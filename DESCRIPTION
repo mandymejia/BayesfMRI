@@ -1,12 +1,25 @@
 Package: BayesGLMfMRI
 Title: Bayesian General Linear Model for Cortical Surface fMRI
 Version: 0.0.0.9000
-Authors@R: person("Amanda", "Mejia", email = "mandy.mejia@gmail.com", role = c("aut", "cre"))
-Description: This package provides the functions necessary to perform the 
-  analysis in [Mejia et al., 2019](https://doi.org/10.1080/01621459.2019.1611582).
-Depends: R (>= 3.1.0)
+Authors@R: 
+    person(given = "Amanda",
+           family = "Mejia",
+           role = c("aut", "cre"),
+           email = "mandy.mejia@gmail.com")
+Description: This package provides the functions necessary
+    to perform the analysis in [Mejia et al.,
+    2019](https://doi.org/10.1080/01621459.2019.1611582).  The package
+    requires the INLA package, which, due to a CRAN policy, will not be
+    installed automatically. You can obtain the two packages by running
+    `install.packages("INLA", repos=c(getOption("repos"),
+    INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`
 License: GPL-3
+Depends: 
+    R (>= 3.1.0)
 Encoding: UTF-8
+Import: colorout, clever, abind, excursions, dplyr, INLA (>=
+    0.0-1468840039), ggplot2, scales, numDeriv, RColorBrewer, gridExtra,
+    viridis
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
