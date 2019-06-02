@@ -1,9 +1,12 @@
 Package: BayesGLMfMRI
-Title: What the Package Does (one line, title case)
+Title: Bayesian General Linear Model for Cortical Surface fMRI
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-Depends: R (>= 3.6.0)
-License: What license is it under?
+Authors@R: person("Amanda", "Mejia", email = "mandy.mejia@gmail.com", role = c("aut", "cre"))
+Description: This package provides the functions necessary to perform the 
+  analysis in [Mejia et al., 2019](https://doi.org/10.1080/01621459.2019.1611582).
+Depends: R (>= 3.1.0)
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.1
