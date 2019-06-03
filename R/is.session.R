@@ -1,7 +1,7 @@
-#' Title
+#' Verify that the \code{session} object is valid
 #'
 #' @param sess 
-#' @return
+#' @return True if all checks pass, or an (hopefully useful) error message
 #' @export
 #'
 #' @examples
