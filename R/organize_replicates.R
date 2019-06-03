@@ -1,14 +1,23 @@
-
+#' Organize replicates
+#'
+#' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
+#' @param nx Number of regressors or tasks
+#' @param mesh The mesh for the data
+#'
+#' @return replicates vector and betas for sessions
+#' @export
+#'
+#' @examples
 organize_replicates <- function(n_sess, nx, mesh){
 
-	# create vectors for each task: 
-	# n_sess is the number of sessions sharing hyperparameters (can be different tasks)
+	# create vectors for each task:
+	#
 
 	# beta and repl vectors are of length nvox * n_sess * nx
 	# ith repl vector is an indicator vector for the cells corresponding to the ith column of x
 	# ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x
 
-	spatial <- mesh$idx$loc 
+	spatial <- mesh$idx$loc
 	nvox <- length(spatial)
 
 	grps <- ((1:(n_sess*nx) + (nx-1)) %% nx) + 1 # 1, 2, .. nx, 1, 2, .. nx, ...

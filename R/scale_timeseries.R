@@ -1,3 +1,11 @@
+#' Scale the BOLD timeseries
+#'
+#' @param BOLD Input fMRI data
+#'
+#' @return Scale to units of percent local signal change and centers
+#' @export
+#'
+#' @examples
 scale_timeseries <- function(BOLD){
 
 	BOLD <- as.matrix(BOLD)
@@ -13,7 +21,7 @@ scale_timeseries <- function(BOLD){
 	}
 
 	local_means <- matrix(rowMeans(BOLD, na.rm=TRUE), nrow=nrow(BOLD), ncol=ncol(BOLD))
-	BOLD <- t(100*(BOLD - local_means)/local_means) #scale to units of pct local signal change AND CENTER 
+	BOLD <- t(100*(BOLD - local_means)/local_means) #scale to units of pct local signal change AND CENTER
 	return(BOLD)
-		    	
+
 }

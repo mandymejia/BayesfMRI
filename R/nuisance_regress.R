@@ -1,6 +1,12 @@
-#Z is the matrix of nuisance regressors
-#Y is the response or predictor variables from which to regress nuisance
-
+#' Regresses nuisance parameters from response or predictor variables
+#'
+#' @param Y a T by M matrix representing the response or predictor variables from which to regress nuisance.
+#' @param Z a T by J matrix where J is the number of nuisance variables. It contains of nuisance regressors.
+#'
+#' @return Y2 is a T by M matrix that regresses on design matrix X.
+#' @export
+#'
+#' @examples
 nuisance_regress <- function(Y, Z){
 
 	if(nrow(Y) != nrow(Z)) stop('X and Z must have same number of rows')
