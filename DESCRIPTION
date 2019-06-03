@@ -17,9 +17,9 @@ License: GPL-3
 Depends: 
     R (>= 3.1.0)
 Encoding: UTF-8
-Import: colorout, clever, abind, excursions, dplyr, INLA (>=
-    0.0-1468840039), ggplot2, scales, numDeriv, RColorBrewer, gridExtra,
-    viridis
+Imports: colorout, clever, abind, dplyr, INLA (>=
+    0.0-1468840039), numDeriv
+Suggests: excursions
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
