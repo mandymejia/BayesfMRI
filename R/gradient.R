@@ -5,7 +5,7 @@
 #' @return Gradient of x
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{}
 gradient <- function(x){
 
 	isMatrix <- is.matrix(x)

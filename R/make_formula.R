@@ -5,10 +5,10 @@
 #' @param model_name char name of the model for each beta (e.g. name of an spde object)
 #' @param hyper_initial Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix
 #'
-#' @return
+#' @return A formula representing the Bayesian GLM to be passed to `inla()`
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{}
 make_formula <- function(beta_names, repl_names, model_name, hyper_initial=NULL){
 
 	# Example:

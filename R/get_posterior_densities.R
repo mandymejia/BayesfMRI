@@ -7,7 +7,7 @@
 #' @return Long-form data frame
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{}
 get_posterior_densities <- function(result, spde, beta_names){
 
 	for(b in beta_names){

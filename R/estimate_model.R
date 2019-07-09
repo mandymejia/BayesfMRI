@@ -6,18 +6,19 @@
 #' @param prec_initial Initial precision
 #' @param num.threads Number of threads
 #' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
+#' @param verbose Logical indicating if should run in a verbose mode (default FALSE).
 #'
 #' @return Results from INLA
 #' @export
+#' @importFrom INLA inla
 #'
-#' @examples
-estimate_model <- function(formula, data, A, prec_initial, num.threads=4, int.strategy = "eb"){
+#' @examples \dontrun{}
+estimate_model <- function(formula, data, A, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE){
 
-	require(INLA)
 	result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
-					verbose = TRUE, keep = FALSE, num.threads = num.threads,
+					verbose = verbose, keep = FALSE, num.threads = num.threads,
 					control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
 					control.family=list(hyper=list(prec=list(initial=prec_initial))),
-	    			control.compute=list(config=TRUE))
+	    			control.compute=list(config=TRUE)) #required for excursions
 	return(result)
 }

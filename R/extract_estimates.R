@@ -7,7 +7,7 @@
 #' @return Estimates from inla model
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{}
 extract_estimates <- function(object, mask, session_names){
 
   if(class(object) != "inla"){

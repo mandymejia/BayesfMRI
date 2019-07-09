@@ -1,0 +1,16 @@
+#' Construct a triangular mesh from a 2D volumetric mask (need to generalize this to a 3D volume)
+#'
+#' @param mask A matrix of 0s and 1s representing a volumetric mask
+#'
+#' @return An inla.mesh object.  See `help(inla.mesh.2d)` for details.
+#' @export
+#' @importFrom INLA inla.mesh.2d
+#'
+#' @examples \dontrun{}
+vol2mesh <- function(mask){
+  ny <- dim(mask)[1]
+  nx <- dim(mask)[2]
+  xy.in <- which(mask==1, arr.ind=TRUE)[,2:1]
+  boundary <- inla.nonconvex.hull(xy.in, resolution = 100)
+  mesh <- inla.mesh.2d(loc = xy.in, boundary = boundary, max.edge = c(2, 4))
+}

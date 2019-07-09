@@ -5,7 +5,7 @@
 #' @return Scale to units of percent local signal change and centers
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{}
 scale_timeseries <- function(BOLD){
 
 	BOLD <- as.matrix(BOLD)

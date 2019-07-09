@@ -2,17 +2,17 @@
 #'
 #' Make triangular mesh from faces and vertices. If mask is given, then mesh is masked.
 #'
+#' @param vertices Matrix of vertices
 #' @param faces Matrix of faces
-#' @param verts Matrix of vertices
 #' @param mask Mask to be applied to mesh. If none given, full mesh is used.
 #'
 #' @return Triangular mesh from matrices and vertices
 #' @export
 #' @importFrom INLA inla.mesh.create
-make_mesh <- function(faces, verts, mask = NULL){
+make_mesh <- function(vertices, faces, mask = NULL){
 
   # Number of vertices
-  V <- nrow(verts)
+  V <- nrow(vertices)
 
   # Check the dimension of mask
   if(is.null(mask)){
@@ -37,7 +37,7 @@ make_mesh <- function(faces, verts, mask = NULL){
 
   # Apply mask to vertices
   inmask <- which(mask)
-  verts <- verts[mask,]
+  vertices <- vertices[mask,]
 
   # Identify and remove any triangles where at least one vertex is not included in the motor mask
   faces <- faces[(faces[,1] %in% inmask) & (faces[,2] %in% inmask) & (faces[,3] %in% inmask),]
@@ -51,7 +51,7 @@ make_mesh <- function(faces, verts, mask = NULL){
   }
 
   # Construct mesh
-  mesh <- inla.mesh.create(loc = as.matrix(verts), tv = as.matrix(faces_new))
+  mesh <- inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces_new))
   return(mesh)
 }
 

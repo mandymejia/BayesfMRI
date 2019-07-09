@@ -1,21 +1,24 @@
+#' Identifies areas of activation given an activation threshold and significance level
 #'
+#' @description For a given latent field, identifies locations that exceed a certain activation
+#' threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
+#' posterior distribution of the latent field.
 #'
 #' @param object An object of class ‘"inla"’, a result of a call to inla
 #' @param name Name of latent field on which to identify activations
 #' @param mask Logical vector used to map beta estimates back to whole-brain field
 #' @param mesh SPDE triangular mesh.  Only required if area.limit is specified.
 #' @param session_names Names of sessions included in INLA model that resulted in object
-#' @param threshold Activation threshold (e.g. 1%)
+#' @param threshold Activation threshold (e.g. 0.01 for 1 percent signal change)
 #' @param alpha Significance level (e.g. 0.05)
 #' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
 #'
-#' @return Activation
+#' @details Put additional details here.
 #'
-#' @export
-#' @importFrom excursions excursions.inla excursions.inla.no.spurious
+#' @return An object of class excurobj (see `help(excursions.inla)` for more information)
 #'
-#' @examples
-id_activations <- function(object, name, mask, mesh=NULL, session_names, threshold, alpha, area.limit=NULL){
+#' @examples \dontrun{}
+id_activations <- function(object, name, mask, mesh=NULL, session_names, threshold, alpha, area.limit){
 
 	nvox2 <- sum(mask)
 	n_sess <- length(session_names)
@@ -29,7 +32,7 @@ id_activations <- function(object, name, mask, mesh=NULL, session_names, thresho
 	for(v in 1:n_sess){
 		sess_name <- session_names[v]
 		inds_v <- (1:nvox2) + (v-1)*nvox2 #indices of beta vector corresponding to session v
-		if(is.null(area.limit)){
+		if(missing(area.limit)){
 			res.exc <- excursions.inla(object, name=name, ind=inds_v, u=threshold, type='>', method='QC', alpha=alpha, F.limit=0.1)
 		} else {
 			res.exc <- excursions.inla.no.spurious(object, mesh=mesh, name=name, ind=inds_v, u=threshold, type='>', method='QC', alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
