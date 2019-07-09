@@ -22,16 +22,16 @@ make_mesh <- function(vertices, faces, mask = NULL){
 
   # Apply mask to vertices, if mask provided
   if(!is.null(mask)){
-    mask <- is.numeric(mask)
+    mask <- as.numeric(mask)
     if(length(mask) != V | !is.vector(mask)){
       stop("Mask should be a vector of length V")
     }
     # Check only 0s and 1s
     values <- sort(unique(mask))
-    if(! (list(values) %in% list(0, 1, 0:1)) ) stop("Mask should be composed of only 0s and 1s")
+    if(! (min(values %in% 0:1)) ) stop("Mask should be composed of only 0s and 1s")
 
     inmask <- which(mask==1)
-    vertices <- vertices[mask,]
+    vertices <- vertices[inmask,]
 
     # Identify and remove any triangles where at least one vertex is not included in the motor mask
     faces <- faces[(faces[,1] %in% inmask) & (faces[,2] %in% inmask) & (faces[,3] %in% inmask),]
