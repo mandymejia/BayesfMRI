@@ -1,8 +1,23 @@
-#y is the TxV data matrix containing the fMRI timeseries
-#X is the TxK design matrix with K task-related columns 
-
+#' Transforms data and design matrices into the Bayesian GLM format
+#'
+#' @description Transforms the usual TxV BOLD data matrix Y into vector form, and
+#' the usual TxK design matrix X into big sparse matrix form.
+#'
+#' @param y the TxV data matrix containing the fMRI timeseries
+#' @param X the TxK design matrix with K task-related columns
+#'
+#' @return A list containing fields `y` and `A` (see Details)
+#'
+#' @details The Bayesian GLM requires `y` (a vector of length TV containing the BOLD data)
+#' and `X_k` (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+#' The design matrices are combined as `A=cbind(X_1,...,X_K)`.
+#'
+#' @export
+#' @importFrom Matrix sparseMatrix
+#'
+#' @examples \dontrun{}
 organize_data <- function(y, X){
-	
+
 	ntime <- nrow(y)
 	nvox <- ncol(y)
 
@@ -20,7 +35,7 @@ organize_data <- function(y, X){
 
 	K <- ncol(X)
 	for(k in 1:K){
-		X_k <- sparseMatrix(ix, iy, x=rep(X[,k], nvox)) 
+		X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,k], nvox))
 		if(k==1) A <- X_k else A <- cbind(A, X_k)
 	}
 

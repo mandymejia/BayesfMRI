@@ -11,6 +11,7 @@
 #'
 #' @return A list containing...
 #' @export
+#' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
 BayesGLMfMRI <- function(data, vertices, faces, mesh, mask=NULL, scale=TRUE){

@@ -6,6 +6,7 @@
 #'
 #' @return Long-form data frame
 #' @export
+#' @importFrom INLA inla.spde2.result
 #'
 #' @examples \dontrun{}
 get_posterior_densities <- function(result, spde, beta_names){

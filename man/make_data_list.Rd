@@ -2,24 +2,24 @@
 % Please edit documentation in R/make_data_list.R
 \name{make_data_list}
 \alias{make_data_list}
-\title{Make data list}
+\title{Make data list to be passed to \code{estimate_model}}
 \usage{
 make_data_list(y, X, betas, repls)
 }
 \arguments{
 \item{y}{Vectorized BOLD data (all voxels, sessions, etc.)}
 
-\item{X}{List of sparse design matrices from each session, each created using organize_data}
+\item{X}{List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{organize_data()}}
 
-\item{betas}{List of bbeta objects from organize_replicates}
+\item{betas}{List (length = number of tasks) of bbeta objects from organize_replicates}
 
-\item{repls}{List of repl objects from organize_replicates}
+\item{repls}{List (length = number of tasks) of repl objects from organize_replicates}
 }
 \value{
 List
 }
 \description{
-Make data list
+Make data list to be passed to \code{estimate_model}
 }
 \examples{
 \dontrun{}

@@ -4,7 +4,7 @@
 #'
 #' @return An inla.mesh object.  See `help(inla.mesh.2d)` for details.
 #' @export
-#' @importFrom INLA inla.mesh.2d
+#' @importFrom INLA inla.nonconvex.hull inla.mesh.2d
 #'
 #' @examples \dontrun{}
 vol2mesh <- function(mask){

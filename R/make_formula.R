@@ -7,6 +7,7 @@
 #'
 #' @return A formula representing the Bayesian GLM to be passed to `inla()`
 #' @export
+#' @importFrom stats as.formula
 #'
 #' @examples \dontrun{}
 make_formula <- function(beta_names, repl_names, model_name, hyper_initial=NULL){
