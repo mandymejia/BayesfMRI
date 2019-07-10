@@ -14,7 +14,7 @@
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
-BayesGLMfMRI <- function(data, vertices, faces, mesh, mask=NULL, scale=TRUE){
+BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -52,11 +52,11 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask=NULL, scale=TRUE){
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
 
-  if(is.null(mesh)) mesh <- make_mesh(vertices, faces, mask)
-  if(is.null(mask)) mask <- rep(1, V)
+  if(missing(mask)) mask <- rep(1, V)
+  if(missing(mesh)) mesh <- make_mesh(vertices, faces, mask)
 
   spde <- inla.spde2.matern(mesh)
-  areas <- compute_vertex_areas(mesh)
+  #areas <- compute_vertex_areas(mesh)
 
   #collect data and design matrices
   y_all <- c()
@@ -72,10 +72,15 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask=NULL, scale=TRUE){
       BOLD_s <- scale_timeseries(t(BOLD_s))
 
       #regress nuisance parameters from BOLD data and design matrix
-      design_s <- data[[s]]$design
-      nuisance_s <- data[[s]]$nuisance
-      y_reg <- nuisance_regress(BOLD_s, nuisance_s)
-      X_reg <- nuisance_regress(design_s, nuisance_s)
+      if('nuisance' %in% names(data[[s]])){
+        design_s <- data[[s]]$design
+        nuisance_s <- data[[s]]$nuisance
+        y_reg <- nuisance_regress(BOLD_s, nuisance_s)
+        X_reg <- nuisance_regress(design_s, nuisance_s)
+      } else {
+        y_reg <- BOLD_s
+        X_reg <- data[[s]]$design
+      }
 
       #set up data and design matrix
       data_org <- organize_data(y_reg, X_reg)
@@ -100,14 +105,13 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask=NULL, scale=TRUE){
   INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, prec_initial=1)
 
   #extract useful stuff from INLA model result
-  session_names <- names(X_all_list)
-  beta_means <- extract_estimates(object=INLA_result, mask=mask, session_names=session_names) #posterior means of latent task field
-  theta_posteriors <- get_posterior_densities(INLA_result, spde, names(betas)) #hyperparameter posterior densities
+  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names) #posterior means of latent task field
+  theta_posteriors <- get_posterior_densities(object=INLA_result, spde) #hyperparameter posterior densities
 
   #identify areas of activation if activation threshold(s) specified by user
 
   #construct object to be returned
-  result <- list(model=INLA_result, mesh=mesh, sessions=session_names, beta_means=beta_means, theta_posteriors=theta_posteriors)
+  result <- list(model=INLA_result, mesh=mesh, sessions=session_names, beta_estimates=beta_estimates, theta_posteriors=theta_posteriors)
   return(result)
 
 

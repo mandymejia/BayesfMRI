@@ -8,8 +8,6 @@
 #'
 #' @examples \dontrun{}
 vol2mesh <- function(mask){
-  ny <- dim(mask)[1]
-  nx <- dim(mask)[2]
   xy.in <- which(mask==1, arr.ind=TRUE)[,2:1]
   boundary <- inla.nonconvex.hull(xy.in, resolution = 100)
   mesh <- inla.mesh.2d(loc = xy.in, boundary = boundary, max.edge = c(2, 4))

@@ -7,6 +7,7 @@
 #'
 #' @return List
 #'
+#' @export
 #' @importFrom Matrix bdiag
 #'
 #' @examples \dontrun{}

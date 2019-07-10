@@ -1,19 +1,19 @@
 #' Extracts posterior density estimates for hyperparameters
 #'
-#' @param result Result
-#' @param spde SPDE
-#' @param beta_names Names of covariates
+#' @param object An object of class ‘"inla"’, a result of a call to \code{inla()}
+#' @param spde The model used for the latent fields in the \code{inla()} call, an object of class ‘"inla.spde"’
 #'
-#' @return Long-form data frame
+#' @return Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
 #' @export
 #' @importFrom INLA inla.spde2.result
 #'
 #' @examples \dontrun{}
-get_posterior_densities <- function(result, spde, beta_names){
+get_posterior_densities <- function(object, spde){
+
+  beta_names <- names(object$summary.random)
 
 	for(b in beta_names){
-		result.spde.b = inla.spde2.result(result, b, spde)
-
+		result.spde.b = inla.spde2.result(object, b, spde)
 		# Kappa and Tau
 		log_kappa.b = as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
 		log_tau.b = as.data.frame(result.spde.b$marginals.log.tau$tau.1)
