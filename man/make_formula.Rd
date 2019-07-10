@@ -4,16 +4,16 @@
 \alias{make_formula}
 \title{Make Formula}
 \usage{
-make_formula(beta_names, repl_names, model_name, hyper_initial = NULL)
+make_formula(beta_names, repl_names, hyper_initial = NULL)
 }
 \arguments{
 \item{beta_names}{char vector of the names of each bbeta object in the environment}
 
 \item{repl_names}{char vector of the names of each replicate object in the environment}
 
-\item{model_name}{char name of the model for each beta (e.g. name of an spde object)}
-
 \item{hyper_initial}{Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix}
+
+\item{spde}{The spatial model for the latent fields}
 }
 \value{
 A formula representing the Bayesian GLM to be passed to \code{inla()}
