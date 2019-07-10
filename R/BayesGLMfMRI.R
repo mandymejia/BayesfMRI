@@ -6,7 +6,6 @@
 #' @param vertices A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.
 #' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh.
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
-#' @param mask A vector of 0s and 1s of length V, where locations with value 0 will be excluded from analysis.
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #'
 #' @return A list containing...
@@ -14,12 +13,11 @@
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
-BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
+BayesGLMfMRI <- function(data, vertices, faces, mesh, scale=TRUE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
-  # V0 = full number of data locations
-  # V = masked number of data locations
+  # V = number of data locations
   # T = length of time series for each session (vector)
   # K = number of unique tasks in all sessions
 
@@ -32,9 +30,6 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
   has_verts_faces <- !missing(vertices) & !missing(faces)
   has_howmany <- has_mesh + has_verts_faces
   if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')
-
-  #maybe also allow the user to supply a mesh object
-  #if mesh and mask both supplied, will need to deal with that...
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
@@ -53,12 +48,10 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
   }
 
   if(missing(mesh)) {
-    if(missing(mask)) mesh <- make_mesh(vertices, faces)
-    if(!missing(mask)) mesh <- make_mesh(vertices, faces, mask)
+    mesh <- make_mesh(vertices, faces)
   }
 
   spde <- inla.spde2.matern(mesh)
-  #areas <- compute_vertex_areas(mesh)
 
   #collect data and design matrices
   y_all <- c()
@@ -68,10 +61,10 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
 
       #extract and mask BOLD data for current session
       BOLD_s <- data[[s]]$BOLD
-      if(!missing(mask)) BOLD_s <- BOLD_s[,mask==1]
 
-      #scale data to represent % signal change
-      BOLD_s <- scale_timeseries(t(BOLD_s))
+      #scale data to represent % signal change (or just center if scale=FALSE)
+      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale)
+      design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
 
       #regress nuisance parameters from BOLD data and design matrix
       if('nuisance' %in% names(data[[s]])){
@@ -100,15 +93,25 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
   repls <- replicates_list$repls
 
   #organize the formula and data objects
-  formula <- make_formula(beta_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
-  formula <- as.formula(formula)
-  #formula <- y ~ -1 + f(bbeta1, model = spde, replicate = repl1, hyper = list(theta = list(initial = c(-2, 2)))) +
-   # f(bbeta2, model = spde, replicate = repl2, hyper = list(theta = list(initial = c(-2, 2))))
+  #formula <- make_formula(beta_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
+  #formula <- as.formula(formula)
 
-    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+  beta_names <- names(betas)
+  repl_names <- names(repls)
+  n_beta <- length(names(betas))
+  hyper_initial <- c(-2,2)
+  hyper_initial <- rep(list(hyper_initial), n_beta)
+  hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
+
+  formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+  formula_vec <- c('y ~ -1', formula_vec)
+  formula_str <- paste(formula_vec, collapse=' + ')
+  formula <- as.formula(formula_str, env = globalenv())
+
+  model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   #estimate model using INLA
-  INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, prec_initial=1)
+  INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1)
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names) #posterior means of latent task field
@@ -123,6 +126,8 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
 
 #   # ID AREAS OF ACTIVATION
 #
+  #areas <- compute_vertex_areas(mesh) #only need this if an activation cluster limit specified?
+
 #   binarize <- function(x, p){ return(x > p) }
 #
 #   #6 hours with cluster-wise, 2 hours with voxel-wise only

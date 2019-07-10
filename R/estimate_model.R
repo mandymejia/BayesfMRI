@@ -3,6 +3,7 @@
 #' @param formula Formula to put into inla
 #' @param data Dataset
 #' @param A Large, sparse observation matrix
+#' @param spde The spatial model, an object of class inla.spde
 #' @param prec_initial Initial precision
 #' @param num.threads Number of threads
 #' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
@@ -13,7 +14,7 @@
 #' @importFrom INLA inla
 #'
 #' @examples \dontrun{}
-estimate_model <- function(formula, data, A, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE){
+estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE){
 
 	result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
 					verbose = verbose, keep = FALSE, num.threads = num.threads,

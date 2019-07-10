@@ -6,7 +6,7 @@
 #' @export
 #'
 #' @examples \dontrun{}
-scale_timeseries <- function(BOLD){
+scale_timeseries <- function(BOLD, scale=TRUE){
 
 	BOLD <- as.matrix(BOLD)
 	nvox <- nrow(BOLD)
@@ -20,8 +20,9 @@ scale_timeseries <- function(BOLD){
 		ntime <- ncol(BOLD)
 	}
 
-	local_means <- matrix(rowMeans(BOLD, na.rm=TRUE), nrow=nrow(BOLD), ncol=ncol(BOLD))
-	BOLD <- t(100*(BOLD - local_means)/local_means) #scale to units of pct local signal change AND CENTER
+	local_means <- matrix(rowMeans(BOLD, na.rm=TRUE), nrow=nrow(BOLD), ncol=ncol(BOLD)) #the mean over time for each voxel (the mean image)
+	if(scale) BOLD <- t(100*(BOLD - local_means)/local_means) #scale to units of pct local signal change AND CENTER
+	if(!scale) BOLD <- t((BOLD - local_means)) #just center
 	return(BOLD)
 
 }

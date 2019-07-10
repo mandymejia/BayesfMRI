@@ -1,54 +1,25 @@
 #' Make Mesh
 #'
-#' Make triangular mesh from faces and vertices. If mask is given, then mesh is masked.
+#' Make triangular mesh from faces and vertices.
 #'
 #' @param vertices Matrix of vertices
 #' @param faces Matrix of faces
-#' @param mask Mask to be applied to mesh. If none given, full mesh is used.
 #'
 #' @return Triangular mesh from matrices and vertices
 #' @export
 #' @importFrom INLA inla.mesh.create
-make_mesh <- function(vertices, faces, mask = NULL){
+make_mesh <- function(vertices, faces){
 
   # Number of vertices
   V <- nrow(vertices)
-
 
   # Check index of faces
   if(min(faces) == 0){
     faces <- faces + 1
   }
 
-  # Apply mask to vertices, if mask provided
-  if(!is.null(mask)){
-    mask <- as.numeric(mask)
-    if(length(mask) != V | !is.vector(mask)){
-      stop("Mask should be a vector of length V")
-    }
-    # Check only 0s and 1s
-    values <- sort(unique(mask))
-    if(! (min(values %in% 0:1)) ) stop("Mask should be composed of only 0s and 1s")
-
-    inmask <- which(mask==1)
-    vertices <- vertices[inmask,]
-
-    # Identify and remove any triangles where at least one vertex is not included in the motor mask
-    faces <- faces[(faces[,1] %in% inmask) & (faces[,2] %in% inmask) & (faces[,3] %in% inmask),]
-
-    # Re-number faces
-    faces_new <- faces*0
-    for(ii in 1:nrow(faces)){
-      faces_new[ii,1] <- which(inmask == faces[ii,1])
-      faces_new[ii,2] <- which(inmask == faces[ii,2])
-      faces_new[ii,3] <- which(inmask == faces[ii,3])
-    }
-  } else {
-    faces_new <- faces
-  }
-
   # Construct mesh
-  mesh <- inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces_new))
+  mesh <- inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces))
   return(mesh)
 }
 
