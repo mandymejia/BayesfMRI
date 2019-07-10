@@ -100,9 +100,12 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
   repls <- replicates_list$repls
 
   #organize the formula and data objects
-  formula <- make_formula(beta_names = names(betas), repl_names = names(repls), model_name = 'spde', hyper_initial = c(-2,2))
-  environment(formula) <- globalenv()
-  model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+  formula <- make_formula(beta_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
+  formula <- as.formula(formula)
+  #formula <- y ~ -1 + f(bbeta1, model = spde, replicate = repl1, hyper = list(theta = list(initial = c(-2, 2)))) +
+   # f(bbeta2, model = spde, replicate = repl2, hyper = list(theta = list(initial = c(-2, 2))))
+
+    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   #estimate model using INLA
   INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, prec_initial=1)

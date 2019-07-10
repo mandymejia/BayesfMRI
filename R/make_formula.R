@@ -6,10 +6,11 @@
 #' @param hyper_initial Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix
 #'
 #' @return A formula representing the Bayesian GLM to be passed to `inla()`
+#'
 #' @importFrom stats as.formula
 #'
 #' @examples \dontrun{}
-make_formula <- function(beta_names, repl_names, spde, hyper_initial=NULL){
+make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 
 	# Example:
 	# beta_names = bbeta1, bbeta2, ...
@@ -33,7 +34,5 @@ make_formula <- function(beta_names, repl_names, spde, hyper_initial=NULL){
 	formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
 	formula_vec <- c('y ~ -1', formula_vec)
 	formula_str <- paste(formula_vec, collapse=' + ')
-	formula <- as.formula(formula_str)
-	environment(formula) <- globalenv()
-	return(formula)
+	return(formula_str)
 }
