@@ -42,7 +42,7 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
 
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')
-  if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists, but it is not')
+  if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
   V <- ncol(data[[1]]$BOLD)
   K <- ncol(data[[1]]$design)
@@ -52,8 +52,10 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
 
-  if(missing(mask)) mask <- rep(1, V)
-  if(missing(mesh)) mesh <- make_mesh(vertices, faces, mask)
+  if(missing(mesh)) {
+    if(missing(mask)) mesh <- make_mesh(vertices, faces)
+    if(!missing(mask)) mesh <- make_mesh(vertices, faces, mask)
+  }
 
   spde <- inla.spde2.matern(mesh)
   #areas <- compute_vertex_areas(mesh)
@@ -66,7 +68,7 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
 
       #extract and mask BOLD data for current session
       BOLD_s <- data[[s]]$BOLD
-      BOLD_s <- BOLD_s[,mask==1]
+      if(!missing(mask)) BOLD_s <- BOLD_s[,mask==1]
 
       #scale data to represent % signal change
       BOLD_s <- scale_timeseries(t(BOLD_s))
@@ -99,6 +101,7 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, mask, scale=TRUE){
 
   #organize the formula and data objects
   formula <- make_formula(beta_names = names(betas), repl_names = names(repls), model_name = 'spde', hyper_initial = c(-2,2))
+  environment(formula) <- globalenv()
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   #estimate model using INLA

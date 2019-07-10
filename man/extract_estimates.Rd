@@ -2,22 +2,22 @@
 % Please edit documentation in R/extract_estimates.R
 \name{extract_estimates}
 \alias{extract_estimates}
-\title{Extract Estimates}
+\title{Extract Estimates of Activation}
 \usage{
-extract_estimates(object, mask, session_names)
+extract_estimates(object, session_names, stat = "mean")
 }
 \arguments{
 \item{object}{An object of class ‘"inla"’, a result of a call to inla}
 
-\item{mask}{Logical vector used to map beta estimates back to whole-brain field}
+\item{session_names}{Vector of fMRI session names}
 
-\item{session_names}{Name of session}
+\item{stat}{A string representing the posterior summary statistic to be returned}
 }
 \value{
 Estimates from inla model
 }
 \description{
-Extract Estimates
+Obtains the posterior mean or other summary statistic for each latent field
 }
 \examples{
 \dontrun{}

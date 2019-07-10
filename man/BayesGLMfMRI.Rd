@@ -4,7 +4,7 @@
 \alias{BayesGLMfMRI}
 \title{Applies spatial Bayesian GLM to task fMRI data}
 \usage{
-BayesGLMfMRI(data, vertices, faces, mesh, mask = NULL, scale = TRUE)
+BayesGLMfMRI(data, vertices, faces, mesh, mask, scale = TRUE)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
