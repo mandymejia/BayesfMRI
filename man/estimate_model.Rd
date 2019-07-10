@@ -4,7 +4,7 @@
 \alias{estimate_model}
 \title{Estimate INLA model}
 \usage{
-estimate_model(formula, data, A, prec_initial, num.threads = 4,
+estimate_model(formula, data, A, spde, prec_initial, num.threads = 4,
   int.strategy = "eb", verbose = FALSE)
 }
 \arguments{
@@ -13,6 +13,8 @@ estimate_model(formula, data, A, prec_initial, num.threads = 4,
 \item{data}{Dataset}
 
 \item{A}{Large, sparse observation matrix}
+
+\item{spde}{The spatial model, an object of class inla.spde}
 
 \item{prec_initial}{Initial precision}
 

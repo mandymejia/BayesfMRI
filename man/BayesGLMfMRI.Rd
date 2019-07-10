@@ -4,7 +4,7 @@
 \alias{BayesGLMfMRI}
 \title{Applies spatial Bayesian GLM to task fMRI data}
 \usage{
-BayesGLMfMRI(data, vertices, faces, mesh, mask, scale = TRUE)
+BayesGLMfMRI(data, vertices, faces, mesh, scale = TRUE)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
@@ -16,8 +16,6 @@ List element names represent session names.}
 \item{faces}{A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh.}
 
 \item{mesh}{A \code{inla.mesh} object.  Must be provided if and only if \code{vertices} and \code{faces} are not.}
-
-\item{mask}{A vector of 0s and 1s of length V, where locations with value 0 will be excluded from analysis.}
 
 \item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.}
 }

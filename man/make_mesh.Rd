@@ -4,18 +4,16 @@
 \alias{make_mesh}
 \title{Make Mesh}
 \usage{
-make_mesh(vertices, faces, mask = NULL)
+make_mesh(vertices, faces)
 }
 \arguments{
 \item{vertices}{Matrix of vertices}
 
 \item{faces}{Matrix of faces}
-
-\item{mask}{Mask to be applied to mesh. If none given, full mesh is used.}
 }
 \value{
 Triangular mesh from matrices and vertices
 }
 \description{
-Make triangular mesh from faces and vertices. If mask is given, then mesh is masked.
+Make triangular mesh from faces and vertices.
 }

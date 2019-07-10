@@ -4,7 +4,7 @@
 \alias{scale_timeseries}
 \title{Scale the BOLD timeseries}
 \usage{
-scale_timeseries(BOLD)
+scale_timeseries(BOLD, scale = TRUE)
 }
 \arguments{
 \item{BOLD}{Input fMRI data}
