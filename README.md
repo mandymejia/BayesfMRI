@@ -5,7 +5,7 @@ BayesGLMfMRI R package
 ### Issues to resolve:
 
 1. Special class 
-    * Create a special class for the result of the main function (DAVID)
+    * Create a special class for the result of the main function (DAVID) -- `class(output) <- "rSPDEobj"`
     * Make the post-processing steps and summaries separate functions to call that object (MANDY)
     * Make/edit the id_activations function to call that object (MANDY)
     * Make a print function for that object class (DAVID)
