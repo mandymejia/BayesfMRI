@@ -5,21 +5,21 @@ BayesGLMfMRI R package
 ### Issues to resolve:
 
 1. Special class 
-    * Create a special class for the result of the main function
-    * Make the post-processing steps and summaries separate functions to call that object
-    * Make/edit the id_activations function to call that object
-    * Make a print function for that object class
-    * Make a summary function for that object class
+    * Create a special class for the result of the main function (DAVID)
+    * Make the post-processing steps and summaries separate functions to call that object (MANDY)
+    * Make/edit the id_activations function to call that object (MANDY)
+    * Make a print function for that object class (DAVID)
+    * Make a summary function for that object class (DAVID)
 
-2. Function documentation
+2. Function documentation (DAVID + MANDY)
 
-3. Incorporate checks into functions
+3. Incorporate checks into functions (DAVID + MANDY)
 
-4. New excursions functions
+4. New excursions functions (DAVID)
     * Decide what to incorporate into excursions and what into BayesGLMfMRI
     * Document functions in new.excursions.functions.R 
     
-5. Test on multi-session data
+5. Test on multi-session data (MANDY)
 
 
 ### Mesh vs. Triangles/vertices
@@ -41,4 +41,5 @@ BayesGLMfMRI R package
 1. Use PARDISO library if the user has a license
 2. Make the initial values for the hyperparameters and the residual precision optional
 3. Translate David's create_mesh.m MATLAB code for getting vertices and faces from 3D arrays into R using deldir package
+4. Consider using testthat for testing
   
