@@ -42,4 +42,5 @@ BayesGLMfMRI R package
 2. Make the initial values for the hyperparameters and the residual precision optional
 3. Translate David's create_mesh.m MATLAB code for getting vertices and faces from 3D arrays into R using deldir package
 4. Consider using testthat for testing
+5. Build in functionality for group analysis (RYAN?)
   
