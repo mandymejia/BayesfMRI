@@ -21,6 +21,8 @@ BayesGLMfMRI R package
     
 5. Test on multi-session data (MANDY)
 
+6. Consider other names – spaBayGLM? spaBayfMRI? spatialBayesGLM?
+
 
 ### Mesh vs. Triangles/vertices
 
