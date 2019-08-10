@@ -11,14 +11,10 @@ BayesGLMfMRI R package
 2. Function documentation (DAVID + MANDY)
 
 3. Incorporate checks into functions (DAVID + MANDY)
-
-4. New excursions functions (DAVID)
-    * Decide what to incorporate into excursions and what into BayesGLMfMRI
-    * Document functions in new.excursions.functions.R 
     
-5. Test on multi-session data (MANDY)
+4. Test on multi-session data (MANDY)
 
-6. Consider other names – spaBayGLM? spaBayfMRI? spatialBayesGLM?
+5. Consider other names – spaBayGLM? spaBayfMRI? spatialBayesGLM?
 
 
 ### Mesh vs. Triangles/vertices
