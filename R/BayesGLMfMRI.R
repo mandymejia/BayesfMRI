@@ -120,7 +120,13 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, scale=TRUE){
   #identify areas of activation if activation threshold(s) specified by user
 
   #construct object to be returned
-  result <- list(model=INLA_result, mesh=mesh, sessions=session_names, beta_estimates=beta_estimates, theta_posteriors=theta_posteriors)
+  result <- list(model = INLA_result,
+                 mesh = mesh,
+                 sessions = session_names,
+                 beta_estimates = beta_estimates,
+                 theta_posteriors = theta_posteriors,
+                 call = match.call())
+  class(result) <- "BayesGLMfMRIobj"
   return(result)
 
 
