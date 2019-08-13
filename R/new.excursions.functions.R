@@ -138,7 +138,7 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' numbere are removed.
 #' @param use.continuous Logical parameter indicating whether the areas of the excursion sets
 #' should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
-#' function uses the approximation that the contribution from each element \phi_i is \int \phi_i(s)ds = C_ii.
+#' function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.
 #' @param factor Non-negative number. If larger than zero, each set is expanded by a small amount
 #' that is proportional to this argument.
 #' @param plot.progress Logical parameter that indicates whether the results should be plotted.
@@ -484,7 +484,7 @@ excursions.no.spurious <- function(alpha,
 #' numbere are removed.
 #' @param use.continuous Logical parameter indicating whether the areas of the excursion sets
 #' should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
-#' function uses the approximation that the contribution from each element \phi_i is \int \phi_i(s)ds = C_ii.
+#' function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.
 #' @param plot.progress Logical parameter that indicates whether the results should be plotted.
 #'
 #' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with

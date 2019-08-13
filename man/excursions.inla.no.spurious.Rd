@@ -56,7 +56,7 @@ numbere are removed.}
 
 \item{use.continuous}{Logical parameter indicating whether the areas of the excursion sets
 should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
-function uses the approximation that the contribution from each element \phi_i is \int \phi_i(s)ds = C_ii.}
+function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.}
 
 \item{plot.progress}{Logical parameter that indicates whether the results should be plotted.}
 
