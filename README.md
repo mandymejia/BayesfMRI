@@ -1,5 +1,5 @@
-# BayesGLMfMRI
-BayesGLMfMRI R package 
+# BayesfMRI
+BayesfMRI R package 
 
 
 ### Issues to resolve:
@@ -14,7 +14,7 @@ BayesGLMfMRI R package
     
 4. Test on multi-session data (MANDY)
 
-5. Consider other names – spaBayGLM? spaBayfMRI? spatialBayesGLM?
+5. Rename main function and every it appears as BayesGLM
 
 
 ### Mesh vs. Triangles/vertices
