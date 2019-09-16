@@ -1,12 +1,12 @@
-Package: BayesGLMfMRI
-Title: Bayesian General Linear Model for Cortical Surface fMRI
+Package: BayesfMRI
+Title: Bayesian Methods for Functional MRI
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Amanda",
            family = "Mejia",
            role = c("aut", "cre"),
            email = "mandy.mejia@gmail.com")
-Description: This package provides the functions necessary to perform the analysis in [Mejia et al., 2019](https://doi.org/10.1080/01621459.2019.1611582).  The package requires the INLA package, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`
+Description: The main function, BayesGLM, performs a spatial Bayesian general linear model (GLM) for task fMRI data, as proposed in [Mejia et al., 2019](https://doi.org/10.1080/01621459.2019.1611582).  The package requires the INLA package, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`
 License: GPL-3
 Depends: 
     R (>= 3.1.0)

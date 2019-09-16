@@ -13,7 +13,7 @@
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
-BayesGLMfMRI <- function(data, vertices, faces, mesh, scale=TRUE){
+BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -126,7 +126,7 @@ BayesGLMfMRI <- function(data, vertices, faces, mesh, scale=TRUE){
                  beta_estimates = beta_estimates,
                  theta_posteriors = theta_posteriors,
                  call = match.call())
-  class(result) <- "BayesGLMfMRIobj"
+  class(result) <- "BayesGLMobj"
   return(result)
 
 
