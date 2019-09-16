@@ -11,7 +11,13 @@ License: GPL-3
 Depends: 
     R (>= 3.1.0)
 Encoding: UTF-8
-Imports: abind, dplyr, INLA (>= 0.0-1468840039), numDeriv, Matrix
+Imports: 
+    abind,
+    dplyr,
+    INLA (>= 0.0-1468840039),
+    numDeriv,
+    Matrix,
+    graphics
 ImportsFrom: 
     grDevices chull rgb
 Suggests: excursions

@@ -1,16 +1,16 @@
 
-#' Summarise BayesGLMfMRI objects
+#' Summarise BayesGLM objects
 #'
-#' Summary method for class "BayesGLMfMRIobj"
+#' Summary method for class "BayesGLMobj"
 #'
-#' @param object an object of class "BayesGLMfMRIobj"
+#' @param object an object of class "BayesGLMobj"
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary BayesGLMfMRIobj
-summary.BayesGLMfMRIobj <- function(object, ...)
+#' @method summary BayesGLMobj
+summary.BayesGLMobj <- function(object, ...)
 {
   out <- list()
-  class(out) <- "summary.BayesGLMfMRIobj"
+  class(out) <- "summary.BayesGLMobj"
   out$sessions = object$sessions
   out$call <- object$call
   out$inla.summary <- summary(object$model)
@@ -18,11 +18,11 @@ summary.BayesGLMfMRIobj <- function(object, ...)
 }
 
 
-#' @param x an object of class "summary.BayesGLMfMRIobj"
+#' @param x an object of class "summary.BayesGLMobj"
 #' @export
-#' @method print summary.BayesGLMfMRIobj
-#' @rdname summary.BayesGLMfMRIobj
-print.summary.BayesGLMfMRIobj <- function(x, ...)
+#' @method print summary.BayesGLMobj
+#' @rdname summary.BayesGLMobj
+print.summary.BayesGLMobj <- function(x, ...)
 {
   cat("Call:\n")
   print(x$call)
@@ -31,8 +31,8 @@ print.summary.BayesGLMfMRIobj <- function(x, ...)
 }
 
 #' @export
-#' @method print BayesGLMfMRIobj
-#' @rdname summary.BayesGLMfMRIobj
-print.BayesGLMfMRIobj <- function(x, ...) {
-  print.summary.BayesGLMfMRIobj(summary(x))
+#' @method print BayesGLMobj
+#' @rdname summary.BayesGLMobj
+print.BayesGLMobj <- function(x, ...) {
+  print.summary.BayesGLMobj(summary(x))
 }

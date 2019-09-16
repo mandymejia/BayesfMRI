@@ -126,6 +126,7 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE){
                  beta_estimates = beta_estimates,
                  theta_posteriors = theta_posteriors,
                  call = match.call())
+
   class(result) <- "BayesGLMobj"
   return(result)
 
