@@ -36,3 +36,5 @@ print.summary.BayesGLMobj <- function(x, ...)
 print.BayesGLMobj <- function(x, ...) {
   print.summary.BayesGLMobj(summary(x))
 }
+
+# TO DO: Add print and summary functions for session object (may need as.session function too, and move is.session here)
