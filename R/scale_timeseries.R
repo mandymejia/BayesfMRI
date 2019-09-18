@@ -1,6 +1,6 @@
 #' Scale the BOLD timeseries
 #'
-#' @param BOLD Input fMRI data
+#' @param BOLD Input fMRI data (V x T)
 #'
 #' @return Scale to units of percent local signal change and centers
 #' @export
