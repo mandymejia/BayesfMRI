@@ -8,7 +8,7 @@
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
-#' @param outdir File name where results will be written (for use by \code{BayesGLM_grp}).
+#' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #'
 #' @return A list containing...
 #' @export
@@ -143,7 +143,7 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result
   }
 
 
-  class(result) <- "BayesGLMobj"
+  class(result) <- "BayesGLM"
 
   if(!missing(outfile)){
     save(outfile, result)

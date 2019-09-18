@@ -2,35 +2,34 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations}
 \alias{id_activations}
-\title{Identifies areas of activation given an activation threshold and significance level}
+\title{Identifies areas of activation}
 \usage{
-id_activations(object, name, mask, mesh = NULL, session_names, threshold,
-  alpha, area.limit)
+id_activations(model_obj, method = c("posterior", "2means"),
+  field_name = NULL, threshold = NULL, alpha = NULL,
+  area.limit = NULL, type = c("point", "sequential"))
 }
 \arguments{
-\item{object}{An object of class ‘"inla"’, a result of a call to inla}
+\item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
 
-\item{name}{Name of latent field on which to identify activations}
+\item{method}{The method to be used for identifying activations, either 'posterior' (Default) or '2means'}
 
-\item{mask}{Logical vector used to map beta estimates back to whole-brain field}
+\item{field_name}{Name of latent field, or vector of names, on which to identify activations}
 
-\item{mesh}{SPDE triangular mesh.  Only required if area.limit is specified.}
+\item{threshold}{For method='posterior' only: activation threshold (e.g. 0.01 for 1 percent signal change)}
+
+\item{alpha}{For method='posterior' only: Significance level (e.g. 0.05)}
+
+\item{area.limit}{For method='posterior' only: Below this value, activations will be considered spurious.  If NULL (default), no limit.}
+
+\item{type}{For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')}
 
 \item{session_names}{Names of sessions included in INLA model that resulted in object}
-
-\item{threshold}{Activation threshold (e.g. 0.01 for 1 percent signal change)}
-
-\item{alpha}{Significance level (e.g. 0.05)}
-
-\item{area.limit}{Below this value, activations will be considered spurious.  If NULL, no limit.}
 }
 \value{
-An object of class excurobj (see \code{help(excursions.inla)} for more information)
+A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an object of class excurobj if method='posterior' (see \code{help(excursions.inla)} for more information) and is NULL if method='2means'.
 }
 \description{
-For a given latent field, identifies locations that exceed a certain activation
-threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
-posterior distribution of the latent field.
+For each latent field, identifies locations that are activated
 }
 \details{
 Put additional details here.

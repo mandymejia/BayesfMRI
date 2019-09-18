@@ -4,7 +4,8 @@
 \alias{BayesGLM}
 \title{Applies spatial Bayesian GLM to task fMRI data}
 \usage{
-BayesGLM(data, vertices, faces, mesh, scale = TRUE)
+BayesGLM(data, vertices, faces, mesh, scale = TRUE,
+  return_INLA_result = TRUE, outfile)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
@@ -18,6 +19,10 @@ List element names represent session names.}
 \item{mesh}{A \code{inla.mesh} object.  Must be provided if and only if \code{vertices} and \code{faces} are not.}
 
 \item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.}
+
+\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
+
+\item{outfile}{File name where results will be written (for use by \code{BayesGLM_grp}).}
 }
 \value{
 A list containing...

@@ -7,7 +7,7 @@
 scale_timeseries(BOLD, scale = TRUE)
 }
 \arguments{
-\item{BOLD}{Input fMRI data}
+\item{BOLD}{Input fMRI data (V x T)}
 }
 \value{
 Scale to units of percent local signal change and centers
