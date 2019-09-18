@@ -1,4 +1,4 @@
-#' Find which values in a matrix appear to be nonzero
+#' Find nonzero element in a matrix using 2-means clustering
 #'
 #' @param beta_est A vector or matrix of values from which values close to zero should be assigned a value of zero.
 #'
@@ -17,6 +17,15 @@ find_nonzero <- function(beta_est) {
   return(out)
 }
 
+#' Sequential 2-means variable selection
+#'
+#' @param x A vector consisting of all variables of interest for a single draw from a posterior distribution
+#' @param b A scale parameter used to determine at what distance cluster centers are considered to be the same.
+#'
+#' @return The number of nonzero values detected within x
+#' @export
+#'
+#' @examples
 s2m <- function(x,b){
   two_means <- kmeans(abs(x),2)
   zero_idx <- which(two_means$cluster == which.min(two_means$centers))
@@ -33,6 +42,16 @@ s2m <- function(x,b){
   return(num_nonzero)
 }
 
+#' Sequential 2-means on array B
+#'
+#' @param B An array of posterior samples (typically a matrix), in which the last margin corresponds to a single posterior sample
+#' @param sigma  A scale parameter used to determine at what distance cluster centers are considered to be the same.
+#'
+#' @return An array of dimension `head(dim(B),-1)` with a point estimate of B based on the sequential 2-means method
+#' @export
+#'
+#' @examples
+#' @md
 s2m_B <- function(B,sigma){
   nonzero_nums <- sapply(asplit(B,length(dim(B))),function(B_s) s2m(c(B_s),sigma))
   num_nonzero <- ceiling(median(nonzero_nums))
@@ -43,6 +62,18 @@ s2m_B <- function(B,sigma){
   return(out)
 }
 
+#' Identify activations using 2-means clustering methods
+#'
+#' @param model_obj An object of class `BayesGLM`
+#' @param field_name Name of latent field or vector of names on which to identify activations
+#' @param type A string that should be either "point" or "sequential". The "point" type does a simple 2-means clustering to determine areas of activation. The "sequential" type uses the sequential 2-means variable selection method, as described in Li and Pati (2017). The "sequential" method takes significantly longer, but should do a better job of accounting for posterior variance.
+#' @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
+#'
+#' @return A list, where the first element gives the areas of activation in a nested list. The first list layer separates by session, and the second list layer is a list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, which will take the value `NULL`.
+#' @export
+#'
+#' @examples \dontrun{}
+#' @md
 id_activation.2means <- function(model_obj, field_name = NULL, type = "point", n_sample = NULL) {
   if(!type %in% c("point","sequential")) stop("The type needs to be either 'point' or 'sequential'.")
   if(type == "point") {
