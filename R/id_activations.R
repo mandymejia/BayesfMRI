@@ -67,6 +67,8 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
 #' @examples \dontrun{}
 id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alpha=0.05, area.limit=NULL){
 
+  require(excursions)
+
   session_names <- model_obj$session_names
 	n_sess <- length(session_names)
 	n_vox <- model_obj$mesh$n
@@ -163,13 +165,15 @@ id_activations.2means <-
       select_vars <- sapply(field_name, function(each_var)
         0,
         simplify = FALSE)
+      n_sess <- length(model_obj$session_names)
+      n_loc <- length(model_obj$INLA_result$marginals.random$bbeta1)/n_sess
       complete_sample <- sapply(model_obj$session_names, function(ses) {
         out <- vector("list", length = length(field_name))
         names(out) <- field_name
         return(out)
       }, simplify = FALSE)
-      complete_sample <- vector("list", length(model_obj$beta_names))
-      names(complete_sample) <- model_obj$beta_names
+      # complete_sample <- vector("list", length(model_obj$beta_names))
+      # names(complete_sample) <- model_obj$beta_names
       while (n_remain > 0) {
         cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
         next_sample_size <- min(n_remain, 100)
@@ -179,31 +183,49 @@ id_activations.2means <-
           selection = select_vars
         )
         next_sample <-
-          sapply(model_obj$beta_names, function(each_var) {
-            sapply(test_sample, function(each_sample) {
-              var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
-              var_sample <- each_sample$latent[var_name == each_var, ]
-              return(var_sample)
-            }, simplify = "array")
+          sapply(model_obj$session_names, function(each_ses) {
+            sapply(model_obj$beta_names, function(each_var) {
+              sapply(test_sample, function(each_sample) {
+                var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
+                var_sample <- each_sample$latent[var_name == each_var, ]
+                return(var_sample)
+              }, simplify = "array")
+            }, simplify = FALSE)
           }, simplify = FALSE)
-        complete_sample <- mapply(function(cs, ns) {
-          cbind(cs, ns)
-        },
-        cs = complete_sample,
-        ns = next_sample,
-        SIMPLIFY = FALSE)
+
+        complete_sample <- mapply(function(complete, next_s) {
+          mapply(function(cs, ns) {
+            cbind(cs, ns)
+          },
+          cs = complete,
+          ns = next_s,
+          SIMPLIFY = FALSE)
+        }, complete = complete_sample, next_s = next_sample, SIMPLIFY = FALSE)
         n_remain <- n_remain - next_sample_size
       }
-      b_estimate <- sapply(complete_sample, function(betas) {
-        median(apply(betas, 1, sd))
-      })
+      # b_estimate <- sapply(complete_sample, function(betas) {
+      #   median(apply(betas, 1, sd))
+      # })
+      b_estimate <- sapply(complete_sample, function(each_ses) {
+        sapply(each_ses, function(betas) {
+          median(apply(betas, 1, sd))
+        })
+      }, simplify = FALSE)
       final_nums <- mapply(s2m_B,
                            B = complete_sample,
                            sigma = b_estimate,
                            SIMPLIFY = TRUE)
-      final_nums[final_nums != 0] <- 1
-      final_out <- list(active = final_nums,
-                        excur_result = NULL)
-      return(final_out)
+      final_nums <- mapply(function(each_ses_beta,each_ses_b) {
+        out_id <- mapply(s2m_B,B = each_ses_beta,
+                         sigma = each_ses_b, SIMPLIFY = TRUE)
+        out_id[out_id != 0] <- 1
+        return(list(active = out_id,
+                    excur_result = NULL))
+      }, each_ses_beta = complete_sample, each_ses_b = b_estimate, SIMPLIFY = FALSE)
+      # final_nums[final_nums != 0] <- 1
+      # final_out <- list(active = final_nums,
+      #                   excur_result = NULL)
+      # return(final_out)
+      return(final_nums)
     }
   }
