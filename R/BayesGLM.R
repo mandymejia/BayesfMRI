@@ -32,6 +32,16 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result
     stop("This function requires the INLA package (see www.r-inla.org/download)")
 
 
+  # Check to see if PARDISO is installed
+  if(!exists("inla.pardiso.check", mode = "function")){
+    warning("Please update to the latest version of INLA for full functionality and PARDISO compatibility (see www.r-inla.org/download)")
+  }else{
+    if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
+    warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
+    inla.pardiso()
+  }
+
+
   #check that only mesh OR vertices+faces supplied
   has_mesh <- !missing(mesh)
   has_verts_faces <- !missing(vertices) & !missing(faces)
