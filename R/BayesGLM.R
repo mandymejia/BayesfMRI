@@ -72,6 +72,17 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
     mesh <- make_mesh(vertices, faces)
   }
 
+
+  # # Mesh masking
+  # if(!is.null()){
+  #   mesh_orig <- mesh
+  #   mesh <- submesh.mesh(mask, mesh)
+  #
+  #   # # Mask the data too:
+  #   # data_orig <- data
+  #   # data <-
+  # }
+
   spde <- inla.spde2.matern(mesh)
 
   #collect data and design matrices
