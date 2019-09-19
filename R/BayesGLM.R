@@ -6,6 +6,7 @@
 #' @param vertices A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.
 #' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh.
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
+#' @param mask Sarah knows what this does!
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
