@@ -17,10 +17,10 @@ Imports:
     INLA (>= 0.0-1468840039),
     numDeriv,
     Matrix,
-    graphics
+    graphics,
+    excursions
 ImportsFrom: 
     grDevices chull rgb
-Suggests: excursions
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1

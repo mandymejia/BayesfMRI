@@ -17,7 +17,7 @@
 #'
 #' @export
 #' @examples \dontrun{}
-id_activations <- function(model_obj, method=c('posterior', '2means'), field_name=NULL, threshold=NULL, alpha=NULL, area.limit=NULL, type=c('point','sequential')){
+id_activations <- function(model_obj, method=c('posterior', '2means'), field_name=NULL, threshold=NULL, alpha=NULL, area.limit=NULL, type=c('point','sequential'), n_sample = NULL){
 
   if(class(model_obj) != 'BayesGLM') stop('The model_obj argument must be of class BayesGLM, but it is not.')
 
@@ -119,61 +119,91 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 #'
 #' @examples \dontrun{}
 #' @md
-id_activation.2means <- function(model_obj, field_name = NULL, type = "point", n_sample = NULL) {
-  if(!type %in% c("point","sequential")) stop("The type needs to be either 'point' or 'sequential'.")
-  if(type == "point") {
-    out <- sapply(model_obj$beta_estimates, function(est_type) {
-      if(is.null(field_name)) field_name <- colnames(est_type)
-      if(!any(field_name %in% colnames(est_type))) stop("Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1).")
-      est_type <- est_type[,which(colnames(est_type) %in% field_name)]
-      out2 <- sapply(split(est_type,col(est_type)), function(beta_est) {
-        vector_beta <- c(beta_est)
-        if(any(is.na(vector_beta))) vector_beta <- vector_beta[!is.na(vector_beta)]
-        km_beta <- kmeans(abs(vector_beta),2)
-        which_nonzero <- which.max(km_beta$centers[,1])
-        keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
-        return(keep_nonzero)
-      }, simplify = TRUE)
-      colnames(out2) <- colnames(est_type)
-      return(out2)
-    }, simplify = FALSE)
-    final_out <- list(active = out,
-                      excur_result = NULL)
-    return(final_out)
-  }
-  if(type == "sequential") {
-    if(is.null(n_sample)) n_sample <- 1000
-    n_remain <- n_sample
-    if(is.null(field_names)) field_name <- model_obj$beta_names
-    select_vars <- sapply(field_name, function(each_var) 0,
-                          simplify = FALSE)
-    complete_sample <- vector("list",length(model_obj$beta_names))
-    names(complete_sample) <- model_obj$beta_names
-    while(n_remain > 0) {
-      cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
-      next_sample_size <- min(n_remain,100)
-      test_sample <- inla.posterior.sample(n = next_sample_size,
-                                           result = model_obj$INLA_result,
-                                           selection = select_vars)
-      next_sample <- sapply(model_obj$beta_names, function(each_var) {
-        sapply(test_sample, function(each_sample) {
-          var_name <- gsub(":[0-9]*","",rownames(each_sample$latent))
-          var_sample <- each_sample$latent[var_name == each_var,]
-          return(var_sample)
-        }, simplify = "array")
-      },simplify = FALSE)
-      complete_sample <- mapply(function(cs,ns) {cbind(cs,ns)},
-                                cs = complete_sample, ns = next_sample, SIMPLIFY = FALSE)
-      n_remain <- n_remain - next_sample_size
+id_activations.2means <-
+  function(model_obj,
+           field_name = NULL,
+           type = "point",
+           n_sample = NULL) {
+    if (!type %in% c("point", "sequential"))
+      stop("The type needs to be either 'point' or 'sequential'.")
+    if (type == "point") {
+      out <- sapply(model_obj$beta_estimates, function(est_type) {
+        if (is.null(field_name))
+          field_name <- colnames(est_type)
+        if (!any(field_name %in% colnames(est_type)))
+          stop(
+            "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
+          )
+        est_type <-
+          est_type[, which(colnames(est_type) %in% field_name)]
+        out2 <-
+          sapply(split(est_type, col(est_type)), function(beta_est) {
+            vector_beta <- c(beta_est)
+            if (any(is.na(vector_beta)))
+              vector_beta <- vector_beta[!is.na(vector_beta)]
+            km_beta <- kmeans(abs(vector_beta), 2)
+            which_nonzero <- which.max(km_beta$centers[, 1])
+            keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
+            return(keep_nonzero)
+          }, simplify = TRUE)
+        colnames(out2) <- colnames(est_type)
+        return(list(active = out2,
+                    excur_result = NULL))
+      }, simplify = FALSE)
+      return(out)
     }
-    b_estimate <- sapply(complete_sample, function(betas){
-      median(apply(betas,1,sd))
-    })
-    final_nums <- mapply(s2m_B,B = complete_sample,
-                         sigma = b_estimate, SIMPLIFY = TRUE)
-    final_nums[final_nums != 0] <- 1
-    final_out <- list(active = final_nums,
-                      excur_result = NULL)
-    return(final_out)
+    if (type == "sequential") {
+      require(INLA)
+      if (is.null(n_sample)){
+        n_sample <- 1000
+      }
+      n_remain <- n_sample
+      if (is.null(field_name))
+        field_name <- model_obj$beta_names
+      select_vars <- sapply(field_name, function(each_var)
+        0,
+        simplify = FALSE)
+      complete_sample <- sapply(model_obj$session_names, function(ses) {
+        out <- vector("list", length = length(field_name))
+        names(out) <- field_name
+        return(out)
+      }, simplify = FALSE)
+      complete_sample <- vector("list", length(model_obj$beta_names))
+      names(complete_sample) <- model_obj$beta_names
+      while (n_remain > 0) {
+        cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
+        next_sample_size <- min(n_remain, 100)
+        test_sample <- inla.posterior.sample(
+          n = next_sample_size,
+          result = model_obj$INLA_result,
+          selection = select_vars
+        )
+        next_sample <-
+          sapply(model_obj$beta_names, function(each_var) {
+            sapply(test_sample, function(each_sample) {
+              var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
+              var_sample <- each_sample$latent[var_name == each_var, ]
+              return(var_sample)
+            }, simplify = "array")
+          }, simplify = FALSE)
+        complete_sample <- mapply(function(cs, ns) {
+          cbind(cs, ns)
+        },
+        cs = complete_sample,
+        ns = next_sample,
+        SIMPLIFY = FALSE)
+        n_remain <- n_remain - next_sample_size
+      }
+      b_estimate <- sapply(complete_sample, function(betas) {
+        median(apply(betas, 1, sd))
+      })
+      final_nums <- mapply(s2m_B,
+                           B = complete_sample,
+                           sigma = b_estimate,
+                           SIMPLIFY = TRUE)
+      final_nums[final_nums != 0] <- 1
+      final_out <- list(active = final_nums,
+                        excur_result = NULL)
+      return(final_out)
+    }
   }
-}

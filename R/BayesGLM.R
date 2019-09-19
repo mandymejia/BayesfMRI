@@ -27,6 +27,11 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result
 
   #INLA:::inla.dynload.workaround() #avoid error on creating mesh
 
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("INLA", quietly = TRUE))
+    stop("This function requires the INLA package (see www.r-inla.org/download)")
+
+
   #check that only mesh OR vertices+faces supplied
   has_mesh <- !missing(mesh)
   has_verts_faces <- !missing(vertices) & !missing(faces)
