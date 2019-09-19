@@ -17,7 +17,9 @@ Imports:
     INLA (>= 0.0-1468840039),
     numDeriv,
     Matrix,
-    graphics
+    graphics,
+    geometry,
+    rdist
 ImportsFrom: 
     grDevices chull rgb
 LazyData: true

@@ -6,7 +6,8 @@
 \usage{
 id_activations(model_obj, method = c("posterior", "2means"),
   field_name = NULL, threshold = NULL, alpha = NULL,
-  area.limit = NULL, type = c("point", "sequential"))
+  area.limit = NULL, type = c("point", "sequential"),
+  n_sample = NULL)
 }
 \arguments{
 \item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
