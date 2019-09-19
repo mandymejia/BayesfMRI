@@ -15,7 +15,7 @@
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
-BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result=TRUE, outfile){
+BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale=TRUE, return_INLA_result=TRUE, outfile = NULL){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -32,9 +32,19 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result
     stop("This function requires the INLA package (see www.r-inla.org/download)")
 
 
+  # Check to see if PARDISO is installed
+  if(!exists("inla.pardiso.check", mode = "function")){
+    warning("Please update to the latest version of INLA for full functionality and PARDISO compatibility (see www.r-inla.org/download)")
+  }else{
+    if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
+    warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
+    inla.pardiso()
+  }
+
+
   #check that only mesh OR vertices+faces supplied
-  has_mesh <- !missing(mesh)
-  has_verts_faces <- !missing(vertices) & !missing(faces)
+  has_mesh <- !is.null(mesh)
+  has_verts_faces <- !is.null(vertices) & !is.null(faces)
   has_howmany <- has_mesh + has_verts_faces
   if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')
 
@@ -54,13 +64,24 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
 
-  if(missing(outfile)){
+  if(is.null(outfile)){
     warning('No value supplied for outfile, which is required for post-hoc group modeling.')
   }
 
-  if(missing(mesh)) {
+  if(is.null(mesh)) {
     mesh <- make_mesh(vertices, faces)
   }
+
+
+  # # Mesh masking
+  # if(!is.null()){
+  #   mesh_orig <- mesh
+  #   mesh <- submesh.mesh(mask, mesh)
+  #
+  #   # # Mask the data too:
+  #   # data_orig <- data
+  #   # data <-
+  # }
 
   spde <- inla.spde2.matern(mesh)
 
@@ -150,7 +171,7 @@ BayesGLM <- function(data, vertices, faces, mesh, scale=TRUE, return_INLA_result
 
   class(result) <- "BayesGLM"
 
-  if(!missing(outfile)){
+  if(!is.null(outfile)){
     save(outfile, result)
   }
 
