@@ -119,7 +119,6 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 #' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, which is NULL for the 2means method.
 #' @export
 #'
-#' @examples \dontrun{}
 #' @md
 id_activations.2means <-
   function(model_obj,
@@ -165,8 +164,30 @@ id_activations.2means <-
       select_vars <- sapply(field_name, function(each_var)
         0,
         simplify = FALSE)
-      n_sess <- length(model_obj$session_names)
-      n_loc <- length(model_obj$INLA_result$marginals.random$bbeta1)/n_sess
+      b_dists <- sapply(model_obj$beta_estimates, function(est_type) {
+        if (is.null(field_name))
+          field_name <- colnames(est_type)
+        if (!any(field_name %in% colnames(est_type)))
+          stop(
+            "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
+          )
+        est_type <-
+          est_type[, which(colnames(est_type) %in% field_name)]
+        out2 <-
+          sapply(split(est_type, col(est_type)), function(beta_est) {
+            vector_beta <- c(beta_est)
+            if (any(is.na(vector_beta)))
+              vector_beta <- vector_beta[!is.na(vector_beta)]
+            km_beta <- kmeans(abs(vector_beta), 2)
+            which_nonzero <- which.max(km_beta$centers[, 1])
+            nz_beta <- vector_beta[km_beta$cluster == which_nonzero]
+            # keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
+            # return(keep_nonzero)
+            return(dist(range(nz_beta)))
+          }, simplify = TRUE)
+        names(out2) <- colnames(est_type)
+        return(out2)
+      }, simplify = FALSE)
       complete_sample <- sapply(model_obj$session_names, function(ses) {
         out <- vector("list", length = length(field_name))
         names(out) <- field_name
@@ -206,15 +227,17 @@ id_activations.2means <-
       # b_estimate <- sapply(complete_sample, function(betas) {
       #   median(apply(betas, 1, sd))
       # })
-      b_estimate <- sapply(complete_sample, function(each_ses) {
-        sapply(each_ses, function(betas) {
-          median(apply(betas, 1, sd))
-        })
-      }, simplify = FALSE)
-      final_nums <- mapply(s2m_B,
-                           B = complete_sample,
-                           sigma = b_estimate,
-                           SIMPLIFY = TRUE)
+      # b_estimate <- sapply(complete_sample, function(each_ses) {
+      #   sapply(each_ses, function(betas) {
+      #     # median(apply(betas, 1, sd))
+      #     min(apply(betas, 1, sd))
+      #   })
+      # }, simplify = FALSE)
+      b_estimate <- b_dists
+      # final_nums <- mapply(s2m_B,
+      #                      B = complete_sample,
+      #                      sigma = b_estimate,
+      #                      SIMPLIFY = TRUE)
       final_nums <- mapply(function(each_ses_beta,each_ses_b) {
         out_id <- mapply(s2m_B,B = each_ses_beta,
                          sigma = each_ses_b, SIMPLIFY = TRUE)
