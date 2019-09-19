@@ -25,7 +25,7 @@
 #
 # # Read in locations from actual data
 # locs <- read.csv('/Users/sarahryan/Desktop/loc.100307.csv')
-# lab <- read.csv('/Users/sarahryan/Desktop/labels.100307.csv')
+# labs <- read.csv('/Users/sarahryan/Desktop/labels.100307.csv')
 # value <- 21
 # max_dist <- 1
 #
@@ -35,7 +35,7 @@
 # # For example, sample the field:
 # Q = inla.spde2.precision(spde,theta = c(log(0.1),log(1)))
 # x = inla.qsample(Q=Q)
-create_spde_vol3D <- function(locs, lab, value = NULL, max_dist = NULL){
+create_spde_vol3D <- function(locs, labs, value = NULL, max_dist = NULL){
 
   # Which part to analyze
   if(!is.null(value)){
@@ -156,7 +156,8 @@ create_spde_vol3D <- function(locs, lab, value = NULL, max_dist = NULL){
                             theta.Q = Diagonal(2,c(1e-6,1e-6)),
                             transform = "identity")
 
-  return(spde)
+  out <- list(spde = spde, vertices = P_new, faces = FV_new)
+  return(out)
 }
 
 

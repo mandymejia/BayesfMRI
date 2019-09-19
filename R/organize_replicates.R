@@ -3,12 +3,13 @@
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param n_task Number of regressors or tasks
 #' @param mesh The mesh for the data
+#' @param spde_obj (Only for 3D volumetric data) The SPDE object from create_spde_vol3D().
 #'
 #' @return replicates vector and betas for sessions
 #' @export
 #'
 #' @examples \dontrun{}
-organize_replicates <- function(n_sess, n_task, mesh){
+organize_replicates <- function(n_sess, n_task, mesh = NULL, spde_obj = NULL){
 
 	# create vectors for each task:
 	#
@@ -17,7 +18,13 @@ organize_replicates <- function(n_sess, n_task, mesh){
 	# ith repl vector is an indicator vector for the cells corresponding to the ith column of x
 	# ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x
 
-	spatial <- mesh$idx$loc
+  if(!is.null(mesh)){
+    spatial <- mesh$idx$loc
+  }
+  if(!is.null(spde_obj)){
+    spatial <- spde_obj$vertices[,1]
+  }
+
 	nvox <- length(spatial)
 
 	grps <- ((1:(n_sess*n_task) + (n_task-1)) %% n_task) + 1 # 1, 2, .. n_task, 1, 2, .. n_task, ...
