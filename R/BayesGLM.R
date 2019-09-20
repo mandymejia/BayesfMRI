@@ -39,7 +39,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   }else{
     if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
     warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
-    inla.pardiso()
+    #inla.pardiso()
   }
 
 
