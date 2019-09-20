@@ -100,7 +100,7 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
   }
 
   #construct betas and repls objects
-  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, spde_obj = spde_obj)
+  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh = spde_obj)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
@@ -127,12 +127,12 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names) #posterior means of latent task field
-  theta_posteriors <- get_posterior_densities(object=INLA_result, spde) #hyperparameter posterior densities
+  theta_posteriors <- get_posterior_densities_vol3D(object=INLA_result, spde) #hyperparameter posterior densities
 
   #construct object to be returned
   if(return_INLA_result){
     result <- list(INLA_result = INLA_result,
-                   mesh = mesh,
+                   spde_obj = spde_obj,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
@@ -140,7 +140,7 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
                    call = match.call())
   } else {
     result <- list(INLA_result = NULL,
-                   mesh = mesh,
+                   spde_obj = spde_obj,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
@@ -152,7 +152,14 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
   class(result) <- "BayesGLM"
 
   if(!is.null(outfile)){
-    save(outfile, result)
+    if(!dir.exists(dirname(outfile))){dir.create(dirname(outfile))}
+    ext <- strsplit(outfile, split=".", fixed = TRUE)[[1]]
+    ext <- ext[length(ext)]
+    if(ext != "RDS"){
+      outfile <- sub(ext, "RDS", outfile)
+    }
+    message('File saved at: ', outfile)
+    save(result, file = outfile)
   }
 
   return(result)

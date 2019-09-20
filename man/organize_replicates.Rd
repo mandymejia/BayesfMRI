@@ -4,7 +4,7 @@
 \alias{organize_replicates}
 \title{Organize replicates}
 \usage{
-organize_replicates(n_sess, n_task, mesh)
+organize_replicates(n_sess, n_task, mesh = NULL)
 }
 \arguments{
 \item{n_sess}{The number of sessions sharing hyperparameters (can be different tasks)}
@@ -12,6 +12,8 @@ organize_replicates(n_sess, n_task, mesh)
 \item{n_task}{Number of regressors or tasks}
 
 \item{mesh}{The mesh for the data}
+
+\item{spde_obj}{(Only for 3D volumetric data) The SPDE object from create_spde_vol3D().}
 }
 \value{
 replicates vector and betas for sessions

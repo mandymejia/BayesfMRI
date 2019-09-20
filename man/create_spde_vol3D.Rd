@@ -4,16 +4,16 @@
 \alias{create_spde_vol3D}
 \title{Create SPDE for 3D volumetric data}
 \usage{
-create_spde_vol3D(locs, lab, value = NULL, max_dist = NULL)
+create_spde_vol3D(locs, labs, value = NULL, max_dist = NULL)
 }
 \arguments{
-\item{lab}{Labels of data points}
-
 \item{value}{Label value to analyze}
 
 \item{max_dist}{Maximum distance of new vertex locations from the original vertex locations}
 
 \item{loc}{Locations of data points}
+
+\item{lab}{Labels of data points}
 }
 \value{
 SPDE

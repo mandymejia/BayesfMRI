@@ -22,6 +22,3 @@ A nested list, where the first layer separates by session, and the second layer 
 \description{
 Identify activations using 2-means clustering methods
 }
-\examples{
-\dontrun{}
-}

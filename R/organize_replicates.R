@@ -9,7 +9,7 @@
 #' @export
 #'
 #' @examples \dontrun{}
-organize_replicates <- function(n_sess, n_task, mesh = NULL, spde_obj = NULL){
+organize_replicates <- function(n_sess, n_task, mesh = NULL){
 
 	# create vectors for each task:
 	#
@@ -18,12 +18,7 @@ organize_replicates <- function(n_sess, n_task, mesh = NULL, spde_obj = NULL){
 	# ith repl vector is an indicator vector for the cells corresponding to the ith column of x
 	# ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x
 
-  if(!is.null(mesh)){
-    spatial <- mesh$idx$loc
-  }
-  if(!is.null(spde_obj)){
-    spatial <- spde_obj$vertices[,1]
-  }
+  spatial <- mesh$idx$loc
 
 	nvox <- length(spatial)
 
