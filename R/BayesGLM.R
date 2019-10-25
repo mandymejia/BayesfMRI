@@ -4,12 +4,12 @@
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 #' List element names represent session names.
 #' @param vertices A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.
-#' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh.
+#' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
 #' @param mask Sarah knows what this does!
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
-#' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
+#' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
 #'
 #' @return A list containing...
 #' @export
@@ -150,6 +150,11 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names) #posterior means of latent task field
   theta_posteriors <- get_posterior_densities(object=INLA_result, spde) #hyperparameter posterior densities
 
+  #extract stuff needed for group analysis
+  mu.theta <- INLA_result$misc$theta.mode #for joint group model
+  Q.theta <- solve(INLA_result$misc$cov.intern) #for joint group model
+
+
   #construct object to be returned
   if(return_INLA_result){
     result <- list(INLA_result = INLA_result,
@@ -158,6 +163,8 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
+                   mu.theta = mu.theta,
+                   Q.theta = Q.theta,
                    call = match.call())
   } else {
     result <- list(INLA_result = NULL,
@@ -166,6 +173,8 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
+                   mu.theta = mu.theta,
+                   Q.theta = Q.theta,
                    call = match.call())
   }
 
