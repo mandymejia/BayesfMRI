@@ -151,8 +151,8 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   theta_posteriors <- get_posterior_densities(object=INLA_result, spde) #hyperparameter posterior densities
 
   #extract stuff needed for group analysis
-  mu.theta <- INLA_result$misc$theta.mode #for joint group model
-  Q.theta <- solve(INLA_result$misc$cov.intern) #for joint group model
+  mu.theta <- INLA_result$misc$theta.mode
+  Q.theta <- solve(INLA_result$misc$cov.intern)
 
 
   #construct object to be returned
@@ -163,8 +163,10 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
-                   mu.theta = mu.theta,
-                   Q.theta = Q.theta,
+                   mu.theta = mu.theta, #for joint group model
+                   Q.theta = Q.theta, #for joint group model
+                   y = y_all, #for joint group model
+                   X = X_all_list, #for joint group model
                    call = match.call())
   } else {
     result <- list(INLA_result = NULL,
@@ -173,8 +175,10 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
-                   mu.theta = mu.theta,
-                   Q.theta = Q.theta,
+                   mu.theta = mu.theta, #for joint group model
+                   Q.theta = Q.theta, #for joint group model
+                   y = y_all, #for joint group model
+                   X = X_all_list, #for joint group model
                    call = match.call())
   }
 
