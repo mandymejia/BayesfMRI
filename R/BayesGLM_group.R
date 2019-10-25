@@ -1,58 +1,44 @@
-#' Applies joint approach to group-level analysis to task fMRI data 
+#' Applies joint approach to group-level analysis to task fMRI data
 #'
-#' @param data A list of signle-session data of M subjects, where each subject is a list with elements
-#' BOLD, design and nuisance. See \code{?create.session} and \code{?is.session} for more details.
-#' List element names represent session names.
-#' @param vertices A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.
-#' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh.
-#' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
-#' @param mask Sarah knows what this does!
-#' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
-#' @param thresholds A vector of thresholds for activation maps.
-#' @param method The type of methods: joint and ...
+#' @param results Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.
+#' @param contrast A vector specifying the contrast of interest.  See Details for more information.
+#' @param no_cores The number of cores to use for sampling in parallel
+#'
+#' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1,M*K) would return the group average for each of K tasks;
+#' the vector `c(rep(1,M1*K)`, `rep(-1,M2*K))` would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
+#' the vector `rep(rep(1,-1,0,0),each=V),M)` would return the difference between the first two tasks (of 4), averaged over all subjects.
 #'
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
-BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale=TRUE,  thresholds=c(0,0.5,1)){
+BayesGLM_group <- function(results, contrasts, no_cores=NULL){
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
   # V = number of data locations
   # T = length of time series for each session (vector)
-  # K = number of unique tasks in all sessions
+  # K = number of tasks for each subject (each subject must have the same tasks)
+  # M = number of subjects
 
-  #need to check that sessions are consistent in terms of V, K?
+  #check that each subject-level object is of class BayesGLM_obj
+  #check that beta_names matches for all subjects
+  #check that mesh (triangle) matches for all subjects
 
-  #INLA:::inla.dynload.workaround() #avoid error on creating mesh
+  #check that results argument is in one of the two correct formats
+  #set up A matrix using the contrasts argument
 
-  # Check to see that the INLA package is installed
-  if (!requireNamespace("INLA", quietly = TRUE))
-    stop("This function requires the INLA package (see www.r-inla.org/download)")
-
-
-  # Check to see if PARDISO is installed
-  if(!exists("inla.pardiso.check", mode = "function")){
-    warning("Please update to the latest version of INLA for full functionality and PARDISO compatibility (see www.r-inla.org/download)")
-  }else{
-  if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
-  warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
-  #inla.pardiso()
- }
-
-
-  #check that only mesh OR vertices+faces supplied
-  has_mesh <- !is.null(mesh)
-  has_verts_faces <- !is.null(vertices) & !is.null(faces)
-  has_howmany <- has_mesh + has_verts_faces
-  if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')
-
-  #check that all elements of the data list are valid sessions and have the same number of locations and tasks
-
-  if(!is.list(data)) stop('I expect data to be a list, but it is not')
-    data_classes <- sapply(data, 'class')
-  if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
+  # #check that only mesh OR vertices+faces supplied
+  # has_mesh <- !is.null(mesh)
+  # has_verts_faces <- !is.null(vertices) & !is.null(faces)
+  # has_howmany <- has_mesh + has_verts_faces
+  # if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')
+  #
+  # #check that all elements of the data list are valid sessions and have the same number of locations and tasks
+  #
+  # if(!is.list(data)) stop('I expect data to be a list, but it is not')
+  #   data_classes <- sapply(data, 'class')
+  # if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
   # Find the numnber of subjects.
   subject_names <- names(data)
@@ -72,7 +58,7 @@ BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, m
 
   if(is.null(mesh)) {
     mesh <- make_mesh(vertices, faces)
-  } 
+  }
 
 
   spde <- inla.spde2.matern(mesh)
@@ -123,7 +109,7 @@ BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, m
         y_reg <- BOLD_s
         X_reg <- data[[s]]$design
       }
-      
+
       #set up data and design matrix
       data_org <- organize_data(y_reg, X_reg)
       y_vec <- data_org$y
@@ -133,7 +119,7 @@ BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, m
       # Computing cross-products for each subject
       Xcros.all[[mm]] <- crossprod(X_list[[1]])
       Xycros.all[[mm]] <- crossprod(X_list[[1]], y_vec)
- 
+
 
       model_data <- make_data_list(y=y_vec, X=X_list, betas=betas, repls=repls)
 
@@ -154,16 +140,16 @@ BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, m
 
   nsamp <- 50
   logwt <- rep(NA, nsamp)
-    
+
   theta.tmp <- mvrnorm(nsamp, mu.theta, solve(Q.theta))
   for(i in 1:nsamp){ logwt[i] <- F.logwt(theta.tmp[i,], spde[[h]], mu.theta, Q.theta, M) }
 
   #weights to apply to each posterior sample of theta
   wt.tmp <- exp(logwt - max(logwt))
-  wt <- wt.tmp/(sum(wt.tmp))  
-  
-  
-  ## Create index vectors 
+  wt <- wt.tmp/(sum(wt.tmp))
+
+
+  ## Create index vectors
   n.mesh <- mesh$n
   ind_beta <- list()
   for(k in 1:K){
@@ -171,20 +157,25 @@ BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, m
   }
 
   #get posterior quantities of beta, conditional on a value of theta
-  no_cores <- min(detectCores() - 1, 25)
-  cl <- makeCluster(no_cores)
-  t0 <- Sys.time()
+  if(is.null(no_cores)) {
+    parallel <- FALSE
+    beta.post.samps <- apply(theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=0.01, ind_beta=ind_beta)
+  } else {
+    max_no_cores <- min(detectCores() - 1, 25)
+    no_cores <- min(max_no_cores, no_cores)
+    cl <- makeCluster(no_cores)
+    beta.post.samps <- parApply(cl, theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=0.01, ind_beta=ind_beta)
+    print(Sys.time() - t0)
+    stopCluster(cl)
+  }
   #in sequence, 8 min per iteration for motor task,  5-6 min for gambling task (for 20 subjects and 3 activation thresholds)
   #in parallel, 21 min total for gambling task!
   #in parallel, 24 min for motor task!
   #with 50 iterations, we save 50*8 - 25 = 375 min (6.25 hours!)
-  U <- length(thresholds)
-  beta.post.samps <- parApply(cl, theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=0.01, ind_beta=ind_beta)
-  print(Sys.time() - t0)
-  stopCluster(cl)
 
 
   #organize samples
+  U <- length(thresholds)
   mu.tot <- matrix(nrow=K*n.mesh, ncol=nsamp)
   F.tot <- rep(list(rep(list(matrix(nrow=n.mesh, ncol=nsamp)), K)), U) #for each activation threshold and task, a Vx50 matrix
   for(itheta in 1:nsamp){
@@ -213,7 +204,7 @@ BayesGLM_group <- function(data, method = NULL, vertices = NULL, faces = NULL, m
   #posterior probabilities
   for(u in 1:U){
     for(k in 1:K){
-      F.pop.uk <- as.vector(F.tot[[u]][[k]]%*%wt) 
+      F.pop.uk <- as.vector(F.tot[[u]][[k]]%*%wt)
       probs.all[,k,u] <- as.vector(F.pop.uk)
     }
   }
