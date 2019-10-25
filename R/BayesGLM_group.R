@@ -1,4 +1,4 @@
-#' Applies group-level analysis to task fMRI data 
+#' Applies joint approach to group-level analysis to task fMRI data 
 #'
 #' @param data A list of signle-session data of M subjects, where each subject is a list with elements
 #' BOLD, design and nuisance. See \code{?create.session} and \code{?is.session} for more details.
