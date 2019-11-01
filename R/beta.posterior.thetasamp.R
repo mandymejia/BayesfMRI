@@ -16,10 +16,10 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alp
 	#theta - one sample of theta 
 
 	require(excursions)
-	require(INLA)
+	# require(INLA)
 	INLA:::inla.dynload.workaround() 
 
-	print('Constructing joint precision')
+	# print('Constructing joint precision')
 	prec.error <- exp(theta[1])
 	K <- length(theta[-1])/2
 	M <- length(Xcros)
@@ -37,7 +37,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alp
 	beta.samp.pop <- 0
 	beta.mean.pop <- 0
 	#~25 seconds per subject
-	print('Looping over subjects')
+	# print('Looping over subjects')
 	for(mm in 1:M){
 		Xcros.mm <- Xcros[[mm]]
 		Xycros.mm <- Xycros[[mm]]
@@ -56,7 +56,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alp
 	mu.theta <- matrix(beta.mean.pop, ncol=1)
 
 	#3.5-7 seconds per activation threshold
-	print('Looping over activation thresholds')
+	# print('Looping over activation thresholds')
 	n.mesh <- spde$n.spde
 	U <- length(thresholds)
 	F.theta <- vector('list', U)
@@ -64,7 +64,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alp
   		F.theta[[u]] <- matrix(nrow=n.mesh, ncol=K)
   		thr <- thresholds[u]
   		for(k in 1:K){
-  			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = '>', alpha = (1-alpha), verbose = FALSE)
+  			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = '>', alpha = alpha, verbose = FALSE)
   			F.theta[[u]][,k] <- res_beta.theta.k$F[ind_beta[[k]]]
   		}
   		F.theta[[u]][is.na(F.theta[[u]])] <- 0
