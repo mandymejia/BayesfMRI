@@ -15,7 +15,7 @@ List element names represent session names.}
 
 \item{vertices}{A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.}
 
-\item{faces}{A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh.}
+\item{faces}{A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.}
 
 \item{mesh}{A \code{inla.mesh} object.  Must be provided if and only if \code{vertices} and \code{faces} are not.}
 
@@ -25,7 +25,7 @@ List element names represent session names.}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
 
-\item{outfile}{File name where results will be written (for use by \code{BayesGLM_grp}).}
+\item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
 }
 \value{
 A list containing...

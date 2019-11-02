@@ -1,9 +1,2 @@
-^Meta$
-^doc$
-^README\.md
-^\.Rhistory
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^\.gitignore$
-^docs$
-^LICENSE\.md$

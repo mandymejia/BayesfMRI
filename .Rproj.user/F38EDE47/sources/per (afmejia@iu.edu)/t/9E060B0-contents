@@ -1,0 +1,456 @@
+---
+title: "BayesfMRI Tutorial"
+author: "Amanda Mejia"
+date: "7/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+library(knitr)
+library(rgl)
+knit_hooks$set(webgl = hook_webgl)
+```
+
+# Introduction
+
+Mejia et al. (2019) proposed a spatial Bayesian model for task fMRI analysis employing INLA for the Bayesian computation, as implemented in the `INLA` R package.  The `BayesfMRI` package allows users to implement the Bayesian GLM by preprocessing the data, organizing it into the proper format, calling the necessary functions from the `INLA` package, applying the excursions set method described in the paper to identify areas of activation, and computing posterior quantities of interest.
+
+We first provide a brief introduction to the Bayesian GLM model proposed by Mejia et al. (2019). Let $T$ be the number of fMRI time points, $V$ be the number of data locations, $\mathbf{y}$ be a vector of length $TV$ containing the BOLD data, $\mathbf{x}_k$ be the $k$th task regressor, and $\mathbf{X}_k=\mathbf{x}_k\otimes\mathbf{I}_V$ be a sparse $TV\times V$ design matrix for task $k$. The data locations must exist on a triangular mesh consisting of a set of vertices and faces or triangles.
+
+After pre-processing (e.g. centering, nuisance regression, prewhitening), the likelihood and priors are given by 
+
+$$
+\mathbf{y} = \sum_{k=1}^K \mathbf{X}_k \boldsymbol\beta_k + \boldsymbol\epsilon, \quad \boldsymbol\epsilon\sim N(\mathbf{0},\xi^{-1}\mathbf{I}_{TV}),
+$$
+$$
+\boldsymbol\beta_k = \boldsymbol\Psi\mathbf{w}_k,\quad \mathbf{w}_k|\boldsymbol\theta\sim N(\mathbf{0},\mathbf{Q}_{\kappa_k,\tau_k}^{-1})
+$$
+$$
+\boldsymbol\theta\sim \pi(\boldsymbol\theta),
+$$
+where $\boldsymbol\theta=(\xi,\kappa_1,\tau_1,\dots,\kappa_K,\tau_K)$ is the vector of all hyperparameters, $\boldsymbol\Psi$ is a $V\times V'$ matrix of piecewise linear basis functions relating the original data locations to $V'$ vertices in a triangular mesh ($\boldsymbol\Psi=\mathbf{I}_V$ if the mesh vertices are the same as the data locations), and $\mathbf{Q}_{\kappa_k,\tau_k}$ is the SPDE precision matrix for task $k$.  The form of the precision matrix is $\mathbf{Q}_{\kappa,\tau}=\tau^2\left(\kappa^4\mathbf{C}+2\kappa^2\mathbf{G} +\mathbf{G}\mathbf{C}^{-1}\mathbf{G}\right)$, where $\mathbf{G}$ is a sparse $V'\times V'$ matrix with non-zero entries in the cells corresponding to neighboring vertices, and $\mathbf{C}$ is a diagonal $V'\times V'$ matrix.
+
+The `BayesfMRI` R package is designed to allow the user to take a traditional task fMRI dataset, consisting of a BOLD $T\times V$ data matrix $\mathbf{Y}$, a $T\times K$ design matrix $\mathbf{X}$, and a $T\times J$ matrix of nuisance covariates $\mathbf{Z}$, along with a triangular mesh, and obtain an INLA model object and certain posterior quantities of interest (e.g. posterior means of latent task activation fields).
+
+## Installing the BayesfMRI package
+
+Before installing the `BayesfMRI` package, the R-INLA package must be installed by the user, as package is not available through CRAN. More information on installing R-INLA is available at \url{http://www.r-inla.org/download}.
+
+Depending on the libraries available on the base system, R-INLA may throw errors upon installation, loading or running certain functions. In particular, R-INLA was built on Ubuntu1604, and other Linux systems including RHEL7 may have binaries that are not compatible with R-INLA.  In this case, the user can simply run `INLA:::inla.dynload.workaround()` after loading INLA, as shown in the chunk below. Another option is to install a version of INLA built for an alternative Linux system. More information is available at \url{http://www.r-inla.org/events/alternativelinuxbuilds}.
+
+For faster computation with INLA, the PARDISO parallel linear algebra library is highly beneficial.  See `inla.pardiso()` for instructions on how to obtain a license.  The next chunk of code gives an example of enabling PARDISO by pointing to the file containing the license. 
+
+```{r}
+#install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+#library(INLA)
+#INLA:::inla.dynload.workaround() #this may be necessary on some systems other than Ubuntu1604 
+#inla.pardiso() #run this to get instructions on obtaining a PARDISO license
+#inla.setOption("pardiso.license", "~/pardiso.lic") #point to the file containing the active PARDISO license
+#inla.pardiso.check() #check that PARDISO is installed and working correctly
+```
+
+Once INLA is properly installed, the `BayesfMRI` package can be installed from github and loaded:
+
+```{r}
+#library(devtools)
+#install_github('mandymejia/BayesfMRI')
+library(BayesfMRI)
+```
+
+
+## The triangular mesh
+
+The first step is to create a triangular mesh encompassing the data locations. This mesh will determine the sparse structure of the SPDE precision matrix.
+
+For cortical surface fMRI, the data locations will typically be a set of vertices in the cortical surface mesh (e.g., a GIFTI file).  In this case, the user must provide (1) a $V\times 3$ matrix of vertex locations in Euclidean space and (2) a matrix of triangles, with each row containing the vertex indices corresponding to one of the mesh triangles.  The function `inla.mesh.create()` creates a constrained refined Delaunay triangulation starting with the initial set of data locations, adding vertices to satisfy size and shape constraints.  Here is an example of these two matrices and the resulting mesh produced by `make_mesh()`, which relies on `inla.mesh.create()`: 
+
+```{r, webgl=TRUE}
+library(gifti)
+surf_32K <- read_gifti('Q1-Q6_R440.L.inflated.32k_fs_LR.surf.gii')
+vertices <- surf_32K$data$pointset
+faces <- surf_32K$data$triangle
+dim(vertices)
+dim(faces)
+head(vertices)
+head(faces)
+mesh <- make_mesh(vertices, faces)
+open3d()
+plot(mesh, rgl=TRUE) 
+```
+
+**FILL IN HERE**
+
+```{r}
+#compute_vertex_areas(mesh) 
+```
+
+
+We can also apply a mask to the mesh to focus on a particular region or exclude certain areas.
+
+**Need to pick a better mask.**
+
+**Let's first plot the mesh with the masked values in a different color (like a 0/1 mask), then plot the submesh. The submesh is not that easy on the eyes.**
+
+```{r, webgl=TRUE}
+# library(cifti)
+# data_ts <- read_cifti('tfMRI_MOTOR_LR_Atlas.dtseries.nii')
+# ts1 <- data_ts$data[,1]
+# data <- read_cifti('RSN-networks.32k_fs_LR.dlabel.nii')
+# parcels <- data$data[1:32492,,1] #consider only left cortex
+# mask <- data > 10000 #(parcels==4) #largest RSN
+# submesh <- excursions::submesh.mesh(mask, mesh)
+# open3d()
+# plot(submesh, rgl=TRUE) 
+# 
+# x <- parcels[,1]
+# nColors <- 50
+# colindex <- as.integer(cut(x,breaks=nColors))
+# plot(mesh,col=heat.colors(nColors)[colindex], rgl=TRUE)
+
+```
+
+## Multi-session Bayesian GLM
+
+The same framework can be used when multiple task fMRI sessions are to be analyzed in the same model. Latent fields corresponding to the same task across multiple sessions share a prior distribution (practically speaking, this means they share hyperparameters), but they have different posteriors.  In reality, the tasks can differ across sessions, as long as it is reasonable to assume that the hyperparameters are common.  
+
+The data (BOLD, design matrix and nuisance covariates) from each session should be organized as a `session` object, and the sessions should be organized into a list to be passed to `BayesGLM()`.  The columns of the design matrix from the different sessions are assumed to correspond to the same tasks.  
+
+[Show the Bayesian GLM for multi-session data. The session-level data gets a super/subscript for session.]
+
+
+\newpage
+# Examples
+
+## Single-session Example
+
+For ease of visualization, here we consider a simulated 2-dimensional array of data representing a slice of a brain volume.  While the Bayesian GLM is designed primarily for cortical surface fMRI analysis (where the spatial dependence structure is simplified), the model can also be applied to volumetric fMRI data.
+
+When using volumetric data, we must start by creating an `inla.mesh` object based on a brain mask, since we do not have the triangles and faces matrices associated with cortical surface data.
+
+```{r, fig.width=3, fig.height=5, out.extra='angle=90', fig.show='hold'}
+## Load INLA package
+library(INLA)
+## Read in the mask
+load('example/Mask.Rdata') #mask3D
+
+## Create a mesh using inla.mesh.2d
+xy.in <- which(mask3D==1, arr.ind=TRUE)[,2:1]
+boundary <- inla.nonconvex.hull(xy.in, resolution = 100)
+mesh <- inla.mesh.2d(loc = xy.in, boundary = boundary, max.edge = c(2, 4))
+
+## Create a matrix to translate between original and mesh locations
+Amat <- inla.spde.make.A(mesh, loc=xy.in)
+
+## Plot mask and mesh
+image(t(mask3D), xaxt='n', yaxt='n', col=c('white','black'))
+plot(mesh, main='')
+```
+
+Next, set up the data for a single session as a list with the following fields: BOLD, design and nuisance (optional).
+
+```{r, fig.height=3}
+## Read in timeseries data
+dat <- as.matrix(read.csv('example/FWHM20_NoisyData_1.csv', header=FALSE))
+
+## Construct design matrix
+z1 <- as.matrix(read.table('example/Z1.txt'))
+z2 <- as.matrix(read.table('example/Z2.txt'))
+Z <- cbind(z1, z2)
+
+## Plot task regressors over time
+plot(z1, type='l', ylab='', main='HRF Task Regressors')
+lines(z2, col='red')
+
+## Build session data
+session <- list(BOLD = dat, design = Z)
+```
+
+The function `is.session()` can check whether the data is in a valid session format.
+
+```{r}
+is.session(session)
+```
+
+Finally, pass the data to the main function, `BayesGLM()`.
+
+```{r, cache=TRUE}
+data <- list(single_session = session)
+result <- BayesfMRI::BayesGLM(data, mesh=mesh)
+```
+
+### Posterior estimates of activation
+
+Done, whoo hoo!  Let's visualize the beta estimates (posterior means):
+
+```{r}
+library(ggplot2)
+visualize_vec2img <- function(values, field_names, xy.inds, pal=NULL, gradient2=FALSE, zlim=NULL){
+  
+  #values is a matrix where each column is a vectorized, masked image
+  #names are the names of the fields corresponding to each column of values
+  #xy.in are the col- and row-indices in the original image corresponding to the rows of values
+  #pal is the color palette to use for the image
+  #zlim is a vector of the lower and upper limits for the intensity values
+  
+  values_df <- data.frame(value = as.vector(values),
+                      field = rep(field_names, each=length(values)/length(field_names)),
+                      row = xy.inds[,1],
+                      col = xy.inds[,2])
+  
+  if(!is.null(zlim)){
+    print(paste0(sum(values_df$value > zlim[2]), ' pixels above upper z-limit')) #very few values
+    print(paste0(sum(values_df$value < zlim[1]), ' pixels above upper z-limit')) #very few values
+    values_df$value[values_df$value > zlim[2]] <- zlim[2]
+    values_df$value[values_df$value < zlim[1]] <- zlim[1]
+  }
+
+  p <- ggplot(values_df) +
+          geom_tile(aes(x = 41-row, y = col, color = value, fill = value)) +
+          facet_grid(. ~ field) + xlab('') + ylab('') +
+          theme_bw() + theme(panel.grid=element_blank())
+
+  if(!is.null(pal)){
+    p <- p + scale_color_gradientn("", colors=pal, na.value = "black", limits=zlim) +
+             scale_fill_gradientn("", colors=pal, na.value = "black", limits=zlim)
+  } else if (gradient2==TRUE) {
+      p <- p + scale_color_gradient2("", na.value = "black", limits=zlim) +
+               scale_fill_gradient2("", na.value = "black", limits=zlim)
+  } else {
+      p <- p + scale_color_gradient("", na.value = "black", limits=zlim) +
+          scale_fill_gradient("", na.value = "black", limits=zlim)
+  }
+  return(p)
+}
+
+visualize_vec2img(
+  values = Amat %*% result$beta_estimates$single_session,
+  field_names = c('beta1', 'beta2'),
+  pal = c('purple','blue','turquoise','yellow','orange','red','darkred'),
+  xy.inds = xy.in[,2:1],
+  zlim = c(-0.3, 1.3)
+)
+
+```
+
+
+### Posteriors of hyperparameters
+
+We can also visualize the posterior distributions of the SPDE hyperparameters for each latent field:
+
+```{r, fig.height=3}
+thetas <- result$theta_posteriors
+ggplot(thetas, aes(x=value, y=density, color=beta, group=beta)) + geom_line() +
+  facet_grid(. ~ param, scales='free')
+```
+
+
+### Identifying areas of activation
+
+We can then identify areas of activation using the `id_activations()` function. The method described in Mejia et al. (2019) is based on using the joint posterior distribution to estimate the "excursion set", the set of locations that exceed a given activation threshold with a certain probability level $1-\alpha$, based on their joint posterior distribution.  If we wish to exclude small, presumably spurious activations, we can set `area.limit` to be the smallest cluster size we would consider a true activation. Setting the activation threshold to 0 and $\alpha=0.05$:
+
+```{r}
+active_betas.posterior <-
+  id_activations(
+    model_obj = result,
+    method = "posterior",
+    field_name = NULL,
+    threshold = 0,
+    alpha = 0.05,
+    area.limit = NULL,
+    type = NULL
+  )
+
+table(active_betas.posterior$single_session$active)
+
+#make Vx2 matrix of values
+values <- Amat %*% active_betas.posterior$single_session$active
+#put NAs in background pixels
+values_all <- matrix(NA, nrow=length(mask3D), ncol=ncol(values))
+values_all[as.vector(mask3D) == 1,] <- as.matrix(values)
+
+visualize_vec2img(
+  values = values_all,
+  field_names = c('beta1', 'beta2'),
+  gradient2=TRUE,
+  xy.in = which(mask3D >= 0, arr.ind=TRUE)
+  )
+```
+
+
+An alternative technique implemented in the `id_activations()` function is (sequential) 2-means clustering.  Using standard 2-means clustering on the posterior means of each latent field, we get:
+
+```{r}
+active_betas.2meanspoint <-
+  id_activations(
+    model_obj = result,
+    method = "2means",
+    field_name = NULL,
+    threshold = NULL,
+    alpha = NULL,
+    area.limit = NULL,
+    type = "point"
+  )
+
+table(active_betas.2meanspoint$single_session$active)
+
+#make Vx2 matrix of values
+values <- Amat %*% active_betas.2meanspoint$single_session$active
+#put NAs in background pixels
+values_all <- matrix(NA, nrow=length(mask3D), ncol=ncol(values))
+values_all[as.vector(mask3D) == 1,] <- as.matrix(values)
+
+visualize_vec2img(
+  values = values_all,
+  field_names = c('beta1', 'beta2'),
+  gradient2=TRUE,
+  xy.in = which(mask3D >= 0, arr.ind=TRUE)
+  )
+
+```
+
+
+Alternatively, we can apply sequential 2-means clustering to each latent field to determine the number of activated locations $V^*$.  The `id_activations()` function with `method='2means'` and `type='sequential'` applies sequential 2-means to each of $M$ (M=1000 by default) posterior samples and determines $V^*$ as the median number of activated locations over all posterior samples.  The activated region is then given by the $V^*$ locations with the highest posterior mean values.
+
+```{r, cache=TRUE}
+
+active_betas.2meansseq <-
+  id_activations(
+    model_obj = result,
+    method = "2means",
+    field_name = NULL,
+    threshold = NULL,
+    alpha = NULL,
+    area.limit = NULL,
+    type = "sequential"
+  )
+
+table(active_betas.2meansseq$single_session$active)
+
+#make Vx2 matrix of values
+values <- Amat %*% active_betas.2meansseq$single_session$active
+#put NAs in background pixels
+values_all <- matrix(NA, nrow=length(mask3D), ncol=ncol(values))
+values_all[as.vector(mask3D) == 1,] <- as.matrix(values)
+
+visualize_vec2img(
+  values = values_all,
+  field_names = c('beta1', 'beta2'),
+  gradient2=TRUE,
+  xy.in = which(mask3D >= 0, arr.ind=TRUE)
+  )
+```
+
+
+\newpage
+## Multi-session Example
+
+The `BayesGLM()` function can also be used to simultaneously analyze data from multiple task fMRI sessions.  Sessions can be from the same subject or different subjects.  What defines multi-session data is a common set of tasks, which can have a different design paradigm (the timing of each task or stimulus during the session) for each session.  The tasks from each session can even differ in reality, as long as they can be assumed to have a common prior distribution.  For example, if during the first session the subject performed finger tapping and during the second session the subject performed toe wiggling, it might be reasonable to assume that the latent fields associated with each task have similar properties (i.e., smoothness, variance), and therefore assume the same spatial prior on each one. In this case, the data consisting of the two different task experiments could be combined into a multi-session dataset.
+
+
+```{r, fig.height=3}
+## Read in timeseries data
+dat2 <- as.matrix(read.csv('example/FWHM20_NoisyData_2.csv', header=FALSE))
+
+## Build session data
+session2 <- list(BOLD = dat2, design = Z) 
+```
+
+The function `is.session()` can check whether the data is in a valid session format.
+
+```{r}
+is.session(session2)
+```
+
+Finally, pass the data to the main function, `BayesGLM()`.
+
+```{r, cache=TRUE}
+data <- list(sess1 = session, sess2 = session2)
+result <- BayesfMRI::BayesGLM(data, mesh=mesh)
+```
+
+
+
+
+
+\newpage
+# The `BayesGLM` function
+
+The main inputs to the `BayesGLM()` function are (1) the data and (2) the vertices and faces matrices or mesh object.
+
+* The data argument is a list of sessions
+
+* A session is defined as a list containing the BOLD data, the design matrix, and (optionally) the matrix of nuisance covariates.  See `help(is.session)` for details.
+
+* Either a mesh OR vertices AND faces matrices must be supplied
+
+
+The `BayesGLM()` function performs the following steps:
+
+1. **Set up the mesh and SPDE object.**
+
+2. **Pre-process and organize the data (BOLD and design matrix) for each data session and combine sessions into lists.**
+
+    a. *Center and (optionally) scale the BOLD data, and center the design matrix.* 
+    If scale=TRUE, `scale_timeseries()` subtracts and divides each location's timeseries by the local mean to convert to units of percent signal change.  
+    If scale=FALSE, `scale_timeseries()` subtracts the local mean from each location's timeseries (removing the mean image)
+    
+    b. *Perform nuisance regression. (Optional)* The function `nuisance_regress()` regresses the matrix of nuisance parameters, if specified, from the data $\mathbf{Y}$ and the design matrix $\mathbf{X}$. This eliminates the nuisance regressors and their corresponding hyperparameters from the model, thereby reducing the computational complexity.
+    
+    c. *Transform the BOLD data and design matrix into the proper form.*  The `organize_data()` function transforms the traditional $T\times V$ data matrix $\mathbf{Y}$ (after scaling and nuisance regression) and $T\times K$ design matrix $\mathbf{X}$ into the format required for the Bayesian GLM.  Specifically, $\mathbf{Y}$ is transformed to a long vector, $\mathbf{y}$, and each column of $\mathbf{X}$ is transformed into a large sparse matrix. Recall that for each task $k$ (corresponding to the $k$th column of $\mathbf{X}$, $\mathbf{x}_k$), the Bayesian GLM expects a $TV\times V$ sparse design matrix of the form: 
+    
+        $$
+        \mathbf{X}_k = \mathbf{x}_k\otimes \mathbf{I}_V = 
+        \begin{bmatrix} \mathbf{x}_k & & & \\
+        & \mathbf{x}_k & & \\
+        & & \ddots & \\
+        & & & \mathbf{x}_k \end{bmatrix}.
+        $$
+  
+        The function returns a list containing $\mathbf{y}$ and $\mathbf{A}=[\mathbf{X}_1,\dots,\mathbf{X}_K]$, the concatenated sparse design matrices. 
+        
+3. **Construct the elements required for the `inla` function:**
+      
+    a) *Create the beta and replicate vectors with the `organize_replicates()` function.*  The formula for the Bayesian GLM is of the form `f ~ -1 + f(bbeta1, ...) + f(bbeta2, ...) + ...`  (see `help(f)` for details).  The `bbeta*` arguments are vectors containing the spatial locations (`spatial = mesh$idx$loc`) in the vector indices corresponding to each task.  If there are multiple data sessions, the `replicate` argument can be specified to specify which vector elements correspond to which session.  For example, consider the case where there are $K=2$ tasks and $J=3$ sessions.  The betas and replicates would be of the form
+        
+        ```
+        bbeta1 = (spatial NA ... NA spatial NA ... NA spatial NA ... NA)
+        bbeta2 = (NA ... NA spatial NA ... NA spatial NA ... NA spatial)
+        repl1 = (1 ... 1 NA ... NA 2 ... 2 NA ... NA 3 ... 3 NA ... NA)
+        repl2 = (NA ... NA 1 ... 1 NA ... NA 2 ... 2 NA ... NA 3 ... 3)
+        ```
+
+    
+    b) *Construct formula and specify initial values for hyperparameters.*  Continuing with the example of two tasks, the formula would take the form 
+        
+        ```
+        y ~ -1 + f(bbeta1, model = spde, replicate = repl1) + 
+                 f(bbeta2, model = spde, replicate = repl2)
+        ```
+        
+        If we wish to specify initial values for the hyperparameters of the SPDE model, these are specified in an argument to `make_formula()`. This argument is either a vector containing the hyperparameter initial values for all betas, or a list of length $K$ with each element containing a vector of the hyperparameter initial values for one of the betas. The formula would then take a form like
+        
+       ```
+        y ~ -1 + f(bbeta1, model = spde, replicate = repl1, 
+                   hyper = list(theta = list(initial = c(-2, 2)))) + 
+                 f(bbeta2, model = spde, replicate = repl2, 
+                   hyper = list(theta = list(initial = c(-2, 2))))
+        ```
+        
+    c) *Organize data in list format with `make_data_list()`.* This function combines the vectorized BOLD data, the sparse design matrices, and the beta and replicate vectors into a list as required by the `inla()` function.
+
+3. **Perform Bayesian computation with INLA.** The `estimate_model()` function passes the formula and data list to the `inla` function and specifies the required settings.  It can take arguments for the initial value of the residual precision (`prec_initial`), the number of parallel threads (`num.threads=4`), and the numerical integration strategy (`int.strategy`).
+
+4. **Extract useful posterior quantities.** 
+
+    a. `extract_estimates()` gets the posterior means for the latent task activation fields
+    b. `get_posterior_densities()` gets the marginal posterior densities for the hyperparameters for each latent field
+
+5. **Return the result.** The main function returns a list containing the INLA model object, the mesh, the extracted posterior quantities, and other values.
+
+
+
