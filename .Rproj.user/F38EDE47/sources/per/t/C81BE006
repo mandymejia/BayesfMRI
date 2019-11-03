@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "3632512280",
+    "hash" : "2480643087",
     "id" : "C81BE006",
-    "lastKnownWriteTime" : 1572656208,
-    "last_content_update" : 1572656208,
+    "lastKnownWriteTime" : 1572741202,
+    "last_content_update" : 1572741202492,
     "path" : "~/Box/SOFTWARE/BayesfMRI/R/BayesGLM_group.R",
     "project_path" : "R/BayesGLM_group.R",
     "properties" : {
-        "cursorPosition" : "91,31",
-        "scrollLine" : "79"
+        "cursorPosition" : "18,2",
+        "scrollLine" : "3"
     },
     "read_only" : false,
     "read_only_alternatives" : [

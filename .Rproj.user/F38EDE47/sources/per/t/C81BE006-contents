@@ -14,6 +14,8 @@
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
+#' @importFrom MASS mvrnorm
+#' @import parallel
 #'
 #' @examples \dontrun{}
 BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
@@ -27,14 +29,14 @@ BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha =
   # Collecting theta posteriors from subject models
   theta.sub <- NULL
   mu.theta.tmp <- Q.theta <- 0
-  
+
   for(m in 1:M){
 
       # Save it in BayesGLM()
-      res.hyper <- result[[m]]$INLA_result$summary.hyperpar 
-      
-      mu.tmp <- result[[m]]$mu.theta 
-      Q.tmp <- result[[m]]$Q.theta 
+      res.hyper <- result[[m]]$INLA_result$summary.hyperpar
+
+      mu.tmp <- result[[m]]$mu.theta
+      Q.tmp <- result[[m]]$Q.theta
 
       mu.theta.tmp <- mu.theta.tmp + as.vector(Q.tmp%*%mu.tmp)
       Q.theta <- Q.theta + Q.tmp
@@ -46,9 +48,9 @@ BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha =
   # Drawing samples from q(theta|y)
   nsamp <- 50
   logwt <- rep(NA, nsamp)
-  theta.tmp <-MASS::mvrnorm(nsamp, mu.theta, solve(Q.theta))
+  theta.tmp <- MASS::mvrnorm(nsamp, mu.theta, solve(Q.theta))
   for(i in 1:nsamp){
-    logwt[i] <- F.logwt(theta.tmp[i,], spde, mu.theta, Q.theta, M) 
+    logwt[i] <- F.logwt(theta.tmp[i,], spde, mu.theta, Q.theta, M)
   }
 
   #weights to apply to each posterior sample of theta
@@ -63,24 +65,24 @@ BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha =
   for(k in 1:K){
     ind_beta[[k]] <- 1:n.mesh + (k-1)*n.mesh
   }
-  
+
   ## Compute cross-products for single session
   A.lst <- vector("list", K)
   for(k in 1:K){
     A.lst[[k]] <- A
   }
-  Amat.tot <- bdiag(A.lst) 
-  
+  Amat.tot <- bdiag(A.lst)
+
   Xcros.all <- Xycros.all <- vector("list", M)
   for(m in 1:M){
     y_vec <- result[[m]]$y
     X_list <- result[[m]]$X
-    
+
     Xmat <- X_list[[1]]%*%Amat.tot
     Xcros.all[[m]] <- crossprod(Xmat)
     Xycros.all[[m]] <- crossprod(Xmat, y_vec)
   }
-  
+
   #get posterior quantities of beta, conditional on a value of theta
   if(is.null(no_cores)) {
     parallel <- FALSE
@@ -131,7 +133,7 @@ BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha =
       active.all[,k,u] <- as.vector(E.pop.uk)
     }
   }
-  
+
 
   result <- list(beta_estimates = betas.all, ppm = probs.all, active = active.all)
 
