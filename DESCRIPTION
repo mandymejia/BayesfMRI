@@ -21,6 +21,8 @@ Imports:
     geometry,
     rdist, 
     excursions
+Suggests:
+    parallel
 ImportsFrom: 
     grDevices chull rgb
 LazyData: true

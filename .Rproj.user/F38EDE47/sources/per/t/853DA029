@@ -1,22 +1,24 @@
 {
     "collab_server" : "",
     "contents" : "",
-    "created" : 1572656327195.000,
+    "created" : 1572739796606.000,
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
     "hash" : "2793463503",
-    "id" : "C62AD456",
+    "id" : "853DA029",
     "lastKnownWriteTime" : 1572656316,
     "last_content_update" : 1572656316,
     "path" : "~/Box/SOFTWARE/BayesfMRI/NAMESPACE",
     "project_path" : "NAMESPACE",
     "properties" : {
+        "cursorPosition" : "50,16",
+        "scrollLine" : "0"
     },
     "read_only" : true,
     "read_only_alternatives" : [
     ],
-    "relative_order" : 1,
+    "relative_order" : 2,
     "source_on_save" : false,
     "source_window" : "",
     "type" : "r_namespace"

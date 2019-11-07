@@ -14,6 +14,8 @@
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
+#' @importFrom MASS mvrnorm
+#' @import parallel
 #'
 #' @examples \dontrun{}
 BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
@@ -46,7 +48,7 @@ BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 
   # Drawing samples from q(theta|y)
   nsamp <- 50
   logwt <- rep(NA, nsamp)
-  theta.tmp <-MASS::mvrnorm(nsamp, mu.theta, solve(Q.theta))
+  theta.tmp <- MASS::mvrnorm(nsamp, mu.theta, solve(Q.theta))
   for(i in 1:nsamp){
     logwt[i] <- F.logwt(theta.tmp[i,], spde, mu.theta, Q.theta, M)
   }
