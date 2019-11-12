@@ -20,6 +20,7 @@
 #' @examples \dontrun{}
 BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
 
+  require(INLA)
   # Find the numnber of subjects.
   subject_names <- names(result)
   M <- length(subject_names)
@@ -79,8 +80,8 @@ BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 
     X_list <- result[[m]]$X
 
     Xmat <- X_list[[1]]%*%Amat.tot
-    Xcros.all[[m]] <- crossprod(Xmat)
-    Xycros.all[[m]] <- crossprod(Xmat, y_vec)
+    Xcros.all[[m]] <- Matrix::crossprod(Xmat)
+    Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
   }
 
   #get posterior quantities of beta, conditional on a value of theta
