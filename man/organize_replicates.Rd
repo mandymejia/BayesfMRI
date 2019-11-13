@@ -12,8 +12,6 @@ organize_replicates(n_sess, n_task, mesh = NULL)
 \item{n_task}{Number of regressors or tasks}
 
 \item{mesh}{The mesh for the data}
-
-\item{spde_obj}{(Only for 3D volumetric data) The SPDE object from create_spde_vol3D().}
 }
 \value{
 replicates vector and betas for sessions

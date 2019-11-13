@@ -7,13 +7,13 @@
 create_spde_vol3D(locs, labs, value = NULL, max_dist = NULL)
 }
 \arguments{
+\item{locs}{Locations of data points}
+
+\item{labs}{Labels of data points}
+
 \item{value}{Label value to analyze}
 
 \item{max_dist}{Maximum distance of new vertex locations from the original vertex locations}
-
-\item{loc}{Locations of data points}
-
-\item{lab}{Labels of data points}
 }
 \value{
 SPDE

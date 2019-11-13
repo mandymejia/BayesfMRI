@@ -4,21 +4,21 @@
 \alias{BayesGLM_group}
 \title{Applies joint approach to group-level analysis to task fMRI data}
 \usage{
-BayesGLM_group(results, A, contrasts = NULL, thresholds = 0,
+BayesGLM_group(result, A, contrasts = NULL, thresholds = 0,
   alpha = 0.05, no_cores = NULL)
 }
 \arguments{
-\item{results}{Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.}
+\item{result}{Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.}
 
 \item{A}{A matrix to translate between original and mesh locations.}
+
+\item{contrasts}{A vector specifying the contrast of interest.  See Details for more information.}
 
 \item{thresholds}{The vector of activation thresholds}
 
 \item{alpha}{The significance level for activation}
 
 \item{no_cores}{The number of cores to use for sampling in parallel}
-
-\item{contrast}{A vector specifying the contrast of interest.  See Details for more information.}
 }
 \value{
 A list containing...

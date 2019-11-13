@@ -3,7 +3,6 @@
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param n_task Number of regressors or tasks
 #' @param mesh The mesh for the data
-#' @param spde_obj (Only for 3D volumetric data) The SPDE object from create_spde_vol3D().
 #'
 #' @return replicates vector and betas for sessions
 #' @export

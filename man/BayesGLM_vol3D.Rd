@@ -12,6 +12,8 @@ BayesGLM_vol3D(data, spde_obj = NULL, scale = TRUE,
 BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 List element names represent session names.}
 
+\item{spde_obj}{Spatial partial differential equation for subcortical region of interest. See \code{?create_spde_vol3D} for more details.}
+
 \item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
