@@ -1,8 +1,8 @@
 #' Applies joint approach to group-level analysis to task fMRI data
 #'
-#' @param results Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.
+#' @param result Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.
 #' @param A A matrix to translate between original and mesh locations.
-#' @param contrast A vector specifying the contrast of interest.  See Details for more information.
+#' @param contrasts A vector specifying the contrast of interest.  See Details for more information.
 #' @param no_cores The number of cores to use for sampling in parallel
 #' @param thresholds The vector of activation thresholds
 #' @param alpha The significance level for activation
@@ -14,12 +14,12 @@
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
-#' @importFrom MASS mvrnorm
 #' @import parallel
 #'
 #' @examples \dontrun{}
-BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
+BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
 
+  require(INLA)
   # Find the numnber of subjects.
   subject_names <- names(result)
   M <- length(subject_names)
@@ -79,8 +79,8 @@ BayesGLM_group <- function(results, A, contrasts = NULL, thresholds = 0, alpha =
     X_list <- result[[m]]$X
 
     Xmat <- X_list[[1]]%*%Amat.tot
-    Xcros.all[[m]] <- crossprod(Xmat)
-    Xycros.all[[m]] <- crossprod(Xmat, y_vec)
+    Xcros.all[[m]] <- Matrix::crossprod(Xmat)
+    Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
   }
 
   #get posterior quantities of beta, conditional on a value of theta

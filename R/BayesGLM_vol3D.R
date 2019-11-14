@@ -3,6 +3,7 @@
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 #' List element names represent session names.
+#' @param spde_obj Spatial partial differential equation for subcortical region of interest. See \code{?create_spde_vol3D} for more details.
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
@@ -12,7 +13,7 @@
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @examples \dontrun{}
-BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result=TRUE, outfile = NULL){
+BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, outfile = NULL){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -61,7 +62,7 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
 
   # Create SPDE
   if(is.null(spde_obj)){
-    spde_obj <- create_spde_vol3D(locs = loc, labs = lab, value = 21, max_dist = 1)
+    stop("SPDE object is required. See \code{?create_spde_vol3D}")
   }
   spde <- spde_obj$spde
 
@@ -75,7 +76,7 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
     BOLD_s <- data[[s]]$BOLD
 
     #scale data to represent % signal change (or just center if scale=FALSE)
-    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale)
+    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose = FALSE)
     design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
 
     #regress nuisance parameters from BOLD data and design matrix
@@ -90,7 +91,7 @@ BayesGLM_vol3D <- function(data, spde_obj = NULL, scale=TRUE, return_INLA_result
     }
 
     #set up data and design matrix
-    data_org <- organize_data(y_reg, X_reg)
+    data_org <- organize_data(y_reg, X_reg, transpose = FALSE)
     y_vec <- data_org$y
     X_list <- list(data_org$A)
     names(X_list) <- session_names[s]

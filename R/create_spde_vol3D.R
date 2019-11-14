@@ -2,8 +2,8 @@
 #'
 #' Create SPDE for 3D volumetric data
 #'
-#' @param loc Locations of data points
-#' @param lab Labels of data points
+#' @param locs Locations of data points
+#' @param labs Labels of data points
 #' @param value Label value to analyze
 #' @param max_dist Maximum distance of new vertex locations from the original vertex locations
 #'

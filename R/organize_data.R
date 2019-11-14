@@ -5,6 +5,7 @@
 #'
 #' @param y the TxV data matrix containing the fMRI timeseries
 #' @param X the TxK design matrix with K task-related columns
+#' @param transpose Check orientation of data, which, if TRUE, will transpose the data when the number of time points is greater than the number of voxels. Note: this is not always true for subcortical regions.
 #'
 #' @return A list containing fields `y` and `A` (see Details)
 #'
@@ -16,13 +17,13 @@
 #' @importFrom Matrix sparseMatrix
 #'
 #' @examples \dontrun{}
-organize_data <- function(y, X){
+organize_data <- function(y, X, transpose = TRUE){
 
 	ntime <- nrow(y)
 	nvox <- ncol(y)
 
 	#check orientation, send warning message and transpose if necessary
-	if(ntime > nvox){
+	if(ntime > nvox & transpose == TRUE){
 		warning('More columns than rows. Transposing matrix so rows are data locations and columns are time points')
 		y <- t(y)
 		ntime <- nrow(y)
