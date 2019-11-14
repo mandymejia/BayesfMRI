@@ -1,6 +1,6 @@
 #' Internal function used in joint approach to group-analysis
 #'
-#' @param theta
+#' @param theta A sample of theta (hyperparameters)
 #' @param spde A SPDE object from inla.spde2.matern() function.
 #' @param Xcros A crossproduct of design matrix.
 #' @param Xycros A crossproduct of design matrix and BOLD y.
@@ -12,10 +12,6 @@
 #'
 #' @examples \dontrun{}
 beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alpha=0.01, ind_beta){
-
-	#theta - one sample of theta
-
-	#INLA:::inla.dynload.workaround()
 
 	# print('Constructing joint precision')
 	prec.error <- exp(theta[1])
