@@ -1,23 +1,21 @@
 #' Internal function used in joint approach to group-analysis
 #'
-#' @param theta 
-#' @param spde A SPDE object from inla.spde2.matern() function. 
+#' @param theta
+#' @param spde A SPDE object from inla.spde2.matern() function.
 #' @param Xcros A crossproduct of design matrix.
 #' @param Xycros A crossproduct of design matrix and BOLD y.
 #' @param thresholds A vector of thresholds for activation maps.
 #' @param ind_beta A vector of indices of beta.
 #' @return A list containing...
 #' @export
-#' @importFrom INLA inla.spde2.matern
+#' @importFrom excursions excursions.mc
 #'
 #' @examples \dontrun{}
 beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alpha=0.01, ind_beta){
-	
-	#theta - one sample of theta 
 
-	require(excursions)
-	# require(INLA)
-	INLA:::inla.dynload.workaround() 
+	#theta - one sample of theta
+
+	#INLA:::inla.dynload.workaround()
 
 	# print('Constructing joint precision')
 	prec.error <- exp(theta[1])
@@ -28,11 +26,11 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alp
 	#for given sampled values of theta
 	theta.beta <- list()
 	Q.beta <- list()
-	for(k in 1:K) { 
+	for(k in 1:K) {
 		theta.beta[[k]] <- theta[(2:3) + 2*(k-1)] #2:3, 4:5, ...
 		Q.beta[[k]] <- inla.spde2.precision(spde, theta = theta.beta[[k]])
 	}
-	Q <- bdiag(Q.beta) 
+	Q <- bdiag(Q.beta)
 
 	beta.samp.pop <- 0
 	beta.mean.pop <- 0
@@ -41,7 +39,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, thresholds, alp
 	for(mm in 1:M){
 		Xcros.mm <- Xcros[[mm]]
 		Xycros.mm <- Xycros[[mm]]
-		Q.m <- prec.error*Xcros.mm + Q 
+		Q.m <- prec.error*Xcros.mm + Q
 		mu.m <- inla.qsolve(Q.m, prec.error*Xycros.mm) #20 sec
 		beta.mean.pop <- beta.mean.pop + mu.m/M
 

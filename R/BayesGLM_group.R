@@ -14,12 +14,12 @@
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
+#' @importFrom MASS mvrnorm
 #' @import parallel
 #'
 #' @examples \dontrun{}
 BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
 
-  require(INLA)
   # Find the numnber of subjects.
   subject_names <- names(result)
   M <- length(subject_names)

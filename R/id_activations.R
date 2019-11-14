@@ -63,11 +63,12 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
 #'
 #' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, an object of class excurobj (see `help(excursions.inla)` for more information).
 #'
+#' @importFrom excursions excursions.inla
+#'
 #' @export
 #' @examples \dontrun{}
 id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alpha=0.05, area.limit=NULL){
 
-  require(excursions)
 
   session_names <- model_obj$session_names
 	n_sess <- length(session_names)

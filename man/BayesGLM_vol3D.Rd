@@ -4,8 +4,8 @@
 \alias{BayesGLM_vol3D}
 \title{Applies spatial Bayesian GLM to task fMRI data for 3D subcortical volumes}
 \usage{
-BayesGLM_vol3D(data, spde_obj = NULL, scale = TRUE,
-  return_INLA_result = TRUE, outfile = NULL)
+BayesGLM_vol3D(data, spde_obj, scale = TRUE, return_INLA_result = TRUE,
+  outfile = NULL)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements

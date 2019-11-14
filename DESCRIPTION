@@ -20,7 +20,8 @@ Imports:
     graphics,
     geometry,
     rdist, 
-    excursions
+    excursions,
+    MASS
 Suggests:
     parallel
 ImportsFrom: 

@@ -62,7 +62,7 @@ BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, 
 
   # Create SPDE
   if(is.null(spde_obj)){
-    stop("SPDE object is required. See \code{?create_spde_vol3D}")
+    stop("SPDE object is required. See ?create_spde_vol3D")
   }
   spde <- spde_obj$spde
 
