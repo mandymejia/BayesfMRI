@@ -2,14 +2,14 @@
 #'
 #' @param result Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.
 #' @param A A matrix to translate between original and mesh locations.
-#' @param contrasts A vector specifying the contrast of interest.  See Details for more information.
+#' @param contrasts A vector of length M*K specifying the contrast of interest.  See Details for more information.
 #' @param no_cores The number of cores to use for sampling in parallel
 #' @param thresholds The vector of activation thresholds
 #' @param alpha The significance level for activation
 #'
-#' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1,M*K) would return the group average for each of K tasks;
-#' the vector `c(rep(1,M1*K)`, `rep(-1,M2*K))` would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
-#' the vector `rep(rep(1,-1,0,0),each=V),M)` would return the difference between the first two tasks (of 4), averaged over all subjects.
+#' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1/M,M*K) would return the group average for each of K tasks;
+#' the vector `c(rep(1/M1,M1*K)`, `rep(-1/M2,M2*K))` would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
+#' the vector `rep(rep(1/M,-1/M,0,...,0),each=V),M)` would return the difference between the first two tasks, averaged over all subjects.
 #'
 #' @return A list containing...
 #' @export
