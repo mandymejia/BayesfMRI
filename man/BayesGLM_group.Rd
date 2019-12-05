@@ -12,7 +12,7 @@ BayesGLM_group(result, A, contrasts = NULL, thresholds = 0,
 
 \item{A}{A matrix to translate between original and mesh locations.}
 
-\item{contrasts}{A vector specifying the contrast of interest.  See Details for more information.}
+\item{contrasts}{A vector of length M*K specifying the contrast of interest.  See Details for more information.}
 
 \item{thresholds}{The vector of activation thresholds}
 
@@ -27,9 +27,9 @@ A list containing...
 Applies joint approach to group-level analysis to task fMRI data
 }
 \details{
-The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1,M*K) would return the group average for each of K tasks;
-the vector \code{c(rep(1,M1*K)}, \code{rep(-1,M2*K))} would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
-the vector \code{rep(rep(1,-1,0,0),each=V),M)} would return the difference between the first two tasks (of 4), averaged over all subjects.
+The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1/M,M*K) would return the group average for each of K tasks;
+the vector \code{c(rep(1/M1,M1*K)}, \code{rep(-1/M2,M2*K))} would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
+the vector \code{rep(rep(1/M,-1/M,0,...,0),each=V),M)} would return the difference between the first two tasks, averaged over all subjects.
 }
 \examples{
 \dontrun{}

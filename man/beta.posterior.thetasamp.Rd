@@ -8,6 +8,8 @@ beta.posterior.thetasamp(theta, spde, Xcros, Xycros, thresholds,
   alpha = 0.01, ind_beta)
 }
 \arguments{
+\item{theta}{A sample of theta (hyperparameters)}
+
 \item{spde}{A SPDE object from inla.spde2.matern() function.}
 
 \item{Xcros}{A crossproduct of design matrix.}
