@@ -156,7 +156,7 @@ create_spde_vol3D <- function(locs, labs, value = NULL, max_dist = NULL){
                             theta.Q = Diagonal(2,c(1e-6,1e-6)),
                             transform = "identity")
 
-  out <- list(spde = spde, vertices = P_new, faces = FV_new, idx = list(loc = I))
+  out <- list(spde = spde, vertices = P_new, faces = FV_new, idx = list(loc = I), Amat = A)
   return(out)
 }
 
