@@ -7,9 +7,9 @@
 #' @param thresholds The vector of activation thresholds
 #' @param alpha The significance level for activation
 #'
-#' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1/M,M*K) would return the group average for each of K tasks;
+#' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector `rep(1/M,M*K)` would return the group average for each of K tasks;
 #' the vector `c(rep(1/M1,M1*K)`, `rep(-1/M2,M2*K))` would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
-#' the vector `rep(rep(1/M,-1/M,0,...,0),each=V),M)` would return the difference between the first two tasks, averaged over all subjects.
+#' the vector `rep(rep(1/M,-1/M,0,...,0)),M)` would return the difference between the first two tasks, averaged over all subjects.
 #'
 #' @return A list containing...
 #' @export
