@@ -15,14 +15,14 @@
 #' @importFrom excursions excursions.mc
 #'
 #' @examples \dontrun{}
-beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thresholds, alpha=0.05, ind_beta){
+beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thresholds, thresholds.contr, type, type.contr, alpha, alpha.contr, ind_beta){
 
-	# print('Constructing joint precision')
+	# print('contructing joint precision')
 	prec.error <- exp(theta[1])
 	K <- length(theta[-1])/2
 	M <- length(Xcros)
 
-	#construct prior precision matrix for beta, Q_theta,
+	#contruct prior precision matrix for beta, Q_theta,
 	#for given sampled values of theta
 	theta.beta <- list()
 	Q.beta <- list()
@@ -57,18 +57,8 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thre
 	  }
 	}
 	
-	beta.mean.pop.lst <-  beta.samp.pop.lst <- list()
-	if(is.null(contrasts) == FALSE){
-	  for(n.ctr in 1:length(contrasts)){
-	    ctr.vec <- contrasts[[n.ctr]]
-	    beta.mean.pop.lst[[n.ctr]] <- t(kronecker(ctr.vec, Idn))%*%beta.mean.pop.mat  # NKx1 or Nx1
-	    beta.samp.pop.lst[[n.ctr]] <- t(kronecker(ctr.vec, Idn))%*%beta.samp.pop.mat  # NKx100 or Nx100
-	  }
-	}
-	
-	
+	## Compute results for beta averages over subjects (default)
 	mu.theta <- matrix(beta.mean.pop, ncol=1)
-
 	#3.5-7 seconds per activation threshold
 	# print('Looping over activation thresholds')
 	n.mesh <- spde$n.spde
@@ -78,13 +68,50 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thre
   		F.theta[[u]] <- matrix(nrow=n.mesh, ncol=K)
   		thr <- thresholds[u]
   		for(k in 1:K){
-  			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = '>', alpha = alpha, verbose = FALSE)
+  			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = type, alpha = alpha, verbose = FALSE)
   			F.theta[[u]][,k] <- res_beta.theta.k$F[ind_beta[[k]]]
   		}
   		F.theta[[u]][is.na(F.theta[[u]])] <- 0
   	}
+	
+	
+	## Compute results for contrasts
+	if(is.null(contrasts) == FALSE){
+	  mu.contr <- F.contr <- vector('list', length(contrasts))
+	  
+	  for(n.ctr in 1:length(contrasts)){
+	    
+	    # Loop over contrasts
+	    ctr.vec <- contrasts[[n.ctr]]
+	    beta.mean.pop.contr <- as.vector(t(kronecker(ctr.vec, Idn))%*%beta.mean.pop.mat)  # NKx1 or Nx1
+	    beta.samp.pop.contr <- t(kronecker(ctr.vec, Idn))%*%beta.samp.pop.mat  # NKx100 or Nx100
+	    mu.theta.contr <- matrix(beta.mean.pop.contr, ncol=1)
+	    
+	    # Loop over activation thresholds for each contrast
+	    n.mesh <- spde$n.spde
+	    K.contr <- dim(mu.theta.contr)[1]/n.mesh
+	    U <- length(thresholds.contr)
+	    F.theta.contr <- vector('list', U)
+	    for(u in 1:U){
+	      F.theta.contr[[u]] <- matrix(nrow = n.mesh, ncol = K.contr)
+	      thr <- thresholds.contr[u]
+	      for(k in 1:K.contr){
+	        res_contr.k <- excursions.mc(beta.samp.pop.contr, u = thr, ind = ind_beta[[k]], type = type.contr, alpha = alpha.contr, verbose = FALSE)
+	        F.theta.contr[[u]][,k] <- res_contr.k$F[ind_beta[[k]]]
+	      }
+	      F.theta.contr[[u]][is.na(F.theta.contr[[u]])] <- 0
+	    }
+	    
+	    mu.contr[[n.ctr]] <- mu.theta.contr
+	    F.contr[[n.ctr]] <- F.theta.contr
+	  }
+	  
+	}else{
+	  mu.contr = NULL
+	  F.contr = NULL
+	}
 
-  	result <- list(mu.theta, F.theta)
-  	names(result) <- c('mu','F')
+  	result <- list(mean = list(mu = mu.theta, F = F.theta), contr = list(mu = mu.contr, F = F.contr))
+  	# names(result) <- c('mu','F')
   	return(result)
 }

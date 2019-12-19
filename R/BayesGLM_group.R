@@ -18,7 +18,7 @@
 #' @import parallel
 #'
 #' @examples \dontrun{}
-BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
+BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, thresholds.contr = 0, type = NULL, type.contr = NULL, alpha = 0.05, alpha.contr = 0.05, no_cores=NULL){
 
   # Find the numnber of subjects.
   subject_names <- names(result)
@@ -86,12 +86,12 @@ BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 
   #get posterior quantities of beta, conditional on a value of theta
   if(is.null(no_cores)) {
     parallel <- FALSE
-    beta.post.samps <- apply(theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, Xcros.all, Xycros.all, thresholds=thresholds, alpha=alpha, ind_beta=ind_beta)
+    beta.post.samps <- apply(theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, Xcros.all, Xycros.all, thresholds=thresholds, alpha=alpha, alpha=alpha.contr, ind_beta=ind_beta)
   } else {
     max_no_cores <- min(detectCores() - 1, 25)
     no_cores <- min(max_no_cores, no_cores)
     cl <- makeCluster(no_cores)
-    beta.post.samps <- parApply(cl, theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=alpha, ind_beta=ind_beta)
+    beta.post.samps <- parApply(cl, theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=alpha, alpha.contr, ind_beta=ind_beta)
     print(Sys.time() - t0)
     stopCluster(cl)
   }
