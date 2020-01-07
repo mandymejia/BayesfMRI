@@ -4,8 +4,12 @@
 #' @param A A matrix to translate between original and mesh locations.
 #' @param contrasts A vector of length M*K specifying the contrast of interest.  See Details for more information.
 #' @param no_cores The number of cores to use for sampling in parallel
+#' @param type The type of excursion function for mean beta (">", "<", "!=")
+#' @param type.contr The list of types of excursion function for contrasts (">", "<", "!=")
 #' @param thresholds The vector of activation thresholds
+#' @param thresholds.contr The list of activation thresholds for contrasts
 #' @param alpha The significance level for activation
+#' @param alpha.contr The list of activation significance levels for contrasts
 #'
 #' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector `rep(1/M,M*K)` would return the group average for each of K tasks;
 #' the vector `c(rep(1/M1,M1*K)`, `rep(-1/M2,M2*K))` would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
@@ -18,7 +22,7 @@
 #' @import parallel
 #'
 #' @examples \dontrun{}
-BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, thresholds.contr = 0, type = NULL, type.contr = NULL, alpha = 0.05, alpha.contr = 0.05, no_cores=NULL){
+BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, thresholds.contr = 0, type = NULL, type.contr = NULL, alpha = 0.05, alpha.contr = NULL, no_cores=NULL){
 
   # Find the numnber of subjects.
   subject_names <- names(result)
