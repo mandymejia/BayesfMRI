@@ -1,6 +1,6 @@
 #' Internal function used in joint approach to group-analysis
 #'
-#' @param theta A sample of theta (hyperparameters)
+#' @param theta A sample of theta (hyperparameters).
 #' @param spde A SPDE object from inla.spde2.matern() function.
 #' @param Xcros A crossproduct of design matrix.
 #' @param Xycros A crossproduct of design matrix and BOLD y.
@@ -73,7 +73,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thre
   		F.theta[[u]] <- matrix(nrow=n.mesh, ncol=K)
   		thr <- thresholds[u]
   		for(k in 1:K){
-  			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = type, alpha = alpha, verbose = FALSE)
+  			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = type, alpha = alpha)
   			F.theta[[u]][,k] <- res_beta.theta.k$F[ind_beta[[k]]]
   		}
   		F.theta[[u]][is.na(F.theta[[u]])] <- 0
