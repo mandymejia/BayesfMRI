@@ -5,12 +5,11 @@
 #' @param Xcros A crossproduct of design matrix.
 #' @param Xycros A crossproduct of design matrix and BOLD y.
 #' @param thresholds A vector of thresholds for activation maps.
+#' @param thresholds.contr The list of activation thresholds for contrasts.
 #' @param ind_beta A vector of indices of beta.
 #' @param contrasts A list of vectors of length M*K specifying the contrasts of interest.  See Details for more information.
 #' @param type The type of excursion function for mean beta (">", "<", "!=")
 #' @param type.contr The list of types of excursion function for contrasts (">", "<", "!=")
-#' @param thresholds The vector of activation thresholds
-#' @param thresholds.contr The list of activation thresholds for contrasts
 #' @param alpha The significance level for activation
 #' @param alpha.contr The list of activation significance levels for contrasts
 #'
