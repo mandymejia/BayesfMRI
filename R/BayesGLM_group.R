@@ -22,7 +22,7 @@
 #' @import parallel
 #'
 #' @examples \dontrun{}
-BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, thresholds.contr = 0, type = NULL, type.contr = NULL, alpha = 0.05, alpha.contr = NULL, no_cores=NULL){
+BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, thresholds.contr = NULL, type = NULL, type.contr = NULL, alpha = 0.05, alpha.contr = NULL, no_cores=NULL){
 
   # Find the numnber of subjects.
   subject_names <- names(result)
