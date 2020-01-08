@@ -96,7 +96,7 @@ BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, threshol
     max_no_cores <- min(detectCores() - 1, 25)
     no_cores <- min(max_no_cores, no_cores)
     cl <- makeCluster(no_cores)
-    beta.post.samps <- parApply(cl, theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=alpha, alpha.contr, ind_beta=ind_beta)
+    beta.post.samps <- parApply(cl, theta.tmp, MARGIN=1, FUN=beta.posterior.thetasamp, spde=spde, K=K, M, Xcros.all, Xycros.all, thresholds=thresholds, alpha=alpha, ind_beta=ind_beta)
     print(Sys.time() - t0)
     stopCluster(cl)
   }

@@ -89,7 +89,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thre
 	    # Loop over contrasts (need to work on ctr.vec)
 	    ctr.mat <- contrasts[[n.ctr]]
 	    beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
-	    beta.samp.pop.contr <- ctr.mat%*%beta.samp.pop.mat  # NKx100 or Nx100
+	    beta.samp.pop.contr <- as.matrix(ctr.mat%*%beta.samp.pop.mat)  # NKx100 or Nx100
 	    mu.theta.contr <- matrix(beta.mean.pop.contr, ncol=1)
 	    
 	    # Loop over activation thresholds for each contrast
