@@ -143,7 +143,7 @@ for(u in 1:U){
 if(is.null(contrasts) == FALSE){
 #organize samples
 betas.all.contr <- probs.all.contr <- active.all.contr <- list()
-for(i.contr in 1:length(contrasts)){
+ for(i.contr in 1:length(contrasts)){
   K.contr <- dim(contrasts[[i.contr]])[1]/n.mesh
   U.contr <- length(thresholds.contr[[i.contr]])
   mu.tot.contr <- matrix(nrow=K.contr*n.mesh, ncol=nsamp)
@@ -180,7 +180,9 @@ for(i.contr in 1:length(contrasts)){
   betas.all.contr[[i.contr]] <- betas.all
   probs.all.contr[[i.contr]] <- probs.all
   active.all.contr[[i.contr]] <- active.all
-}
+ }
+} else{
+  betas.all.contr <- probs.all.contr <- active.all.contr <- NULL
 }
 
 ### Save all results 
