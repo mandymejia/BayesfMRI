@@ -51,21 +51,20 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thre
 		Q.m <- prec.error*Xcros.mm + Q
 		mu.m <- inla.qsolve(Q.m, prec.error*Xycros.mm) #20 sec  NK x 1
 		#draw samples from pi(beta_m|theta,y)
-	  beta.samp.m <- inla.qsample(n = 100, Q = Q.m, mu = mu.m) #NK x 100
+	    beta.samp.m <- inla.qsample(n = 100, Q = Q.m, mu = mu.m) #NK x 100
 	  
-	  if(is.null(contrasts)){ ## return group mean for each task by default
+	    ## return group mean for each task by default
 	    beta.mean.pop <- beta.mean.pop + mu.m/M
 	    beta.samp.pop <- beta.samp.pop + beta.samp.m/M #NKx100
-	  } else{
-	    beta.mean.pop.mat <- c(beta.mean.pop.mat, mu.m) #NKM x 1
-	    beta.samp.pop.mat <- rBind(beta.samp.pop.mat, beta.samp.m) #NKM x 100
-	  }
+
+	    if(is.null(contrasts)==FALSE){
+	    	beta.mean.pop.mat <- c(beta.mean.pop.mat, mu.m) #NKM x 1
+	    	beta.samp.pop.mat <- rbind(beta.samp.pop.mat, beta.samp.m) #NKM x 100 
+	    }
 	}
 	
 	## Compute results for beta averages over subjects (default)
 	mu.theta <- matrix(beta.mean.pop, ncol=1)
-	#3.5-7 seconds per activation threshold
-	# print('Looping over activation thresholds')
 	n.mesh <- spde$n.spde
 	U <- length(thresholds)
 	F.theta <- vector('list', U)
@@ -82,6 +81,7 @@ beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, thre
 	
 	## Compute results for contrasts
 	if(is.null(contrasts) == FALSE){
+
 	  mu.contr <- F.contr <- vector('list', length(contrasts))
 	  
 	  for(n.ctr in 1:length(contrasts)){
