@@ -158,7 +158,7 @@ betas.all.contr <- probs.all.contr <- active.all.contr <- list()
   }
   ## Sum over samples using weights
   betas.all.c <- matrix(0, nrow=n.mesh, ncol=K.contr)
-  probs.all.c <- active.all <- array(0, dim=c(n.mesh, K.contr, U.contr)) #last dimension is for different activation thresholds
+  probs.all.c <- active.all.c <- array(0, dim=c(n.mesh, K.contr, U.contr)) #last dimension is for different activation thresholds
   
   #posterior mean
   beta.pop.contr <- as.vector(mu.tot.contr%*%wt)
