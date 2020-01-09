@@ -157,14 +157,14 @@ betas.all.contr <- probs.all.contr <- active.all.contr <- list()
     }
   }
   ## Sum over samples using weights
-  betas.all <- matrix(0, nrow=n.mesh, ncol=K.contr)
-  probs.all <- active.all <- array(0, dim=c(n.mesh, K.contr, U.contr)) #last dimension is for different activation thresholds
+  betas.all.c <- matrix(0, nrow=n.mesh, ncol=K.contr)
+  probs.all.c <- active.all <- array(0, dim=c(n.mesh, K.contr, U.contr)) #last dimension is for different activation thresholds
   
   #posterior mean
   beta.pop.contr <- as.vector(mu.tot.contr%*%wt)
   for(k in 1:K.contr){
     beta.pop.k <- beta.pop.contr[ind_beta[[k]]]
-    betas.all[,k] <- as.vector(beta.pop.k)
+    betas.all.c[,k] <- as.vector(beta.pop.k)
   }
   #posterior probabilities and excursion sets
   for(u in 1:U.contr){
@@ -172,13 +172,13 @@ betas.all.contr <- probs.all.contr <- active.all.contr <- list()
       F.pop.uk <- as.vector(F.tot.contr[[u]][[k]]%*%wt)
       E.pop.uk <- rep(0, length(F.pop.uk))
       E.pop.uk[F.pop.uk > 1 - alpha.contr[i.contr]] <- 1
-      probs.all[,k,u] <- as.vector(F.pop.uk)
-      active.all[,k,u] <- as.vector(E.pop.uk)
+      probs.all.c[,k,u] <- as.vector(F.pop.uk)
+      active.all.c[,k,u] <- as.vector(E.pop.uk)
     }
   }
-  betas.all.contr[[i.contr]] <- betas.all
-  probs.all.contr[[i.contr]] <- probs.all
-  active.all.contr[[i.contr]] <- active.all
+  betas.all.contr[[i.contr]] <- betas.all.c
+  probs.all.contr[[i.contr]] <- probs.all.c
+  active.all.contr[[i.contr]] <- active.all.c
  }
 } else{
   betas.all.contr <- probs.all.contr <- active.all.contr <- NULL
