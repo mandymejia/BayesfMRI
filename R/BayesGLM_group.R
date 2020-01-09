@@ -115,7 +115,6 @@ for(itheta in 1:nsamp){
     }
   }
 }
-  
 ## Sum over samples using weights
 betas.all <- matrix(0, nrow=n.mesh, ncol=K)
 probs.all <- active.all <- array(0, dim=c(n.mesh, K, U)) #last dimension is for different activation thresholds
