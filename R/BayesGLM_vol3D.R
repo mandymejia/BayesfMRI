@@ -14,7 +14,7 @@
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @examples \dontrun{}
-BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, outfile = NULL){
+BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, outfile = NULL, GLM = TRUE, num.threads = 6){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -124,30 +124,43 @@ BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, 
 
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
-  #estimate model using INLA
-  INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1)
+  # estimate model using INLA
+  INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1, num.threads = num.threads)
+  # INLA_result <- readRDS('/Users/sarahryan/Desktop/StuffWithMandy/myINLA_result.RDS')
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names) #posterior means of latent task field
   theta_posteriors <- get_posterior_densities_vol3D(object=INLA_result, spde) #hyperparameter posterior densities
 
+  if(GLM){
+    # estimate model using GLM
+    GLM_result <- solve(t(design_s) %*% design_s) %*% t(design_s) %*% BOLD_s
+    GLM_result <- t(GLM_result)
+  }else{
+    GLM_result <- NULL
+  }
+
   #construct object to be returned
   if(return_INLA_result){
     result <- list(INLA_result = INLA_result,
                    spde_obj = spde_obj,
+                   mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
-                   call = match.call())
+                   call = match.call(),
+                   GLM_result = GLM_result)
   } else {
     result <- list(INLA_result = NULL,
                    spde_obj = spde_obj,
+                   mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
-                   call = match.call())
+                   call = match.call(),
+                   GLM_result = GLM_result)
   }
 
 
