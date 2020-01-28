@@ -17,6 +17,7 @@
 #' @importFrom MASS mvrnorm
 #' @import parallel
 #'
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @examples \dontrun{}
 BayesGLM_group <- function(result, A, contrasts = NULL, thresholds = 0, alpha = 0.05, no_cores=NULL){
 

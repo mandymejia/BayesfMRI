@@ -14,6 +14,7 @@
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
 #' @examples \dontrun{}
 BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale=TRUE, return_INLA_result=TRUE, outfile = NULL){

@@ -7,6 +7,7 @@
 #' @export
 #' @importFrom INLA inla.spde2.result
 #'
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @examples \dontrun{}
 get_posterior_densities <- function(object, spde){
 

@@ -8,10 +8,8 @@
 #' @return Triangular mesh from matrices and vertices
 #' @export
 #' @importFrom INLA inla.mesh.create
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 make_mesh <- function(vertices, faces){
-
-  # Number of vertices
-  V <- nrow(vertices)
 
   # Check index of faces
   if(min(faces) == 0){

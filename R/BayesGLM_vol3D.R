@@ -12,6 +12,7 @@
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @examples \dontrun{}
 BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, outfile = NULL){
 

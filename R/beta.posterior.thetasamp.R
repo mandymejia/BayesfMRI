@@ -8,6 +8,7 @@
 #' @param ind_beta A vector of indices of beta.
 #' @return A list containing...
 #' @export
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @importFrom excursions excursions.mc
 #'
 #' @examples \dontrun{}
