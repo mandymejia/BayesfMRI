@@ -7,6 +7,7 @@
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
+#' @param GLM If TRUE, classical GLM estimates will also be returned
 #'
 #' @return A list containing...
 #' @export
@@ -15,6 +16,11 @@
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @examples \dontrun{}
 BayesGLM_vol3D <- function(data, spde_obj, scale=TRUE, return_INLA_result=TRUE, outfile = NULL, GLM = TRUE, num.threads = 6){
+
+  ### HERE
+
+  ### Take in as arguments locations, labels, and label names/groupings
+  ### Run create_spde_vol3D for each grouping
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)

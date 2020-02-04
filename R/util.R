@@ -1,4 +1,69 @@
 
+#' Plot BayesGLM objects
+#'
+#' Summary method for class "BayesGLM"
+#'
+#' @param object an object of class "BayesGLM"
+#' @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
+#' @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
+#' @export
+#' @importFrom INLA plot.mesh
+#' @import viridis
+#' @method plot BayesGLM
+plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
+{
+  session_names <- names(result$beta_estimates)
+
+  if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
+  if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
+
+  if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
+
+  ind <- which(names(result$beta_estimates) == session_name) #which element of list
+  est <- (result$beta_estimates)[[ind]]
+  K <- ncol(est)
+
+
+  if(is.null(pal)) {
+    nColors <- 64
+    pal <- viridis_pal(option='plasma', direction=1)(nColors)
+  } else {
+    if(min(areColors(pal)) < 1) stop('At least one of the elements of the pal argument is not a valid color representation.  See help(areColors).')
+    nColors <- length(pal)
+  }
+
+
+  for(k in 1:K){
+    x = est[,k]
+    colindex <- as.integer(cut(x,breaks=nColors))
+
+    #NEED TO CHECK WHICH TYPE OF BAYESGLM OBJECT (VOL OR CORTICAL) -- maybe use the mesh class?  or the spde_obj class?
+    #plot(mesh_LH_s$mesh,col=pal[colindex], rgl=TRUE)
+
+    tetramesh(object$spde_obj$faces, object$spde_obj$vertices, col=pal[colindex], clear=FALSE)
+
+  }
+
+
+}
+
+
+#' Check whether each element of vector x is a valid color representation
+#'
+#' @param x Character vector
+#'
+#' @return A logical vector indicating which of the elements of x are valid color representations
+#' @importFrom grDevices col2rgb
+#' @export
+#'
+areColors <- function(x) {
+  sapply(x, function(X) {
+    tryCatch(is.matrix(col2rgb(X)),
+             error = function(e) FALSE)
+  })
+}
+
+
 #' Summarise BayesGLM objects
 #'
 #' Summary method for class "BayesGLM"
