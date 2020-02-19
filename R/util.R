@@ -1,3 +1,30 @@
+#' Plot BayesfMRI.spde objects
+#'
+#' @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
+#' @param colors (Optional) Vector of colors to represent each region.
+#' @param alpha Transparency level.
+#'
+#' @return
+#' @export
+#' @importFrom geometry tetramesh
+#' @import rgl
+#' @import viridis viridis_pal
+#'
+#' @examples
+plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
+  if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
+  num_regions <- length(object$vertices)
+  if(is.null(colors)) colors <- viridis_pal()(num_regions)
+  if(length(colors) < num_regions) {
+    colors <- rep(colors, length.out=num_regions)
+    warning('Fewer colors specified than number of regions in the mesh.  Recycling colors to equal number of regions.')
+  }
+  for(ii in 1:num_regions){
+    if(ii==1) tetramesh(object$faces[[ii]], object$vertices[[ii]], col=colors[ii], alpha=alpha)
+    if(ii > 1) tetramesh(object$faces[[ii]], object$vertices[[ii]], clear=FALSE, col=colors[ii], alpha=alpha)
+
+  }
+}
 
 #' Plot BayesGLM objects
 #'
