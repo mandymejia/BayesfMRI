@@ -1,8 +1,8 @@
 #' Create SPDE for 3D volumetric data
 #'
-#' @param locs Locations of data points
-#' @param labs Labels of data points
-#' @param values Vector of label values for which to construct spde object
+#' @param locs Locations of data points (Vx3 matrix)
+#' @param labs Region labels of data points (vector of length V). If NULL, treat observations as a single region.
+#' @param lab_set Only used if labs is not NULL. Vector of region labels for which to construct spde object. If NULL, use all region labels.
 #'
 #' @return SPDE object representing triangular mesh structure on data locations
 #' @export
@@ -10,22 +10,26 @@
 #' @importFrom geometry delaunayn
 #' @importFrom Matrix sparseMatrix colSums Diagonal t solve
 #' @importFrom rdist cdist
-#' @importFrom abind abind
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-create_spde_vol3D <- function(locs, labs, values = NULL){
+create_spde_vol3D <- function(locs, labs, lab_set = NULL){
 
-  # If no label values specified, construct mesh over all values
-  if(is.null(values)){ values <- unique(labs) }
+  if(is.null(labs) & !is.null(lab_set)) stop('If labs is NULL, then lab_set must not be specified.')
 
-  # For each of the label values specified, create a triangularization
+  # If no labels provided, construct mesh over all regions (treat as a single region)
+  if(is.null(labs)) labs <- rep(1, nrow(locs))
 
-  G_all <- C_all <- vector('list', length=length(values))
-  P_new_all <- FV_new_all <- vector('list', length=length(values))
-  I_all <- A_all <- vector('list', length=length(values))
-  for(value in values){
+  # If no set of labels specified, use all labels
+  if(is.null(lab_set)) lab_set <- unique(labs)
 
-    ii <- which(values==value)
+  # For each of the labels specified, create a triangularization
+
+  G_all <- C_all <- vector('list', length=length(lab_set))
+  P_new_all <- FV_new_all <- vector('list', length=length(lab_set))
+  I_all <- A_all <- vector('list', length=length(lab_set))
+  for(value in lab_set){
+
+    ii <- which(lab_set==value)
     ind <- (labs == value)
     P <- locs[ind,] #(x,y,z) coordinates of selected locations
 
@@ -139,6 +143,8 @@ create_spde_vol3D <- function(locs, labs, values = NULL){
               faces = FV_new_all,
               idx = I_all,
               Amat = bdiag(A_all))
+  class(out) <- 'BayesfMRI.spde'
+
   return(out)
 }
 

@@ -2,22 +2,20 @@
 #'
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param n_task Number of regressors or tasks
-#' @param mesh The mesh for the data
+#' @param mesh Object of type inla.mesh (for surface data, see \code{help(make_mesh)}) or BayesfMRI.spde (for subcortical data, see \code{help(create_spde_vol3D)}).
 #'
 #' @return replicates vector and betas for sessions
-#' @export
+#'
+#' @details beta and repl vectors are of length nvox * n_sess * n_task
+# The ith repl vector is an indicator vector for the cells corresponding to the ith column of x
+# The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x
+
 #'
 #' @examples \dontrun{}
-organize_replicates <- function(n_sess, n_task, mesh = NULL){
+organize_replicates <- function(n_sess, n_task, mesh){
 
-	# create vectors for each task:
-	#
-
-	# beta and repl vectors are of length nvox * n_sess * n_task
-	# ith repl vector is an indicator vector for the cells corresponding to the ith column of x
-	# ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x
-
-  spatial <- mesh$idx$loc
+  if(!(class(mesh) %in% c('inla.mesh','BayesfMRI.spde'))) stop('mesh must be of class inla.mesh  (for surface data, see help(make_mesh)) or BayesfMRI.spde (for subcortical data, see help(create_spde_vol3D))')
+  spatial <- unlist(mesh$idx)
 
 	nvox <- length(spatial)
 

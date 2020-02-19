@@ -1,4 +1,238 @@
-#' Applies spatial Bayesian GLM to task fMRI data
+#' Performs whole-brain spatial Bayesian GLM for fMRI task activation
+#'
+#' @param fname_cifti File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
+#' @param fname_gifti_left File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".
+#' @param fname_gifti_right File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
+#' @param brainstructures A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)
+#' @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7).
+#' @param wb_cmd Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).
+#' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.
+#' @param onsets A matrix of onsets and durations for each task (or a list of such matrices, for multiple-session modeling).  Must be provided if and only if design=NULL.
+#' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
+#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
+#' @param session_names (Optional) A vector of names corresponding to each session.
+#'
+#' @return An object of class BayesGLM, a list containing ...
+#' @export
+#' @importFrom ciftiTools cifti_read_separate
+#' @importFrom matrixStats rowVars rowSums2
+#'
+#' @details This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
+#' available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_cmd' argument is the full file path to the 'wb_command' executable file.
+#'
+#' The subcortical brain structure labels range from 3-21 and represent:
+#' 3 Accumbens-L
+#' 4 Accumbens-R
+#' 5 Amygdala-L
+#' 6 Amygdala-R
+#' 7 Brain Stem
+#' 8 Caudate-L
+#' 9 Caudate-R
+#' 10 Cerebellum-L
+#' 11 Cerebellum-R
+#' 12 Diencephalon-L
+#' 13 Diencephalon-R
+#' 14 Hippocampus-L
+#' 15 Hippocampus-R
+#' 16 Pallidum-L
+#' 17 Pallidum-R
+#' 18 Putamen-L
+#' 19 Putamen-R
+#' 20 Thalamus-L
+#' 21 Thalamus-R
+#'
+BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL, brainstructures=c('left','right','subcortical'), vol_regions=c(3:6,8:21), wb_cmd, design=NULL, onsets=NULL, nuisance=NULL, GLM_method='both', session_names=NULL){
+
+  # Check that arguments are compatible
+  do_left <- ('left' %in% brainstructures)
+  do_right <- ('right' %in% brainstructures)
+  do_sub <- ('subcortical' %in% brainstructures)
+  if(do_left & is.null(fname_gifti_left)) stop('fname_gifti_left must be provided if brainstructures includes "left"')
+  if(do_right & is.null(fname_gifti_right)) stop('fname_gifti_left must be provided if brainstructures includes "left"')
+  if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
+  if(do_sub){
+    if(length(unique(vol_regions)) != length(vol_regions)) stop('vol_regions must contain no repeated values.')
+    if(min(is.element(vol_regions, 3:21))==0) stop('vol_regions must include only integer values between 3 and 21.')
+  }
+
+  # Name sessions and check compatibility of multi-session arguments
+  n_sess <- length(fname_cifti)
+  if(n_sess==1){
+    if(is.null(session_names)) session_names <- 'single_session'
+    fname_cifti <- list(fname_cifti)
+    if(!is.null(design)) design <- list(design)
+    #if(!is.null(onsets)) onsets <- list(onsets)
+    if(!is.null(nuisance)) nuisance <- list(nuisance)
+  } else {
+    if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
+    if(!is.null(design)){ if(length(design) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), design must be a list of length equal to the number of sessions (or NULL, if onsets provided).') }
+    #if(!is.null(onsets)){ if(length(onsets) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), onsets must be a list of length equal to the number of sessions (or NULL, if design provided).') }
+    if(!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
+  }
+  if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as fname_cifti')
+
+
+  ### For each session, separate the CIFTI data into left/right/sub and read in files
+  if(do_left) cifti_left <- vector('list', n_sess)
+  if(do_right) cifti_right <- vector('list', n_sess)
+  if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
+  for(ss in 1:n_sess){
+    cifti_ss <- cifti_read_separate(fname_cifti[[ss]], brainstructures=brainstructures)
+    if(do_left) cifti_left[[ss]] <- cifti_ss$CORTEX_LEFT
+    if(do_right) cifti_right[[ss]] <- cifti_ss$CORTEX_RIGHT
+    if(do_sub) nifti_data[[ss]] <- cifti_ss$VOL
+    if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
+  }
+  #check that labels are the same across all sessions
+  if(do_sub) {
+    if(n_sess > 1) {
+      tmp <- sapply(nifti_labels, function(x) {all.equal(x,nifti_labels[[1]])})
+      if(min(tmp)==0) stop('Subcortical labels must match across all sessions in cifti data. Check compatibility of cifti files.')
+    }
+    nifti_labels <- nifti_labels[[1]]
+  }
+
+
+  ### TO DO: DEAL WITH MEDIAL WALL LOCATIONS.  BAYESGLM WILL NOT WORK WITH NAS.
+
+  classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
+  BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
+
+  ### LEFT HEMISPHERE
+  if(do_left){
+
+    #set up mesh
+    surf_left <- readGIfTI(fname_gifti_left)$data
+    verts_left <- surf_left$pointset
+    faces_left <- surf_left$triangle + 1
+
+    #set up session list
+    session_data <- vector('list', n_sess)
+    names(session_data) <- session_names
+    for(ss in 1:n_sess){
+       sess <- list(BOLD = t(cifti_left[[ss]]), design=design[[ss]])
+      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+      session_data[[ss]] <- sess
+    }
+
+    ### FIT GLM
+
+    if(GLM_method %in% c('classical','both')) classicalGLM_left <- classicalGLM(session_data) else classicalGLM_left <- NULL
+    if(GLM_method %in% c('Bayesian','both')) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_left <- NULL
+
+  }
+
+
+  ### RIGHT HEMISPHERE
+  if(do_right){
+
+    #set up mesh
+    surf_right <- readGIfTI(fname_gifti_right)$data
+    verts_right <- surf_right$pointset
+    faces_right <- surf_right$triangle + 1
+
+    #set up session list
+    session_data <- vector('list', n_sess)
+    names(session_data) <- session_names
+    for(ss in 1:n_sess){
+      sess <- list(BOLD = t(cifti_right[[ss]]), design=design[[ss]])
+      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+      session_data[[ss]] <- sess
+    }
+
+    ### FIT GLM
+    if(GLM_method %in% c('classical','both')) classicalGLM_right <- classicalGLM(session_data) else classicalGLM_right <- NULL
+    if(GLM_method %in% c('Bayesian','both')) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_right <- NULL
+  }
+
+  ### SUBCORTICAL
+  if(do_sub){
+
+    # Create and Apply Mask
+
+    #include only specified regions
+    mask <- nifti_labels %in% vol_regions
+    nvox <- sum(mask)
+    ntime <- dim(nifti_data[[1]])[4]
+    BOLD_data_vol <- vector('list', n_sess)
+    for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- apply(nifti_data[[ss]], 4, function(x, mask){return(x[mask==1])}, mask=mask) #apply mask to each time point (4th dim)
+
+    #identify any zero-variance voxels
+    zerovar <- sapply(BOLD_data_vol, rowVars)
+    zerovar <- rowSums2(zerovar==0)
+    mask2 <- mask #initialize with original mask
+    mask2[mask==1] <- !zerovar #exclude voxels with zero variance
+    nifti_labels <- nifti_labels*mask2
+
+    zerovar <- sapply(
+                apply(nifti_data[[1]], 1:3, var) #return a 3D
+
+
+    #set up SPDE
+    if(GLM_method %in% c('Bayesian','both')){
+      ### SET UP SUBCORTICAL SPDE
+    }
+
+
+    #vectorize data
+    #get voxel count within each region
+    nvox_by_region <- rep(NA, 21)
+    nvox_by_region[vol_regions] <- table(nifti_labels[mask==1])
+    #get vector indices for each region
+    inds_by_region <- vector('list', length=21)
+    last_ind <- 0 #last ind of previous region
+    for(k in vol_regions){
+      nvox_k <- nvox_by_region[k]
+      inds_by_region[[k]] <- last_ind + (1:nvox_k)
+      last_ind <- max(inds_by_region[[k]])
+    }
+
+
+
+    #set up session list
+    session_data <- vector('list', n_sess)
+    names(session_data) <- session_names
+    for(ss in 1:n_sess){
+      ### EDIT THIS FOR VOLUMETRIC DATA USING MASK, EXCLUDING SPECIFIED SUBCORTICAL REGIONS
+      #sess <- list(BOLD = t(nifti_data[[ss]]), design=design[[ss]])
+      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+      session_data[[ss]] <- sess
+    }
+
+    ### FIT GLM
+    if(GLM_method %in% c('classical','both')) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
+    if(GLM_method %in% c('Bayesian','both')) BayesGLM_vol <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_right <- NULL
+  }
+
+  if(do_sub) mask <- (nifti_labels %in% vol_regions) else mask <- labels <- NULL
+
+  classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
+  names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
+  for(ss in 1:n_sess){
+    if(GLM_method %in% c('classical','both')){
+      classicalGLM_cifti[[ss]] <- cifti_make(cortex_left = classicalGLM_left$single_session,
+                                   cortex_right = classicalGLM_right$single_session,
+                                   subcortical = classicalGLM_vol$single_session,
+                                   mask = mask,
+                                   labels = nifti_labels)
+    }
+    if(GLM_method %in% c('Bayesian','both')){
+      BayesGLM_cifti[[ss]] <- cifti_make(cortex_left = BayesGLM_left$single_session,
+                                           cortex_right = BayesGLM_right$single_session,
+                                           subcortical = BayesGLM_vol$single_session,
+                                           mask = mask,
+                                           labels = nifti_labels)
+    }
+  }
+
+  result <- list(BayesGLM=BayesGLM_cifti, classicalGLM=classicalGLM_cifti)
+
+
+}
+
+
+
+#' Applies spatial Bayesian GLM to task fMRI data on the cortical surface
 #'
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
@@ -6,7 +240,7 @@
 #' @param vertices A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.
 #' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
-#' @param mask Sarah knows what this does!
+#' @param mask (Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
@@ -14,10 +248,11 @@
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern
+#' @importFrom excursions submesh.mesh
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
 #' @examples \dontrun{}
-BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale=TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL){
+BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale=TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -70,8 +305,25 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
     warning('No value supplied for outfile, which is required for post-hoc group modeling.')
   }
 
-  if(is.null(mesh)) {
-    mesh <- make_mesh(vertices, faces)
+  if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
+
+  #ID any zero-variance voxels and remove from analysis
+  zero_var <- sapply(data, function(x){
+    vars <- colVars(x$BOLD)
+    return(vars < 1e-6)
+    })
+  zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
+  if(sum(zero_var) > 0){
+    if(is.null(mask)) mask <- !zero_var else mask <- mask*(!zero_var)
+  }
+
+  if(!is.null(mask)) {
+    mask <- as.logical(mask)
+    mesh <- submesh.mesh(mask, mesh)
+    for(s in 1:n_sess){
+      data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
+    }
+    V <- sum(mask)
   }
 
 

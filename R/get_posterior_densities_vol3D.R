@@ -6,23 +6,28 @@
 #' @return Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
 #' @export
 #' @importFrom INLA inla.spde2.result
+#' @importFrom INLA inla.extract.el
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @examples \dontrun{}
 get_posterior_densities_vol3D <- function(object, spde){
 
-  beta_names <- names(object$summary.random)
+  hyper_names <- names(object$marginals.hyperpar)
 
-  for(b in beta_names){
-    df.b <- inla.extract.el(object$marginals.hyperpar,
-                                     paste("Theta[^ ]+ for ", b, "$", sep = ""))
-    df.b <- as.data.frame(df.b)
-    #colnames(df.b) <-
+  for(h in hyper_names){
+    df.h <- inla.extract.el(object$marginals.hyperpar, h)
+    df.h <- as.data.frame(df.h)
+    names(df.h) <- c('x','y')
+    df.h$hyper_name <- h
+    df.h$beta_name <- ifelse(grepl('bbeta',h), #if bbeta appears in name
+                        gsub('.+bbeta','bbeta',h), #rename as bbeta*
+                        NA) #NA if this is the precision hyperparameter
+    df.h$theta_name <- ifelse(grepl('Theta',h), #if bbeta appears in name
+                              gsub(' for.+','',h), #rename as Theta*
+                              NA) #NA if this is the precision hyperparameter
 
-    df.b$beta <- b
-    if(b==beta_names[1]) df <- df.b else df <- cbind(df, df.b)
+    if(h==hyper_names[1]) df <- df.h else df <- rbind(df, df.h)
   }
-  # df <- df[,c('beta','param','value','density')]
   return(df)
 }
 
