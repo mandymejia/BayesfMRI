@@ -15,6 +15,9 @@ An inla.mesh object.  See \code{help(inla.mesh.2d)} for details.
 \description{
 Construct a triangular mesh from a 2D volumetric mask (need to generalize this to a 3D volume)
 }
+\note{
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+}
 \examples{
 \dontrun{}
 }

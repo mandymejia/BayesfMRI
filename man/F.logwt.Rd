@@ -23,6 +23,9 @@ A list containing...
 \description{
 Internal function used in joint approach to group-analysis
 }
+\note{
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+}
 \examples{
 \dontrun{}
 }

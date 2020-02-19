@@ -4,20 +4,21 @@
 \alias{create_spde_vol3D}
 \title{Create SPDE for 3D volumetric data}
 \usage{
-create_spde_vol3D(locs, labs, value = NULL, max_dist = NULL)
+create_spde_vol3D(locs, labs, lab_set = NULL)
 }
 \arguments{
-\item{locs}{Locations of data points}
+\item{locs}{Locations of data points (Vx3 matrix)}
 
-\item{labs}{Labels of data points}
+\item{labs}{Region labels of data points (vector of length V). If NULL, treat observations as a single region.}
 
-\item{value}{Label value to analyze}
-
-\item{max_dist}{Maximum distance of new vertex locations from the original vertex locations}
+\item{lab_set}{Only used if labs is not NULL. Vector of region labels for which to construct spde object. If NULL, use all region labels.}
 }
 \value{
-SPDE
+SPDE object representing triangular mesh structure on data locations
 }
 \description{
 Create SPDE for 3D volumetric data
+}
+\note{
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }

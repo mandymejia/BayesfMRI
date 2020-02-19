@@ -164,8 +164,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     mask2[mask==1] <- !zerovar #exclude voxels with zero variance
     nifti_labels <- nifti_labels*mask2
 
-    zerovar <- sapply(
-                apply(nifti_data[[1]], 1:3, var) #return a 3D
+    #HERE
 
 
     #set up SPDE

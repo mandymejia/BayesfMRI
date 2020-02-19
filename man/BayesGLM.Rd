@@ -2,37 +2,73 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{Applies spatial Bayesian GLM to task fMRI data}
+\title{Performs whole-brain spatial Bayesian GLM for fMRI task activation}
 \usage{
-BayesGLM(data, vertices = NULL, faces = NULL, mesh = NULL,
-  mask = NULL, scale = TRUE, return_INLA_result = TRUE,
-  outfile = NULL)
+BayesGLM(
+  fname_cifti,
+  fname_gifti_left = NULL,
+  fname_gifti_right = NULL,
+  brainstructures = c("left", "right", "subcortical"),
+  vol_regions = c(3:6, 8:21),
+  wb_cmd,
+  design = NULL,
+  onsets = NULL,
+  nuisance = NULL,
+  GLM_method = "both",
+  session_names = NULL
+)
 }
 \arguments{
-\item{data}{A list of sessions, where each session is a list with elements
-BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
-List element names represent session names.}
+\item{fname_cifti}{File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}
 
-\item{vertices}{A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.}
+\item{fname_gifti_left}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
 
-\item{faces}{A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.}
+\item{fname_gifti_right}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
 
-\item{mesh}{A \code{inla.mesh} object.  Must be provided if and only if \code{vertices} and \code{faces} are not.}
+\item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
 
-\item{mask}{Sarah knows what this does!}
+\item{vol_regions}{A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7).}
 
-\item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.}
+\item{wb_cmd}{Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
+\item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.}
 
-\item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
+\item{onsets}{A matrix of onsets and durations for each task (or a list of such matrices, for multiple-session modeling).  Must be provided if and only if design=NULL.}
+
+\item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
+
+\item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
+
+\item{session_names}{(Optional) A vector of names corresponding to each session.}
 }
 \value{
-A list containing...
+An object of class BayesGLM, a list containing ...
 }
 \description{
-Applies spatial Bayesian GLM to task fMRI data
+Performs whole-brain spatial Bayesian GLM for fMRI task activation
 }
-\examples{
-\dontrun{}
+\details{
+This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
+available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_cmd' argument is the full file path to the 'wb_command' executable file.
+
+The subcortical brain structure labels range from 3-21 and represent:
+3 Accumbens-L
+4 Accumbens-R
+5 Amygdala-L
+6 Amygdala-R
+7 Brain Stem
+8 Caudate-L
+9 Caudate-R
+10 Cerebellum-L
+11 Cerebellum-R
+12 Diencephalon-L
+13 Diencephalon-R
+14 Hippocampus-L
+15 Hippocampus-R
+16 Pallidum-L
+17 Pallidum-R
+18 Putamen-L
+19 Putamen-R
+20 Thalamus-L
+21 Thalamus-R
 }

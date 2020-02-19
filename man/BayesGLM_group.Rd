@@ -4,8 +4,18 @@
 \alias{BayesGLM_group}
 \title{Applies joint approach to group-level analysis to task fMRI data}
 \usage{
-BayesGLM_group(result, A, contrasts = NULL, thresholds = 0,
-  alpha = 0.05, no_cores = NULL)
+BayesGLM_group(
+  result,
+  A,
+  contrasts = NULL,
+  thresholds = 0,
+  thresholds.contr = NULL,
+  type = NULL,
+  type.contr = NULL,
+  alpha = 0.05,
+  alpha.contr = NULL,
+  no_cores = NULL
+)
 }
 \arguments{
 \item{result}{Either (1) a list of length M of objects of class BayesGLM, or (2) a character vector of length M of file names output from the BayesGLM function. M is the number of subjects.}
@@ -16,7 +26,15 @@ BayesGLM_group(result, A, contrasts = NULL, thresholds = 0,
 
 \item{thresholds}{The vector of activation thresholds}
 
+\item{thresholds.contr}{The list of activation thresholds for contrasts}
+
+\item{type}{The type of excursion function for mean beta (">", "<", "!=")}
+
+\item{type.contr}{The list of types of excursion function for contrasts (">", "<", "!=")}
+
 \item{alpha}{The significance level for activation}
+
+\item{alpha.contr}{The list of activation significance levels for contrasts}
 
 \item{no_cores}{The number of cores to use for sampling in parallel}
 }
@@ -27,9 +45,12 @@ A list containing...
 Applies joint approach to group-level analysis to task fMRI data
 }
 \details{
-The contrast vector specifies the group-level quantity of interest.  For example, the vector rep(1/M,M*K) would return the group average for each of K tasks;
-the vector \code{c(rep(1/M1,M1*K)}, \code{rep(-1/M2,M2*K))} would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
-the vector \code{rep(rep(1/M,-1/M,0,...,0),each=V),M)} would return the difference between the first two tasks, averaged over all subjects.
+The contrast vector specifies the group-level quantity of interest.  For example, the vector \code{rep(1/M,M*K)} would return the group average for each of K tasks;
+the vector \verb{c(rep(1/M1,M1*K)}, \verb{rep(-1/M2,M2*K))} would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
+the vector \verb{rep(rep(1/M,-1/M,0,...,0)),M)} would return the difference between the first two tasks, averaged over all subjects.
+}
+\note{
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
 \examples{
 \dontrun{}

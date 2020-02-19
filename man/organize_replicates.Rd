@@ -4,20 +4,23 @@
 \alias{organize_replicates}
 \title{Organize replicates}
 \usage{
-organize_replicates(n_sess, n_task, mesh = NULL)
+organize_replicates(n_sess, n_task, mesh)
 }
 \arguments{
 \item{n_sess}{The number of sessions sharing hyperparameters (can be different tasks)}
 
 \item{n_task}{Number of regressors or tasks}
 
-\item{mesh}{The mesh for the data}
+\item{mesh}{Object of type inla.mesh (for surface data, see \code{help(make_mesh)}) or BayesfMRI.spde (for subcortical data, see \code{help(create_spde_vol3D)}).}
 }
 \value{
 replicates vector and betas for sessions
 }
 \description{
 Organize replicates
+}
+\details{
+beta and repl vectors are of length nvox * n_sess * n_task
 }
 \examples{
 \dontrun{}

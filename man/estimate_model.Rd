@@ -4,8 +4,16 @@
 \alias{estimate_model}
 \title{Estimate INLA model}
 \usage{
-estimate_model(formula, data, A, spde, prec_initial, num.threads = 4,
-  int.strategy = "eb", verbose = FALSE)
+estimate_model(
+  formula,
+  data,
+  A,
+  spde,
+  prec_initial,
+  num.threads = 4,
+  int.strategy = "eb",
+  verbose = FALSE
+)
 }
 \arguments{
 \item{formula}{Formula to put into inla}
@@ -29,6 +37,9 @@ Results from INLA
 }
 \description{
 Estimate INLA model
+}
+\note{
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
 \examples{
 \dontrun{}
