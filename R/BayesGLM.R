@@ -151,59 +151,41 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     # Create and Apply Mask
 
     #include only specified regions
-    mask <- nifti_labels %in% vol_regions
+    mask <- array(nifti_labels %in% vol_regions, dim=dim(nifti_labels))
     nvox <- sum(mask)
     ntime <- dim(nifti_data[[1]])[4]
     BOLD_data_vol <- vector('list', n_sess)
     for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- apply(nifti_data[[ss]], 4, function(x, mask){return(x[mask==1])}, mask=mask) #apply mask to each time point (4th dim)
 
-    #identify any zero-variance voxels
+    #identify and remove any zero-variance voxels (important for Bayesian GLM)
     zerovar <- sapply(BOLD_data_vol, rowVars)
     zerovar <- rowSums2(zerovar==0)
-    mask2 <- mask #initialize with original mask
-    mask2[mask==1] <- !zerovar #exclude voxels with zero variance
-    nifti_labels <- nifti_labels*mask2
+    mask[mask==1] <- !zerovar #exclude voxels with zero variance
+    nifti_labels <- nifti_labels*mask #this also masks out excluded regions
+    nifti_labels_vec <- nifti_labels[mask==TRUE]
+    for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- BOLD_data_vol[[ss]][!zerovar,]
+    nvox <- sum(mask)
 
-    #HERE
-
+    #set up session list
+    session_data <- vector('list', n_sess)
+    names(session_data) <- session_names
+    for(ss in 1:n_sess){
+      sess <- list(BOLD = t(BOLD_data_vol[[ss]]), design=design[[ss]])
+      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+      session_data[[ss]] <- sess
+    }
 
     #set up SPDE
     if(GLM_method %in% c('Bayesian','both')){
       ### SET UP SUBCORTICAL SPDE
     }
 
-
-    #vectorize data
-    #get voxel count within each region
-    nvox_by_region <- rep(NA, 21)
-    nvox_by_region[vol_regions] <- table(nifti_labels[mask==1])
-    #get vector indices for each region
-    inds_by_region <- vector('list', length=21)
-    last_ind <- 0 #last ind of previous region
-    for(k in vol_regions){
-      nvox_k <- nvox_by_region[k]
-      inds_by_region[[k]] <- last_ind + (1:nvox_k)
-      last_ind <- max(inds_by_region[[k]])
-    }
-
-
-
-    #set up session list
-    session_data <- vector('list', n_sess)
-    names(session_data) <- session_names
-    for(ss in 1:n_sess){
-      ### EDIT THIS FOR VOLUMETRIC DATA USING MASK, EXCLUDING SPECIFIED SUBCORTICAL REGIONS
-      #sess <- list(BOLD = t(nifti_data[[ss]]), design=design[[ss]])
-      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
-      session_data[[ss]] <- sess
-    }
-
     ### FIT GLM
     if(GLM_method %in% c('classical','both')) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
-    if(GLM_method %in% c('Bayesian','both')) BayesGLM_vol <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_right <- NULL
+    if(GLM_method %in% c('Bayesian','both')) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
   }
 
-  if(do_sub) mask <- (nifti_labels %in% vol_regions) else mask <- labels <- NULL
+  if(!do_sub) mask <- nifti_labels <- NULL
 
   classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
