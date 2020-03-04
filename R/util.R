@@ -8,9 +8,8 @@
 #' @export
 #' @importFrom geometry tetramesh
 #' @import rgl
-#' @import viridis viridis_pal
+#' @importFrom viridis viridis_pal
 #'
-#' @examples
 plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
   num_regions <- length(object$vertices)
@@ -34,7 +33,6 @@ plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
 #' @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
 #' @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
 #' @export
-#' @importFrom INLA plot.mesh
 #' @import viridis
 #' @method plot BayesGLM
 plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
@@ -67,7 +65,7 @@ plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
     #NEED TO CHECK WHICH TYPE OF BAYESGLM OBJECT (VOL OR CORTICAL) -- maybe use the mesh class?  or the spde_obj class?
     #plot(mesh_LH_s$mesh,col=pal[colindex], rgl=TRUE)
 
-    tetramesh(object$spde_obj$faces, object$spde_obj$vertices, col=pal[colindex], clear=FALSE)
+    #tetramesh(object$spde_obj$faces, object$spde_obj$vertices, col=pal[colindex], clear=FALSE)
 
   }
 
