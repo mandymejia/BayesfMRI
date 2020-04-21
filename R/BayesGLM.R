@@ -182,6 +182,8 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
     ### FIT GLM
     if(GLM_method %in% c('classical','both')) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
+
+    ### TO DO: Pass through locations, labels & groups_df instead of spde
     if(GLM_method %in% c('Bayesian','both')) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
   }
 
@@ -230,6 +232,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #' @importFrom excursions submesh.mesh
+#' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
 #' @examples \dontrun{}

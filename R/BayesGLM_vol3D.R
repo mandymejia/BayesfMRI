@@ -102,7 +102,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
     paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')')
 
-    spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, values=label_set_grp)
+    spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     #plot(spde_grp)
     spde <- spde_grp$spde
 

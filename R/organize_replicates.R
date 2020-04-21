@@ -6,7 +6,7 @@
 #'
 #' @return replicates vector and betas for sessions
 #'
-#' @details beta and repl vectors are of length nvox * n_sess * n_task
+#' @details beta and repl vectors are of length nvox X n_sess X n_task
 # The ith repl vector is an indicator vector for the cells corresponding to the ith column of x
 # The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x
 
@@ -15,7 +15,7 @@
 organize_replicates <- function(n_sess, n_task, mesh){
 
   if(!(class(mesh) %in% c('inla.mesh','BayesfMRI.spde'))) stop('mesh must be of class inla.mesh  (for surface data, see help(make_mesh)) or BayesfMRI.spde (for subcortical data, see help(create_spde_vol3D))')
-  spatial <- unlist(mesh$idx)
+  spatial <- mesh$idx$loc
 
 	nvox <- length(spatial)
 

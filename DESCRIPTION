@@ -25,6 +25,7 @@ Imports:
 Suggests:
     parallel
 ImportsFrom: 
+    matrixStats colVars
     grDevices chull rgb
     viridis viridis_pal
 LazyData: true
