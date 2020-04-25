@@ -20,7 +20,7 @@ replicates vector and betas for sessions
 Organize replicates
 }
 \details{
-beta and repl vectors are of length nvox * n_sess * n_task
+beta and repl vectors are of length nvox X n_sess X n_task
 }
 \examples{
 \dontrun{}

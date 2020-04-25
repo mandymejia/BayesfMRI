@@ -4,7 +4,7 @@
 \alias{plot.BayesfMRI.spde}
 \title{Plot BayesfMRI.spde objects}
 \usage{
-plot.BayesfMRI.spde(object, colors = NULL, alpha = 0.5)
+\method{plot}{BayesfMRI.spde}(object, colors = NULL, alpha = 0.5)
 }
 \arguments{
 \item{object}{Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})}

@@ -19,6 +19,3 @@ Scale to units of percent local signal change and centers
 \description{
 Scale the BOLD timeseries
 }
-\examples{
-\dontrun{}
-}
