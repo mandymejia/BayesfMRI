@@ -30,7 +30,7 @@ id_activations(
 
 \item{type}{For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')}
 
-\item{session_names}{Names of sessions included in INLA model that resulted in object}
+\item{n_sample}{The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.}
 }
 \value{
 A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, an object of class excurobj if method='posterior' (see \code{help(excursions.inla)} for more information) and is NULL if method='2means'.
@@ -40,7 +40,4 @@ For each latent field, identifies locations that are activated
 }
 \details{
 Put additional details here.
-}
-\examples{
-\dontrun{}
 }

@@ -6,7 +6,7 @@
 #' @export
 #' @importFrom INLA inla.fmesher.smorg
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#' @examples \dontrun{}
+#'
 compute_vertex_areas <- function(mesh)
 {
   if(missing(mesh))

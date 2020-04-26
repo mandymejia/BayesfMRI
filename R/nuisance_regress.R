@@ -6,7 +6,7 @@
 #' @return A T by M matrix representing the residuals of Y after regressing out Z
 #' @export
 #'
-#' @examples \dontrun{}
+#'
 nuisance_regress <- function(Y, Z){
 
 	if(nrow(Y) != nrow(Z)) stop('X and Z must have same number of rows')

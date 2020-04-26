@@ -39,6 +39,8 @@ find.connected <- function(ind,mesh){
 # The argument area.el contains these integrals. The argument is thus only used if res is of class
 # excurobj.  area.limit is a limit for the area of the sets. NULL is returned if all sets have areas
 # larger than area.limit. If factor>0 the set is expanded by an amount given by factor*area.limit.
+
+
 find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 
   if (class(res) == "excurobj") {
@@ -72,8 +74,8 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
       set.rem <- res$M["1"]
       set.rem@polygons[[1]]@Polygons <- set.rem@polygons[[1]]@Polygons[ind]
       mesh.locs <- data.frame(x = mesh$loc[,1],y = mesh$loc[,2])
-      coordinates(mesh.locs) <- ~ x + y
-      ov <- over(mesh.locs,set.rem)
+      sp::coordinates(mesh.locs) <- ~ x + y
+      ov <- sp::over(mesh.locs,set.rem)
 
       center.points <- mesh.locs[!is.na(ov)]
       p.list <- NULL
@@ -89,11 +91,11 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
                                        p1@coords[1,2] + sqrt(area.limit)*factor)))
 
       }
-      ch <- chull(p.list)
+      ch <- grDevices::chull(p.list)
       p.coords <- p.list[c(ch, ch[1]), ]
-      p <- Polygon(p.coords)
-      sps = SpatialPolygons(list(Polygons(list(p),1)))
-      ov <- over(mesh.locs,sps)
+      p <- sp::Polygon(p.coords)
+      sps = sp::SpatialPolygons(list(sp::Polygons(list(p),1)))
+      ov <- sp::over(mesh.locs,sps)
       ind.rem <- unique(which(!is.na(ov)))
     }
   }
@@ -147,6 +149,9 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
 #' the same elements as the output of \code{continuous}.
 #' @export
+#' @import excursions
+#' @importFrom INLA inla.mesh.projector
+#'
 excursions.no.spurious <- function(alpha,
                                    u,
                                    mu,
@@ -379,16 +384,16 @@ excursions.no.spurious <- function(alpha,
     ind.rem <- areas$ind.rem
     cat(sprintf("smallest area = %f (limit = %f)\n", areas$smallest.area, area.limit))
     if (plot.progress) {
-      if(use.continuous){
-        plot(mesh, vertex.color = rgb(0.8, 0.8, 0.8), draw.segments = FALSE,
-             edge.color = rgb(0.8, 0.8, 0.8), main = " ")
-        plot(sets$M["1"], col = "red", xlim = range(mesh$loc[,1]),
-             ylim = range(mesh$loc[,2]), add = TRUE)
-      } else {
-        E1 <- res.exc$E
-        E1[ind.rem] <- 0
-        image(proj$x, proj$y, inla.mesh.project(proj, field = E1),asp = 1)
-      }
+      # if(use.continuous){
+      #   plot(mesh, vertex.color = rgb(0.8, 0.8, 0.8), draw.segments = FALSE,
+      #        edge.color = rgb(0.8, 0.8, 0.8), main = " ")
+      #   plot(sets$M["1"], col = "red", xlim = range(mesh$loc[,1]),
+      #        ylim = range(mesh$loc[,2]), add = TRUE)
+      # } else {
+      #   E1 <- res.exc$E
+      #   E1[ind.rem] <- 0
+      #   image(proj$x, proj$y, inla.mesh.project(proj, field = E1),asp = 1)
+      # }
 
     }
   }
@@ -428,16 +433,16 @@ excursions.no.spurious <- function(alpha,
     }
     ind.rem <- areas$ind.rem
     if (plot.progress) {
-      if(use.continuous){
-        plot(mesh, vertex.color = rgb(0.8, 0.8, 0.8), draw.segments = FALSE,
-             edge.color = rgb(0.8, 0.8, 0.8), main = " ")
-        plot(sets$M["1"], col = "red", xlim = range(mesh$loc[,1]),
-             ylim = range(mesh$loc[,2]), add = TRUE)
-      } else {
-        E1 <- res.exc$E
-        E1[ind.rem] <- 0
-        image(proj$x, proj$y, inla.mesh.project(proj, field = E1),asp = 1)
-      }
+      # if(use.continuous){
+      #   plot(mesh, vertex.color = rgb(0.8, 0.8, 0.8), draw.segments = FALSE,
+      #        edge.color = rgb(0.8, 0.8, 0.8), main = " ")
+      #   plot(sets$M["1"], col = "red", xlim = range(mesh$loc[,1]),
+      #        ylim = range(mesh$loc[,2]), add = TRUE)
+      # } else {
+      #   E1 <- res.exc$E
+      #   E1[ind.rem] <- 0
+      #   image(proj$x, proj$y, inla.mesh.project(proj, field = E1),asp = 1)
+      # }
 
     }
   }
@@ -480,6 +485,7 @@ excursions.no.spurious <- function(alpha,
 #' @param verbose Set to TRUE for verbose mode (optional).
 #' @param max.threads Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).
 #' @param seed Random seed (optional).
+#' @param mesh The mesh on which the model is defined.
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
 #' numbere are removed.
 #' @param use.continuous Logical parameter indicating whether the areas of the excursion sets
@@ -490,7 +496,6 @@ excursions.no.spurious <- function(alpha,
 #' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
 #' the same elements as the output of \code{continuous}.
 #' @export
-
 excursions.inla.no.spurious <- function(result.inla,
                             stack,
                             name=NULL,
@@ -503,6 +508,7 @@ excursions.inla.no.spurious <- function(result.inla,
                             u.link = FALSE,
                             method,
                             ind=NULL,
+                            max.size,
                             verbose=0,
                             max.threads=0,
                             seed=NULL,

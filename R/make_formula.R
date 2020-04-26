@@ -2,14 +2,13 @@
 #'
 #' @param beta_names char vector of the names of each bbeta object in the environment
 #' @param repl_names char vector of the names of each replicate object in the environment
-#' @param spde The spatial model for the latent fields
 #' @param hyper_initial Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix
 #'
 #' @return A formula representing the Bayesian GLM to be passed to `inla()`
 #'
 #' @importFrom stats as.formula
 #'
-#' @examples \dontrun{}
+#'
 make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 
 	# Example:

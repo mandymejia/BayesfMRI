@@ -10,7 +10,7 @@
 #' @export
 #' @importFrom Matrix bdiag
 #'
-#' @examples \dontrun{}
+#'
 make_data_list <- function(y, X, betas, repls){
 
 	# Check length/dimensions of y, X, elements of betas and repls all match

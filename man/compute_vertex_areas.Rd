@@ -18,6 +18,3 @@ Compute surface areas of each vertex in a triangular mesh.
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
-\examples{
-\dontrun{}
-}

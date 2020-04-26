@@ -14,7 +14,7 @@
 #' @importFrom INLA inla
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#' @examples \dontrun{}
+#'
 estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE){
 
 	result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),

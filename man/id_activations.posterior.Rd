@@ -34,6 +34,3 @@ posterior distribution of the latent field.
 \details{
 Put additional details here.
 }
-\examples{
-\dontrun{}
-}

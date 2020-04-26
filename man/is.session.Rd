@@ -23,6 +23,3 @@ A valid "session" object is a list with the following named fields
 \item nuisance (optional): T x L matrix containing the L nuisance regressors
 }
 }
-\examples{
-\dontrun{}
-}

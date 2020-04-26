@@ -15,6 +15,3 @@ Gradient of x
 \description{
 Calculate gradient
 }
-\examples{
-\dontrun{}
-}

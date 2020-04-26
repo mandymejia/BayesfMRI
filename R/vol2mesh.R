@@ -7,7 +7,7 @@
 #' @importFrom INLA inla.nonconvex.hull inla.mesh.2d
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#' @examples \dontrun{}
+#'
 vol2mesh <- function(mask){
   xy.in <- which(mask==1, arr.ind=TRUE)[,2:1]
   boundary <- inla.nonconvex.hull(xy.in, resolution = 100)

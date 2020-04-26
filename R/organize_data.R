@@ -16,7 +16,7 @@
 #' @export
 #' @importFrom Matrix sparseMatrix
 #'
-#' @examples \dontrun{}
+#'
 organize_data <- function(y, X, transpose = TRUE){
 
 	ntime <- nrow(y)
@@ -37,9 +37,9 @@ organize_data <- function(y, X, transpose = TRUE){
 	K <- ncol(X)
 	for(k in 1:K){
 		X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,k], nvox))
-		if(k==1) A <- X_k else A <- cbind(A, X_k)
+		if(k==1) bigX <- X_k else bigX <- cbind(bigX, X_k)
 	}
 
-	result <- list(y=y, A=A)
+	result <- list(y=y, X=bigX)
 	return(result)
 }

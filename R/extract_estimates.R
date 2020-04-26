@@ -9,7 +9,6 @@
 #' @return Estimates from inla model
 #' @export
 #'
-#' @examples \dontrun{}
 extract_estimates <- function(object, session_names, stat='mean'){
 
   if(class(object) != "inla"){

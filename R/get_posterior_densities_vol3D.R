@@ -9,7 +9,7 @@
 #' @importFrom INLA inla.extract.el
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#' @examples \dontrun{}
+#'
 get_posterior_densities_vol3D <- function(object, spde){
 
   hyper_names <- names(object$marginals.hyperpar)

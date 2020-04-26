@@ -19,6 +19,3 @@ Estimates from inla model
 \description{
 Obtains the posterior mean or other summary statistic for each latent field
 }
-\examples{
-\dontrun{}
-}

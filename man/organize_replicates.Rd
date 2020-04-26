@@ -22,6 +22,3 @@ Organize replicates
 \details{
 beta and repl vectors are of length nvox X n_sess X n_task
 }
-\examples{
-\dontrun{}
-}

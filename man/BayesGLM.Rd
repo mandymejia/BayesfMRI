@@ -8,6 +8,10 @@ BayesGLM(
   fname_cifti,
   fname_gifti_left = NULL,
   fname_gifti_right = NULL,
+  fname_gifti2_left = NULL,
+  fname_gifti2_right = NULL,
+  fname_sphere_left = NULL,
+  fname_sphere_right = NULL,
   brainstructures = c("left", "right", "subcortical"),
   vol_regions = c(3:6, 8:21),
   wb_cmd,
@@ -15,7 +19,8 @@ BayesGLM(
   onsets = NULL,
   nuisance = NULL,
   GLM_method = "both",
-  session_names = NULL
+  session_names = NULL,
+  resample = 10000
 )
 }
 \arguments{
@@ -24,6 +29,14 @@ BayesGLM(
 \item{fname_gifti_left}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
 
 \item{fname_gifti_right}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
+
+\item{fname_gifti2_left}{(Optional) File path of GIFTI-format left cortical surface (*.surf.gii) to use for visualization of results.}
+
+\item{fname_gifti2_right}{(Optional) File path of GIFTI-format right cortical surface (*.surf.gii) to use for visualization of results.}
+
+\item{fname_sphere_left}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
+
+\item{fname_sphere_right}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
 \item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
 
@@ -40,6 +53,8 @@ BayesGLM(
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
 
 \item{session_names}{(Optional) A vector of names corresponding to each session.}
+
+\item{resample}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
 }
 \value{
 An object of class BayesGLM, a list containing ...

@@ -18,6 +18,3 @@ Construct a triangular mesh from a 2D volumetric mask (need to generalize this t
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
-\examples{
-\dontrun{}
-}

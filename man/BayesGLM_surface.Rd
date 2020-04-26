@@ -31,6 +31,8 @@ List element names represent session names.}
 
 \item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.}
 
+\item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
+
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
 
 \item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
@@ -43,7 +45,4 @@ Applies spatial Bayesian GLM to task fMRI data on the cortical surface
 }
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-}
-\examples{
-\dontrun{}
 }

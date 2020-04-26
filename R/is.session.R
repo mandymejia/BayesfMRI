@@ -9,7 +9,7 @@
 #' - design: T x K matrix containing the K task regressors
 #' - nuisance (optional): T x L matrix containing the L nuisance regressors
 #'
-#' @examples \dontrun{}
+#'
 is.session <- function(sess){
 
     ## check number of fields

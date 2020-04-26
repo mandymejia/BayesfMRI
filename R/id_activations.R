@@ -5,18 +5,18 @@
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
 #' @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
 #' @param field_name Name of latent field, or vector of names, on which to identify activations
-#' @param session_names Names of sessions included in INLA model that resulted in object
 #' @param threshold For method='posterior' only: activation threshold (e.g. 0.01 for 1 percent signal change)
 #' @param alpha For method='posterior' only: Significance level (e.g. 0.05)
 #' @param area.limit For method='posterior' only: Below this value, activations will be considered spurious.  If NULL (default), no limit.
 #' @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
+#' @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
 #'
 #' @details Put additional details here.
 #'
 #' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, an object of class excurobj if method='posterior' (see `help(excursions.inla)` for more information) and is NULL if method='2means'.
 #'
 #' @export
-#' @examples \dontrun{}
+#'
 id_activations <- function(model_obj, method=c('posterior', '2means'), field_name=NULL, threshold=NULL, alpha=NULL, area.limit=NULL, type=c('point','sequential'), n_sample = NULL){
 
   if(class(model_obj) != 'BayesGLM') stop('The model_obj argument must be of class BayesGLM, but it is not.')
@@ -38,7 +38,7 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
     if(is.null(type)) stop('For identifying activations based on 2means, you must specify type.')
     if(!is.null(threshold)) stop('For identifying activations based on 2means, do not specify threshold.')
     if(!is.null(alpha)) stop('For identifying activations based on posterior probability method, do not specify alpha.')
-    out <- id_activations.2means(model_obj=model_obj, field_name=field_name, type=type)
+    out <- id_activations.2means(model_obj=model_obj, field_name=field_name, type=type, n_sample=n_sample)
 
   } else {
     stop('Must specify method = "posterior" or "2means"')
@@ -66,13 +66,14 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
 #' @importFrom excursions excursions.inla
 #'
 #' @export
-#' @examples \dontrun{}
+#'
 id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alpha=0.05, area.limit=NULL){
 
 
   session_names <- model_obj$session_names
 	n_sess <- length(session_names)
-	n_vox <- model_obj$mesh$n
+	mesh <- model_obj$mesh
+	n_vox <- mesh$n
 
 	if(is.null(field_name)) field_name <- model_obj$beta_names
 	if(!any(field_name %in% model_obj$beta_names)) stop("Please specify only field names that corresponds to one of the latent fields (i.e. 'bbeta1').")
@@ -119,6 +120,8 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 #'
 #' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, which is NULL for the 2means method.
 #' @export
+#' @importFrom stats kmeans dist
+#' @importFrom INLA inla.posterior.sample
 #'
 #' @md
 id_activations.2means <-
@@ -155,7 +158,6 @@ id_activations.2means <-
       return(out)
     }
     if (type == "sequential") {
-      require(INLA)
       if (is.null(n_sample)){
         n_sample <- 1000
       }

@@ -25,6 +25,3 @@ The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD da
 and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
 The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 }
-\examples{
-\dontrun{}
-}

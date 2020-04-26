@@ -12,15 +12,10 @@ make_formula(beta_names, repl_names, hyper_initial = NULL)
 \item{repl_names}{char vector of the names of each replicate object in the environment}
 
 \item{hyper_initial}{Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix}
-
-\item{spde}{The spatial model for the latent fields}
 }
 \value{
 A formula representing the Bayesian GLM to be passed to \code{inla()}
 }
 \description{
 Make Formula
-}
-\examples{
-\dontrun{}
 }

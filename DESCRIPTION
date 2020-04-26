@@ -13,21 +13,24 @@ Depends:
 Encoding: UTF-8
 Imports: 
     abind,
+    gifti,
+    ciftiTools,
     dplyr,
-    INLA (>= 0.0-1468840039),
-    numDeriv,
-    Matrix,
+    excursions,
     graphics,
     geometry,
-    rdist, 
-    excursions,
-    MASS
+    INLA (>= 0.0-1468840039),
+    numDeriv,
+    MASS,
+    Matrix,
+    matrixStats,
+    rdist,
+    rgl,
+    sp
 Suggests:
     parallel
 ImportsFrom: 
-    matrixStats colVars
     grDevices chull rgb
-    viridis viridis_pal
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.0

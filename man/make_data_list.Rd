@@ -21,6 +21,3 @@ List
 \description{
 Make data list to be passed to \code{estimate_model}
 }
-\examples{
-\dontrun{}
-}

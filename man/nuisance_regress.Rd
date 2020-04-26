@@ -17,6 +17,3 @@ A T by M matrix representing the residuals of Y after regressing out Z
 \description{
 Regresses nuisance parameters from response or predictor variables
 }
-\examples{
-\dontrun{}
-}

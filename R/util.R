@@ -1,132 +1,134 @@
-#' Plot BayesfMRI.spde objects
-#'
-#' @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
-#' @param colors (Optional) Vector of colors to represent each region.
-#' @param alpha Transparency level.
-#'
-#' @return
-#' @export
-#' @importFrom geometry tetramesh
-#' @import rgl
-#' @importFrom viridis viridis_pal
-#'
-plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
-  if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
-  num_regions <- length(object$vertices)
-  if(is.null(colors)) colors <- viridis_pal()(num_regions)
-  if(length(colors) < num_regions) {
-    colors <- rep(colors, length.out=num_regions)
-    warning('Fewer colors specified than number of regions in the mesh.  Recycling colors to equal number of regions.')
-  }
-  for(ii in 1:num_regions){
-    if(ii==1) tetramesh(object$faces[[ii]], object$vertices[[ii]], col=colors[ii], alpha=alpha)
-    if(ii > 1) tetramesh(object$faces[[ii]], object$vertices[[ii]], clear=FALSE, col=colors[ii], alpha=alpha)
+# Plot BayesfMRI.spde objects
+#
+# @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
+# @param colors (Optional) Vector of colors to represent each region.
+# @param alpha Transparency level.
+#
+# @return
+# @export
+# @importFrom geometry tetramesh
+# @import rgl
+# @importFrom viridis viridis_pal
+#
+# plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
+#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
+#   num_regions <- length(object$vertices)
+#   if(is.null(colors)) colors <- viridis_pal()(num_regions)
+#   if(length(colors) < num_regions) {
+#     colors <- rep(colors, length.out=num_regions)
+#     warning('Fewer colors specified than number of regions in the mesh.  Recycling colors to equal number of regions.')
+#   }
+#   for(ii in 1:num_regions){
+#     if(ii==1) tetramesh(object$faces[[ii]], object$vertices[[ii]], col=colors[ii], alpha=alpha)
+#     if(ii > 1) tetramesh(object$faces[[ii]], object$vertices[[ii]], clear=FALSE, col=colors[ii], alpha=alpha)
+#
+#   }
+# }
 
-  }
-}
+# Plot BayesGLM objects
+#
+# Summary method for class "BayesGLM"
+#
+# @param object an object of class "BayesGLM"
+# @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
+# @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
+# @param ... further arguments passed to or from other methods.
+# @export
+# @import viridis
+# @method plot BayesGLM
+# plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
+# {
+#   session_names <- names(object$beta_estimates)
+#
+#   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
+#   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
+#
+#   if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
+#
+#   ind <- which(names(object$beta_estimates) == session_name) #which element of list
+#   est <- (object$beta_estimates)[[ind]]
+#   K <- ncol(est)
+#
+#
+#   if(is.null(pal)) {
+#     nColors <- 64
+#     pal <- viridis_pal(option='plasma', direction=1)(nColors)
+#   } else {
+#     if(min(areColors(pal)) < 1) stop('At least one of the elements of the pal argument is not a valid color representation.  See help(areColors).')
+#     nColors <- length(pal)
+#   }
+#
+#
+#   for(k in 1:K){
+#     x = est[,k]
+#     colindex <- as.integer(cut(x,breaks=nColors))
+#
+#     #NEED TO CHECK WHICH TYPE OF BAYESGLM OBJECT (VOL OR CORTICAL) -- maybe use the mesh class?  or the spde_obj class?
+#     #plot(mesh_LH_s$mesh,col=pal[colindex], rgl=TRUE)
+#
+#     #tetramesh(object$spde_obj$faces, object$spde_obj$vertices, col=pal[colindex], clear=FALSE)
+#
+#   }
+#
+#
+# }
+#
 
-#' Plot BayesGLM objects
-#'
-#' Summary method for class "BayesGLM"
-#'
-#' @param object an object of class "BayesGLM"
-#' @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
-#' @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
-#' @export
-#' @import viridis
-#' @method plot BayesGLM
-plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
-{
-  session_names <- names(result$beta_estimates)
-
-  if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
-  if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
-
-  if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
-
-  ind <- which(names(result$beta_estimates) == session_name) #which element of list
-  est <- (result$beta_estimates)[[ind]]
-  K <- ncol(est)
-
-
-  if(is.null(pal)) {
-    nColors <- 64
-    pal <- viridis_pal(option='plasma', direction=1)(nColors)
-  } else {
-    if(min(areColors(pal)) < 1) stop('At least one of the elements of the pal argument is not a valid color representation.  See help(areColors).')
-    nColors <- length(pal)
-  }
-
-
-  for(k in 1:K){
-    x = est[,k]
-    colindex <- as.integer(cut(x,breaks=nColors))
-
-    #NEED TO CHECK WHICH TYPE OF BAYESGLM OBJECT (VOL OR CORTICAL) -- maybe use the mesh class?  or the spde_obj class?
-    #plot(mesh_LH_s$mesh,col=pal[colindex], rgl=TRUE)
-
-    #tetramesh(object$spde_obj$faces, object$spde_obj$vertices, col=pal[colindex], clear=FALSE)
-
-  }
-
-
-}
-
-
-#' Check whether each element of vector x is a valid color representation
-#'
-#' @param x Character vector
-#'
-#' @return A logical vector indicating which of the elements of x are valid color representations
-#' @importFrom grDevices col2rgb
-#' @export
-#'
-areColors <- function(x) {
-  sapply(x, function(X) {
-    tryCatch(is.matrix(col2rgb(X)),
-             error = function(e) FALSE)
-  })
-}
-
-
-#' Summarise BayesGLM objects
-#'
-#' Summary method for class "BayesGLM"
-#'
-#' @param object an object of class "BayesGLM"
-#' @param ... further arguments passed to or from other methods.
-#' @export
-#' @method summary BayesGLM
-summary.BayesGLM <- function(object, ...)
-{
-  out <- list()
-  class(out) <- "summary.BayesGLM"
-  out$sessions <- object$session_names
-  out$betas <- object$beta_names
-  out$call <- object$INLA_result$call
-  out$inla.summary <- summary(object$model)
-  return(out)
-}
+# Check whether each element of vector x is a valid color representation
+#
+# @param x Character vector
+#
+# @return A logical vector indicating which of the elements of x are valid color representations
+# @importFrom grDevices col2rgb
+# @export
+#
+# areColors <- function(x) {
+#   sapply(x, function(X) {
+#     tryCatch(is.matrix(col2rgb(X)),
+#              error = function(e) FALSE)
+#   })
+# }
 
 
-#' @param x an object of class "summary.BayesGLM"
-#' @export
-#' @method print summary.BayesGLM
-#' @rdname summary.BayesGLM
-print.summary.BayesGLM <- function(x, ...)
-{
-  cat("Call:\n")
-  print(x$call)
-  cat("Sessions: ", x$sessions,"\n")
-  cat("Time used:\n", x$inla.summary$cpu.used)
-}
+# Summarise BayesGLM objects
+#
+# Summary method for class "BayesGLM"
+#
+# @param object an object of class "BayesGLM"
+# @param ... further arguments passed to or from other methods.
+# @export
+# @method summary BayesGLM
+# summary.BayesGLM <- function(object, ...)
+# {
+#   out <- list()
+#   class(out) <- "summary.BayesGLM"
+#   out$sessions <- object$session_names
+#   out$betas <- object$beta_names
+#   out$call <- object$INLA_result$call
+#   out$inla.summary <- summary(object$model)
+#   return(out)
+# }
 
-#' @export
-#' @method print BayesGLM
-#' @rdname summary.BayesGLM
-print.BayesGLM <- function(x, ...) {
-  print.summary.BayesGLM(summary(x))
-}
+
+# @param x an object of class "summary.BayesGLM"
+# @param ... further arguments passed to or from other methods.
+# @export
+# @method print summary.BayesGLM
+# @rdname summary.BayesGLM
+# print.summary.BayesGLM <- function(x, ...)
+# {
+#   cat("Call:\n")
+#   print(x$call)
+#   cat("Sessions: ", x$sessions,"\n")
+#   cat("Time used:\n", x$inla.summary$cpu.used)
+# }
+
+# @export
+# @method print BayesGLM
+# @rdname summary.BayesGLM
+# print.BayesGLM <- function(x, ...) {
+#   print.summary.BayesGLM(summary(x))
+# }
 
 # TO DO: Add print and summary functions for session object (may need as.session function too, and move is.session here)
 
@@ -138,6 +140,7 @@ print.BayesGLM <- function(x, ...) {
 #'
 #' @return A vector or matrix of the same dimension as beta_est in which values close to zero are assigned the value of zero. The closeness of a value to zero is found by performing two-means clustering on the absolute values of beta_est, and
 #' @export
+#' @importFrom stats kmeans
 #'
 find_nonzero <- function(beta_est) {
   vector_beta <- c(beta_est)
@@ -181,6 +184,7 @@ s2m <- function(x,b){
 #'
 #' @return An array of dimension `head(dim(B),-1)` with a point estimate of B based on the sequential 2-means method
 #' @export
+#' @importFrom stats quantile median
 #'
 #' @md
 s2m_B <- function(B,sigma){
