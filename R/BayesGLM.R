@@ -69,7 +69,6 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   n_sess <- length(fname_cifti)
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
-    fname_cifti <- list(fname_cifti)
     if(!is.null(design)) design <- list(design)
     #if(!is.null(onsets)) onsets <- list(onsets)
     if(!is.null(nuisance)) nuisance <- list(nuisance)
@@ -91,9 +90,9 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
       if(is.null(fname_sphere_left) | is.null(fname_sphere_right)) stop('Must provide fname_sphere_left and fname_sphere_right to resample.')
 
       #cifti file resampling
-      cat(paste0('RESAMPLING CIFTI TIMESERIES FILES TO ', resample, ' RESOLUTION\n'))
+      cat('\n RESAMPLING CIFTI TIMESERIES FILES TO ', resample, ' RESOLUTION \n')
       fname_cifti2 <- rep(NA, n_sess)
-      cifti_dir <- dirname(fname_cifti[[1]])
+      cifti_dir <- dirname(fname_cifti[1])
       for(ss in 1:n_sess){
         cifti_extn <- get_cifti_extn(fname_cifti[ss])
         fname_cifti2[ss] <- paste0(gsub(cifti_extn, '', fname_cifti[ss]), resample, '.', cifti_extn)
@@ -111,13 +110,13 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
       fname_cifti <- fname_cifti2
 
       #gifti file resampling
-      cat(paste0('RESAMPLING GIFTI SURFACE FILES TO ', resample, ' RESOLUTION'))
+      cat('\n RESAMPLING GIFTI SURFACE FILES TO ', resample, ' RESOLUTION \n')
       fnames_gifti <- c(fname_gifti_left, fname_gifti_right, fname_gifti2_left, fname_gifti2_right)
-      fnames_sphere_orig <- c(fname_sphere_left, fname_sphere_left, fname_sphere_right, fname_sphere_right)
-      fnames_sphere_target <- file.path(cifti_dir, 'helper_files_resampling', c('Sphere.target.L.surf.gii', 'Sphere.target.L.surf.gii', 'Sphere.target.R.surf.gii', 'Sphere.target.R.surf.gii'))
-      inds <- c(TRUE, TRUE, !is.null(fname_gifti2_left), !is.null(fname_gifti2_right))
-      fnames_sphere_orig <- fnames_sphere_orig[inds]
-      fnames_sphere_target <- fnames_sphere_target[inds]
+      fnames_sphere_orig <- c(fname_sphere_left, fname_sphere_right, fname_sphere_left, fname_sphere_right)
+      fnames_sphere_target <- file.path(cifti_dir, 'helper_files_resampling', c('Sphere.target.L.surf.gii',  'Sphere.target.R.surf.gii', 'Sphere.target.L.surf.gii', 'Sphere.target.R.surf.gii'))
+      notnull <- c(TRUE, TRUE, !is.null(fname_gifti2_left), !is.null(fname_gifti2_right))
+      fnames_sphere_orig <- fnames_sphere_orig[notnull]
+      fnames_sphere_target <- fnames_sphere_target[notnull]
       fnames_gifti_target <- gsub('surf.gii', paste0(resample,'.surf.gii'), fnames_gifti)
       for(gg in 1:length(fnames_gifti)){
         gifti_resample(gifti_orig = fnames_gifti[gg],
@@ -125,7 +124,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
                        sphere_orig = fnames_sphere_orig[gg],
                        sphere_target = fnames_sphere_target[gg],
                        wb_cmd = wb_cmd,
-                       overwrite = TRUE)
+                       overwrite = FALSE)
       }
 
       #redefine gifti file names to resampled files
@@ -143,7 +142,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
 
   for(ss in 1:n_sess){
-    cifti_ss <- cifti_read_separate(fname_cifti[ss], brainstructures=brainstructures)
+    cifti_ss <- cifti_read_separate(fname_cifti[ss], brainstructures=brainstructures, wb_cmd=wb_cmd)
     if(do_left) cifti_left[[ss]] <- cifti_ss$CORTEX_LEFT
     if(do_right) cifti_right[[ss]] <- cifti_ss$CORTEX_RIGHT
     if(do_sub) nifti_data[[ss]] <- cifti_ss$VOL
@@ -169,7 +168,8 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     #set up mesh
     surf_left <- readGIfTI(fname_gifti_left)$data
     verts_left <- surf_left$pointset
-    faces_left <- surf_left$triangle + 1
+    faces_left <- surf_left$triangle
+    if(min(faces_left)==0) faces_left <- faces_left + 1
 
     #set up session list
     session_data <- vector('list', n_sess)
@@ -194,7 +194,8 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     #set up mesh
     surf_right <- readGIfTI(fname_gifti_right)$data
     verts_right <- surf_right$pointset
-    faces_right <- surf_right$triangle + 1
+    faces_right <- surf_right$triangle
+    if(min(faces_right)==0) faces_right <- faces_right + 1
 
     #set up session list
     session_data <- vector('list', n_sess)
@@ -284,25 +285,27 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     surf_right <- NULL
   }
 
-  ### CONSTRUCT RESULTS AS CIFTI OBJECTS
+  ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
 
   classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      classicalGLM_cifti[[ss]] <- cifti_make(cortex_left = classicalGLM_left$single_session,
+      classicalGLM_cifti[[ss]] <- cifti_make(cortex_left = classicalGLM_left$beta_estimates[[ss]],
                                              cortex_right = classicalGLM_right$single_session,
                                              surf_left = surf_left,
                                              surf_right = surf_right,
+                                             surf_names = 'surface',
                                              subcortical = classicalGLM_vol$single_session,
                                              mask = mask,
                                              labels = nifti_labels)
     }
     if(do_Bayesian){
-      BayesGLM_cifti[[ss]] <- cifti_make(cortex_left = BayesGLM_left$single_session,
-                                         cortex_right = BayesGLM_right$single_session,
+      BayesGLM_cifti[[ss]] <- cifti_make(cortex_left = BayesGLM_left$beta_estimates[[ss]],
+                                         cortex_right = BayesGLM_right$beta_estimates[[ss]],
                                          surf_left = surf_left,
                                          surf_right = surf_right,
+                                         surf_names = 'surface',
                                          #subcortical = BayesGLM_vol$single_session,
                                          #mask = mask,
                                          #labels = nifti_labels
@@ -310,7 +313,14 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     }
   }
 
-  result <- list(BayesGLM=BayesGLM_cifti, classicalGLM=classicalGLM_cifti)
+  result <- list(beta_estimates = list(Bayesian=BayesGLM_cifti,
+                                       classical=classicalGLM_cifti),
+                 BayesianGLM = list(cortex_left = BayesGLM_left,
+                                 cortex_right = BayesGLM_right,
+                                 subcortical = BayesGLM_vol),
+                 classicalGLM = list(cortex_left = classicalGLM_left,
+                                     cortex_right = classicalGLM_right,
+                                     subcortical = classicalGLM_vol))
 
 }
 
@@ -405,6 +415,11 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   #2. If sum(zero_var) > 0, remove zero_var locations from data and create Amat
   #   Else, let Amat = identity matrix
 
+  if(sum(zero_var) > 0){
+    if(!is.null(mask)) mask[zero_var==TRUE] <- 0
+    if(is.null(mask)) mask <- !zero_var
+  }
+
   if(!is.null(mask)) {
     mask <- as.logical(mask)
     mesh <- submesh.mesh(mask, mesh)
@@ -415,15 +430,15 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
     zero_var <- zero_var[mask]
   }
 
-  #remove zero var locations from set of data locations, but leave in the mesh (if no mask provided)
-  Amat <- Diagonal(V, x=1)
-  if(sum(zero_var) > 0){
-    Amat <- Amat[!zero_var,]
-    mesh$idx$loc <- mesh$idx$loc[!zero_var]
-    for(s in 1:n_sess){
-      data[[s]]$BOLD <- data[[s]]$BOLD[,!zero_var]
-    }
-  }
+  # #remove zero var locations from set of data locations, but leave in the mesh (if no mask provided)
+  # Amat <- Diagonal(V, x=1)
+  # if(sum(zero_var) > 0){
+  #   Amat <- Amat[!zero_var,]
+  #   mesh$idx$loc <- mesh$idx$loc[!zero_var]
+  #   for(s in 1:n_sess){
+  #     data[[s]]$BOLD <- data[[s]]$BOLD[,!zero_var]
+  #   }
+  # }
 
 
   spde <- inla.spde2.matern(mesh)
