@@ -4,12 +4,13 @@
 #'
 #' @param object An object of class ‘"inla"’, a result of a call to inla
 #' @param session_names Vector of fMRI session names
+#' @param mask (Optional) Original mask applied to data before model fitting
 #' @param stat A string representing the posterior summary statistic to be returned
 #'
 #' @return Estimates from inla model
 #' @export
 #'
-extract_estimates <- function(object, session_names, stat='mean'){
+extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 
   if(class(object) != "inla"){
     stop("Object is not of class 'inla'")
@@ -21,6 +22,10 @@ extract_estimates <- function(object, session_names, stat='mean'){
 
 	n_sess <- length(session_names)
 	n_loc <- length(res.beta[[1]]$mean)/n_sess
+	if(!is.null(mask)) {
+	  V <- length(mask)
+	  if(sum(mask) != n_loc) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
+	}
 	betas <- vector('list', n_sess)
 	names(betas) <- session_names
 
@@ -38,7 +43,8 @@ extract_estimates <- function(object, session_names, stat='mean'){
 			est_iv <- res.beta[[i]][[stat_ind]][inds_v]
 			betas_v[,i] <- est_iv
 		}
-		betas[[v]] <- betas_v
+		betas[[v]] <- matrix(NA, nrow=V, ncol=nbeta)
+		betas[[v]][mask==1,] <- betas_v
 	}
 	return(betas)
 }

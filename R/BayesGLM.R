@@ -180,10 +180,10 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
       session_data[[ss]] <- sess
     }
 
-    ### FIT GLM
+    ### FIT GLM(s)
 
-    if(do_classical) classicalGLM_left <- classicalGLM(session_data) else classicalGLM_left <- NULL
-    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_left <- NULL
+    if(do_classical) classicalGLM_left <- classicalGLM(session_data)
+    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL)
 
   }
 
@@ -207,8 +207,8 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     }
 
     ### FIT GLM
-    if(do_classical) classicalGLM_right <- classicalGLM(session_data) else classicalGLM_right <- NULL
-    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_right <- NULL
+    if(do_classical) classicalGLM_right <- classicalGLM(session_data)
+    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL)
   }
 
   ### SUBCORTICAL
@@ -397,7 +397,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   }
 
   if(is.null(outfile)){
-    warning('No value supplied for outfile, which is required for post-hoc group modeling.')
+    message('No value supplied for outfile, which is required for post-hoc group modeling.')
   }
 
   if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
@@ -423,11 +423,12 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   if(!is.null(mask)) {
     mask <- as.logical(mask)
     mesh <- submesh.mesh(mask, mesh)
+    mesh$idx$loc <- mesh$idx$loc[!is.na(mesh$idx$loc)]
     for(s in 1:n_sess){
       data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
     }
     V <- sum(mask)
-    zero_var <- zero_var[mask]
+    #zero_var <- zero_var[mask]
   }
 
   # #remove zero var locations from set of data locations, but leave in the mesh (if no mask provided)
@@ -504,13 +505,12 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1, num.threads=num.threads)
 
   #extract useful stuff from INLA model result
-  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names) #posterior means of latent task field
-  theta_posteriors <- get_posterior_densities(object=INLA_result, spde) #hyperparameter posterior densities
+  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
+  theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
 
   #extract stuff needed for group analysis
   mu.theta <- INLA_result$misc$theta.mode
   Q.theta <- solve(INLA_result$misc$cov.intern)
-
 
   #construct object to be returned
   if(return_INLA_result){
@@ -528,6 +528,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   } else {
     result <- list(INLA_result = NULL,
                    mesh = mesh,
+                   mask = mask,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
