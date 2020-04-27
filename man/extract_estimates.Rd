@@ -4,12 +4,14 @@
 \alias{extract_estimates}
 \title{Extract Estimates of Activation}
 \usage{
-extract_estimates(object, session_names, stat = "mean")
+extract_estimates(object, session_names, mask = NULL, stat = "mean")
 }
 \arguments{
 \item{object}{An object of class ‘"inla"’, a result of a call to inla}
 
 \item{session_names}{Vector of fMRI session names}
+
+\item{mask}{(Optional) Original mask applied to data before model fitting}
 
 \item{stat}{A string representing the posterior summary statistic to be returned}
 }

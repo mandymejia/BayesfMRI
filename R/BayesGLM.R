@@ -291,14 +291,15 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      classicalGLM_cifti[[ss]] <- cifti_make(cortex_left = classicalGLM_left$beta_estimates[[ss]],
-                                             cortex_right = classicalGLM_right$single_session,
+      classicalGLM_cifti[[ss]] <- cifti_make(cortex_left = classicalGLM_left[[ss]],
+                                             cortex_right = classicalGLM_right[[ss]],
                                              surf_left = surf_left,
                                              surf_right = surf_right,
                                              surf_names = 'surface',
-                                             subcortical = classicalGLM_vol$single_session,
-                                             mask = mask,
-                                             labels = nifti_labels)
+                                             #subcortical = classicalGLM_vol$single_session,
+                                             #mask = mask,
+                                             #labels = nifti_labels
+                                             )
     }
     if(do_Bayesian){
       BayesGLM_cifti[[ss]] <- cifti_make(cortex_left = BayesGLM_left$beta_estimates[[ss]],
@@ -313,14 +314,14 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     }
   }
 
-  result <- list(beta_estimates = list(Bayesian=BayesGLM_cifti,
+  result <- list(betas = list(Bayesian=BayesGLM_cifti,
                                        classical=classicalGLM_cifti),
-                 BayesianGLM = list(cortex_left = BayesGLM_left,
-                                 cortex_right = BayesGLM_right,
-                                 subcortical = BayesGLM_vol),
-                 classicalGLM = list(cortex_left = classicalGLM_left,
-                                     cortex_right = classicalGLM_right,
-                                     subcortical = classicalGLM_vol))
+                 GLM = list(Bayesian = list(cortex_left = BayesGLM_left,
+                                            cortex_right = BayesGLM_right,
+                                            subcortical = BayesGLM_vol),
+                            classical = list(cortex_left = classicalGLM_left,
+                                              cortex_right = classicalGLM_right,
+                                              subcortical = classicalGLM_vol)))
 
 }
 

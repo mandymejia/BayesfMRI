@@ -4,12 +4,14 @@
 \alias{get_posterior_densities}
 \title{Extracts posterior density estimates for hyperparameters}
 \usage{
-get_posterior_densities(object, spde)
+get_posterior_densities(object, spde, beta_names = NULL)
 }
 \arguments{
 \item{object}{An object of class ‘"inla"’, a result of a call to \code{inla()}}
 
 \item{spde}{The model used for the latent fields in the \code{inla()} call, an object of class ‘"inla.spde"’}
+
+\item{beta_names}{(Optional) Descriptive names of model regressors (tasks).}
 }
 \value{
 Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
