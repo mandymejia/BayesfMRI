@@ -135,6 +135,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     }
   }
 
+  cat('\n SETTING UP DATA \n')
 
   ### For each session, separate the CIFTI data into left/right/sub and read in files
   if(do_left) cifti_left <- vector('list', n_sess)
@@ -158,12 +159,16 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   }
 
 
+  cat('\n RUNNING MODELS \n')
+
   classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
   BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
 
 
   ### LEFT HEMISPHERE
   if(do_left){
+
+    cat('\n ... LEFT CORTEX \n')
 
     #set up mesh
     surf_left <- readGIfTI(fname_gifti_left)$data
@@ -191,7 +196,9 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   ### RIGHT HEMISPHERE
   if(do_right){
 
-    #set up mesh
+    cat('\n ... RIGHT CORTEX \n')
+
+        #set up mesh
     surf_right <- readGIfTI(fname_gifti_right)$data
     verts_right <- surf_right$pointset
     faces_right <- surf_right$triangle
@@ -213,6 +220,8 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
   ### SUBCORTICAL
   if(do_sub){
+
+    cat('\n ... SUBCORTICAL \n')
 
     # Create and Apply Mask
 
@@ -257,6 +266,9 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
   ### SET UP SURFACES FOR VISUALIZATION
 
+  cat('\n SETTING UP VISUALIZATION SURFACES \n')
+
+
   #LEFT CORTEX
   if(do_left){
     if(!is.null(fname_gifti2_left)){
@@ -286,6 +298,8 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   }
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
+
+  cat('\n PUTTING RESULTS IN CIFTI FORMAT \n')
 
   classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
@@ -323,6 +337,9 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
                                               cortex_right = classicalGLM_right,
                                               subcortical = classicalGLM_vol)))
 
+  cat('\n DONE! \n')
+
+  return(result)
 }
 
 
@@ -371,6 +388,9 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   }else{
     if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
       warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
+    else {
+      inla.setOption(smtp='pardiso')
+    }
     #inla.pardiso()
   }
 
@@ -460,13 +480,13 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
 
     #regress nuisance parameters from BOLD data and design matrix
     if('nuisance' %in% names(data[[s]])){
-      design_s <- data[[s]]$design
+      design_s <- design_s
       nuisance_s <- data[[s]]$nuisance
       y_reg <- nuisance_regress(BOLD_s, nuisance_s)
       X_reg <- nuisance_regress(design_s, nuisance_s)
     } else {
       y_reg <- BOLD_s
-      X_reg <- data[[s]]$design
+      X_reg <- design_s
     }
 
     #set up data and design matrix
@@ -503,7 +523,9 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   #estimate model using INLA
-  INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1, num.threads=num.threads)
+  cat('\n ...... estimating model with INLA')
+  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=TRUE))
+  cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field

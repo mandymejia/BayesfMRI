@@ -31,7 +31,7 @@ get_posterior_densities <- function(object, spde, beta_names=NULL){
 		df.b <- rbind(log_kappa.b, log_tau.b)
 		df.b$beta <- name_b
 		if(!is.null(beta_names)) df.b$name <- beta_names[b] else df.b$name <- NA
-		if(b==beta_names_model[1]) df <- df.b else df <- rbind(df, df.b)
+		if(b == 1) df <- df.b else df <- rbind(df, df.b)
 	}
 	df <- df[,c('beta','name','param','value','density')]
 	return(df)
