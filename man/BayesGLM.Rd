@@ -18,9 +18,12 @@ BayesGLM(
   design = NULL,
   onsets = NULL,
   nuisance = NULL,
+  scale_BOLD = TRUE,
+  scale_design = TRUE,
   GLM_method = "both",
   session_names = NULL,
-  resample = 10000
+  resample = 10000,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -44,17 +47,23 @@ BayesGLM(
 
 \item{wb_cmd}{Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).}
 
-\item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.}
+\item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}
 
 \item{onsets}{A matrix of onsets and durations for each task (or a list of such matrices, for multiple-session modeling).  Must be provided if and only if design=NULL.}
 
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
+
+\item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
+
+\item{scale_design}{If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
 
 \item{session_names}{(Optional) A vector of names corresponding to each session.}
 
 \item{resample}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
+
+\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 }
 \value{
 An object of class BayesGLM, a list containing ...

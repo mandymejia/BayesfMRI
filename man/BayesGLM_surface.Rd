@@ -10,10 +10,11 @@ BayesGLM_surface(
   faces = NULL,
   mesh = NULL,
   mask = NULL,
-  scale = TRUE,
+  scale_BOLD = TRUE,
   num.threads = 4,
   return_INLA_result = TRUE,
-  outfile = NULL
+  outfile = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -29,13 +30,15 @@ List element names represent session names.}
 
 \item{mask}{(Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.}
 
-\item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.}
+\item{scale_BOLD}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
 
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
 
 \item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
+
+\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 }
 \value{
 A list containing...

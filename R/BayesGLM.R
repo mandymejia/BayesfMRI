@@ -10,12 +10,15 @@
 #' @param brainstructures A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)
 #' @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7).
 #' @param wb_cmd Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).
-#' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.
+#' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.
 #' @param onsets A matrix of onsets and durations for each task (or a list of such matrices, for multiple-session modeling).  Must be provided if and only if design=NULL.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
+#' @param scale_BOLD If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
+#' @param scale_design If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each session.
 #' @param resample The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
+#' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
@@ -47,7 +50,7 @@
 #' 20 Thalamus-L
 #' 21 Thalamus-R
 #'
-BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL, fname_gifti2_left=NULL, fname_gifti2_right=NULL, fname_sphere_left=NULL, fname_sphere_right=NULL, brainstructures=c('left','right','subcortical'), vol_regions=c(3:6,8:21), wb_cmd, design=NULL, onsets=NULL, nuisance=NULL, GLM_method='both', session_names=NULL, resample=10000){
+BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL, fname_gifti2_left=NULL, fname_gifti2_right=NULL, fname_sphere_left=NULL, fname_sphere_right=NULL, brainstructures=c('left','right','subcortical'), vol_regions=c(3:6,8:21), wb_cmd, design=NULL, onsets=NULL, nuisance=NULL, scale_BOLD=TRUE, scale_design=TRUE, GLM_method='both', session_names=NULL, resample=10000, verbose=FALSE){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
@@ -164,6 +167,12 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
   BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
 
+  ### FORMAT DESIGN MATRIX
+  for(ss in 1:n_sess){
+    design[[ss]] <- scale(design[[s]], scale=FALSE) #center design matrix to eliminate baseline
+    if(scale_design) design[[ss]] <- design[[ss]]/max(design[[ss]])
+  }
+
 
   ### LEFT HEMISPHERE
   if(do_left){
@@ -188,7 +197,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     ### FIT GLM(s)
 
     if(do_classical) classicalGLM_left <- classicalGLM(session_data)
-    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL)
+    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale_BOLD=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
 
   }
 
@@ -215,7 +224,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
     ### FIT GLM
     if(do_classical) classicalGLM_right <- classicalGLM(session_data)
-    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL)
+    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale_BOLD=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
   }
 
   ### SUBCORTICAL
@@ -259,7 +268,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     if(do_classical) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
 
     ### TO DO: Pass through locations, labels & groups_df instead of spde
-    #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
+    #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
   }
 
   if(!do_sub) mask <- nifti_labels <- NULL
@@ -353,10 +362,11 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 #' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
 #' @param mask (Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.
-#' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  Else, do not scale.
+#' @param scale_BOLD If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
+#' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #'
 #' @return A list containing...
 #' @export
@@ -365,17 +375,13 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale=TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL){
+BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
   # V = number of data locations
   # T = length of time series for each session (vector)
   # K = number of unique tasks in all sessions
-
-  #need to check that sessions are consistent in terms of V, K?
-
-  #INLA:::inla.dynload.workaround() #avoid error on creating mesh
 
   # Check to see that the INLA package is installed
   if (!requireNamespace("INLA", quietly = TRUE))
@@ -475,12 +481,11 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
     BOLD_s <- data[[s]]$BOLD
 
     #scale data to represent % signal change (or just center if scale=FALSE)
-    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale)
-    design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
+    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
+    design_s <- data[[s]]$design #previously centered and scaled to max=1
 
     #regress nuisance parameters from BOLD data and design matrix
     if('nuisance' %in% names(data[[s]])){
-      design_s <- design_s
       nuisance_s <- data[[s]]$nuisance
       y_reg <- nuisance_regress(BOLD_s, nuisance_s)
       X_reg <- nuisance_regress(design_s, nuisance_s)
@@ -524,7 +529,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
 
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=TRUE))
+  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
