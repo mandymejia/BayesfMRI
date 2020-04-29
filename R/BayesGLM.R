@@ -169,7 +169,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
   ### FORMAT DESIGN MATRIX
   for(ss in 1:n_sess){
-    design[[ss]] <- scale(design[[s]], scale=FALSE) #center design matrix to eliminate baseline
+    design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
     if(scale_design) design[[ss]] <- design[[ss]]/max(design[[ss]])
   }
 
@@ -370,7 +370,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 #'
 #' @return A list containing...
 #' @export
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check
+#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
