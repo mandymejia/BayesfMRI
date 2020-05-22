@@ -1,7 +1,7 @@
 # BayesfMRI
-BayesfMRI R package 
 
-Two main functions:
+BayesfMRI R package. Includes two main functions:
+
 * BayesGLM – Implements the spatial Bayesian GLM for task fMRI on the cortical surface proposed by Mejia et al. 2019a [https://doi.org/10.1080/01621459.2019.1611582]
 * templateICA – Implements the template ICA model for estimating functional brain networks in individual subjects proposed by Mejia et al. 2019b [https://doi.org/10.1080/01621459.2019.1611582]
 
