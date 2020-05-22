@@ -23,6 +23,7 @@ BayesGLM(
   GLM_method = "both",
   session_names = NULL,
   resample = 10000,
+  num.threads = 4,
   verbose = FALSE
 )
 }
@@ -62,6 +63,8 @@ BayesGLM(
 \item{session_names}{(Optional) A vector of names corresponding to each session.}
 
 \item{resample}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
+
+\item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
 \item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 }

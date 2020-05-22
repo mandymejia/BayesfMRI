@@ -1,15 +1,15 @@
 Package: BayesfMRI
 Title: Bayesian Methods for Functional MRI
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person(given = "Amanda",
            family = "Mejia",
            role = c("aut", "cre"),
            email = "mandy.mejia@gmail.com")
-Description: The main function, BayesGLM, performs a spatial Bayesian general linear model (GLM) for task fMRI data, as proposed in [Mejia et al., 2019](https://doi.org/10.1080/01621459.2019.1611582).  The package requires the INLA package, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`
+Description: The two main functions are BayesGLM and templateICA.  BayesGLM performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface.  The templateICA function performs template ICA and spatial template ICA for subject-level brain network estimation. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`
 License: GPL-3
 Depends: 
-    R (>= 3.1.0)
+    R (>= 3.6.0)
 Encoding: UTF-8
 Imports: 
     abind,
@@ -19,14 +19,19 @@ Imports:
     excursions,
     graphics,
     geometry,
+    ica,
     INLA (>= 0.0-1468840039),
     numDeriv,
     MASS,
     Matrix,
     matrixStats,
+    methods,
+    pesel,
     rdist,
     rgl,
-    sp
+    sp,
+    SQUAREM,
+    stats
 Suggests:
     parallel
 ImportsFrom: 
@@ -34,3 +39,5 @@ ImportsFrom:
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.0
+URL: https://github.com/mandymejia/BayesfMRI
+BugReports: https://github.com/mandymejia/BayesfMRI/issues

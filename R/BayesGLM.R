@@ -18,6 +18,7 @@
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each session.
 #' @param resample The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
+#' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #'
 #' @return An object of class BayesGLM, a list containing ...
@@ -50,7 +51,7 @@
 #' 20 Thalamus-L
 #' 21 Thalamus-R
 #'
-BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL, fname_gifti2_left=NULL, fname_gifti2_right=NULL, fname_sphere_left=NULL, fname_sphere_right=NULL, brainstructures=c('left','right','subcortical'), vol_regions=c(3:6,8:21), wb_cmd, design=NULL, onsets=NULL, nuisance=NULL, scale_BOLD=TRUE, scale_design=TRUE, GLM_method='both', session_names=NULL, resample=10000, verbose=FALSE){
+BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL, fname_gifti2_left=NULL, fname_gifti2_right=NULL, fname_sphere_left=NULL, fname_sphere_right=NULL, brainstructures=c('left','right','subcortical'), vol_regions=c(3:6,8:21), wb_cmd, design=NULL, onsets=NULL, nuisance=NULL, scale_BOLD=TRUE, scale_design=TRUE, GLM_method='both', session_names=NULL, resample=10000, num.threads=4, verbose=FALSE){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
@@ -197,7 +198,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     ### FIT GLM(s)
 
     if(do_classical) classicalGLM_left <- classicalGLM(session_data)
-    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale_BOLD=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
+    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
 
   }
 
@@ -224,7 +225,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
     ### FIT GLM
     if(do_classical) classicalGLM_right <- classicalGLM(session_data)
-    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale_BOLD=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
+    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
   }
 
   ### SUBCORTICAL
@@ -268,7 +269,7 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     if(do_classical) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
 
     ### TO DO: Pass through locations, labels & groups_df instead of spde
-    #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=4, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
+    #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
   }
 
   if(!do_sub) mask <- nifti_labels <- NULL
