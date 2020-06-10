@@ -295,7 +295,7 @@ BayesGLM <- function(fname_cifti,
                                                       scale_BOLD=scale_BOLD,
                                                       num.threads=num.threads,
                                                       return_INLA_result=FALSE,
-                                                      outfile = outfile_left,
+                                                      outfile = file.path(outdir,outfile_left),
                                                       verbose=verbose)
 
   }
@@ -322,14 +322,17 @@ BayesGLM <- function(fname_cifti,
     }
 
     ### FIT GLM
-    if(do_classical) classicalGLM_right <- classicalGLM(session_data)
+
+    if(!is.null(outfile)) outfile_right <- paste0(outfile, '_right.Rdata') else outfile_right <- NULL
+
+    if(do_classical) classicalGLM_right <- classicalGLM(session_data, scale=scale_BOLD)
     if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data,
                                                       vertices = verts_right,
                                                       faces = faces_right,
                                                       scale_BOLD=scale_BOLD,
                                                       num.threads=num.threads,
                                                       return_INLA_result=FALSE,
-                                                      outfile = NULL,
+                                                      outfile = file.path(outdir,outfile_right),
                                                       verbose=verbose)
   }
 
@@ -428,8 +431,8 @@ BayesGLM <- function(fname_cifti,
     if(do_Bayesian){
       BayesGLM_cifti[[ss]] <- cifti_make(cortex_left = BayesGLM_left$beta_estimates[[ss]],
                                          cortex_right = BayesGLM_right$beta_estimates[[ss]],
-                                         surf_left = surf_left,
-                                         surf_right = surf_right,
+                                         surf_left = surf_left_viz,
+                                         surf_right = surf_right_viz,
                                          surf_names = 'surface',
                                          #subcortical = BayesGLM_vol$single_session,
                                          #mask = mask,
@@ -438,14 +441,16 @@ BayesGLM <- function(fname_cifti,
     }
   }
 
-  result <- list(betas = list(Bayesian=BayesGLM_cifti,
-                                       classical=classicalGLM_cifti),
-                 GLM = list(Bayesian = list(cortex_left = BayesGLM_left,
-                                            cortex_right = BayesGLM_right,
-                                            subcortical = BayesGLM_vol),
-                            classical = list(cortex_left = classicalGLM_left,
-                                              cortex_right = classicalGLM_right,
-                                              subcortical = classicalGLM_vol)))
+  result <- list(betas_Bayesian = BayesGLM_cifti,
+                 betas_classical = classicalGLM_cifti,
+                 GLMs_Bayesian = list(cortex_left = BayesGLM_left,
+                                     cortex_right = BayesGLM_right,
+                                     subcortical = BayesGLM_vol),
+                 GLMs_classical = list(cortex_left = classicalGLM_left,
+                                      cortex_right = classicalGLM_right,
+                                      subcortical = classicalGLM_vol))
+
+  save(result, file=file.path(outdir, paste0(outfile,'.Rdata')))
 
   cat('\n DONE! \n')
 
