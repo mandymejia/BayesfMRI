@@ -26,6 +26,7 @@ Imports:
     Matrix,
     matrixStats,
     methods,
+    neuRosim,
     pesel,
     rdist,
     rgl,

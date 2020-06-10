@@ -1,18 +1,16 @@
 #' Create HRF design matrix columns from onsets and durations
 #'
 #' @param onsets A matrix of onsets (first column) and durations (second column) for each task in SECONDS (set duration to zero for event related design), organized as a list where each element of the list corresponds to one task. Names of list indicate task names.
-#' @param TR Temporal resolution of fMRI data, in seconds.
-#' @param duration Length of fMRI timeseries, in scans.
+#' @param TR Temporal resolution of fMRI data, in SECONDS.
+#' @param duration Length of fMRI timeseries, in SCANS.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick function with canonical HRF
-#' @param scale If TRUE, columns are scaled globally so that the maximum across all columns is 1.
 #'
-#' @return
+#' @return Design matrix containing one HRF column for each task
 #' @export
 #' @importFrom neuRosim canonicalHRF
 #' @importFrom stats convolve
 #'
-#' @examples
-make_HRFs <- function(onsets, TR, duration, downsample=100, scale=TRUE){
+make_HRFs <- function(onsets, TR, duration, downsample=100){
 
   K <- length(onsets) #number of tasks
   if(is.null(names(onsets))) task_names <- paste0('task', 1:K) else task_names <- names(onsets)

@@ -8,11 +8,13 @@
 #' @param fname_sphere_left File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param fname_sphere_right File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param brainstructures A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)
-#' @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7).
+# @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7). # vol_regions=c(3:6,8:21)
 #' @param wb_cmd Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).
 #' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.
 #' @param onsets A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.
+#' @param TR The temporal resolution of the data in seconds.  Must be provided if onsets provided.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
+#' @param nuisance_include (Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).
 #' @param scale_BOLD If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
 #' @param scale_design If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
@@ -20,6 +22,8 @@
 #' @param resample The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
+#' @param outdir (Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.
+#' @param outfile (Optional) File name (without extension) of output file for BayesGLM result. Required for Bayesian group modeling.
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
@@ -51,10 +55,35 @@
 #' 20 Thalamus-L
 #' 21 Thalamus-R
 #'
-BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL, fname_gifti2_left=NULL, fname_gifti2_right=NULL, fname_sphere_left=NULL, fname_sphere_right=NULL, brainstructures=c('left','right','subcortical'), vol_regions=c(3:6,8:21), wb_cmd, design=NULL, onsets=NULL, nuisance=NULL, scale_BOLD=TRUE, scale_design=TRUE, GLM_method='both', session_names=NULL, resample=10000, num.threads=4, verbose=FALSE){
+BayesGLM <- function(fname_cifti,
+                     fname_gifti_left=NULL, fname_gifti_right=NULL,
+                     fname_gifti2_left=NULL, fname_gifti2_right=NULL,
+                     fname_sphere_left=NULL, fname_sphere_right=NULL,
+                     brainstructures=c('left','right','subcortical'),
+                     wb_cmd,
+                     design=NULL, onsets=NULL, TR=NULL,
+                     nuisance=NULL, nuisance_include=c('drift','dHRF'),
+                     scale_BOLD=TRUE, scale_design=TRUE,
+                     GLM_method='both',
+                     session_names=NULL,
+                     resample=10000,
+                     num.threads=4,
+                     verbose=FALSE,
+                     outdir=NULL,
+                     outfile=NULL){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
+
+  if(is.null(outdir)){
+    outdir <- getwd()
+  } else if(!file.exists(outdir)){
+    stop('outdir does not exist, check and try again.')
+  }
+  #TO DO: Check that the user has write permissions in outdir
+
+  #TO DO: Test this line of code for Windows systems.  May need to try both options for winslash argument with a tryCatch or if statement to keep the one that works.
+  outdir <- normalizePath(outdir) #generate full path
 
   # Check that arguments are compatible
   do_left <- ('left' %in% brainstructures)
@@ -64,80 +93,82 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   if(do_left & is.null(fname_gifti_left)) stop('fname_gifti_left must be provided if brainstructures includes "left"')
   if(do_right & is.null(fname_gifti_right)) stop('fname_gifti_left must be provided if brainstructures includes "left"')
   if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
-  if(do_sub){
-    if(length(unique(vol_regions)) != length(vol_regions)) stop('vol_regions must contain no repeated values.')
-    if(min(is.element(vol_regions, 3:21))==0) stop('vol_regions must include only integer values between 3 and 21.')
-  }
+  if(!is.null(onsets) & is.null(TR)) stop('Please provide TR if onsets provided')
+  # if(do_sub){
+  #   if(length(unique(vol_regions)) != length(vol_regions)) stop('vol_regions must contain no repeated values.')
+  #   if(min(is.element(vol_regions, 3:21))==0) stop('vol_regions must include only integer values between 3 and 21.')
+  # }
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(fname_cifti)
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
     if(!is.null(design)) design <- list(design)
-    #if(!is.null(onsets)) onsets <- list(onsets)
+    if(!is.null(onsets)) onsets <- list(onsets)
     if(!is.null(nuisance)) nuisance <- list(nuisance)
   } else {
     if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
     if(!is.null(design)){ if(length(design) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), design must be a list of length equal to the number of sessions (or NULL, if onsets provided).') }
-    #if(!is.null(onsets)){ if(length(onsets) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), onsets must be a list of length equal to the number of sessions (or NULL, if design provided).') }
+    if(!is.null(onsets)){ if(length(onsets) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), onsets must be a list of length equal to the number of sessions (or NULL, if design provided).') }
     if(!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because fname_cifti is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
   }
   if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as fname_cifti')
 
+  # ### First, perform resampling
+  # if(do_Bayesian){
+  #   if(!is.null(resample)){
+  #     if(!is.numeric(resample)) stop('resample must be numeric')
+  #     if(round(resample) != resample) stop('resample must be an integer')
+  #     if(resample > 30000 | resample < 1000) stop('resample must be a number between 1,000 and 30,000')
+  #     if(is.null(fname_sphere_left) | is.null(fname_sphere_right)) stop('Must provide fname_sphere_left and fname_sphere_right to resample.')
+  #
+  #     #cifti file resampling
+  #     cat('\n RESAMPLING CIFTI TIMESERIES FILES TO ', resample, ' RESOLUTION \n')
+  #     fname_cifti2 <- rep(NA, n_sess)
+  #     cifti_dir <- dirname(fname_cifti[1])
+  #     for(ss in 1:n_sess){
+  #       cifti_extn <- get_cifti_extn(fname_cifti[ss])
+  #       fname_cifti2[ss] <- paste0(gsub(cifti_extn, '', fname_cifti[ss]), resample, '.', cifti_extn)
+  #       fname_cifti2[ss] <- file.path(outdir,basename(fname_cifti2[ss]))
+  #       delete_helper_files <- FALSE
+  #       if(ss==1){ make_helper_files <- TRUE } else { make_helper_files <- FALSE }
+  #       cifti_resample(cifti_orig = fname_cifti[ss],
+  #                      cifti_target = fname_cifti2[ss],
+  #                      sphere_orig_L = fname_sphere_left,
+  #                      sphere_orig_R = fname_sphere_right,
+  #                      target_res = resample,
+  #                      wb_cmd = wb_cmd,
+  #                      make_helper_files = make_helper_files,
+  #                      delete_helper_files = delete_helper_files)
+  #     }
+  #     fname_cifti <- fname_cifti2
+  #
+  #     #gifti file resampling
+  #     cat('\n RESAMPLING GIFTI SURFACE FILES TO ', resample, ' RESOLUTION \n')
+  #     fnames_gifti <- c(fname_gifti_left, fname_gifti_right, fname_gifti2_left, fname_gifti2_right)
+  #     fnames_sphere_orig <- c(fname_sphere_left, fname_sphere_right, fname_sphere_left, fname_sphere_right)
+  #     fnames_sphere_target <- file.path(cifti_dir, 'helper_files_resampling', c('Sphere.target.L.surf.gii',  'Sphere.target.R.surf.gii', 'Sphere.target.L.surf.gii', 'Sphere.target.R.surf.gii'))
+  #     notnull <- c(TRUE, TRUE, !is.null(fname_gifti2_left), !is.null(fname_gifti2_right))
+  #     fnames_sphere_orig <- fnames_sphere_orig[notnull]
+  #     fnames_sphere_target <- fnames_sphere_target[notnull]
+  #     fnames_gifti_target <- gsub('surf.gii', paste0(resample,'.surf.gii'), fnames_gifti)
+  #     for(gg in 1:length(fnames_gifti)){
+  #       gifti_resample(gifti_orig = fnames_gifti[gg],
+  #                      gifti_target = fnames_gifti_target[gg],
+  #                      sphere_orig = fnames_sphere_orig[gg],
+  #                      sphere_target = fnames_sphere_target[gg],
+  #                      wb_cmd = wb_cmd,
+  #                      overwrite = FALSE)
+  #     }
+  #
+  #     #redefine gifti file names to resampled files
+  #     fname_gifti_left <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti_left)
+  #     fname_gifti_right <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti_right)
+  #     if(!is.null(fname_gifti2_left)) fname_gifti2_left <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti2_left)
+  #     if(!is.null(fname_gifti2_right)) fname_gifti2_right <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti2_right)
+  #   }
+  # }
 
-  ### First, perform resampling
-  if(do_Bayesian){
-    if(!is.null(resample)){
-      if(!is.numeric(resample)) stop('resample must be numeric')
-      if(round(resample) != resample) stop('resample must be an integer')
-      if(resample > 30000 | resample < 1000) stop('resample must be a number between 1,000 and 30,000')
-      if(is.null(fname_sphere_left) | is.null(fname_sphere_right)) stop('Must provide fname_sphere_left and fname_sphere_right to resample.')
-
-      #cifti file resampling
-      cat('\n RESAMPLING CIFTI TIMESERIES FILES TO ', resample, ' RESOLUTION \n')
-      fname_cifti2 <- rep(NA, n_sess)
-      cifti_dir <- dirname(fname_cifti[1])
-      for(ss in 1:n_sess){
-        cifti_extn <- get_cifti_extn(fname_cifti[ss])
-        fname_cifti2[ss] <- paste0(gsub(cifti_extn, '', fname_cifti[ss]), resample, '.', cifti_extn)
-        delete_helper_files <- FALSE
-        if(ss==1){ make_helper_files <- TRUE } else { make_helper_files <- FALSE }
-        cifti_resample(cifti_orig = fname_cifti[ss],
-                       cifti_target = fname_cifti2[ss],
-                       sphere_orig_L = fname_sphere_left,
-                       sphere_orig_R = fname_sphere_right,
-                       target_res = resample,
-                       wb_cmd = wb_cmd,
-                       make_helper_files = make_helper_files,
-                       delete_helper_files = delete_helper_files)
-      }
-      fname_cifti <- fname_cifti2
-
-      #gifti file resampling
-      cat('\n RESAMPLING GIFTI SURFACE FILES TO ', resample, ' RESOLUTION \n')
-      fnames_gifti <- c(fname_gifti_left, fname_gifti_right, fname_gifti2_left, fname_gifti2_right)
-      fnames_sphere_orig <- c(fname_sphere_left, fname_sphere_right, fname_sphere_left, fname_sphere_right)
-      fnames_sphere_target <- file.path(cifti_dir, 'helper_files_resampling', c('Sphere.target.L.surf.gii',  'Sphere.target.R.surf.gii', 'Sphere.target.L.surf.gii', 'Sphere.target.R.surf.gii'))
-      notnull <- c(TRUE, TRUE, !is.null(fname_gifti2_left), !is.null(fname_gifti2_right))
-      fnames_sphere_orig <- fnames_sphere_orig[notnull]
-      fnames_sphere_target <- fnames_sphere_target[notnull]
-      fnames_gifti_target <- gsub('surf.gii', paste0(resample,'.surf.gii'), fnames_gifti)
-      for(gg in 1:length(fnames_gifti)){
-        gifti_resample(gifti_orig = fnames_gifti[gg],
-                       gifti_target = fnames_gifti_target[gg],
-                       sphere_orig = fnames_sphere_orig[gg],
-                       sphere_target = fnames_sphere_target[gg],
-                       wb_cmd = wb_cmd,
-                       overwrite = FALSE)
-      }
-
-      #redefine gifti file names to resampled files
-      fname_gifti_left <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti_left)
-      fname_gifti_right <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti_right)
-      if(!is.null(fname_gifti2_left)) fname_gifti2_left <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti2_left)
-      if(!is.null(fname_gifti2_right)) fname_gifti2_right <- gsub('surf.gii', paste0(resample,'.surf.gii'), fname_gifti2_right)
-    }
-  }
 
   cat('\n SETTING UP DATA \n')
 
@@ -146,22 +177,67 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
   if(do_right) cifti_right <- vector('list', n_sess)
   if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
 
-  for(ss in 1:n_sess){
-    cifti_ss <- cifti_read_separate(fname_cifti[ss], brainstructures=brainstructures, wb_cmd=wb_cmd)
-    if(do_left) cifti_left[[ss]] <- cifti_ss$CORTEX_LEFT
-    if(do_right) cifti_right[[ss]] <- cifti_ss$CORTEX_RIGHT
-    if(do_sub) nifti_data[[ss]] <- cifti_ss$VOL
-    if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
-  }
-  #check that labels are the same across all sessions
-  if(do_sub) {
-    if(n_sess > 1) {
-      tmp <- sapply(nifti_labels, function(x) {all.equal(x,nifti_labels[[1]])})
-      if(min(tmp)==0) stop('Subcortical labels must match across all sessions in cifti data. Check compatibility of cifti files.')
-    }
-    nifti_labels <- nifti_labels[[1]]
+  if(is.null(design)) {
+    make_design <- TRUE
+    design <- vector('list', length=n_sess)
   }
 
+  for(ss in 1:n_sess){
+
+    cat(paste0('\n    Reading in data for session ', ss,'\n'))
+
+    if(ss==1){
+      cifti_ss <- cifti_read_separate(fname_cifti[ss],
+                                    c(fname_gifti_left, fname_gifti2_left),
+                                    c(fname_gifti_right, fname_gifti2_right),
+                                    surf_names = c('midthickness','inflated'),
+                                    brainstructures=brainstructures,
+                                    wb_cmd=wb_cmd,
+                                    outdir=outdir,
+                                    resample=resample,
+                                    sphere_orig_L=fname_sphere_left,
+                                    sphere_orig_R=fname_sphere_right,
+                                    make_helper_files=TRUE,
+                                    delete_helper_files=FALSE)
+      if(do_left) surf_left <- cifti_ss$SURF_LEFT
+      if(do_right) surf_right <- cifti_ss$SURF_RIGHT
+    } else {
+      cifti_ss <- cifti_read_separate(fname_cifti[ss],
+                                      brainstructures=brainstructures,
+                                      wb_cmd=wb_cmd,
+                                      outdir=outdir,
+                                      resample=resample,
+                                      sphere_orig_L=fname_sphere_left,
+                                      sphere_orig_R=fname_sphere_right,
+                                      make_helper_files=FALSE)
+    }
+
+    if(do_left) { cifti_left[[ss]] <- cifti_ss$CORTEX_LEFT; ntime <- ncol(cifti_ss$CORTEX_LEFT) }
+    if(do_right) { cifti_right[[ss]] <- cifti_ss$CORTEX_RIGHT; ntime <- ncol(cifti_ss$CORTEX_RIGHT) }
+    #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
+    #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
+
+    if(make_design){
+      cat(paste0('\n    Constructing design matrix for session ', ss))
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+    }
+
+  }
+  # #check that labels are the same across all sessions
+  # if(do_sub) {
+  #   if(n_sess > 1) {
+  #     tmp <- sapply(nifti_labels, function(x) {all.equal(x,nifti_labels[[1]])})
+  #     if(min(tmp)==0) stop('Subcortical labels must match across all sessions in cifti data. Check compatibility of cifti files.')
+  #   }
+  #   nifti_labels <- nifti_labels[[1]]
+  # }
+
+  ### Check that design matrix names consistent across sessions
+  if(n_sess > 1){
+    tmp <- sapply(design, colnames)
+    tmp <- apply(tmp, 1, function(x) length(unique(x)))
+    if(max(tmp) > 1) stop('task names must match across sessions for multi-session modeling')
+  }
 
   cat('\n RUNNING MODELS \n')
 
@@ -174,6 +250,19 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     if(scale_design) design[[ss]] <- design[[ss]]/max(design[[ss]])
   }
 
+  ### ADD ADDITIONAL NUISANCE REGRESSORS
+  for(ss in 1:n_sess){
+    ntime <- nrow(design[[ss]])
+    if('drift' %in% nuisance_include){
+      drift <- (1:ntime)/ntime
+      if(!is.null(nuisance)) nuisance[[ss]] <- cbind(nuisance[[ss]], drift, drift^2) else nuisance[[ss]] <- cbind(drift, drift^2)
+    }
+    if('dHRF' %in% nuisance_include){
+      dHRF <- gradient(design[[ss]])
+      if(!is.null(nuisance)) nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF) else nuisance[[ss]] <- dHRF
+    }
+  }
+
 
   ### LEFT HEMISPHERE
   if(do_left){
@@ -181,10 +270,10 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     cat('\n ... LEFT CORTEX \n')
 
     #set up mesh
-    surf_left <- readGIfTI(fname_gifti_left)$data
-    verts_left <- surf_left$pointset
-    faces_left <- surf_left$triangle
-    if(min(faces_left)==0) faces_left <- faces_left + 1
+    #surf_left <- readGIfTI(fname_gifti_left)$data
+    verts_left <- surf_left[[1]]$vertices #first surface is used for modeling
+    faces_left <- surf_left[[1]]$faces
+    #if(min(faces_left)==0) faces_left <- faces_left + 1
 
     #set up session list
     session_data <- vector('list', n_sess)
@@ -197,8 +286,17 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
     ### FIT GLM(s)
 
-    if(do_classical) classicalGLM_left <- classicalGLM(session_data)
-    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data, vertices = verts_left, faces = faces_left, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
+    if(!is.null(outfile)) outfile_left <- paste0(outfile, '_left.Rdata') else outfile_left <- NULL
+
+    if(do_classical) classicalGLM_left <- classicalGLM(session_data, scale=scale_BOLD)
+    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data,
+                                                      vertices = verts_left,
+                                                      faces = faces_left,
+                                                      scale_BOLD=scale_BOLD,
+                                                      num.threads=num.threads,
+                                                      return_INLA_result=FALSE,
+                                                      outfile = outfile_left,
+                                                      verbose=verbose)
 
   }
 
@@ -208,11 +306,11 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
     cat('\n ... RIGHT CORTEX \n')
 
-        #set up mesh
-    surf_right <- readGIfTI(fname_gifti_right)$data
-    verts_right <- surf_right$pointset
-    faces_right <- surf_right$triangle
-    if(min(faces_right)==0) faces_right <- faces_right + 1
+    #set up mesh
+    #surf_right <- readGIfTI(fname_gifti_right)$data
+    verts_right <- surf_right[[1]]$vertices #first surface is used for modeling
+    faces_right <- surf_right[[1]]$faces
+    #if(min(faces_right)==0) faces_right <- faces_right + 1
 
     #set up session list
     session_data <- vector('list', n_sess)
@@ -225,86 +323,88 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
 
     ### FIT GLM
     if(do_classical) classicalGLM_right <- classicalGLM(session_data)
-    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data, vertices = verts_right, faces = faces_right, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL, verbose=verbose)
+    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data,
+                                                      vertices = verts_right,
+                                                      faces = faces_right,
+                                                      scale_BOLD=scale_BOLD,
+                                                      num.threads=num.threads,
+                                                      return_INLA_result=FALSE,
+                                                      outfile = NULL,
+                                                      verbose=verbose)
   }
 
-  ### SUBCORTICAL
-  if(do_sub){
-
-    cat('\n ... SUBCORTICAL \n')
-
-    # Create and Apply Mask
-
-    #include only specified regions
-    mask <- array(nifti_labels %in% vol_regions, dim=dim(nifti_labels))
-    nvox <- sum(mask)
-    ntime <- dim(nifti_data[[1]])[4]
-    BOLD_data_vol <- vector('list', n_sess)
-    for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- apply(nifti_data[[ss]], 4, function(x, mask){return(x[mask==1])}, mask=mask) #apply mask to each time point (4th dim)
-
-    #identify and remove any zero-variance voxels (important for Bayesian GLM)
-    zerovar <- sapply(BOLD_data_vol, rowVars)
-    zerovar <- rowSums2(zerovar==0)
-    mask[mask==1] <- !zerovar #exclude voxels with zero variance
-    nifti_labels <- nifti_labels*mask #this also masks out excluded regions
-    nifti_labels_vec <- nifti_labels[mask==TRUE]
-    for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- BOLD_data_vol[[ss]][!zerovar,]
-    nvox <- sum(mask)
-
-    #set up session list
-    session_data <- vector('list', n_sess)
-    names(session_data) <- session_names
-    for(ss in 1:n_sess){
-      sess <- list(BOLD = t(BOLD_data_vol[[ss]]), design=design[[ss]])
-      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
-      session_data[[ss]] <- sess
-    }
-
-    #set up SPDE
-    if(do_Bayesian){
-      ### SET UP SUBCORTICAL SPDE
-    }
-
-    ### FIT GLM
-    if(do_classical) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
-
-    ### TO DO: Pass through locations, labels & groups_df instead of spde
-    #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
-  }
-
-  if(!do_sub) mask <- nifti_labels <- NULL
+  # ### SUBCORTICAL
+  # if(do_sub){
+  #
+  #   cat('\n ... SUBCORTICAL \n')
+  #
+  #   # Create and Apply Mask
+  #
+  #   #include only specified regions
+  #   mask <- array(nifti_labels %in% vol_regions, dim=dim(nifti_labels))
+  #   nvox <- sum(mask)
+  #   ntime <- dim(nifti_data[[1]])[4]
+  #   BOLD_data_vol <- vector('list', n_sess)
+  #   for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- apply(nifti_data[[ss]], 4, function(x, mask){return(x[mask==1])}, mask=mask) #apply mask to each time point (4th dim)
+  #
+  #   #identify and remove any zero-variance voxels (important for Bayesian GLM)
+  #   zerovar <- sapply(BOLD_data_vol, rowVars)
+  #   zerovar <- rowSums2(zerovar==0)
+  #   mask[mask==1] <- !zerovar #exclude voxels with zero variance
+  #   nifti_labels <- nifti_labels*mask #this also masks out excluded regions
+  #   nifti_labels_vec <- nifti_labels[mask==TRUE]
+  #   for(ss in 1:n_sess) BOLD_data_vol[[ss]] <- BOLD_data_vol[[ss]][!zerovar,]
+  #   nvox <- sum(mask)
+  #
+  #   #set up session list
+  #   session_data <- vector('list', n_sess)
+  #   names(session_data) <- session_names
+  #   for(ss in 1:n_sess){
+  #     sess <- list(BOLD = t(BOLD_data_vol[[ss]]), design=design[[ss]])
+  #     if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+  #     session_data[[ss]] <- sess
+  #   }
+  #
+  #   #set up SPDE
+  #   if(do_Bayesian){
+  #     ### SET UP SUBCORTICAL SPDE
+  #   }
+  #
+  #   ### FIT GLM
+  #   if(do_classical) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
+  #
+  #   ### TO DO: Pass through locations, labels & groups_df instead of spde
+  #   #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
+  # }
+  #
+  # if(!do_sub) mask <- nifti_labels <- NULL
 
   ### SET UP SURFACES FOR VISUALIZATION
 
   cat('\n SETTING UP VISUALIZATION SURFACES \n')
 
+  surf_left_viz <- surf_right_viz <- NULL
 
   #LEFT CORTEX
   if(do_left){
+    #if visualization surface provided, use that, otherwise use the same surface as modeling
     if(!is.null(fname_gifti2_left)){
-      gifti_left <- readGIfTI(fname_gifti2_left)$data
-      verts_left <- gifti_left$pointset
-      faces_left <- gifti_left$triangle + 1
-      surf_left <- list(vertices = verts_left, faces = faces_left)
-    } else {
-      surf_left <- list(vertices = verts_left, faces = faces_left)
+      #gifti_left <- readGIfTI(fname_gifti2_left)$data
+      verts_left <- surf_left[[2]]$vertices #second surface (if provided) used for visualization
+      faces_left <- surf_left[[2]]$faces
     }
-  } else {
-    surf_left <- NULL
+    surf_left_viz <- list(vertices = verts_left, faces = faces_left)
   }
 
   #RIGHT CORTEX
   if(do_right){
+    #if visualization surface provided, use that, otherwise use the same surface as modeling
     if(!is.null(fname_gifti2_right)){
-      gifti_right <- readGIfTI(fname_gifti2_right)$data
-      verts_right <- gifti_right$pointset
-      faces_right <- gifti_right$triangle + 1
-      surf_right <- list(vertices = verts_right, faces = faces_right)
-    } else {
-      surf_right <- list(vertices = verts_right, faces = faces_right)
+      #gifti_right <- readGIfTI(fname_gifti2_right)$data
+      verts_right <- surf_right[[2]]$vertices #second surface (if provided) used for visualization
+      faces_right <- surf_right[[2]]$faces
     }
-  } else {
-    surf_right <- NULL
+    surf_right_viz <- list(vertices = verts_right, faces = faces_right)
   }
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
@@ -317,9 +417,9 @@ BayesGLM <- function(fname_cifti, fname_gifti_left=NULL, fname_gifti_right=NULL,
     if(do_classical){
       classicalGLM_cifti[[ss]] <- cifti_make(cortex_left = classicalGLM_left[[ss]],
                                              cortex_right = classicalGLM_right[[ss]],
-                                             surf_left = surf_left,
-                                             surf_right = surf_right,
-                                             surf_names = 'surface',
+                                             surf_left = surf_left_viz,
+                                             surf_right = surf_right_viz,
+                                             surf_names = 'surface'
                                              #subcortical = classicalGLM_vol$single_session,
                                              #mask = mask,
                                              #labels = nifti_labels
@@ -573,7 +673,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   class(result) <- "BayesGLM"
 
   if(!is.null(outfile)){
-    save(outfile, result)
+    save(result, file=outfile)
   }
 
   return(result)

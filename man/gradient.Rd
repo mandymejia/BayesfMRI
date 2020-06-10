@@ -7,7 +7,7 @@
 gradient(x)
 }
 \arguments{
-\item{x}{If x is a matrix, compute gradient of each column of x. Otherwise, temporarily transform to a matrix with 1 column}
+\item{x}{A vector or matrix. If a matrix, compute gradient of each column of x.}
 }
 \value{
 Gradient of x

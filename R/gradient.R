@@ -1,6 +1,6 @@
 #' Calculate gradient
 #'
-#' @param x If x is a matrix, compute gradient of each column of x. Otherwise, temporarily transform to a matrix with 1 column
+#' @param x  A vector or matrix. If a matrix, compute gradient of each column of x. 
 #'
 #' @return Gradient of x
 #' @export

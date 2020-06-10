@@ -13,18 +13,21 @@ BayesGLM(
   fname_sphere_left = NULL,
   fname_sphere_right = NULL,
   brainstructures = c("left", "right", "subcortical"),
-  vol_regions = c(3:6, 8:21),
   wb_cmd,
   design = NULL,
   onsets = NULL,
+  TR = NULL,
   nuisance = NULL,
+  nuisance_include = c("drift", "dHRF"),
   scale_BOLD = TRUE,
   scale_design = TRUE,
   GLM_method = "both",
   session_names = NULL,
   resample = 10000,
   num.threads = 4,
-  verbose = FALSE
+  verbose = FALSE,
+  outdir = NULL,
+  outfile = NULL
 )
 }
 \arguments{
@@ -44,15 +47,17 @@ BayesGLM(
 
 \item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
 
-\item{vol_regions}{A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7).}
-
 \item{wb_cmd}{Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).}
 
 \item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}
 
 \item{onsets}{A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.}
 
+\item{TR}{The temporal resolution of the data in seconds.  Must be provided if onsets provided.}
+
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
+
+\item{nuisance_include}{(Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).}
 
 \item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
 
@@ -67,6 +72,10 @@ BayesGLM(
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
 \item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
+
+\item{outdir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
+
+\item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result. Required for Bayesian group modeling.}
 }
 \value{
 An object of class BayesGLM, a list containing ...

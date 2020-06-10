@@ -4,21 +4,19 @@
 \alias{make_HRFs}
 \title{Create HRF design matrix columns from onsets and durations}
 \usage{
-make_HRFs(onsets, TR, duration, downsample = 100, scale = TRUE)
+make_HRFs(onsets, TR, duration, downsample = 100)
 }
 \arguments{
 \item{onsets}{A matrix of onsets (first column) and durations (second column) for each task in SECONDS (set duration to zero for event related design), organized as a list where each element of the list corresponds to one task. Names of list indicate task names.}
 
-\item{TR}{Temporal resolution of fMRI data, in seconds.}
+\item{TR}{Temporal resolution of fMRI data, in SECONDS.}
 
-\item{duration}{Length of fMRI timeseries, in scans.}
+\item{duration}{Length of fMRI timeseries, in SCANS.}
 
 \item{downsample}{Downsample factor for convolving stimulus boxcar or stick function with canonical HRF}
-
-\item{scale}{If TRUE, columns are scaled globally so that the maximum across all columns is 1.}
 }
 \value{
-
+Design matrix containing one HRF column for each task
 }
 \description{
 Create HRF design matrix columns from onsets and durations
