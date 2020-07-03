@@ -33,6 +33,8 @@ Imports:
     sp,
     SQUAREM,
     stats
+Remotes:
+    mandymejia/ciftiTools
 Suggests:
     parallel
 ImportsFrom: 
