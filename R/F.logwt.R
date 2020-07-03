@@ -1,19 +1,16 @@
-#' Internal function used in joint approach to group-analysis
+#' Internal function used in joint approach to group-analysis for combining across models
 #'
 #' @param theta A vector of hyperparameter values at which to compute the posterior log density
-#' @param spde A SPDE object from inla.spde2.matern() function.
+#' @param spde A SPDE object from inla.spde2.matern() function, determines prior precision matrix
 #' @param mu.theta Posterior mean from combined subject-level models.
 #' @param Q.theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
-#' @export
 #' @importFrom INLA inla.spde2.matern
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
 # F.logwt <- function(theta, spde, mu.theta, Q.theta, M){
-#   #theta - vector of hyperparameter values at which to compute the posterior log density
-#   #spde - spde object, determines prior precision matrix
 #   #mu.theta - posterior mean from combined subject-level models
 #   #Q.theta - posterior precision matrix from combined subject-level models
 #   #M - number of subjects

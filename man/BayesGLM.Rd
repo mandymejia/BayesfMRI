@@ -27,7 +27,8 @@ BayesGLM(
   num.threads = 4,
   verbose = FALSE,
   outdir = NULL,
-  outfile = NULL
+  outfile = NULL,
+  return_INLA_result = FALSE
 )
 }
 \arguments{
@@ -75,7 +76,9 @@ BayesGLM(
 
 \item{outdir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
 
-\item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result. Required for Bayesian group modeling.}
+\item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
+
+\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
 }
 \value{
 An object of class BayesGLM, a list containing ...

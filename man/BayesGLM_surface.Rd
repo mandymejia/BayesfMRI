@@ -34,7 +34,7 @@ List element names represent session names.}
 
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.}
+\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
 
 \item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
 

@@ -23,7 +23,8 @@
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #' @param outdir (Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.
-#' @param outfile (Optional) File name (without extension) of output file for BayesGLM result. Required for Bayesian group modeling.
+#' @param outfile (Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.
+#' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
@@ -70,7 +71,8 @@ BayesGLM <- function(fname_cifti,
                      num.threads=4,
                      verbose=FALSE,
                      outdir=NULL,
-                     outfile=NULL){
+                     outfile=NULL,
+                     return_INLA_result=FALSE){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
@@ -184,7 +186,7 @@ BayesGLM <- function(fname_cifti,
 
   for(ss in 1:n_sess){
 
-    cat(paste0('\n    Reading in data for session ', ss,'\n'))
+    cat(paste0('    Reading in data for session ', ss,'\n'))
 
     if(ss==1){
       cifti_ss <- cifti_read_separate(fname_cifti[ss],
@@ -218,7 +220,7 @@ BayesGLM <- function(fname_cifti,
     #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
 
     if(make_design){
-      cat(paste0('\n    Constructing design matrix for session ', ss))
+      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
       design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
     }
 
@@ -294,7 +296,7 @@ BayesGLM <- function(fname_cifti,
                                                       faces = faces_left,
                                                       scale_BOLD=scale_BOLD,
                                                       num.threads=num.threads,
-                                                      return_INLA_result=FALSE,
+                                                      return_INLA_result=return_INLA_result,
                                                       outfile = file.path(outdir,outfile_left),
                                                       verbose=verbose)
 
@@ -331,7 +333,7 @@ BayesGLM <- function(fname_cifti,
                                                       faces = faces_right,
                                                       scale_BOLD=scale_BOLD,
                                                       num.threads=num.threads,
-                                                      return_INLA_result=FALSE,
+                                                      return_INLA_result=return_INLA_result,
                                                       outfile = file.path(outdir,outfile_right),
                                                       verbose=verbose)
   }
@@ -377,7 +379,7 @@ BayesGLM <- function(fname_cifti,
   #   if(do_classical) classicalGLM_vol <- classicalGLM(session_data) else classicalGLM_vol <- NULL
   #
   #   ### TO DO: Pass through locations, labels & groups_df instead of spde
-  #   #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=FALSE, outfile = NULL) else BayesGLM_vol <- NULL
+  #   #if(do_Bayesian) BayesGLM_vol <- BayesGLM_vol3D(session_data, spde=spde, scale_BOLD=TRUE, num.threads=num.threads, return_INLA_result=return_INLA_result, outfile = NULL) else BayesGLM_vol <- NULL
   # }
   #
   # if(!do_sub) mask <- nifti_labels <- NULL
@@ -448,9 +450,8 @@ BayesGLM <- function(fname_cifti,
                                      subcortical = BayesGLM_vol),
                  GLMs_classical = list(cortex_left = classicalGLM_left,
                                       cortex_right = classicalGLM_right,
-                                      subcortical = classicalGLM_vol))
-
-  save(result, file=file.path(outdir, paste0(outfile,'.Rdata')))
+                                      subcortical = classicalGLM_vol),
+                 design = design)
 
   cat('\n DONE! \n')
 
@@ -470,7 +471,7 @@ BayesGLM <- function(fname_cifti,
 #' @param mask (Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.
 #' @param scale_BOLD If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
-#' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
+#' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #'
