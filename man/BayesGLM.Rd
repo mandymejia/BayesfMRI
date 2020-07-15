@@ -5,15 +5,15 @@
 \title{Performs whole-brain spatial Bayesian GLM for fMRI task activation}
 \usage{
 BayesGLM(
-  fname_cifti,
-  fname_gifti_left = NULL,
-  fname_gifti_right = NULL,
-  fname_gifti2_left = NULL,
-  fname_gifti2_right = NULL,
-  fname_sphere_left = NULL,
-  fname_sphere_right = NULL,
+  cifti_fname,
+  surfL_fname = NULL,
+  surfR_fname = NULL,
+  surf2L_fname = NULL,
+  surf2R_fname = NULL,
+  sphereL_fname = NULL,
+  sphereR_fname = NULL,
   brainstructures = c("left", "right", "subcortical"),
-  wb_cmd,
+  wb_path,
   design = NULL,
   onsets = NULL,
   TR = NULL,
@@ -26,29 +26,29 @@ BayesGLM(
   resample = 10000,
   num.threads = 4,
   verbose = FALSE,
-  outdir = NULL,
+  write_dir = NULL,
   outfile = NULL,
   return_INLA_result = FALSE
 )
 }
 \arguments{
-\item{fname_cifti}{File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}
+\item{cifti_fname}{File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}
 
-\item{fname_gifti_left}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
+\item{surfL_fname}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
 
-\item{fname_gifti_right}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
+\item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
 
-\item{fname_gifti2_left}{(Optional) File path of GIFTI-format left cortical surface (*.surf.gii) to use for visualization of results.}
+\item{surf2L_fname}{(Optional) File path of GIFTI-format left cortical surface (*.surf.gii) to use for visualization of results.}
 
-\item{fname_gifti2_right}{(Optional) File path of GIFTI-format right cortical surface (*.surf.gii) to use for visualization of results.}
+\item{surf2R_fname}{(Optional) File path of GIFTI-format right cortical surface (*.surf.gii) to use for visualization of results.}
 
-\item{fname_sphere_left}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
+\item{sphereL_fname}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
-\item{fname_sphere_right}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
+\item{sphereR_fname}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
 \item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
 
-\item{wb_cmd}{Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).}
+\item{wb_path}{Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).}
 
 \item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}
 
@@ -74,7 +74,7 @@ BayesGLM(
 
 \item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 
-\item{outdir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
+\item{write_dir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
 
 \item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
 
@@ -88,7 +88,7 @@ Performs whole-brain spatial Bayesian GLM for fMRI task activation
 }
 \details{
 This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
-available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_cmd' argument is the full file path to the 'wb_command' executable file.
+available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_path' argument is the full file path to the 'wb_command' executable file.
 
 The subcortical brain structure labels range from 3-21 and represent:
 3 Accumbens-L
