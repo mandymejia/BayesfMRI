@@ -7,7 +7,7 @@
 #' @param sphereR_fname File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param brainstructures A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)
 # @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7). # vol_regions=c(3:6,8:21)
-#' @inheritParams ciftiTools::wb_wb_path_Param
+#' @inheritParams ciftiTools::wb_path_Param
 #' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.
 #' @param onsets A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.
 #' @param TR The temporal resolution of the data in seconds.  Must be provided if onsets provided.
@@ -26,7 +26,7 @@
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
-#' @importFrom ciftiTools read_cifti resample_cifti get_cifti_extn resample_gifti make_cifti
+#' @importFrom ciftiTools read_cifti resample_cifti get_cifti_extn resample_gifti make_cifti_from_separate
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom gifti readGIfTI
 #'

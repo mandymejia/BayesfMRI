@@ -8,12 +8,10 @@ BayesGLM(
   cifti_fname,
   surfL_fname = NULL,
   surfR_fname = NULL,
-  surf2L_fname = NULL,
-  surf2R_fname = NULL,
   sphereL_fname = NULL,
   sphereR_fname = NULL,
   brainstructures = c("left", "right", "subcortical"),
-  wb_path,
+  wb_path = NULL,
   design = NULL,
   onsets = NULL,
   TR = NULL,
@@ -23,7 +21,7 @@ BayesGLM(
   scale_design = TRUE,
   GLM_method = "both",
   session_names = NULL,
-  resample = 10000,
+  resamp_res = 10000,
   num.threads = 4,
   verbose = FALSE,
   write_dir = NULL,
@@ -38,17 +36,15 @@ BayesGLM(
 
 \item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
 
-\item{surf2L_fname}{(Optional) File path of GIFTI-format left cortical surface (*.surf.gii) to use for visualization of results.}
-
-\item{surf2R_fname}{(Optional) File path of GIFTI-format right cortical surface (*.surf.gii) to use for visualization of results.}
-
 \item{sphereL_fname}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
 \item{sphereR_fname}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
 \item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
 
-\item{wb_path}{Path to Connectome Workbench executable file, ending in 'wb_command' (Mac/linux) or 'wb_command.exe' (Windows).}
+\item{wb_path}{(Optional) Path to Connectome Workbench folder or executable. 
+If not provided, should be set with 
+\code{ciftiTools.setOption("wb_path", "path/to/workbench")}.}
 
 \item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}
 
@@ -68,7 +64,7 @@ BayesGLM(
 
 \item{session_names}{(Optional) A vector of names corresponding to each session.}
 
-\item{resample}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
+\item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
 
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
