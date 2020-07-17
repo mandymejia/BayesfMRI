@@ -1,4 +1,4 @@
-#' Computes Bayesian GLM posterior means, quantiles and excursions sets (areas of activation) for summaries across sessions based on a single multi-session model
+#' Computes Bayesian GLM posterior means, quantiles and excursions sets (areas of activation) for summaries or contrasts across sessions within a single multi-session model
 #'
 #' @param result An object of class BayesGLM containing the results of a multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM)`.)
 #' @param contrasts A list of vectors, each length M*K, specifying the contrast(s) of interest across sessions, where M is the number of sessions analyzed and K is the number of tasks.  See Details for more information.
@@ -27,7 +27,7 @@
 #' @import parallel
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-BayesGLM_joint.one_model <- function(result,
+BayesGLM_group.within <- function(result,
                                      contrasts = NULL,
                                      quantiles = NULL,
                                      excursion_type,
@@ -89,6 +89,12 @@ BayesGLM_joint.one_model <- function(result,
   if(is.null(result$GLMs_Bayesian$cortex_left)) do_left <- FALSE
   if(is.null(result$GLMs_Bayesian$cortex_right)) do_right <- FALSE
 
+  #put each hemisphere results into a list to create cifti objects later
+  posterior_means <- vector('list', length=2)
+  posterior_quantiles <- vector('list', length=2)
+  posterior_probs <- vector('list', length=2)
+  posterior_active <- vector('list', length=2)
+
   for(h in 1:2){
 
     if(h==1){
@@ -103,6 +109,7 @@ BayesGLM_joint.one_model <- function(result,
     # Mesh and SPDE object
     mesh <- result_h$mesh
     spde <- inla.spde2.matern(mesh)
+    mask <- result_h$mask
 
     #### GET THETA POSTERIOR FROM MULTI-SESSION MODEL
 
@@ -137,37 +144,56 @@ BayesGLM_joint.one_model <- function(result,
       Xycros[[mm]] <- crossprod(X_list[[mm]], y_vec[inds_m])
     }
 
+    print('Computing posterior quantities of beta for each value of theta')
+
     #get posterior quantities of beta, conditional on a value of theta
-    if(is.null(no_cores)) {
+    #if(is.null(no_cores)) {
 
-      #this is crashing R!  Try looping?
-      beta.posteriors <- apply(theta.samp, MARGIN=2,
-                               FUN=beta.posterior.thetasamp,
-                               spde=spde,
-                               Xcros=Xcros,
-                               Xycros=Xycros,
-                               contrasts=contrasts,
-                               quantiles=quantiles,
-                               excursion_type=excursion_type,
-                               gamma=gamma,
-                               alpha=alpha)
+      #apply is crashing R!  Try looping?
+      beta.posteriors <- vector('list', length=nsamp_theta)
+      for(isamp in 1:nsamp_theta){
+        print(paste0('theta value ',isamp,' of ',nsamp_theta))
+        print(
+          system.time(
+            beta.posteriors[[isamp]] <- beta.posterior.thetasamp(theta.samp[,isamp],
+                                 spde=spde,
+                                 Xcros=Xcros,
+                                 Xycros=Xycros,
+                                 contrasts=contrasts,
+                                 quantiles=quantiles,
+                                 excursion_type=excursion_type,
+                                 gamma=gamma,
+                                 alpha=alpha,
+                                 nsamp_beta=nsamp_beta))) #20 sec/iter
+      }
 
-    } else {
-      max_no_cores <- min(detectCores() - 1, 25)
-      no_cores <- min(max_no_cores, no_cores)
-      cl <- makeCluster(no_cores)
-      beta.posteriors <- parApply(cl, theta.samp, MARGIN=2,
-                               FUN=beta.posterior.thetasamp,
-                               spde=spde,
-                               Xcros=Xcros,
-                               Xycros=Xycros,
-                               contrasts=contrasts,
-                               quantiles=quantiles,
-                               excursion_type=excursion_type,
-                               gamma=gamma,
-                               alpha=alpha)
-      stopCluster(cl)
-    }
+    #   beta.posteriors <- apply(theta.samp, MARGIN=2,
+    #                            FUN=beta.posterior.thetasamp,
+    #                            spde=spde,
+    #                            Xcros=Xcros,
+    #                            Xycros=Xycros,
+    #                            contrasts=contrasts,
+    #                            quantiles=quantiles,
+    #                            excursion_type=excursion_type,
+    #                            gamma=gamma,
+    #                            alpha=alpha)
+    #
+    # } else {
+    #   max_no_cores <- min(detectCores() - 1, 25)
+    #   no_cores <- min(max_no_cores, no_cores)
+    #   cl <- makeCluster(no_cores)
+    #   beta.posteriors <- parApply(cl, theta.samp, MARGIN=2,
+    #                            FUN=beta.posterior.thetasamp,
+    #                            spde=spde,
+    #                            Xcros=Xcros,
+    #                            Xycros=Xycros,
+    #                            contrasts=contrasts,
+    #                            quantiles=quantiles,
+    #                            excursion_type=excursion_type,
+    #                            gamma=gamma,
+    #                            alpha=alpha)
+    #   stopCluster(cl)
+    # }
 
 
     # ### Computing posterior quantities of beta averaged over subjects (summing over theta)
@@ -189,7 +215,8 @@ BayesGLM_joint.one_model <- function(result,
     #posterior mean (average over all thetas)
     mu.bytheta <- lapply(beta.posteriors, function(x) return(x$mu)) #extract conditional posterior means
     mu.bytheta <- abind(mu.bytheta, along=3) #list to array
-    mu.all <- apply(mu.bytheta, c(1,2), mean) #average over thetas
+    mu.all <- matrix(NA, nrow=length(mask), ncol = num_contrasts)
+    mu.all[mask,] <- apply(mu.bytheta, c(1,2), mean) #average over thetas
 
 
     # #posterior mean
@@ -207,16 +234,20 @@ BayesGLM_joint.one_model <- function(result,
       for(iq in 1:num_quantiles){
         quantiles.bytheta <- lapply(beta.posteriors, function(x) return(x$quantiles[[iq]]))
         quantiles.bytheta <- abind(quantiles.bytheta, along=3)
-        quantiles.all[[iq]] <- apply(quantiles.bytheta, c(1,2), mean)
+        quantiles.all[[iq]] <- matrix(NA, nrow=length(mask), ncol = num_contrasts)
+        quantiles.all[[iq]][mask,] <- apply(quantiles.bytheta, c(1,2), mean)
       }
     }
 
     #posterior probabilities and excursion sets
     F.bytheta <- lapply(beta.posteriors, function(x) return(x$F))
     F.bytheta <- abind(F.bytheta, along=3)
-    F.all <- apply(F.bytheta, c(1,2), mean) #joint PPM / posterior probabilities of activation
+    F.all <- matrix(NA, nrow=length(mask), ncol = num_contrasts)
+    F.all[mask,] <- apply(F.bytheta, c(1,2), mean) #joint PPM / posterior probabilities of activation
     E.all <- F.all*0
     E.all[F.all > 1-alpha] <- 1 #active areas
+    active.all <- matrix(NA, nrow=length(mask), ncol = num_contrasts)
+    active.all[mask,] <- E.all
 
 
     # for(u in 1:U){
@@ -277,14 +308,43 @@ BayesGLM_joint.one_model <- function(result,
     #   betas.all.contr <- probs.all.contr <- active.all.contr <- NULL
     # }
 
-    ### Save all results
-    result <- list(posterior_mean = mu.all,
-                   posterior_quantiles = quantiles.all,
-                   ppm = F.all,
-                   active = E.all)
 
-    class(result) <- "BayesGLM_group"
+    posterior_means[[h]] <- mu.all
+    posterior_quantiles[[h]] <- quantiles.all
+    posterior_probs[[h]] <- F.all
+    posterior_active[[h]] <- active.all
+
+  } #end loop over hemispheres
+
+  ## Make cifti objects
+
+  posterior_means_cifti <- cifti_make(cortex_left = posterior_means[[1]],
+                                      cortex_right = posterior_means[[2]])
+                                      #surf_left = result_svh$betas_Bayesian$LR$SURF_LEFT$surface)
+  if(do_excur){
+    posterior_probs_cifti <- cifti_make(cortex_left = posterior_probs[[1]],
+                                        cortex_right = posterior_probs[[2]])
+    posterior_active_cifti <- cifti_make(cortex_left = posterior_active[[1]],
+                                         cortex_right = posterior_active[[2]])
+                                         #surf_left = result_svh$betas_Bayesian$LR$SURF_LEFT$surface)
   }
+  if(num_quantiles > 0){
+    posterior_quantiles_cifti <- vector('list', num_quantiles)
+    names(posterior_quantiles_cifti) <- paste0('q',quantiles)
+    for(iq in 1:num_quantiles){
+      posterior_quantiles_cifti[[1]] <- cifti_make(cortex_left = posterior_quantiles[[1]][[iq]],
+                                                   cortex_right = posterior_quantiles[[2]][[iq]])
+    }
+  }
+
+
+  ### Save all results
+  result <- list(mean = posterior_means_cifti,
+                 quantiles = posterior_quantiles_cifti,
+                 PPM = posterior_probs_cifti,
+                 active = posterior_active_cifti)
+
+  class(result) <- "BayesGLM_group"
 
   return(result)
 
@@ -485,3 +545,138 @@ BayesGLM_joint.one_model <- function(result,
   # }
   #
   #
+
+#' Internal function used in joint approach to group-analysis
+#'
+#' @param theta A sample of theta (hyperparameters).
+#' @param spde A SPDE object from inla.spde2.matern() function.
+#' @param Xcros A crossproduct of design matrix.
+#' @param Xycros A crossproduct of design matrix and BOLD y.
+#' @param contrasts A list of vectors of length M*K specifying the contrasts of interest.  See Details for more information.
+#' @param quantiles Vector of posterior quantiles to return in addition to the posterior mean
+#' @param excursion_type Vector of excursion function type (">", "<", "!=") for each contrast
+#' @param gamma Vector of activation thresholds for each contrast
+#' @param alpha Significance level for activation for the excursion sets
+#' @param nsamp_beta The number of samples to draw from p(beta|theta,y)
+#'
+#' @details The contrast vector specifies the group-level quantity of interest.  For example, the vector `rep(1/M,M*K)` would return the group average for each of K tasks;
+#' the vector `c(rep(1/M1,M1*K)`, `rep(-1/M2,M2*K))` would return the difference between the average within two groups of size M1 and M2, respectively, for each of K tasks;
+#' the vector `rep(rep(1/M,-1/M,0,...,0),each=V),M)` would return the difference between the first two tasks, averaged over all subjects.
+#' @return A list containing...
+#' @export
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' @importFrom excursions excursions.mc
+#' @importFrom Matrix Diagonal chol
+#' @importFrom INLA inla.spde2.precision inla.qsample
+#'
+beta.posterior.thetasamp <- function(theta, spde, Xcros, Xycros, contrasts, quantiles, excursion_type, gamma, alpha, nsamp_beta=100){
+
+  n.mesh <- spde$n.spde
+
+  # print('contructing joint precision')
+  prec.error <- exp(theta[1])
+  K <- length(theta[-1])/2
+  M <- length(Xcros)
+
+  #contruct prior precision matrix for beta, Q_theta for given sampled value of thetas
+  Q.beta <- list()
+  for(k in 1:K) {
+    theta_k <- theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
+    Q.beta[[k]] <- inla.spde2.precision(spde, theta = theta_k)
+  }
+  Q <- bdiag(Q.beta)
+
+  # #make block diagonal Q in multi-session case
+  # tmp1 <- nrow(Q)
+  # tmp2 <- nrow(Xcros[[1]])
+  # n_sess <- tmp2/tmp1
+  # if(n_sess != round(n_sess)) stop('Something is wrong. Dimensions of prior precision and X matrix not compatible.')
+  # Q <- bdiag(rep(list(Q), n_sess))
+  #
+  N <- dim(Q.beta[[1]])[1]
+  if(N != n.mesh) stop('Length of betas does not match number of vertices in mesh. Contact developer to request this functionality.')
+
+  #beta.samp.pop <- 0
+  #beta.mean.pop <- 0
+  #beta.mean.pop.mat <- NULL
+  beta.samples <- NULL
+  #~5 seconds per subject with PARDISO
+  # print('Looping over subjects or sessions')
+  for(mm in 1:M){
+
+    #compute posterior mean and precision of beta|theta
+    Xcros.mm <- Xcros[[mm]] #X'X
+    Xycros.mm <- Xycros[[mm]] #X'y
+    Q.m <- prec.error*Xcros.mm + Q
+    mu.m <- inla.qsolve(Q.m, prec.error*Xycros.mm) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!
+
+    #draw samples from pi(beta_m|theta,y)
+    beta.samp.m <- inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
+
+    #concatenate samples over models
+    beta.samples <- rbind(beta.samples, beta.samp.m) #(N*K*M) x nsamp_beta
+
+    # ## group mean
+    # beta.mean.pop <- beta.mean.pop + mu.m/M
+    # beta.samp.pop <- beta.samp.pop + beta.samp.m/M #NKx100
+
+    #       ## contrast
+    # 	    beta.mean.pop.mat <- c(beta.mean.pop.mat, mu.m) #NKM x 1
+    # 	    beta.samp.pop.mat <- rbind(beta.samp.pop.mat, beta.samp.m) #NKM x nsamp_beta
+
+  }
+
+  ## Compute results for beta averages over subjects (default)
+  #mu.theta <- matrix(beta.mean.pop, ncol=1)
+
+  # 	if(excursion_type != 'none'){
+  #
+  #   	U <- length(gamma)
+  #   	F.theta <- vector('list', U)
+  #   	for(u in 1:U){
+  #   		F.theta[[u]] <- matrix(nrow=n.mesh, ncol=K)
+  #   		thr <- gamma[u]
+  #   		for(k in 1:K){
+  #   			res_beta.theta.k <- excursions.mc(beta.samp.pop, u = thr, ind = ind_beta[[k]], type = excursion_type, alpha = alpha)
+  #   			F.theta[[u]][,k] <- res_beta.theta.k$F[ind_beta[[k]]]
+  #   		}
+  #   		F.theta[[u]][is.na(F.theta[[u]])] <- 0
+  #   	}
+  # 	}
+
+  if(excursion_type[1] == 'none') do_excur <- FALSE else do_excur <- TRUE
+
+  # Loop over contrasts
+  num_contrasts <- length(contrasts)
+  mu.contr <- F.contr <- matrix(NA, nrow=n.mesh, ncol=num_contrasts)
+  num_quantiles <- length(quantiles)
+  quantiles.contr <- rep(list(matrix(NA, nrow=n.mesh, ncol=num_contrasts)), num_quantiles)
+  names(quantiles.contr) <- paste0('q',quantiles)
+  for(l in 1:num_contrasts){
+
+    #Construct "A" matrix from paper
+    ctr.mat <- kronecker(t(contrasts[[l]]), Diagonal(n.mesh, 1))
+
+    #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
+    samples_l <- as.matrix(ctr.mat%*%beta.samples)  # NKx100 or Nx100
+    mu.contr[,l] <- rowMeans(samples_l)
+    if(num_quantiles > 0){
+      for(iq in 1:num_quantiles){
+        quantiles.contr[[iq]][,l] <- apply(samples_l, 1, quantile, quantiles[iq])
+      }
+    }
+
+    # Estimate excursions set for current contrast
+    if(do_excur){
+      type_l <- excursion_type[l]
+      thr_l <- gamma[l]
+      excur_l <- excursions.mc(samples_l, u = thr_l, type = type_l, alpha = alpha)
+      F.contr[,l] <- excur_l$F
+    }
+  }
+
+  # 	result <- list(mean = list(mu = mu.theta, F = F.theta),
+  #                 contr = list(mu = mu.contr, F = F.contr))
+  result <- list(mu = mu.contr, quantiles=quantiles.contr, F = F.contr)
+  return(result)
+}
