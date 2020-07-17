@@ -31,6 +31,7 @@
 #' @importFrom ciftiTools cifti_read_separate cifti_resample get_cifti_extn gifti_resample cifti_make
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom gifti readGIfTI
+#' @importFrom INLA inla.pardiso.check inla.setOption
 #'
 #' @details This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
 #' available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_cmd' argument is the full file path to the 'wb_command' executable file.
@@ -76,6 +77,12 @@ BayesGLM <- function(fname_cifti,
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
+
+  if(do_Bayesian){
+    flag <- inla.pardiso.check()
+    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
+    inla.setOption(smtp='pardiso')
+  }
 
   if(is.null(outdir)){
     outdir <- getwd()
@@ -651,6 +658,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   if(return_INLA_result){
     result <- list(INLA_result = INLA_result,
                    mesh = mesh,
+                   mask = mask,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
