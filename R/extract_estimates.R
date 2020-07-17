@@ -21,10 +21,12 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 	beta_names <- names(res.beta)
 
 	n_sess <- length(session_names)
-	n_loc <- length(res.beta[[1]]$mean)/n_sess
+	n_loc <- length(res.beta[[1]]$mean)/n_sess #number of locations for which beta is estimated
 	if(!is.null(mask)) {
 	  V <- length(mask)
 	  if(sum(mask) != n_loc) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
+	} else {
+	  V <- n_loc
 	}
 	betas <- vector('list', n_sess)
 	names(betas) <- session_names
