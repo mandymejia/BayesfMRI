@@ -1,3 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^R/BayesGLM_group\.R$
+^R/diagnosticICA\.R$
+^R/EM_diagnosticICA\.R$

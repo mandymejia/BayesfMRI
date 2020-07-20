@@ -2,7 +2,6 @@
 
 export(BayesGLM)
 export(BayesGLM_surface)
-export(EM_diagnosticICA)
 export(EM_templateICA.independent)
 export(EM_templateICA.spatial)
 export(UpdateTheta.independent)
