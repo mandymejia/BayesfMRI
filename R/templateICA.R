@@ -48,6 +48,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   } else if(class(mesh) != 'templateICA_mesh'){
     stop('mesh argument should be of class templateICA_mesh. See help(make_templateICA_mesh).')
   }
+  if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
 
   if(!is.null(maxQ)){
     if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number')
@@ -214,6 +215,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
     #project estimates back to data locations
     resultEM$subjICmean_mat <- matrix(resultEM$subjICmean, ncol=L)
+  } else {
+    resultEM$subjICmean_mat <- resultEM$subjICmean
   }
 
 
