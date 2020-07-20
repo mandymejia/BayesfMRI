@@ -31,6 +31,7 @@
 #' @importFrom ciftiTools read_cifti resample_cifti get_cifti_extn resample_gifti make_cifti_from_separate
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom gifti readGIfTI
+#' @importFrom INLA inla.pardiso.check inla.setOption
 #'
 #' @details This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
 #' available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_path' argument is the full file path to the 'wb_command' executable file.
@@ -76,10 +77,16 @@ BayesGLM <- function(cifti_fname,
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
-  if(is.null(write_dir)){
-    write_dir <- getwd()
-  } else if(!file.exists(write_dir)){
-    stop('write_dir does not exist, check and try again.')
+  if(do_Bayesian){
+    flag <- inla.pardiso.check()
+    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
+    inla.setOption(smtp='pardiso')
+  }
+
+  if(is.null(outdir)){
+    outdir <- getwd()
+  } else if(!file.exists(outdir)){
+    stop('outdir does not exist, check and try again.')
   }
   #TO DO: Check that the user has write permissions in write_dir
   #TO DO: Damon: We could integrate ciftiTools::format_path() with this package too.
@@ -616,6 +623,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   if(return_INLA_result){
     result <- list(INLA_result = INLA_result,
                    mesh = mesh,
+                   mask = mask,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,

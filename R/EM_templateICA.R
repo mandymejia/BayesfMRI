@@ -3,10 +3,10 @@
 #'
 #' @title EM Algorithms for Template ICA Models
 #'
-#' @param template_mean (QxN matrix) mean maps for each IC in template, where Q is the number of ICs, N is the number of data or mesh locations.
-#' @param template_var  (QxN matrix) between-subject variance maps for each IC in template
+#' @param template_mean (QxV matrix) mean maps for each IC in template, where Q is the number of ICs, V is the number of data or mesh locations.
+#' @param template_var  (QxV matrix) between-subject variance maps for each IC in template
 #' @param mesh NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
-#' @param BOLD  (QxN matrix) dimension-reduced fMRI data
+#' @param BOLD  (QxV matrix) dimension-reduced fMRI data
 #' @param theta0 (list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
@@ -716,9 +716,9 @@ compute_R_inv <- function(mesh, kappa, C1=1/(4*pi)){
 
   #get inmesh and notinmesh indices
   Amat = mesh$A #n_loc x n_mesh
-  N = ncol(mesh$A) #number of mesh locations
+  V = ncol(mesh$A) #number of mesh locations
   inmesh = which(colSums(Amat) > 0)
-  notinmesh = setdiff(1:N, inmesh)
+  notinmesh = setdiff(1:V, inmesh)
 
 
   #set up R^{-1} (QVxQV) as a sparse block diagonal matrix
