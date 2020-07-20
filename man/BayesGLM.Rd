@@ -42,8 +42,8 @@ BayesGLM(
 
 \item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
 
-\item{wb_path}{(Optional) Path to Connectome Workbench folder or executable. 
-If not provided, should be set with 
+\item{wb_path}{(Optional) Path to Connectome Workbench folder or executable.
+If not provided, should be set with
 \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.}
 
 \item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}

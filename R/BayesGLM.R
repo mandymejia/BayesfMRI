@@ -7,7 +7,9 @@
 #' @param sphereR_fname File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param brainstructures A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)
 # @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7). # vol_regions=c(3:6,8:21)
-#' @inheritParams ciftiTools::wb_path_Param
+#' @param wb_path (Optional) Path to Connectome Workbench folder or executable. 
+#'  If not provided, should be set with 
+#'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
 #' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.
 #' @param onsets A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.
 #' @param TR The temporal resolution of the data in seconds.  Must be provided if onsets provided.
@@ -268,8 +270,8 @@ BayesGLM <- function(cifti_fname,
 
     #set up mesh
     #surf_left <- readGIfTI(surfL_fname)$data
-    verts_left <- surf_left[[1]]$vertices #first surface is used for modeling
-    faces_left <- surf_left[[1]]$faces
+    verts_left <- surf_left$vertices #first surface is used for modeling
+    faces_left <- surf_left$faces
     #if(min(faces_left)==0) faces_left <- faces_left + 1
 
     #set up session list
@@ -305,8 +307,8 @@ BayesGLM <- function(cifti_fname,
 
     #set up mesh
     #surf_right <- readGIfTI(surfR_fname)$data
-    verts_right <- surf_right[[1]]$vertices #first surface is used for modeling
-    faces_right <- surf_right[[1]]$faces
+    verts_right <- surf_right$vertices #first surface is used for modeling
+    faces_right <- surf_right$faces
     #if(min(faces_right)==0) faces_right <- faces_right + 1
 
     #set up session list
