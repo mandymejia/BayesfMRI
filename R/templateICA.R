@@ -22,9 +22,11 @@
 #'
 templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE){
 
-  flag <- inla.pardiso.check()
-  if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
-  inla.setOption(smtp='pardiso')
+  if(!is.null(mesh)){
+    flag <- inla.pardiso.check()
+    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
+    inla.setOption(smtp='pardiso')
+  }
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
