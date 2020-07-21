@@ -140,7 +140,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   #TEMPLATE ICA
   if(do_spatial) print('INITIATING WITH STANDARD TEMPLATE ICA')
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon)
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'tICA'
 
