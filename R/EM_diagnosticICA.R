@@ -26,7 +26,13 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
   iter = 1
   theta = theta0
   success = 1
-  for(g in 1:G) template_var[[g]][template_var[[g]] < 1e-6] = 1e-6 #to prevent problems when inverting covariance
+  for(g in 1:G) {
+    num_smallvar <- sum(template_var[[g]] < 1e-6)
+    if(num_smallvar>0){
+      if(verbose) cat(paste0('Setting ',num_smallvar,' very small variance values in group ',g,' template to zero.'))
+      template_var[[g]][template_var[[g]] < 1e-6] = 1e-6 #to prevent problems when inverting covariance
+    }
+  }
 
   err = 1000 #large initial value for difference between iterations
   while(err > epsilon){
@@ -129,20 +135,29 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
     }
 
     exp_part[g] <- -0.5 * (exp_part1 + exp_part2 + exp_part3[1])
-    #prod_pr_yz[g] <- exp(exp_part) #might need to introduce a common factor that will cancel over num/denom
   }
 
-  if(is.infinite(exp(max(exp_part)-min(exp_part)))) {
-    #this is for two groups, need to generalize for G>2
-    pr_zy[which.max(exp_part)] <- 1
-    pr_zy[which.min(exp_part)] <- 0
-  } else {
-    exp_part <- exp_part - mean(exp_part) #this minimizes the most extreme magnitude in exp_part (to avoid )
-    prod_pr_yz <- exp(exp_part)
-    #compute p(z=g|y), g=1,...,G
-    denom <- sum((1/G)*prod_pr_yz) #can change 1/G for unequal prior probs
-    pr_zy <- (1/G)*prod_pr_yz / denom
+  for(g in 1:G){
+    pr_zy_inv_g <- sum(exp(exp_part-exp_part[g])) # ( (e^M1 + e^M2 + e^M3) / e^M1 ) = e^(M1-M1) + e^(M2-M1) + e^(M3-M1) = 1 + e^(M2-M1) + e^(M3-M1)  <-- If any e^(Mk-Mg) Inf, the inverse will be zero so p(z=g|y)=0
+    pr_zy[g] <- 1/pr_zy_inv_g
   }
+
+  #fix numerical issues with very small values (values very close to 1 are numerically equal to 1, while values very close to zero are not)
+  if(any(pr_zy==1)){
+    pr_zy[pr_zy!=1] <- 0
+  }
+
+  # if(is.infinite(exp(max(exp_part)-min(exp_part)))) {
+  #   #this is for two groups, need to generalize for G>2
+  #   pr_zy[which.max(exp_part)] <- 1
+  #   pr_zy[which.min(exp_part)] <- 0
+  # } else {
+  #   exp_part <- exp_part - mean(exp_part) #this minimizes the most extreme magnitude in exp_part (to avoid )
+  #   prod_pr_yz <- exp(exp_part)
+  #   #compute p(z=g|y), g=1,...,G
+  #   denom <- sum((1/G)*prod_pr_yz) #can change 1/G for unequal prior probs
+  #   pr_zy <- (1/G)*prod_pr_yz / denom
+  # }
 
   ##########################################
   ### POSTERIOR MOMENTS OF s
