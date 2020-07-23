@@ -83,10 +83,10 @@ BayesGLM <- function(cifti_fname,
     inla.setOption(smtp='pardiso')
   }
 
-  if(is.null(outdir)){
-    outdir <- getwd()
-  } else if(!file.exists(outdir)){
-    stop('outdir does not exist, check and try again.')
+  if(is.null(write_dir)){
+    write_dir <- getwd()
+  } else if(!file.exists(write_dir)){
+    stop('write_dir does not exist, check and try again.')
   }
   #TO DO: Check that the user has write permissions in write_dir
   #TO DO: Damon: We could integrate ciftiTools::format_path() with this package too.
