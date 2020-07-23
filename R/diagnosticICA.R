@@ -37,10 +37,10 @@ diagnosticICA <- function(template_mean,
   nvox <- ncol(BOLD) #number of data locations
   L <- nrow(template_mean[[1]]) #number of ICs
 
-  cat(paste0('Length of timeseries: T = ',ntime,'\n'))
-  cat(paste0('Number of voxels/vertices: V = ',nvox,'\n'))
-  cat(paste0('Number of ICs: L = ',L,'\n'))
-  cat(paste0('Number of groups: G = ',G,'\n'))
+  if(verbose) cat(paste0('Length of timeseries: T = ',ntime,'\n'))
+  if(verbose) cat(paste0('Number of voxels/vertices: V = ',nvox,'\n'))
+  if(verbose) cat(paste0('Number of ICs: L = ',L,'\n'))
+  if(verbose) cat(paste0('Number of groups: G = ',G,'\n'))
 
   #check that each element of template_mean and template_var is a matrix
   #check that the dimensions of template_mean and template_var elements are ok

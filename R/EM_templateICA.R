@@ -193,7 +193,7 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
 
     t00 <- Sys.time()
-    theta_new = UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
+    theta_new = UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag, verbose=verbose)
     if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters

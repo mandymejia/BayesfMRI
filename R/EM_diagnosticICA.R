@@ -62,7 +62,7 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
     }
   }
 
-  MAP = UpdateTheta.diagnosticICA(template_mean, template_var, BOLD, theta, C_diag, return_MAP=TRUE)
+  MAP = UpdateTheta.diagnosticICA(template_mean, template_var, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
 
   result <- list(group_probs = MAP$group_probs,
                  subjICmean=t(MAP$ICmean),

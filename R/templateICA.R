@@ -44,7 +44,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   #check that the supplied mesh object is of type templateICA_mesh
   do_spatial <- !is.null(mesh)
   if(!do_spatial){
-    message('No mesh supplied: Using standard template ICA model, which assumes spatial independence. If this is not what you want, stop and supply a valid mesh. See help(make_templateICA_mesh).')
+    if(verbose) message('No mesh supplied: Using standard template ICA model, which assumes spatial independence. If this is not what you want, stop and supply a valid mesh. See help(make_templateICA_mesh).')
   } else if(class(mesh) != 'templateICA_mesh'){
     stop('mesh argument should be of class templateICA_mesh. See help(make_templateICA_mesh).')
   }
