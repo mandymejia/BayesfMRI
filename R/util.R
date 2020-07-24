@@ -1,14 +1,14 @@
-# Plot BayesfMRI.spde objects
-#
-# @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
-# @param colors (Optional) Vector of colors to represent each region.
-# @param alpha Transparency level.
-#
-# @return
-# @export
-# @importFrom geometry tetramesh
-# @import rgl
-# @importFrom viridis viridis_pal
+# #' Plot BayesfMRI.spde objects
+# #'
+# #' @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
+# #' @param colors (Optional) Vector of colors to represent each region.
+# #' @param alpha Transparency level.
+# #'
+# #' @return
+# #' @export
+# #' @importFrom geometry tetramesh
+# #' @import rgl
+# #' @importFrom viridis viridis_pal
 #
 # plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
 #   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
@@ -25,17 +25,17 @@
 #   }
 # }
 
-# Plot BayesGLM objects
-#
-# Summary method for class "BayesGLM"
-#
-# @param object an object of class "BayesGLM"
-# @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
-# @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
-# @param ... further arguments passed to or from other methods.
-# @export
-# @import viridis
-# @method plot BayesGLM
+# #' Plot BayesGLM objects
+# #'
+# #' Summary method for class "BayesGLM"
+# #'
+# #' @param object an object of class "BayesGLM"
+# #' @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
+# #' @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
+# #' @param ... further arguments passed to or from other methods.
+# #' @export
+# #' @import viridis
+# #' @method plot BayesGLM
 # plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
 # {
 #   session_names <- names(object$beta_estimates)
@@ -74,13 +74,13 @@
 # }
 #
 
-# Check whether each element of vector x is a valid color representation
-#
-# @param x Character vector
-#
-# @return A logical vector indicating which of the elements of x are valid color representations
-# @importFrom grDevices col2rgb
-# @export
+# #' Check whether each element of vector x is a valid color representation
+# #'
+# #' @param x Character vector
+# #'
+# #' @return A logical vector indicating which of the elements of x are valid color representations
+# #' @importFrom grDevices col2rgb
+# #' @export
 #
 # areColors <- function(x) {
 #   sapply(x, function(X) {
@@ -90,14 +90,14 @@
 # }
 
 
-# Summarise BayesGLM objects
-#
-# Summary method for class "BayesGLM"
-#
-# @param object an object of class "BayesGLM"
-# @param ... further arguments passed to or from other methods.
-# @export
-# @method summary BayesGLM
+# #' Summarise BayesGLM objects
+# #'
+# #' Summary method for class "BayesGLM"
+# #'
+# #' @param object an object of class "BayesGLM"
+# #' @param ... further arguments passed to or from other methods.
+# #' @export
+# #' @method summary BayesGLM
 # summary.BayesGLM <- function(object, ...)
 # {
 #   out <- list()
@@ -110,11 +110,11 @@
 # }
 
 
-# @param x an object of class "summary.BayesGLM"
-# @param ... further arguments passed to or from other methods.
-# @export
-# @method print summary.BayesGLM
-# @rdname summary.BayesGLM
+# #' @param x an object of class "summary.BayesGLM"
+# #' @param ... further arguments passed to or from other methods.
+# #' @export
+# #' @method print summary.BayesGLM
+# #' @rdname summary.BayesGLM
 # print.summary.BayesGLM <- function(x, ...)
 # {
 #   cat("Call:\n")
@@ -123,9 +123,9 @@
 #   cat("Time used:\n", x$inla.summary$cpu.used)
 # }
 
-# @export
-# @method print BayesGLM
-# @rdname summary.BayesGLM
+# #' @export
+# #' @method print BayesGLM
+# #' @rdname summary.BayesGLM
 # print.BayesGLM <- function(x, ...) {
 #   print.summary.BayesGLM(summary(x))
 # }
