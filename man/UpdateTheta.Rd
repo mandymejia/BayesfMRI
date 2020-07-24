@@ -23,7 +23,14 @@ UpdateTheta.spatial(
   update = c("all", "kappa", "A")
 )
 
-UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
+UpdateTheta.independent(
+  template_mean,
+  template_var,
+  BOLD,
+  theta,
+  C_diag,
+  verbose
+)
 }
 \arguments{
 \item{template_mean}{(QxV matrix) mean maps for each IC in template}

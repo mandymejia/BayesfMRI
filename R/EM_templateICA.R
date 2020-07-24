@@ -1,5 +1,5 @@
-#' @name EM_Algorithm
-#' @rdname EM_Algorithm
+#' @name EM_templateICA
+#' @rdname EM_templateICA
 #'
 #' @title EM Algorithms for Template ICA Models
 #'
@@ -24,7 +24,7 @@
 #'
 NULL
 
-#' @rdname EM_Algorithm
+#' @rdname EM_templateICA
 #' @export
 #' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
@@ -66,7 +66,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	# Positive change --> search for kappa_max, set kappa_min to kappa1.
 	# Negative change --> search for kappa_min, set kappa_max to kappa1.
 	kappa_min <- kappa_max <- theta0$kappa[1]
-	theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, dim_reduce_flag=dim_reduce_flag, update='kappa')
+	theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, dim_reduce_flag=dim_reduce_flag, update='kappa')
 	kappa_diff0 <- theta1$kappa[1] - theta0$kappa[1]
 	theta <- theta0
 
@@ -79,7 +79,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  while(kappa_diff < 0){
 	    if(verbose) cat(paste0('... testing kappa = ',round(kappa_min,3),'\n '))
 	    theta$kappa <- rep(kappa_min, Q)
-	    theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, dim_reduce_flag=dim_reduce_flag, update='kappa')
+	    theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, dim_reduce_flag=dim_reduce_flag, update='kappa')
 	    kappa_diff <- theta1$kappa[1] - theta$kappa[1]
 	    if(kappa_diff > 0) {
 	      #set minimum and stop here
@@ -167,9 +167,9 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	return(result)
 }
 
-#' @rdname EM_Algorithm
+#' @rdname EM_templateICA
 #' @export
-EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001){
+EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -190,11 +190,11 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
   err = 1000 #large initial value for difference between iterations
   while(err > epsilon){
 
-    print(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ '))
+    if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
 
     t00 <- Sys.time()
-    theta_new = UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
-    print(Sys.time() - t00)
+    theta_new = UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag, verbose=verbose)
+    if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters
 
@@ -210,7 +210,7 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
     change = c(A_change, nu0_sq_change)
     err = max(change)
     change = format(change, digits=3, nsmall=3)
-    print(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
 
     ### Move to next iteration
     theta <- theta_new
@@ -559,7 +559,7 @@ UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C
 }
 #' @rdname UpdateTheta
 #' @export
-UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_diag){
+UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_diag, verbose){
 
   Q = nrow(BOLD)
   V = ncol(BOLD)
@@ -574,7 +574,7 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
   At_nu0Cinv = t(A) %*% nu0C_inv
   At_nu0Cinv_A = At_nu0Cinv %*% A
 
-  cat('Updating A \n')
+  if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
   miu_s = matrix(NA, nrow=Q, ncol=V)

@@ -22,9 +22,11 @@
 #'
 templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE){
 
-  flag <- inla.pardiso.check()
-  if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
-  inla.setOption(smtp='pardiso')
+  if(!is.null(mesh)){
+    flag <- inla.pardiso.check()
+    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
+    inla.setOption(smtp='pardiso')
+  }
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -42,10 +44,11 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   #check that the supplied mesh object is of type templateICA_mesh
   do_spatial <- !is.null(mesh)
   if(!do_spatial){
-    message('No mesh supplied: Using standard template ICA model, which assumes spatial independence. If this is not what you want, stop and supply a valid mesh. See help(make_templateICA_mesh).')
+    if(verbose) message('No mesh supplied: Using standard template ICA model, which assumes spatial independence. If this is not what you want, stop and supply a valid mesh. See help(make_templateICA_mesh).')
   } else if(class(mesh) != 'templateICA_mesh'){
     stop('mesh argument should be of class templateICA_mesh. See help(make_templateICA_mesh).')
   }
+  if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
 
   if(!is.null(maxQ)){
     if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number')
@@ -137,7 +140,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   #TEMPLATE ICA
   if(do_spatial) print('INITIATING WITH STANDARD TEMPLATE ICA')
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon)
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'tICA'
 
@@ -212,6 +215,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
     #project estimates back to data locations
     resultEM$subjICmean_mat <- matrix(resultEM$subjICmean, ncol=L)
+  } else {
+    resultEM$subjICmean_mat <- resultEM$subjICmean
   }
 
 
