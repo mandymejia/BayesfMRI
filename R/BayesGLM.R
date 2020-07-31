@@ -198,6 +198,8 @@ BayesGLM <- function(cifti_fname,
     if(ss==1){
       cifti_ss <- read_cifti(
         cifti_fname[ss],
+        method="separate", #because resamp_res != NULL
+        format="regular",
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res,
@@ -210,6 +212,8 @@ BayesGLM <- function(cifti_fname,
     } else {
       cifti_ss <- read_cifti(
         cifti_fname[ss],
+        method="separate", #because resamp_res != NULL
+        format="regular",
         brainstructures=brainstructures,
         resamp_res=resamp_res,
         sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
@@ -218,8 +222,16 @@ BayesGLM <- function(cifti_fname,
       )
     }
 
-    if(do_left) { cifti_left[[ss]] <- cifti_ss$CORTEX_LEFT; ntime <- ncol(cifti_ss$CORTEX_LEFT) }
-    if(do_right) { cifti_right[[ss]] <- cifti_ss$CORTEX_RIGHT; ntime <- ncol(cifti_ss$CORTEX_RIGHT) }
+    if(do_left) { 
+      cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$LABELS$CORTEX_LEFT), ncol=ncol(cifti_ss$CORTEX_LEFT))
+      cifti_left[[ss]][cifti_ss$LABELS$CORTEX_LEFT!="Medial Wall",] <- cifti$CORTEX_LEFT
+      ntime <- ncol(cifti_ss$CORTEX_LEFT) 
+    }
+    if(do_right) { 
+      cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$LABELS$CORTEX_RIGHT), ncol=ncol(cifti_ss$CORTEX_RIGHT))
+      cifti_right[[ss]][cifti_ss$LABELS$CORTEX_RIGHT!="Medial Wall",] <- cifti$CORTEX_RIGHT
+      ntime <- ncol(cifti_ss$CORTEX_RIGHT) 
+    }
     #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
     #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
 

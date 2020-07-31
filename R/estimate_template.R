@@ -9,29 +9,11 @@
 #'
 #' @return
 #' @export
-<<<<<<<< HEAD:R/estimate_template.R
-#' @importFrom ciftiTools read_cifti flatten_cifti
-========
 #' @importFrom ciftiTools read_cifti
->>>>>>>> master:R/template_estimate.R
 #'
 estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname, inds=NULL, brainstructures=c('left','right'), verbose=TRUE){
 
   if(verbose) cat('\n Reading in GICA result')
-<<<<<<<< HEAD:R/estimate_template.R
-  GICA_cifti <- read_cifti(GICA_fname, brainstructures=brainstructures)
-  #may need to save some info from GICA_cifti to map templates back to surfaces for visualization
-
-  if(verbose) cat('\n Flattening GICA')
-  GICA <- flatten_cifti(GICA_cifti, brainstructures='everything') #Damon I know this might need to be changed if the brainstructures argument is not everything
-  L0 <- ncol(GICA)
-  V <- nrow(GICA)
-  wall_mask <- rep(FALSE, V)
-  wall_mask[is.nan(GICA[,1])] <- TRUE
-  wall_mask[is.na(GICA[,1])] <- TRUE
-  wall_mask[rowSums(GICA^2)==0] <- TRUE
-  GICA2 <- GICA[!wall_mask,]
-========
   GICA <- read_cifti(GICA_fname, method="separate", format="flat", brainstructures=brainstructures)
 
   if(verbose) cat('\n Flattening GICA')
@@ -42,7 +24,6 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
   wall_mask[is.na(GICA$DAT[,1])] <- TRUE
   wall_mask[rowSums(GICA$DAT^2)==0] <- TRUE
   GICA2 <- GICA$DAT[!wall_mask,]
->>>>>>>> master:R/template_estimate.R
 
   if(verbose){
     cat(paste0('\n Number of data locations: ',V))
@@ -83,11 +64,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
       if(verbose) cat(paste0('\n Data not available'))
       next
     }
-<<<<<<<< HEAD:R/estimate_template.R
-    BOLD1_ii <- read_cifti(fname_ii, brainstructures=brainstructures, flat=TRUE)
-========
-    BOLD1_ii <- read_cifti_flat(fname_ii, brainstructures=brainstructures)$DAT
->>>>>>>> master:R/template_estimate.R
+    BOLD1_ii <- read_cifti(fname_ii, format="flat", brainstructures=brainstructures)$DAT
 
     if(nrow(BOLD1_ii) != nrow(GICA2)) stop(paste0('The number of data locations in GICA and timeseries data from subject ',ii,' do not match.'))
     ntime <- ncol(BOLD1_ii)
@@ -106,11 +83,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
-<<<<<<<< HEAD:R/estimate_template.R
-      BOLD2_ii <- read_cifti(fname_ii, brainstructures=brainstructures, flat=TRUE)
-========
-      BOLD2_ii <- read_cifti_flat(fname_ii, brainstructures=brainstructures)$DAT
->>>>>>>> master:R/template_estimate.R
+      BOLD2_ii <- read_cifti(fname_ii, format="flat", brainstructures=brainstructures)$DAT
     }
 
     #perform dual regression on test and retest data
