@@ -4,7 +4,7 @@
 #' @param cifti_fnames2 Vector of file paths of "retest" CIFTI-format fMRI timeseries (*.dtseries.nii) for template estimation.  Must be from the same subjects and in the same order as cifti_fnames.  If none specified, will create pseudo test-retest data from single session.
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
 #' @param inds Indicators of which group ICs to include in template. If NULL, use all group ICs.
-#' @param brainstructures Vector of brainstructures to include ('left','right','surface').  Default is c('left','right').
+#' @param brainstructures Vector of brainstructures to include ('left','right','subcortical').  Default is c('left','right').
 #' @param verbose If TRUE, display progress updates
 #'
 #' @return
