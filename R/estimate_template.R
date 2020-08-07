@@ -54,7 +54,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
 
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
-  missing_data <- 0
+  missing_data <- NULL
   for(ii in 1:N){
 
     if(verbose) cat(paste0('\n Reading in data for subject ',ii,' of ',N))
@@ -62,7 +62,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
     #read in BOLD
     fname_ii <- cifti_fnames[ii]
     if(!file.exists(fname_ii)) {
-      missing_data <- missing_data + 1
+      missing_data <- c(missing_data, fname_ii)
       if(verbose) cat(paste0('\n Data not available'))
       next
     }
@@ -81,7 +81,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
       #read in BOLD from retest
       fname_ii <- cifti_fnames2[ii]
       if(!file.exists(fname_ii)) {
-        missing_data <- missing_data + 1
+        missing_data <- c(missing_data, fname_ii)
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
