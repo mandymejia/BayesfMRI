@@ -71,7 +71,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
     maxQ <- ntime
   }
 
-  if(class(scale) != 'logical' | length(scale) != 1) stop('scale must be a logical value')
+  if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
   if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
 
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)

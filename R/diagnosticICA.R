@@ -16,6 +16,7 @@
 #' @importFrom ica icaimax
 #' @importFrom stats optim
 #' @importFrom abind abind
+#' @importFrom matrixStats colVars
 #'
 diagnosticICA <- function(template_mean,
                         template_var,
@@ -25,7 +26,6 @@ diagnosticICA <- function(template_mean,
                         maxiter=100,
                         epsilon=0.001,
                         verbose=TRUE){
-
 
   if(!is.list(template_mean)) stop('template_mean must be a list')
   if(!is.list(template_var)) stop('template_var must be a list')
@@ -70,13 +70,42 @@ diagnosticICA <- function(template_mean,
 
   if(class(scale) != 'logical' | length(scale) != 1) stop('scale must be a logical value')
 
+
+  ### IDENTIFY AND REMOVE ANY BAD VOXELS/VERTICES
+
+  keep <- rep(TRUE, nvox)
+  for(g in 1:G){
+    keep[colSums(is.nan(template_mean[[g]])) > 0] <- FALSE
+    keep[colSums(is.na(template_mean[[g]])) > 0] <- FALSE
+    keep[colSums(is.nan(template_var[[g]])) > 0] <- FALSE
+    keep[colSums(is.na(template_var[[g]])) > 0] <- FALSE
+  }
+  keep[colSums(is.nan(BOLD)) > 0] <- FALSE
+  keep[colSums(is.na(BOLD)) > 0] <- FALSE
+  keep[colVars(BOLD) == 0] <- FALSE
+
+  if(sum(!keep) > 0){
+    template_mean_orig <- template_mean
+    template_var_orig <- template_var
+    nvox <- sum(keep)
+    if(verbose) cat(paste0('Excluding ',sum(!keep),' bad (NA, NaN or flat) voxels/vertices from analysis.\n'))
+    for(g in 1:G){
+      template_mean[[g]] <- template_mean[[g]][,keep]
+      template_var[[g]] <- template_var[[g]][,keep]
+    }
+    BOLD <- BOLD[,keep]
+  }
+
+
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
+
+  template_mean_avg <- apply(abind(template_mean, along=3), c(1,2), mean)
 
   if(maxQ > L){
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
     BOLD1 <- scale_BOLD(BOLD, scale=scale)
-    DR1 <- dual_reg(BOLD1, template_mean)
+    DR1 <- dual_reg(BOLD1, template_mean_avg)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
     fit <- DR1$A %*% DR1$S
@@ -116,7 +145,6 @@ diagnosticICA <- function(template_mean,
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
-  template_mean_avg <- apply(abind(template_mean, along=3), c(1,2), mean)
   #dat_DR <- dual_reg(BOLD3, template_mean[[1]])
   dat_DR <- dual_reg(BOLD3, template_mean_avg)
   HA <- H %*% dat_DR$A #apply dimension reduction
@@ -129,9 +157,24 @@ diagnosticICA <- function(template_mean,
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'dICA'
 
-  #regression-based estimate of A
-  tmp <- dual_reg(BOLD3, t(resultEM$subjICmean))
-  resultEM$A_reg <- tmp$A
+  # #regression-based estimate of A
+  # tmp <- dual_reg(BOLD3, t(resultEM$subjICmean))
+  # resultEM$A_reg <- tmp$A
+
+  resultEM$keep <- keep
+
+  #map estimates & templates back to original locations
+  if(sum(!keep)>0){
+    #estimates
+    subjICmean <- subjICvar <- matrix(nrow=length(keep), ncol=L)
+    subjICmean[keep,] <- resultEM$subjICmean
+    subjICvar[keep,] <- resultEM$subjICvar
+    resultEM$subjICmean <- subjICmean
+    resultEM$subjICvar <- subjICvar
+    #templates
+    resultEM$template_mean <- template_mean_orig
+    resultEM$template_var <- template_var_orig
+  }
 
   return(resultEM)
 

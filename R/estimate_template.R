@@ -4,6 +4,7 @@
 #' @param cifti_fnames2 Vector of file paths of "retest" CIFTI-format fMRI timeseries (*.dtseries.nii) for template estimation.  Must be from the same subjects and in the same order as cifti_fnames.  If none specified, will create pseudo test-retest data from single session.
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
 #' @param inds Indicators of which group ICs to include in template. If NULL, use all group ICs.
+#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before template estimation.
 #' @param brainstructures Vector of brainstructures to include ('left','right','surface').  Default is c('left','right').
 #' @param verbose If TRUE, display progress updates
 #'
@@ -11,7 +12,9 @@
 #' @export
 #' @importFrom ciftiTools read_cifti flatten_cifti
 #'
-estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname, inds=NULL, brainstructures=c('left','right'), verbose=TRUE){
+estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname, inds=NULL, scale=TRUE, brainstructures=c('left','right'), verbose=TRUE){
+
+  if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
 
   if(verbose) cat('\n Reading in GICA result')
   GICA_cifti <- read_cifti(GICA_fname, brainstructures=brainstructures)
@@ -26,6 +29,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
   wall_mask[is.na(GICA[,1])] <- TRUE
   wall_mask[rowSums(GICA^2)==0] <- TRUE
   GICA2 <- GICA[!wall_mask,]
+  GICA2 <- scale(GICA2, scale=FALSE) #center each IC map
 
   if(verbose){
     cat(paste0('\n Number of data locations: ',V))
@@ -85,12 +89,12 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
-      BOLD2_ii <- read_cifti(fname_ii, brainstructures=brainstructures, flat=TRUE)
+      BOLD2_ii <- read_cifti(fname_ii, brainstructures=brainstructures, flat=TRUE) #TO DO: Is flat=TRUE the right way to go here?  Need to be careful with medial wall
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA2))$S
-    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA2))$S
+    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA2), scale=scale)$S #TO DO: Since we are centering and scaling as part of dual regression, we need to be careful with the medial wall in case it introduces 0's or NA's into the computations
+    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA2), scale=scale)$S
     DR1[ii,,!wall_mask] <- DR1_ii[inds,]
     DR2[ii,,!wall_mask] <- DR2_ii[inds,]
   }
@@ -121,6 +125,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
   template_var[template_var < 0] <- 0
 
   template <- list(mean = template_mean, var = template_var)
+
 
   return(template)
 

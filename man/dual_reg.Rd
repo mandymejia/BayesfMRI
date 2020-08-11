@@ -11,7 +11,7 @@ dual_reg(dat, GICA, scale = FALSE)
 
 \item{GICA}{Group-level independent components (QxV)}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
+\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.}
 }
 \value{
 A list containing the subject-level independent components S (QxV), subject-level mixing matrix A (TxQ), and the row- and column- centered fMRI data (TxV)

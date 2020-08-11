@@ -2,7 +2,7 @@
 #'
 #' @param dat Subject-level fMRI data (TxV)
 #' @param GICA Group-level independent components (QxV)
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
+#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #'
 #' @return A list containing the subject-level independent components S (QxV), subject-level mixing matrix A (TxQ), and the row- and column- centered fMRI data (TxV)
 #' @export

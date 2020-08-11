@@ -163,7 +163,15 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 
 	subjICcov=(D %*% inla.qinv(mu_Omega_s$Omega_s) %*% D)
 
-	result <- list(subjICmean=mu_Omega_s$mu_s, subjICcov=subjICcov, Omega = mu_Omega_s$Omega_s, theta_MLE=theta_MLE, theta_path=theta_path, numiter=numiter, squarem = result_squarem, template = list(mean = t(template_mean), var=t(template_var)))
+	result <- list(subjICmean=mu_Omega_s$mu_s,
+	               subjICcov=subjICcov,
+	               Omega = mu_Omega_s$Omega_s,
+	               theta_MLE=theta_MLE,
+	               theta_path=theta_path,
+	               numiter=numiter,
+	               squarem = result_squarem,
+	               template_mean = template_mean,
+	               template_var=template_var)
 	return(result)
 }
 
@@ -238,7 +246,14 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
     var_s[,v] <- diag(Sigma_s_v)
   }
 
-  result <- list(subjICmean=t(miu_s), subjICvar=t(var_s), theta_MLE=theta, success_flag=success, error=err, numiter=iter-1, template = list(mean = t(template_mean), var = t(template_var)))
+  result <- list(subjICmean=t(miu_s),
+                 subjICvar=t(var_s),
+                 theta_MLE=theta,
+                 success_flag=success,
+                 error=err,
+                 numiter=iter-1,
+                 template_mean = template_mean,
+                 template_var = template_var)
   #names(result) <- c('subjICmean', 'subjICvar', 'theta_MLE', 'success_flag')
   return(result)
 }
