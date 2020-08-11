@@ -9,6 +9,7 @@ estimate_template.cifti(
   cifti_fnames2 = NULL,
   GICA_fname,
   inds = NULL,
+  scale = TRUE,
   brainstructures = c("left", "right"),
   verbose = TRUE
 )
@@ -22,7 +23,9 @@ estimate_template.cifti(
 
 \item{inds}{Indicators of which group ICs to include in template. If NULL, use all group ICs.}
 
-\item{brainstructures}{Vector of brainstructures to include ('left','right','subcortical').  Default is c('left','right').}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before template estimation.}
+
+\item{brainstructures}{Vector of brainstructures to include ('left','right','surface').  Default is c('left','right').}
 
 \item{verbose}{If TRUE, display progress updates}
 }

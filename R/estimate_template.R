@@ -4,14 +4,17 @@
 #' @param cifti_fnames2 Vector of file paths of "retest" CIFTI-format fMRI timeseries (*.dtseries.nii) for template estimation.  Must be from the same subjects and in the same order as cifti_fnames.  If none specified, will create pseudo test-retest data from single session.
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
 #' @param inds Indicators of which group ICs to include in template. If NULL, use all group ICs.
-#' @param brainstructures Vector of brainstructures to include ('left','right','subcortical').  Default is c('left','right').
+#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before template estimation.
+#' @param brainstructures Vector of brainstructures to include ('left','right','surface').  Default is c('left','right').
 #' @param verbose If TRUE, display progress updates
 #'
 #' @return
 #' @export
 #' @importFrom ciftiTools read_cifti
 #'
-estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname, inds=NULL, brainstructures=c('left','right'), verbose=TRUE){
+estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname, inds=NULL, scale=TRUE, brainstructures=c('left','right'), verbose=TRUE){
+
+  if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
 
   if(verbose) cat('\n Reading in GICA result')
   GICA <- read_cifti(GICA_fname, method="separate", format="flat", brainstructures=brainstructures)
@@ -20,10 +23,11 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
   L0 <- ncol(GICA$DAT)
   V <- nrow(GICA$DAT)
   wall_mask <- rep(FALSE, V)
-  wall_mask[is.nan(GICA$DAT[,1])] <- TRUE
-  wall_mask[is.na(GICA$DAT[,1])] <- TRUE
-  wall_mask[rowSums(GICA$DAT^2)==0] <- TRUE
-  GICA2 <- GICA$DAT[!wall_mask,]
+  wall_mask[is.nan(GICA[,1])] <- TRUE
+  wall_mask[is.na(GICA[,1])] <- TRUE
+  wall_mask[rowSums(GICA^2)==0] <- TRUE
+  GICA2 <- GICA[!wall_mask,]
+  GICA2 <- scale(GICA2, scale=FALSE) #center each IC map
 
   if(verbose){
     cat(paste0('\n Number of data locations: ',V))
@@ -52,7 +56,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
 
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
-  missing_data <- 0
+  missing_data <- NULL
   for(ii in 1:N){
 
     if(verbose) cat(paste0('\n Reading in data for subject ',ii,' of ',N))
@@ -60,7 +64,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
     #read in BOLD
     fname_ii <- cifti_fnames[ii]
     if(!file.exists(fname_ii)) {
-      missing_data <- missing_data + 1
+      missing_data <- c(missing_data, fname_ii)
       if(verbose) cat(paste0('\n Data not available'))
       next
     }
@@ -79,16 +83,16 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
       #read in BOLD from retest
       fname_ii <- cifti_fnames2[ii]
       if(!file.exists(fname_ii)) {
-        missing_data <- missing_data + 1
+        missing_data <- c(missing_data, fname_ii)
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
-      BOLD2_ii <- read_cifti(fname_ii, format="flat", brainstructures=brainstructures)$DAT
+      BOLD2_ii <- read_cifti(fname_ii, brainstructures=brainstructures, flat=TRUE) #TO DO: Is flat=TRUE the right way to go here?  Need to be careful with medial wall
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA2))$S
-    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA2))$S
+    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA2), scale=scale)$S #TO DO: Since we are centering and scaling as part of dual regression, we need to be careful with the medial wall in case it introduces 0's or NA's into the computations
+    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA2), scale=scale)$S
     DR1[ii,,!wall_mask] <- DR1_ii[inds,]
     DR2[ii,,!wall_mask] <- DR2_ii[inds,]
   }
@@ -119,6 +123,7 @@ estimate_template.cifti <- function(cifti_fnames, cifti_fnames2=NULL, GICA_fname
   template_var[template_var < 0] <- 0
 
   template <- list(mean = template_mean, var = template_var)
+
 
   return(template)
 

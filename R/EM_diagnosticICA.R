@@ -29,7 +29,7 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
   for(g in 1:G) {
     num_smallvar <- sum(template_var[[g]] < 1e-6)
     if(num_smallvar>0){
-      if(verbose) cat(paste0('Setting ',num_smallvar,' very small variance values in group ',g,' template to zero.'))
+      if(verbose) cat(paste0('Setting ',num_smallvar,' (',round(100*num_smallvar/length(template_var[[g]]),1),'%) very small variance values in group ',g,' template to ',1e-6,'.\n'))
       template_var[[g]][template_var[[g]] < 1e-6] = 1e-6 #to prevent problems when inverting covariance
     }
   }
@@ -71,7 +71,8 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
                  success_flag=success,
                  error=err,
                  numiter=iter-1,
-                 template = list(mean = template_mean, var = template_var))
+                 template_mean = template_mean,
+                 template_var = template_var)
 
   return(result)
 }
@@ -146,6 +147,8 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
   if(any(pr_zy==1)){
     pr_zy[pr_zy!=1] <- 0
   }
+
+  if(verbose) print(paste(pr_zy, collapse=','))
 
   # if(is.infinite(exp(max(exp_part)-min(exp_part)))) {
   #   #this is for two groups, need to generalize for G>2
