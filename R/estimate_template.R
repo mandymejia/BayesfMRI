@@ -1,20 +1,20 @@
 #' Estimate Template for Template or Diagnostic ICA
 #'
-#' @param cifti_fnames Vector of file paths of CIFTI-format fMRI timeseries 
+#' @param cifti_fnames Vector of file paths of CIFTI-format fMRI timeseries
 #'  (*.dtseries.nii) for template estimation
-#' @param cifti_fnames2 Vector of file paths of "retest" CIFTI-format fMRI 
-#'  timeseries (*.dtseries.nii) for template estimation.  Must be from the same 
-#'  subjects and in the same order as cifti_fnames.  If none specified, will 
+#' @param cifti_fnames2 Vector of file paths of "retest" CIFTI-format fMRI
+#'  timeseries (*.dtseries.nii) for template estimation.  Must be from the same
+#'  subjects and in the same order as cifti_fnames.  If none specified, will
 #'  create pseudo test-retest data from single session.
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
-#' @param inds Indicators of which group ICs to include in template. If NULL, 
+#' @param inds Indicators of which group ICs to include in template. If NULL,
 #'  use all group ICs.
-#' @param scale Logical indicating whether BOLD data should be scaled by the 
+#' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
-#' @param brainstructures Character vector indicating which brain structure(s) 
-#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right 
+#' @param brainstructures Character vector indicating which brain structure(s)
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
-#'  gray matter). Can also be \code{"all"} (obtain all three brain structures). 
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param verbose If TRUE, display progress updates
 #'
@@ -23,8 +23,13 @@
 #' @importFrom ciftiTools read_cifti
 #'
 estimate_template.cifti <- function(
-  cifti_fnames, cifti_fnames2=NULL, GICA_fname, 
-  inds=NULL, scale=TRUE, brainstructures=c('left','right'), verbose=TRUE){
+  cifti_fnames,
+  cifti_fnames2=NULL,
+  GICA_fname,
+  inds=NULL,
+  scale=TRUE,
+  brainstructures=c('left','right'),
+  verbose=TRUE){
 
   # Check arguments.
   if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
@@ -33,11 +38,11 @@ estimate_template.cifti <- function(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
-  if ("all" %in% brainstructures) { 
+  if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
 
-  # Read GICA result. 
+  # Read GICA result.
   #'  First, obtain the mapping (used to infer brainstructures)
   #   with `cifti_read_flat` for `cifti_fnames` and `cifti_fnames2`).
   if(verbose) cat('\n Reading in GICA result')
@@ -73,8 +78,8 @@ estimate_template.cifti <- function(
   #   visualization). Otherwise, use the `convert` method.
   } else {
     GICA <- read_cifti(
-      GICA_fname, 
-      full_volume="subcortical" %in% brainstructures, 
+      GICA_fname,
+      full_volume="subcortical" %in% brainstructures,
       brainstructures=brainstructures
     )
   }
@@ -89,7 +94,7 @@ estimate_template.cifti <- function(
   flat_bs_mask <- flat_bs_labs %in% brainstructures
 
   # Flatten. `GICA_flat` will have the subcortical voxels in alphabetical order
-  #   because `cifti_read_flat()` returns them in alphabetical order. 
+  #   because `cifti_read_flat()` returns them in alphabetical order.
   GICA_flat <- GICA
   if ("subcortical" %in% brainstructures) {
     alpha_order <- order(GICA_flat$meta$subcort$labels)
@@ -97,9 +102,9 @@ estimate_template.cifti <- function(
   }
   GICA_flat <- do.call(rbind, GICA_flat$data)
   V <- nrow(GICA_flat); L0 <- ncol(GICA_flat)
-  
+
   # Center each IC map.
-  GICA_flat <- scale(GICA_flat, scale=FALSE) 
+  GICA_flat <- scale(GICA_flat, scale=FALSE)
 
   if(verbose){
     cat(paste0('\n Number of data locations: ',V))
@@ -140,9 +145,9 @@ estimate_template.cifti <- function(
       if(verbose) cat(paste0('\n Data not available'))
       next
     }
-    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[flat_bs_labs != "mwall"],, drop=FALSE]
+    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[!(flat_bs_labs %in% c("mwall","mwallL","mwallR"))],, drop=FALSE]
 
-    if(nrow(BOLD1_ii) != nrow(GICA2)) stop(paste0('The number of data locations in GICA and timeseries data from subject ',ii,' do not match.'))
+    if(nrow(BOLD1_ii) != nrow(GICA_flat)) stop(paste0('The number of data locations in GICA and timeseries data from subject ',ii,' do not match.'))
     ntime <- ncol(BOLD1_ii)
 
     #read in BOLD retest data OR create pseudo test-retest data
@@ -159,12 +164,12 @@ estimate_template.cifti <- function(
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
-      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[flat_bs_labs != "mwall"],, drop=FALSE]
+      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[!(flat_bs_labs %in% c("mwall","mwallL","mwallR"))],, drop=FALSE]
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA2), scale=scale)$S
-    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA2), scale=scale)$S
+    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA_flat), scale=scale)$S
+    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA_flat), scale=scale)$S
     DR1[ii,,] <- DR1_ii[inds,]
     DR2[ii,,] <- DR2_ii[inds,]
   }
@@ -213,3 +218,4 @@ estimate_template.cifti <- function(
 
   list(mean_template=xifti_mean, var_template=xifti_var)
 }
+
