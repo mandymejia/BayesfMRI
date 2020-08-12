@@ -98,6 +98,13 @@ BayesGLM <- function(cifti_fname,
   write_dir <- normalizePath(write_dir) #generate full path
 
   # Check that arguments are compatible
+  brainstructures <- ciftiTools:::match_input(
+    brainstructures, c("left","right","subcortical","all"),
+    user_value_label="brainstructures"
+  )
+  if ("all" %in% brainstructures) { 
+    brainstructures <- c("left","right","subcortical")
+  }
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
   do_sub <- ('subcortical' %in% brainstructures)

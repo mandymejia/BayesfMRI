@@ -78,7 +78,6 @@ estimate_template.cifti <- function(
       brainstructures=brainstructures
     )
   }
-  V_bs <- lapply(GICA$data, nrow)
 
   # Obtain the brainstructure mask for the flattened CIFTIs.
   #   It will remove any newly-detected medial wall vertices.
@@ -96,7 +95,7 @@ estimate_template.cifti <- function(
     alpha_order <- order(GICA_flat$meta$subcort$labels)
     GICA_flat$data$subcort <- GICA_flat$data$subcort[alpha_order,, drop=FALSE]
   }
-  GICA_flat <- do.call(rbind, GICA$data)[flat_bs_mask,, drop=FALSE]
+  GICA_flat <- do.call(rbind, GICA_flat$data)
   V <- nrow(GICA_flat); L0 <- ncol(GICA_flat)
   
   # Center each IC map.
@@ -141,7 +140,7 @@ estimate_template.cifti <- function(
       if(verbose) cat(paste0('\n Data not available'))
       next
     }
-    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask,, drop=FALSE]
+    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[flat_bs_labs != "mwall"],, drop=FALSE]
 
     if(nrow(BOLD1_ii) != nrow(GICA2)) stop(paste0('The number of data locations in GICA and timeseries data from subject ',ii,' do not match.'))
     ntime <- ncol(BOLD1_ii)
@@ -160,7 +159,7 @@ estimate_template.cifti <- function(
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
-      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask,, drop=FALSE]
+      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[flat_bs_labs != "mwall"],, drop=FALSE]
     }
 
     #perform dual regression on test and retest data
