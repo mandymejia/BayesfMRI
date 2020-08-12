@@ -87,8 +87,8 @@ estimate_template.cifti <- function(
   # Obtain the brainstructure mask for the flattened CIFTIs.
   #   It will remove any newly-detected medial wall vertices.
   flat_bs_labs <- c(
-    ifelse(flat_CIFTI_map$cortex$medial_wall_mask$left, "left", "mwallL"),
-    ifelse(flat_CIFTI_map$cortex$medial_wall_mask$right, "right", "mwallR"),
+    ifelse(flat_CIFTI_map$cortex$medial_wall_mask$left, "left", "mwall"),
+    ifelse(flat_CIFTI_map$cortex$medial_wall_mask$right, "right", "mwall"),
     rep("subcortical", length(flat_CIFTI_map$subcort$labels))
   )
   flat_bs_mask <- flat_bs_labs %in% brainstructures
