@@ -5,8 +5,11 @@
 #' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
 #' @param sphereL_fname File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param sphereR_fname File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
-#' @param brainstructures A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)
-# @param vol_regions A vector indicating which subcortical brain regions (3-21) to model. Default is to exclude brainstem (region 7). # vol_regions=c(3:6,8:21)
+#' @param brainstructures Character vector indicating which brain structure(s) 
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right 
+#'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures). 
+#'  Default: \code{c("left","right")} (cortical surface only).
 #' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
 #'  If not provided, should be set with
 #'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
@@ -28,7 +31,7 @@
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
-#' @importFrom ciftiTools read_cifti resample_cifti get_cifti_extn resample_gifti make_cifti
+#' @importFrom ciftiTools read_cifti resample_gifti make_xifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom gifti readGIfTI
 #' @importFrom INLA inla.pardiso.check inla.setOption
@@ -198,8 +201,6 @@ BayesGLM <- function(cifti_fname,
     if(ss==1){
       cifti_ss <- read_cifti(
         cifti_fname[ss],
-        method="separate", #because resamp_res != NULL
-        format="regular",
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res,
@@ -207,13 +208,11 @@ BayesGLM <- function(cifti_fname,
         write_dir=write_dir,
         wb_path=wb_path
       )
-      if(do_left) surf_left <- cifti_ss$SURF_LEFT
-      if(do_right) surf_right <- cifti_ss$SURF_RIGHT
+      if(do_left) surf_left <- cifti_ss$surf$cortex_left
+      if(do_right) surf_right <- cifti_ss$surf$cortex_right
     } else {
       cifti_ss <- read_cifti(
         cifti_fname[ss],
-        method="separate", #because resamp_res != NULL
-        format="regular",
         brainstructures=brainstructures,
         resamp_res=resamp_res,
         sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
@@ -223,14 +222,12 @@ BayesGLM <- function(cifti_fname,
     }
 
     if(do_left) { 
-      cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$LABELS$CORTEX_LEFT), ncol=ncol(cifti_ss$CORTEX_LEFT))
-      cifti_left[[ss]][cifti_ss$LABELS$CORTEX_LEFT!="Medial Wall",] <- cifti$CORTEX_LEFT
-      ntime <- ncol(cifti_ss$CORTEX_LEFT) 
+      cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
+      cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,, drop=FALSE] <- cifti_ss$data$cortex_left
     }
     if(do_right) { 
-      cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$LABELS$CORTEX_RIGHT), ncol=ncol(cifti_ss$CORTEX_RIGHT))
-      cifti_right[[ss]][cifti_ss$LABELS$CORTEX_RIGHT!="Medial Wall",] <- cifti$CORTEX_RIGHT
-      ntime <- ncol(cifti_ss$CORTEX_RIGHT) 
+      cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
+      cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,, drop=FALSE] <- cifti_ss$data$cortex_right
     }
     #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
     #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
@@ -408,7 +405,7 @@ BayesGLM <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      classicalGLM_cifti[[ss]] <- make_cifti(
+      classicalGLM_cifti[[ss]] <- make_xifti(
         cortexL = classicalGLM_left[[ss]],
         cortexR = classicalGLM_right[[ss]]
         #subcortVol = classicalGLM_vol$single_session,
@@ -417,7 +414,7 @@ BayesGLM <- function(cifti_fname,
                                              )
     }
     if(do_Bayesian){
-      BayesGLM_cifti[[ss]] <- make_cifti(
+      BayesGLM_cifti[[ss]] <- make_xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]
         #subcortVol = BayesGLM_vol$single_session,

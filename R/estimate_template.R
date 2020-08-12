@@ -11,8 +11,11 @@
 #'  use all group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the 
 #'  spatial standard deviation before template estimation.
-#' @param brainstructures Vector of brainstructures to include ('left', 'right',
-#'  'surface').  Default is c('left', 'right').
+#' @param brainstructures Character vector indicating which brain structure(s) 
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right 
+#'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures). 
+#'  Default: \code{c("left","right")} (cortical surface only).
 #' @param verbose If TRUE, display progress updates
 #'
 #' @return
