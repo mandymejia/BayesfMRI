@@ -55,7 +55,7 @@ estimate_template.cifti <- function(
     if (no_left_mwall || no_right_mwall) {
       warning(paste(
         "No medial wall vertices were detected in the",
-        c("left cortex", "right cortex" "cortex")[no_left_mwall*1 + no_right_mwall*2],
+        c("left cortex", "right cortex", "cortex")[no_left_mwall*1 + no_right_mwall*2],
         "component of the GICA CIFTI."
       ))
     # Replace the empty medial wall mask(s).

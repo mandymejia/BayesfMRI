@@ -40,7 +40,11 @@ BayesGLM(
 
 \item{sphereR_fname}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
-\item{brainstructures}{A vector indicating which brain structure(s) to model: 'left' (left cortical surface), 'right' (right cortical surface), and/or 'subcortical' (subcortical and cerebellar gray matter)}
+\item{brainstructures}{Character vector indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+gray matter). Can also be \code{"all"} (obtain all three brain structures).
+Default: \code{c("left","right")} (cortical surface only).}
 
 \item{wb_path}{(Optional) Path to Connectome Workbench folder or executable.
 If not provided, should be set with
