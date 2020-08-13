@@ -179,7 +179,7 @@ estimate_template.cifti <- function(
   if(verbose) cat('\n Estimating Template Mean')
   mean1 <- apply(DR1, c(2,3), mean, na.rm=TRUE)
   mean2 <- apply(DR2, c(2,3), mean, na.rm=TRUE)
-  template_mean <- (mean1 + mean2)/2;
+  template_mean <- t((mean1 + mean2)/2)
 
   # ESTIMATE SIGNAL (BETWEEN-SUBJECT) VARIANCE
 
@@ -187,12 +187,12 @@ estimate_template.cifti <- function(
   if(verbose) cat('\n Estimating Total Variance')
   var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
   var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
-  var_tot <- (var_tot1 + var_tot2)/2
+  var_tot <- t((var_tot1 + var_tot2)/2)
 
   # noise (within-subject) variance
   if(verbose) cat('\n Estimating Within-Subject Variance')
   DR_diff = DR1 - DR2;
-  var_noise <- (1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE)
+  var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance
   if(verbose) cat('\n Estimating Template (Between-Subject) Variance')
@@ -202,7 +202,7 @@ estimate_template.cifti <- function(
   rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
 
   # Format template as "xifti"s
-  xifti_mean <- GICA; xifti_var <- GICA
+  xifti_mean <- xifti_var <- GICA
   if ("left" %in% brainstructures) {
     xifti_mean$data$cortex_left <- template_mean[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
     xifti_var$data$cortex_left <- template_var[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
