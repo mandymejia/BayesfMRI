@@ -21,7 +21,6 @@
 #' @return
 #' @export
 #' @importFrom ciftiTools read_cifti
-#'
 estimate_template.cifti <- function(
   cifti_fnames,
   cifti_fnames2=NULL,
@@ -42,13 +41,12 @@ estimate_template.cifti <- function(
     brainstructures <- c("left","right","subcortical")
   }
 
-  # Read GICA result.
-  #'  First, obtain the mapping (used to infer brainstructures)
-  #   with `cifti_read_flat` for `cifti_fnames` and `cifti_fnames2`).
+  # Read GICA result
+  # First, obtain the mapping (used to infer brainstructures) with cifti_read_flat for cifti_fnames and cifti_fnames2).
   if(verbose) cat('\n Reading in GICA result')
   flat_CIFTI_map <- ciftiTools:::map_cifti(GICA_fname)
   #   Next, read the CIFTI. If cortex data to be included does not have a medial
-  #   wall, use `cifti_read_separate` to try to infer it from the NIFTI.
+  #   wall, use cifti_read_separate to try to infer it from the NIFTI.
   no_left_mwall <- "left" %in% brainstructures && all(flat_CIFTI_map$cortex$medial_wall_mask$left)
   no_right_mwall <- "right" %in% brainstructures && all(flat_CIFTI_map$cortex$medial_wall_mask$left)
   if (no_left_mwall || no_right_mwall) {
@@ -74,8 +72,7 @@ estimate_template.cifti <- function(
         flat_CIFTI_map$cortex$medial_wall_mask$right <- GICA$meta$cortex$medial_wall_mask$right
       }
     }
-  #   Also use the `separate` method if subcortical data is included (for
-  #   visualization). Otherwise, use the `convert` method.
+  # Also use the separate method if subcortical data is included (for visualization). Otherwise, use the convert method.
   } else {
     GICA <- read_cifti(
       GICA_fname,
@@ -93,8 +90,8 @@ estimate_template.cifti <- function(
   )
   flat_bs_mask <- flat_bs_labs %in% brainstructures
 
-  # Flatten. `GICA_flat` will have the subcortical voxels in alphabetical order
-  #   because `cifti_read_flat()` returns them in alphabetical order.
+  # Flatten. GICA_flat will have the subcortical voxels in alphabetical order
+  # because cifti_read_flat() returns them in alphabetical order.
   GICA_flat <- GICA
   if ("subcortical" %in% brainstructures) {
     alpha_order <- order(GICA_flat$meta$subcort$labels)
