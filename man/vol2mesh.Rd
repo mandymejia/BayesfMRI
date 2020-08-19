@@ -2,19 +2,19 @@
 % Please edit documentation in R/vol2mesh.R
 \name{vol2mesh}
 \alias{vol2mesh}
-\title{Construct a triangular mesh from a 2D volumetric mask (need to generalize this to a 3D volume)}
+\title{}
 \usage{
 vol2mesh(mask)
 }
 \arguments{
-\item{mask}{A matrix of 0s and 1s representing a volumetric mask}
+\item{mask}{}
 }
 \value{
-An inla.mesh object.  See \code{help(inla.mesh.2d)} for details.
+\verb{}
 }
 \description{
-Construct a triangular mesh from a 2D volumetric mask (need to generalize this to a 3D volume)
+
 }
 \note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+
 }

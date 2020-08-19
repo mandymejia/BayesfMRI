@@ -2,18 +2,18 @@
 % Please edit documentation in R/nuisance_regress.R
 \name{nuisance_regress}
 \alias{nuisance_regress}
-\title{Regresses nuisance parameters from response or predictor variables}
+\title{}
 \usage{
 nuisance_regress(Y, Z)
 }
 \arguments{
-\item{Y}{a T by M matrix representing the response or predictor variables from which to regress nuisance.}
+\item{Y}{}
 
-\item{Z}{a T by J matrix where J is the number of nuisance variables. It contains of nuisance regressors.}
+\item{Z}{}
 }
 \value{
-A T by M matrix representing the residuals of Y after regressing out Z
+
 }
 \description{
-Regresses nuisance parameters from response or predictor variables
+
 }

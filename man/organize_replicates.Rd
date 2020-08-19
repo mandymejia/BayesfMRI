@@ -2,23 +2,23 @@
 % Please edit documentation in R/organize_replicates.R
 \name{organize_replicates}
 \alias{organize_replicates}
-\title{Organize replicates}
+\title{}
 \usage{
 organize_replicates(n_sess, n_task, mesh)
 }
 \arguments{
-\item{n_sess}{The number of sessions sharing hyperparameters (can be different tasks)}
+\item{n_sess}{}
 
-\item{n_task}{Number of regressors or tasks}
+\item{n_task}{}
 
-\item{mesh}{Object of type inla.mesh (for surface data, see \code{help(make_mesh)}) or BayesfMRI.spde (for subcortical data, see \code{help(create_spde_vol3D)}).}
+\item{mesh}{}
 }
 \value{
-replicates vector and betas for sessions
+
 }
 \description{
-Organize replicates
+
 }
 \details{
-beta and repl vectors are of length nvox X n_sess X n_task
+
 }

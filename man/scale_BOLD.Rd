@@ -2,31 +2,21 @@
 % Please edit documentation in R/scale_BOLD_templateICA.R
 \name{scale_BOLD}
 \alias{scale_BOLD}
-\title{Center BOLD data across space and time and scale (optionally)}
+\title{}
 \usage{
 scale_BOLD(BOLD, scale = FALSE)
 }
 \arguments{
-\item{BOLD}{(TxV matrix) fMRI timeseries data matrix}
+\item{BOLD}{}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
+\item{scale}{}
 }
 \value{
-Centered and scaled BOLD data (TxV matrix)
+
 }
 \description{
-Center BOLD data across space and time and scale (optionally)
+
 }
 \details{
-The BOLD data is centered across time, which removes the mean image by subtracting the mean of each voxel timeseries, and across space,
-which removes the global signal.  Both steps are necessary for dual regression, which in the first regression treats time points as observations,
-and in the second step treats voxels as observations. Neither regression includes an intercept, so the BOLD timeseries must be centered across
-both space and time. The group independent components used in the first regression must also be centered across space.  The mixing matrix estimated
-in the first step of dual regression is also centered across time as a result.
 
-In order to ensure that all fMRI data share the same scale, the BOLD data can also be scaled by the global image standard deviation, equal to
-\deqn{\sqrt{\frac{1}{T}\sum_{t=1}^T \sigma^2_t}},
-where \eqn{\sigma^2_t} is the standard deviation across all voxels at time point \eqn{t}. If scaling is applied to the BOLD timeseries used in
-template estimation, it should also be applied to the BOLD timeseries being analyzed with template ICA using the resulting templates to ensure
-compatibility of scale.
 }

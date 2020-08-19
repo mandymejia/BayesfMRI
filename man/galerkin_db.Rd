@@ -2,18 +2,18 @@
 % Please edit documentation in R/create_spde_vol3D.R
 \name{galerkin_db}
 \alias{galerkin_db}
-\title{Create FEM matrices}
+\title{}
 \usage{
 galerkin_db(FV, P)
 }
 \arguments{
-\item{FV}{Matrix of faces in triangularization}
+\item{FV}{}
 
-\item{P}{Matrix of vertex locations in triangularization}
+\item{P}{}
 }
 \value{
-A list of matrices C and G appearing in sparse SPDE precision
+
 }
 \description{
-Create FEM matrices
+
 }

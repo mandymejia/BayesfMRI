@@ -2,19 +2,19 @@
 % Please edit documentation in R/utils_templateICA.R
 \name{orthonorm}
 \alias{orthonorm}
-\title{Orthonormalizes a square, invertible matrix}
+\title{}
 \usage{
 orthonorm(X)
 }
 \arguments{
-\item{X}{A square matrix to be orthonormalized.}
+\item{X}{}
 }
 \value{
-X after orthonormalization
+
 }
 \description{
-Orthonormalizes a square, invertible matrix
+
 }
 \details{
-Y is orthonormal if $YY'=Y'Y=I$. Orthonormalization of X is given by $X (X'X)^(-.5)$.
+
 }

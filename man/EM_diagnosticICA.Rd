@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_diagnosticICA.R
 \name{EM_diagnosticICA}
 \alias{EM_diagnosticICA}
-\title{EM Algorithm for Diagnostic ICA Models}
+\title{}
 \usage{
 EM_diagnosticICA(
   template_mean,
@@ -16,25 +16,25 @@ EM_diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{(A list of G matrices, each LxV) template mean estimates for each group 1 to G}
+\item{template_mean}{}
 
-\item{template_var}{(A list of G matrices, each LxV) template variance estimates for each group 1 to G}
+\item{template_var}{}
 
-\item{BOLD}{(LxV matrix) dimension-reduced fMRI data}
+\item{BOLD}{}
 
-\item{theta0}{(list) initial guess at mixing matrix A (LxL)}
+\item{theta0}{}
 
-\item{C_diag}{(Lx1) diagonal elements of residual covariance after dimension reduction}
+\item{C_diag}{}
 
-\item{maxiter}{maximum number of EM iterations}
+\item{maxiter}{}
 
-\item{epsilon}{smallest proportion change between iterations (e.g. .001)}
+\item{epsilon}{}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{}
 }
 \value{
-A list with 5 elements: theta (list of final parameter estimates), group_probs (posterior probabilities of group membership), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+
 }
 \description{
-EM Algorithm for Diagnostic ICA Models
+
 }

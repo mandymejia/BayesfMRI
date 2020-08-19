@@ -2,23 +2,23 @@
 % Please edit documentation in R/create_spde_vol3D.R
 \name{create_spde_vol3D}
 \alias{create_spde_vol3D}
-\title{Create SPDE for 3D volumetric data}
+\title{}
 \usage{
 create_spde_vol3D(locs, labs, lab_set = NULL)
 }
 \arguments{
-\item{locs}{Locations of data points (Vx3 matrix)}
+\item{locs}{}
 
-\item{labs}{Region labels of data points (vector of length V). If NULL, treat observations as a single region.}
+\item{labs}{}
 
-\item{lab_set}{Only used if labs is not NULL. Vector of region labels for which to construct spde object. If NULL, use all region labels.}
+\item{lab_set}{}
 }
 \value{
-SPDE object representing triangular mesh structure on data locations
+
 }
 \description{
-Create SPDE for 3D volumetric data
+
 }
 \note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+
 }

@@ -2,20 +2,20 @@
 % Please edit documentation in R/dual_reg.R
 \name{dual_reg}
 \alias{dual_reg}
-\title{Dual Regression}
+\title{}
 \usage{
 dual_reg(dat, GICA, scale = FALSE)
 }
 \arguments{
-\item{dat}{Subject-level fMRI data (TxV)}
+\item{dat}{}
 
-\item{GICA}{Group-level independent components (QxV)}
+\item{GICA}{}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.}
+\item{scale}{}
 }
 \value{
-A list containing the subject-level independent components S (QxV), subject-level mixing matrix A (TxQ), and the row- and column- centered fMRI data (TxV)
+
 }
 \description{
-Dual Regression
+
 }
