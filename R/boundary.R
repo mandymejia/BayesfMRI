@@ -266,9 +266,14 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
     # Make new faces. ----------------------------------------------------------
     # Strategy: 
     #   * Start with an arbitrary vertex from layer A.
-    #   * Make a face between that vertex, the closest in layer B, and
-    #     the next in layer A ("next" meaning next in radial order).
-    #   * Then, make a face between 
+    #   * Make a face between that vertex, the closest (first) in layer B, and
+    #     the second in layer A next in radial order).
+    #   * Then, make a face between the second in layer A, the first in layer B,
+    #   * and the second in layer B. These two faces are a square with a dividing
+    #   * diagonal.
+    #   * Continue until looped around.
+    #   * Add triangles evenly distributed to account for different number
+    #   * of vertices.
     # --------------------------------------------------------------------------
 
     # Multiply adjacency matrices between all in-between layers to get
