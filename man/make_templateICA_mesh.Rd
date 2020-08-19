@@ -2,25 +2,25 @@
 % Please edit documentation in R/make_templateICA_mesh.R
 \name{make_templateICA_mesh}
 \alias{make_templateICA_mesh}
-\title{Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces}
+\title{}
 \usage{
 make_templateICA_mesh(mask = NULL, vertices = NULL, faces = NULL, locs = NULL)
 }
 \arguments{
-\item{mask}{Brain mask (matrix of 0/1 or TRUE/FALSE) (only supply mask OR vertices and faces)}
+\item{mask}{}
 
-\item{vertices}{Matrix of vertices (only supply vertices and faces OR mask)}
+\item{vertices}{}
 
-\item{faces}{Matrix of faces (only supply vertices and faces OR mask)}
+\item{faces}{}
 
-\item{locs}{Indices of vertices corresponding to observed data locations}
+\item{locs}{}
 }
 \value{
-List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
+
 }
 \description{
-Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces
+
 }
 \note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+
 }

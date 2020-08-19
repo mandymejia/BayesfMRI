@@ -2,33 +2,31 @@
 % Please edit documentation in R/utils_templateICA.R
 \name{LL2_kappa}
 \alias{LL2_kappa}
-\title{Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization}
+\title{}
 \usage{
 LL2_kappa(kappa, mesh, OplusW, u, v, C1 = 1/(4 * pi), Q = NULL)
 }
 \arguments{
-\item{kappa}{Value of kappa for which to compute log-likelihood}
+\item{kappa}{}
 
-\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
+\item{mesh}{\verb{}}
 
-\item{OplusW}{Sparse matrix containing estimated values of RHS of trace in part 2 of log-likelihood. In common smoothness model, represents the sum over q=1,...,Q.}
+\item{OplusW}{}
 
-\item{u}{Vector needed for part 3 of log-likelihood}
+\item{u}{}
 
-\item{v}{Vector needed for part 3 of log-likelihood}
+\item{v}{}
 
-\item{C1}{For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}}
+\item{C1}{}
 
-\item{Q}{Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model}
+\item{Q}{}
 }
 \value{
-Value of log-likelihood at logkappa
+
 }
 \description{
-Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
+
 }
 \details{
-This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
-template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
-the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.
+
 }

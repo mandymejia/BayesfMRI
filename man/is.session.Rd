@@ -2,24 +2,23 @@
 % Please edit documentation in R/is.session.R
 \name{is.session}
 \alias{is.session}
-\title{Verify that the \code{session} object is valid.}
+\title{}
 \usage{
 is.session(sess)
 }
 \arguments{
-\item{sess}{A list representing a task fMRI session (see Details)}
+\item{sess}{}
 }
 \value{
-True if all checks pass, or an (hopefully useful) error message
+
 }
 \description{
-Verify that the \code{session} object is valid.
+
 }
 \details{
-A valid "session" object is a list with the following named fields
 \itemize{
-\item BOLD: T x V matrix of BOLD responses, rows are time points, columns are voxels
-\item design: T x K matrix containing the K task regressors
-\item nuisance (optional): T x L matrix containing the L nuisance regressors
+\item 
+\item 
+\item 
 }
 }

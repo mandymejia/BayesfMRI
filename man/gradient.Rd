@@ -2,16 +2,16 @@
 % Please edit documentation in R/gradient.R
 \name{gradient}
 \alias{gradient}
-\title{Calculate gradient}
+\title{}
 \usage{
 gradient(x)
 }
 \arguments{
-\item{x}{A vector or matrix. If a matrix, compute gradient of each column of x.}
+\item{x}{}
 }
 \value{
-Gradient of x
+
 }
 \description{
-Calculate gradient
+
 }

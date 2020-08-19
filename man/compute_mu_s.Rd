@@ -2,28 +2,28 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{compute_mu_s}
 \alias{compute_mu_s}
-\title{Computes posterior mean and precision matrix of s}
+\title{}
 \usage{
 compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 }
 \arguments{
-\item{y_vec}{Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length QV.}
+\item{y_vec}{}
 
-\item{D}{Sparse diagonal matrix of template standard deviations}
+\item{D}{}
 
-\item{Dinv_s0}{The inverse of D times s0_vec}
+\item{Dinv_s0}{}
 
-\item{R_inv}{Estimate of inverse spatial correlation matrix (sparse)}
+\item{R_inv}{}
 
-\item{theta}{List of current parameter estimates}
+\item{theta}{}
 
-\item{P}{Permutation matrix for regrouping by locations (instead of by ICs.)}
+\item{P}{}
 
-\item{C_diag}{Diagonals of residual covariance of the first level model. A vector of length Q.}
+\item{C_diag}{}
 }
 \value{
-A list containing the posterior mean \eqn{\mu} (mu) and precision \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, where \eqn{\mu = \Omega^{-1}m}.
+
 }
 \description{
-Computes posterior mean and precision matrix of s
+
 }

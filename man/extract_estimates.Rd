@@ -2,22 +2,22 @@
 % Please edit documentation in R/BayesGLM.R
 \name{extract_estimates}
 \alias{extract_estimates}
-\title{Extract Estimates of Activation}
+\title{}
 \usage{
 extract_estimates(object, session_names, mask = NULL, stat = "mean")
 }
 \arguments{
-\item{object}{An object of class ‘"inla"’, a result of a call to inla}
+\item{object}{}
 
-\item{session_names}{Vector of fMRI session names}
+\item{session_names}{}
 
-\item{mask}{(Optional) Original mask applied to data before model fitting}
+\item{mask}{}
 
-\item{stat}{A string representing the posterior summary statistic to be returned}
+\item{stat}{}
 }
 \value{
-Estimates from inla model
+
 }
 \description{
-Obtains the posterior mean or other summary statistic for each latent field
+
 }

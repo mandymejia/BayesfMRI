@@ -2,7 +2,7 @@
 % Please edit documentation in R/excursions.R
 \name{excursions.inla.no.spurious}
 \alias{excursions.inla.no.spurious}
-\title{Calculation of excursion sets with the removal of small areas}
+\title{}
 \usage{
 excursions.inla.no.spurious(
   result.inla,
@@ -28,65 +28,49 @@ excursions.inla.no.spurious(
 )
 }
 \arguments{
-\item{result.inla}{Result object from INLA call.}
+\item{result.inla}{}
 
-\item{stack}{The stack object used in the INLA call.}
+\item{stack}{}
 
-\item{name}{The name of the component for which to do the calculation. This argument should
-only be used if a stack object is not provided, use the tag argument otherwise.}
+\item{name}{}
 
-\item{tag}{The tag of the component in the stack for which to do the calculation. This argument
-should only be used if a stack object is provided, use the name argument otherwise.}
+\item{tag}{}
 
-\item{u}{Excursion or contour level.}
+\item{u}{}
 
-\item{alpha}{Error probability for the excursion set.}
+\item{alpha}{}
 
-\item{type}{Type of region:
-\itemize{
-\item{'>' }{positive excursion region}
-\item{'<' }{negative excursion region}
-\item{'!=' }{contour avoiding region}
-\item{'=' }{contour credibility region}}}
+\item{type}{}
 
-\item{n.iter}{Number or iterations in the MC sampler that is used for approximating probabilities. The default value is 10000.}
+\item{n.iter}{}
 
-\item{F.limit}{The limit value for the computation of the F function. F is set to NA for all nodes where F<1-F.limit. Default is F.limit = \code{alpha}.}
+\item{F.limit}{}
 
-\item{u.link}{If u.link is TRUE, u is assumed to be in the scale of the data and is then transformed to the scale of the linear predictor (default FALSE).}
+\item{u.link}{}
 
-\item{method}{Method for handeling the latent Gaussian structure:
-\itemize{
-\item{'EB' }{Empirical Bayes (default)}
-\item{'QC' }{Quantile correction, rho must be provided if QC is used.}}}
+\item{method}{}
 
-\item{ind}{Indices of the nodes that should be analysed (optional).}
+\item{ind}{}
 
-\item{max.size}{Maximum number of nodes to include in the set of interest (optional).}
+\item{max.size}{}
 
-\item{verbose}{Set to TRUE for verbose mode (optional).}
+\item{verbose}{}
 
-\item{max.threads}{Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).}
+\item{max.threads}{}
 
-\item{seed}{Random seed (optional).}
+\item{seed}{}
 
-\item{mesh}{The mesh on which the model is defined.}
+\item{mesh}{}
 
-\item{area.limit}{Positive number. All connected excursion sets with an area smaller than this
-numbere are removed.}
+\item{area.limit}{}
 
-\item{use.continuous}{Logical parameter indicating whether the areas of the excursion sets
-should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
-function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.}
+\item{use.continuous}{}
 
-\item{plot.progress}{Logical parameter that indicates whether the results should be plotted.}
+\item{plot.progress}{}
 }
 \value{
-If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
-the same elements as the output of \code{continuous}.
+
 }
 \description{
-Function similar to the excursions.inla function, but which also takes a mesh as input
-and computes modified excursion sets where all regions with areas smaller than area.limit are
-removed in the internal calculations.
+
 }

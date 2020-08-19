@@ -2,7 +2,7 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations}
 \alias{id_activations}
-\title{Identifies areas of activation}
+\title{}
 \usage{
 id_activations(
   model_obj,
@@ -16,28 +16,28 @@ id_activations(
 )
 }
 \arguments{
-\item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
+\item{model_obj}{}
 
-\item{method}{The method to be used for identifying activations, either 'posterior' (Default) or '2means'}
+\item{method}{}
 
-\item{field_name}{Name of latent field, or vector of names, on which to identify activations}
+\item{field_name}{}
 
-\item{threshold}{For method='posterior' only: activation threshold (e.g. 0.01 for 1 percent signal change)}
+\item{threshold}{}
 
-\item{alpha}{For method='posterior' only: Significance level (e.g. 0.05)}
+\item{alpha}{}
 
-\item{area.limit}{For method='posterior' only: Below this value, activations will be considered spurious.  If NULL (default), no limit.}
+\item{area.limit}{}
 
-\item{type}{For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')}
+\item{type}{}
 
-\item{n_sample}{The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.}
+\item{n_sample}{}
 }
 \value{
-A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, an object of class excurobj if method='posterior' (see \code{help(excursions.inla)} for more information) and is NULL if method='2means'.
+\verb{}\verb{}\verb{}\verb{}
 }
 \description{
-For each latent field, identifies locations that are activated
+
 }
 \details{
-Put additional details here.
+
 }

@@ -2,26 +2,26 @@
 % Please edit documentation in R/utils_templateICA.R
 \name{loglik_kappa_est}
 \alias{loglik_kappa_est}
-\title{Computes log-likelihood of kappa given an initial estimate of delta}
+\title{}
 \usage{
 loglik_kappa_est(par, delta, D_diag, mesh, C1 = 1/(4 * pi), Q = NULL)
 }
 \arguments{
-\item{par}{Vector of parameter values (log kappa, log variance)}
+\item{par}{}
 
-\item{delta}{Estimate of delta (subject effect or deviation)}
+\item{delta}{}
 
-\item{D_diag}{Diagonal values of D matrix (template standard deviations)}
+\item{D_diag}{}
 
-\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
+\item{mesh}{\verb{}}
 
-\item{C1}{For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}}
+\item{C1}{}
 
-\item{Q}{Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model}
+\item{Q}{}
 }
 \value{
-Value of negative log likelihood
+
 }
 \description{
-Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
+
 }

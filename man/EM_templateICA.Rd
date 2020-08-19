@@ -4,7 +4,7 @@
 \alias{EM_templateICA}
 \alias{EM_templateICA.spatial}
 \alias{EM_templateICA.independent}
-\title{EM Algorithms for Template ICA Models}
+\title{}
 \usage{
 EM_templateICA.spatial(
   template_mean,
@@ -32,36 +32,34 @@ EM_templateICA.independent(
 )
 }
 \arguments{
-\item{template_mean}{(QxV matrix) mean maps for each IC in template, where Q is the number of ICs, V is the number of data or mesh locations.}
+\item{template_mean}{}
 
-\item{template_var}{(QxV matrix) between-subject variance maps for each IC in template}
+\item{template_var}{}
 
-\item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)})}
+\item{mesh}{\verb{}}
 
-\item{BOLD}{(QxV matrix) dimension-reduced fMRI data}
+\item{BOLD}{}
 
-\item{theta0}{(list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)}
+\item{theta0}{}
 
-\item{C_diag}{(Qx1) diagonal elements of matrix proportional to residual variance.}
+\item{C_diag}{}
 
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
+\item{common_smoothness}{}
 
-\item{maxiter}{maximum number of EM iterations}
+\item{maxiter}{}
 
-\item{epsilon}{smallest proportion change between iterations (e.g. .001)}
+\item{epsilon}{}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{}
 
-\item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
+\item{dim_reduce_flag}{}
 }
 \value{
-A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+
 }
 \description{
-EM Algorithms for Template ICA Models
+
 }
 \details{
-\code{EM_templateICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA model with spatial priors on subject effects.
 
-In both models, if original fMRI timeseries has covariance \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying by (QxT) matrix \eqn{H} from PCA has diagonal covariance \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
 }
