@@ -5,10 +5,10 @@
 #' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
 #' @param sphereL_fname File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param sphereR_fname File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
-#' @param brainstructures Character vector indicating which brain structure(s) 
-#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right 
+#' @param brainstructures Character vector indicating which brain structure(s)
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
-#'  gray matter). Can also be \code{"all"} (obtain all three brain structures). 
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
 #'  If not provided, should be set with
@@ -102,7 +102,7 @@ BayesGLM <- function(cifti_fname,
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
-  if ("all" %in% brainstructures) { 
+  if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
   do_left <- ('left' %in% brainstructures)
@@ -228,11 +228,11 @@ BayesGLM <- function(cifti_fname,
       )
     }
 
-    if(do_left) { 
+    if(do_left) {
       cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
       cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,, drop=FALSE] <- cifti_ss$data$cortex_left
     }
-    if(do_right) { 
+    if(do_right) {
       cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
       cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,, drop=FALSE] <- cifti_ss$data$cortex_right
     }
@@ -268,8 +268,12 @@ BayesGLM <- function(cifti_fname,
 
   ### FORMAT DESIGN MATRIX
   for(ss in 1:n_sess){
-    design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
-    if(scale_design) design[[ss]] <- design[[ss]]/max(design[[ss]])
+    if(scale_design){
+      design[[ss]] <- scale_design_mat(design[[ss]])
+      scale_design <- F
+    } else {
+      design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
+    }
   }
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
@@ -310,11 +314,14 @@ BayesGLM <- function(cifti_fname,
 
     if(!is.null(outfile)) outfile_left <- paste0(outfile, '_left.Rdata') else outfile_left <- NULL
 
-    if(do_classical) classicalGLM_left <- classicalGLM(session_data, scale=scale_BOLD)
+    if(do_classical) classicalGLM_left <- classicalGLM(session_data,
+                                                       scale_BOLD=scale_BOLD,
+                                                       scale_design = scale_design)
     if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data,
                                                       vertices = verts_left,
                                                       faces = faces_left,
                                                       scale_BOLD=scale_BOLD,
+                                                      scale_design = scale_design,
                                                       num.threads=num.threads,
                                                       return_INLA_result=return_INLA_result,
                                                       outfile = file.path(write_dir,outfile_left),
@@ -347,11 +354,14 @@ BayesGLM <- function(cifti_fname,
 
     if(!is.null(outfile)) outfile_right <- paste0(outfile, '_right.Rdata') else outfile_right <- NULL
 
-    if(do_classical) classicalGLM_right <- classicalGLM(session_data, scale=scale_BOLD)
+    if(do_classical) classicalGLM_right <- classicalGLM(session_data,
+                                                        scale_BOLD=scale_BOLD,
+                                                        scale_design = scale_design)
     if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data,
                                                       vertices = verts_right,
                                                       faces = faces_right,
                                                       scale_BOLD=scale_BOLD,
+                                                      scale_design = scale_design,
                                                       num.threads=num.threads,
                                                       return_INLA_result=return_INLA_result,
                                                       outfile = file.path(write_dir,outfile_right),
@@ -470,7 +480,7 @@ BayesGLM <- function(cifti_fname,
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE){
+BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -577,7 +587,11 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
 
     #scale data to represent % signal change (or just center if scale=FALSE)
     BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
-    design_s <- data[[s]]$design #previously centered and scaled to max=1
+    if(scale_design) {
+      design_s <- scale_design_mat(data[[s]]$design)
+    } else {
+      design_s <- scale(data[[s]]$design, scale = F)
+    }
 
     #regress nuisance parameters from BOLD data and design matrix
     if('nuisance' %in% names(data[[s]])){

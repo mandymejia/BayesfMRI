@@ -41,7 +41,9 @@ Imports:
 Remotes:
     mandymejia/ciftiTools
 Suggests:
-    parallel
+    parallel,
+    knitr,
+    rmarkdown
 ImportsFrom: 
     grDevices chull rgb
 LazyData: true
@@ -49,3 +51,4 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 URL: https://github.com/mandymejia/BayesfMRI
 BugReports: https://github.com/mandymejia/BayesfMRI/issues
+VignetteBuilder: knitr

@@ -11,6 +11,7 @@ BayesGLM_surface(
   mesh = NULL,
   mask = NULL,
   scale_BOLD = TRUE,
+  scale_design = TRUE,
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
