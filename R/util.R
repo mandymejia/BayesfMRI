@@ -220,23 +220,23 @@ asplit <- function(X,margin) {
 }
 
 #' Boundary Mask
-#' 
+#'
 #' Identify the vertices within `boundary_width` edges of the input mask. The
 #'  faces must be triangular.
-#' 
+#'
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
 #' @param mask a length-V logical vector. TRUE indicates vertices within the
-#'  input mask. 
+#'  input mask.
 #' @param boundary_width a positive integer. Vertices no more than this number
 #'  of edges from any vertex in the input mask will be placed in the boundary mask.
 #' @return The boundary mask, a length-V logical vector. TRUE indicates vertices
 #'  within the boundary mask.
-#' 
+#'
 boundary_mask <- function(faces, mask, boundary_width){
   s <- ncol(faces)
   v <- max(faces)
-  # For quads, boundary_mask() would count opposite vertices on a face as 
+  # For quads, boundary_mask() would count opposite vertices on a face as
   #   adjacent--that's probably not desired.
   stopifnot(s == 3)
 
@@ -259,4 +259,72 @@ boundary_mask <- function(faces, mask, boundary_width){
   }
 
   boundary_mask
+}
+
+#' Match user inputs to expected values
+#'
+#' Match each user input to an expected/allowed value. Raise a warning if either
+#'  several user inputs match the same expected value, or at least one could not
+#'  be matched to any expected value. \code{ciftiTools} uses this function to
+#'  match keyword arguments for a function call. Another use is to match
+#'  brainstructure labels ("left", "right", or "subcortical").
+#'
+#' @param user Character vector of user input. These will be matched to
+#'  \code{expected} using \code{match.arg()}.
+#' @param expected Character vector of expected/allowed values.
+#' @param fail_action If any value in \code{user} could not be
+#'  matched, or repeated matches occured, what should happen? Possible values
+#'  are \code{"stop"} (default; raises an error), \code{"warning"}, and
+#'  \code{"nothing"}.
+#' @param user_value_label How to refer to the user input in a stop or warning
+#'  message. If \code{NULL}, no label is used.
+#'
+#' @return The matched user inputs.
+#'
+#' @keywords internal
+#'
+match_input <- function(
+  user, expected,
+  fail_action=c("stop", "warning", "message", "nothing"),
+  user_value_label=NULL) {
+
+  fail_action <- match.arg(
+    fail_action,
+    c("stop", "warning", "message", "nothing")
+  )
+  unrecognized_FUN <- switch(fail_action,
+                             stop=stop,
+                             warning=warning,
+                             message=message,
+                             nothing=invisible
+  )
+
+  if (!is.null(user_value_label)) {
+    user_value_label <- paste0("\"", user_value_label, "\" ")
+  }
+  msg <- paste0(
+    "The user-input values ", user_value_label,
+    "did not match their expected values. ",
+    "Either several matched the same value, ",
+    "or at least one did not match any.\n\n",
+    "The user inputs were:\n",
+    "\t\"", paste0(user, collapse="\", \""), "\".\n",
+    "The expected values were:\n",
+    "\t\"", paste0(expected, collapse="\", \""), "\".\n"
+  )
+
+  tryCatch(
+    {
+      matched <- match.arg(user, expected, several.ok=TRUE)
+      if (length(matched) != length(user)) { stop() }
+      return(matched)
+    },
+    error = function(e) {
+      unrecognized_FUN(msg)
+    },
+    finally = {
+    }
+  )
+
+  invisible(NULL)
 }

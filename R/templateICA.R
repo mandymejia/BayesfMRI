@@ -1,8 +1,8 @@
 #' Perform template independent component analysis (ICA) using expectation-maximization (EM)
 #'
-#' @param template_mean (LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
-#' @param template_var (LxV matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
-#' @param BOLD (TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
+#' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
+#' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
+#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component)
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
@@ -11,16 +11,19 @@
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
-#' @param dim_reduce_flag If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.
 #'
-#' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+#' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @import pesel
 #' @importFrom ica icaimax
 #' @importFrom stats optim
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL){
+
+  template_mean <- t(template_mean)
+  template_var <- t(template_var)
+  BOLD <- t(BOLD)
 
   if(!is.null(mesh)){
     flag <- inla.pardiso.check()
@@ -109,7 +112,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
-  if(dim_reduce_flag) if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
+  if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
 
   dat_list <- dim_reduce(BOLD3, L)
 
@@ -129,6 +132,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
+
 
 
   #initialize residual variance
@@ -152,11 +156,11 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
     resultEM$A_reg <- tmp$A
     resultEM_tICA <- resultEM
 
-    if(dim_reduce_flag == FALSE){
-      BOLD4 <- BOLD3
-      C_diag <- rep(1, ntime)
-      theta0$A <- dat_DR$A
-    }
+    # if(dim_reduce_flag == FALSE){
+    #   BOLD4 <- BOLD3
+    #   C_diag <- rep(1, ntime)
+    #   theta0$A <- dat_DR$A
+    # }
 
     #starting value for kappas
     if(is.null(kappa_init)){
@@ -210,23 +214,21 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
     print('RUNNING SPATIAL TEMPLATE ICA')
     t000 <- Sys.time()
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, verbose=verbose)
     print(Sys.time() - t000)
 
-    #project estimates back to data locations
-    resultEM$subjICmean_mat <- matrix(resultEM$subjICmean, ncol=L)
-  } else {
-    resultEM$subjICmean_mat <- resultEM$subjICmean
+    #organize estimates and variances in matrix form
+    resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
+    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
   }
 
-
-  if(dim_reduce_flag) {
+  #if(dim_reduce_flag) {
     A <- Hinv %*% resultEM$theta_MLE$A
     resultEM$A <- A
-  }
+  #}
 
   #regression-based estimate of A
-  tmp <- dual_reg(BOLD3, t(resultEM$subjICmean_mat))
+  tmp <- dual_reg(BOLD3, t(resultEM$subjICmean))
   resultEM$A_reg <- tmp$A
 
   #for stICA, return tICA estimates also
@@ -275,8 +277,8 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
 
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
 
-    nvox <- nrow(result$subjICmean_mat)
-    L <- ncol(result$subjICmean_mat)
+    nvox <- nrow(result$subjICmean)
+    L <- ncol(result$subjICmean)
 
     #identify areas of activation in each IC
     active <- jointPPM <- marginalPPM <- vars <- matrix(NA, nrow=nvox, ncol=L)
@@ -285,9 +287,9 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
       if(verbose) cat(paste0('.. IC ',q,' (',which(which.ICs==q),' of ',length(which.ICs),') \n'))
       inds_q <- (1:nvox) + (q-1)*nvox
       if(deviation){
-        Dinv_mu_s <-  (result$subjICmean - as.vector(template_mean) - u)/as.vector(sqrt(template_var))
+        Dinv_mu_s <-  (as.vector(result$subjICmean) - as.vector(template_mean) - u)/as.vector(sqrt(template_var))
       } else {
-        Dinv_mu_s <- (result$subjICmean - u)/as.vector(sqrt(template_var))
+        Dinv_mu_s <- (as.vector(result$subjICmean) - u)/as.vector(sqrt(template_var))
       }
 
       if(q==which.ICs[1]) {

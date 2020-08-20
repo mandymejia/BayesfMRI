@@ -15,16 +15,15 @@ templateICA(
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
-  kappa_init = NULL,
-  dim_reduce_flag = TRUE
+  kappa_init = NULL
 )
 }
 \arguments{
-\item{template_mean}{(LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
+\item{template_mean}{(VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
 
-\item{template_var}{(LxV matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs}
+\item{template_var}{(VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs}
 
-\item{BOLD}{(TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
+\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
@@ -41,11 +40,9 @@ templateICA(
 \item{verbose}{If TRUE, display progress of algorithm}
 
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
-
-\item{dim_reduce_flag}{If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.}
 }
 \value{
-A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 }
 \description{
 Perform template independent component analysis (ICA) using expectation-maximization (EM)

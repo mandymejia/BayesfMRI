@@ -11,7 +11,8 @@ estimate_template.cifti(
   inds = NULL,
   scale = TRUE,
   brainstructures = c("left", "right"),
-  verbose = TRUE
+  verbose = TRUE,
+  out_fname = NULL
 )
 }
 \arguments{
@@ -38,6 +39,11 @@ gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
 \item{verbose}{If TRUE, display progress updates}
+
+\item{out_fname}{(Required if templates are to be resampled to a lower spatial
+resolution, usually necessary for spatial template ICA.) The path and base name
+prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
+template mean maps and "_var.dscalar.nii" for template variance maps.}
 }
 \value{
 
