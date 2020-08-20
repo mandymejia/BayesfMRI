@@ -4,7 +4,7 @@
 \alias{UpdateTheta}
 \alias{UpdateTheta.spatial}
 \alias{UpdateTheta.independent}
-\title{}
+\title{Parameter Estimates in EM Algorithm for Template ICA Model}
 \usage{
 UpdateTheta.spatial(
   template_mean,
@@ -33,37 +33,37 @@ UpdateTheta.independent(
 )
 }
 \arguments{
-\item{template_mean}{}
+\item{template_mean}{(QxV matrix) mean maps for each IC in template}
 
-\item{template_var}{}
+\item{template_var}{(QxV matrix) between-subject variance maps for each IC in template}
 
-\item{mesh}{\verb{}}
+\item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
 
-\item{BOLD}{}
+\item{BOLD}{dimension-reduced fMRI data}
 
-\item{theta}{}
+\item{theta}{A list of current parameter estimates (mixing matrix A, noise variance nu0_sq and (for spatial model) SPDE parameters kappa)}
 
-\item{C_diag}{}
+\item{C_diag}{(Qx1) diagonal elements of matrix proportional to residual variance.}
 
-\item{s0_vec}{}
+\item{s0_vec}{Vectorized template means}
 
-\item{D}{}
+\item{D}{Sparse diagonal matrix of template standard deviations}
 
-\item{Dinv_s0}{}
+\item{Dinv_s0}{The inverse of D times s0_vec}
 
-\item{common_smoothness}{}
+\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
-\item{verbose}{}
+\item{verbose}{If TRUE, print progress updates for slow steps.}
 
-\item{return_MAP}{}
+\item{return_MAP}{If TRUE, returns the posterior mean and precision of the latent fields instead of the parameter estimates}
 
-\item{dim_reduce_flag}{}
+\item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
 
-\item{update}{}
+\item{update}{Which parameters to update. Either "all", "A" or "kappa".}
 }
 \value{
-
+An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
 }
 \description{
-
+Parameter Estimates in EM Algorithm for Template ICA Model
 }

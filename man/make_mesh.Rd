@@ -2,21 +2,21 @@
 % Please edit documentation in R/make_mesh.R
 \name{make_mesh}
 \alias{make_mesh}
-\title{}
+\title{Make Mesh}
 \usage{
 make_mesh(vertices, faces)
 }
 \arguments{
-\item{vertices}{}
+\item{vertices}{Matrix of vertices}
 
-\item{faces}{}
+\item{faces}{Matrix of faces}
 }
 \value{
-
+Triangular mesh from matrices and vertices
 }
 \description{
-
+Make triangular mesh from faces and vertices.
 }
 \note{
-
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }

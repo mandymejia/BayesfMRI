@@ -18,11 +18,11 @@ knitr::opts_chunk$set(
 library(BayesfMRI)
 ```
 
-Due to my familiarity with FSL over SPM8, I have created a binary mask image that is $45 \times 54$ (rather than $46 \times 55$, as in [@mejia2020bayesian]). Using tools from the `neuRosim` package, the data are recreated below:
+Due to open access goals, brain tempate data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
 
-```{r show template image activation profile and amplitude}
+```{r show template image activation profile and amplitude, message=F}
 # Load the binary template image
-binary_template <- readRDS("binary_image_slice.rds") # This needs to be changed.
+data(binary_template)
 # Create the activation profiles
 library(neuRosim)
 # Task 1
@@ -144,7 +144,7 @@ convert_mat <- inla.spde.make.A(mesh = mesh, loc = in_mask)
 ```
 
 ```{r Classical GLM}
-single_subject_classical <- classicalGLM(data = data, scale = T)
+single_subject_classical <- classicalGLM(data = data, scale_BOLD = T, scale_design = T)
 par(mfrow=c(1,2), mar = c(1,1,1,5))
 # Get beta 1
 classical_beta1 <- binary_template
@@ -169,4 +169,8 @@ image.plot(classical_beta2, xaxt = "n", yaxt = "n",
 single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
 ```
 
+```{r Find the activations}
+active_betas_posterior <- 
+  id_activations(model_obj = single_subject_result,method = "posterior",field_name = NULL,threshold = 0,alpha = 0.05,area.limit = NULL,type = NULL, n_sample = NULL)
+```
 

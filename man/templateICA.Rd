@@ -2,7 +2,7 @@
 % Please edit documentation in R/templateICA.R
 \name{templateICA}
 \alias{templateICA}
-\title{}
+\title{Perform template independent component analysis (ICA) using expectation-maximization (EM)}
 \usage{
 templateICA(
   template_mean,
@@ -20,33 +20,33 @@ templateICA(
 )
 }
 \arguments{
-\item{template_mean}{}
+\item{template_mean}{(LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
 
-\item{template_var}{}
+\item{template_var}{(LxV matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs}
 
-\item{BOLD}{}
+\item{BOLD}{(TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
-\item{scale}{}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{mesh}{}
+\item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component)}
 
-\item{maxQ}{}
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
 
-\item{common_smoothness}{}
+\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
-\item{maxiter}{}
+\item{maxiter}{Maximum number of EM iterations}
 
-\item{epsilon}{}
+\item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
-\item{verbose}{}
+\item{verbose}{If TRUE, display progress of algorithm}
 
-\item{kappa_init}{}
+\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 
-\item{dim_reduce_flag}{}
+\item{dim_reduce_flag}{If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.}
 }
 \value{
-
+A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 }
 \description{
-
+Perform template independent component analysis (ICA) using expectation-maximization (EM)
 }

@@ -2,22 +2,22 @@
 % Please edit documentation in R/BayesGLM.R
 \name{make_data_list}
 \alias{make_data_list}
-\title{}
+\title{Make data list to be passed to \code{estimate_model}}
 \usage{
 make_data_list(y, X, betas, repls)
 }
 \arguments{
-\item{y}{}
+\item{y}{Vectorized BOLD data (all voxels, sessions, etc.)}
 
-\item{X}{\verb{}}
+\item{X}{List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{organize_data()}}
 
-\item{betas}{}
+\item{betas}{List (length = number of tasks) of bbeta objects from organize_replicates}
 
-\item{repls}{}
+\item{repls}{List (length = number of tasks) of repl objects from organize_replicates}
 }
 \value{
-
+List
 }
 \description{
-
+Make data list to be passed to \code{estimate_model}
 }

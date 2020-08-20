@@ -2,16 +2,16 @@
 % Please edit documentation in R/create_spde_vol3D.R
 \name{get_spacing}
 \alias{get_spacing}
-\title{}
+\title{Determine grid spacing}
 \usage{
 get_spacing(locations)
 }
 \arguments{
-\item{locations}{}
+\item{locations}{Vector of vertex locations in one dimension}
 }
 \value{
-
+Value of minimum spacing between two locations
 }
 \description{
-
+Determine grid spacing
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/templateICA.R
 \name{activations}
 \alias{activations}
-\title{}
+\title{Identify areas of activation in each independent component map}
 \usage{
 activations(
   result,
@@ -16,25 +16,25 @@ activations(
 )
 }
 \arguments{
-\item{result}{}
+\item{result}{Fitted stICA or tICA model object (of class stICA or tICA)}
 
-\item{u}{}
+\item{u}{Activation threshold, default = 0}
 
-\item{alpha}{}
+\item{alpha}{Significance level for joint PPM, default = 0.1}
 
-\item{type}{}
+\item{type}{Type of region.  Default is '>' (positive excursion region).}
 
-\item{method_p}{}
+\item{method_p}{If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.}
 
-\item{verbose}{}
+\item{verbose}{If TRUE, display progress of algorithm}
 
-\item{which.ICs}{}
+\item{which.ICs}{Indices of ICs for which to identify activations.  If NULL, use all ICs.}
 
-\item{deviation}{}
+\item{deviation}{If TRUE, identify significant deviations from the template mean}
 }
 \value{
-
+A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 }
 \description{
-
+Identify areas of activation in each independent component map
 }

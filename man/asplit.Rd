@@ -2,18 +2,18 @@
 % Please edit documentation in R/util.R
 \name{asplit}
 \alias{asplit}
-\title{}
+\title{Array split}
 \usage{
 asplit(X, margin)
 }
 \arguments{
-\item{X}{}
+\item{X}{An array of dimension greater than 1}
 
-\item{margin}{}
+\item{margin}{The margin at which the array should be split}
 }
 \value{
-\verb{}
+A list of subarrays split along the \code{margin} dimension
 }
 \description{
-\verb{}
+Generalizes the \code{split} function to work with arrays of arbitrary dimension greater than 2.
 }

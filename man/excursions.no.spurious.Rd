@@ -2,7 +2,7 @@
 % Please edit documentation in R/excursions.R
 \name{excursions.no.spurious}
 \alias{excursions.no.spurious}
-\title{}
+\title{Calculation of excursion sets with the removal of small areas}
 \usage{
 excursions.no.spurious(
   alpha,
@@ -29,51 +29,66 @@ excursions.no.spurious(
 )
 }
 \arguments{
-\item{alpha}{}
+\item{alpha}{Error probability for the excursion set.}
 
-\item{u}{}
+\item{u}{Excursion or contour level.}
 
-\item{mu}{}
+\item{mu}{Expectation vector.}
 
-\item{Q}{}
+\item{Q}{Precision matrix.}
 
-\item{type}{}
+\item{type}{Type of region:
+\itemize{
+\item{'>' }{positive excursion region}
+\item{'<' }{negative excursion region}
+\item{'!=' }{contour avoiding region}
+\item{'=' }{contour credibility region}}}
 
-\item{n.iter}{}
+\item{n.iter}{Number or iterations in the MC sampler that is used for approximating probabilities. The default value is 10000.}
 
-\item{Q.chol}{}
+\item{Q.chol}{The Cholesky factor of the precision matrix (optional).}
 
-\item{F.limit}{}
+\item{F.limit}{The limit value for the computation of the F function. F is set to NA for all nodes where F<1-F.limit. Default is F.limit = \code{alpha}.}
 
-\item{vars}{}
+\item{vars}{Precomputed marginal variances (optional).}
 
-\item{rho}{}
+\item{rho}{Marginal excursion probabilities (optional). For contour regions, provide \eqn{P(X>u)}.}
 
-\item{method}{}
+\item{method}{Method for handeling the latent Gaussian structure:
+\itemize{
+\item{'EB' }{Empirical Bayes (default)}
+\item{'QC' }{Quantile correction, rho must be provided if QC is used.}}}
 
-\item{ind}{}
+\item{ind}{Indices of the nodes that should be analysed (optional).}
 
-\item{max.size}{}
+\item{max.size}{Maximum number of nodes to include in the set of interest (optional).}
 
-\item{verbose}{}
+\item{verbose}{Set to TRUE for verbose mode (optional).}
 
-\item{max.threads}{}
+\item{max.threads}{Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).}
 
-\item{seed}{}
+\item{seed}{Random seed (optional).}
 
-\item{area.limit}{}
+\item{area.limit}{Positive number. All connected excursion sets with an area smaller than this
+numbere are removed.}
 
-\item{use.continuous}{}
+\item{use.continuous}{Logical parameter indicating whether the areas of the excursion sets
+should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
+function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.}
 
-\item{factor}{}
+\item{factor}{Non-negative number. If larger than zero, each set is expanded by a small amount
+that is proportional to this argument.}
 
-\item{plot.progress}{}
+\item{plot.progress}{Logical parameter that indicates whether the results should be plotted.}
 
-\item{mesh}{}
+\item{mesh}{The mesh on which the model is defined.}
 }
 \value{
-
+If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
+the same elements as the output of \code{continuous}.
 }
 \description{
-
+Function similar to the excursions function, but which also takes a mesh as input
+and computes modified excursion sets where all regions with areas smaller than area.limit are
+removed in the internal calculations.
 }

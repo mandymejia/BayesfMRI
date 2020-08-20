@@ -2,7 +2,7 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations.posterior}
 \alias{id_activations.posterior}
-\title{}
+\title{Identifies areas of activation given an activation threshold and significance level using joint posterior probabilities}
 \usage{
 id_activations.posterior(
   model_obj,
@@ -13,22 +13,24 @@ id_activations.posterior(
 )
 }
 \arguments{
-\item{model_obj}{}
+\item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
 
-\item{field_name}{}
+\item{field_name}{Name of latent field or vector of names on which to identify activations}
 
-\item{threshold}{}
+\item{threshold}{Activation threshold (e.g. 0.01 for 1 percent signal change)}
 
-\item{alpha}{}
+\item{alpha}{Significance level (e.g. 0.05)}
 
-\item{area.limit}{}
+\item{area.limit}{Below this value, activations will be considered spurious.  If NULL, no limit.}
 }
 \value{
-\verb{}\verb{}\verb{}\verb{}
+A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, an object of class excurobj (see \code{help(excursions.inla)} for more information).
 }
 \description{
-
+For a given latent field, identifies locations that exceed a certain activation
+threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
+posterior distribution of the latent field.
 }
 \details{
-
+Put additional details here.
 }

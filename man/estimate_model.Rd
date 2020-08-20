@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{estimate_model}
 \alias{estimate_model}
-\title{}
+\title{Estimate INLA model}
 \usage{
 estimate_model(
   formula,
@@ -16,28 +16,28 @@ estimate_model(
 )
 }
 \arguments{
-\item{formula}{}
+\item{formula}{Formula to put into inla}
 
-\item{data}{}
+\item{data}{Dataset}
 
-\item{A}{}
+\item{A}{Large, sparse observation matrix}
 
-\item{spde}{}
+\item{spde}{The spatial model, an object of class inla.spde}
 
-\item{prec_initial}{}
+\item{prec_initial}{Initial precision}
 
-\item{num.threads}{}
+\item{num.threads}{Number of threads}
 
-\item{int.strategy}{}
+\item{int.strategy}{INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy}
 
-\item{verbose}{}
+\item{verbose}{Logical indicating if should run in a verbose mode (default FALSE).}
 }
 \value{
-
+Results from INLA
 }
 \description{
-
+Estimate INLA model
 }
 \note{
-
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }

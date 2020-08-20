@@ -2,20 +2,20 @@
 % Please edit documentation in R/dim_reduce.R
 \name{dim_reduce}
 \alias{dim_reduce}
-\title{}
+\title{PCA-based Dimension Reduction and Prewhitening for ICA}
 \usage{
 dim_reduce(X, Q = NULL, Q_max = 100)
 }
 \arguments{
-\item{X}{}
+\item{X}{TxV fMRI timeseries data matrix, centered by columns and rows (columns are actually all that matter, but MATLAB implementation of Minka method also assumes rows have been centered (implicit in use of cov function))}
 
-\item{Q}{}
+\item{Q}{Number of latent dimensions to estimate. If not specified, estimated using PESEL (Sobczyka et al. 2020).}
 
-\item{Q_max}{}
+\item{Q_max}{Maximal number of principal components for automatic dimensionality selection with PESEL}
 }
 \value{
-
+A list containing the dimension-reduced data (data_reduced, a QxV matrix), prewhitening/dimension reduction matrix (H, a QxT matrix) and its (pseudo-)inverse (Hinv, a TxQ matrix), the noise variance (sigma_sq), the correlation matrix of the dimension-reduced data (C_diag, a QxQ matrix), and the dimensionality (Q)
 }
 \description{
-
+Performs dimension reduction and prewhitening based on probablistic PCA using SVD. If dimensionality is not specified, it is estimated using the method described in Minka (2008).
 }
