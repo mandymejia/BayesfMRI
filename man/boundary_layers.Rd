@@ -2,20 +2,29 @@
 % Please edit documentation in R/boundary.R
 \name{boundary_layers}
 \alias{boundary_layers}
-\title{}
+\title{Identify Boundary Layers}
 \usage{
 boundary_layers(faces, mask, boundary_width = 10)
 }
 \arguments{
-\item{faces}{}
+\item{faces}{a V x 3 matrix of integers. Each row defines a face by the index
+of three vertices.}
 
-\item{mask}{}
+\item{mask}{a length-V logical vector. Each entry corresponds to the vertex
+with the same index. TRUE indicates vertices within the input mask.}
 
-\item{boundary_width}{}
+\item{boundary_width}{a positive integer representing the width of the boundary
+to compute. The furthest vertices from the input mask will be this number of
+edges away from the closest vertex in the input mask. Default: \code{10}.}
 }
 \value{
-
+a length-V numeric vector. Each entry corresponds to the vertex
+with the same index. For vertices within the boundary, the value will be the
+number of vertices away from the closest vertex in the input mask.
+Vertices inside the input mask but at the edge of it (touching vertices with
+value 1) will have value 0. All other vertices will have value -1.
 }
 \description{
-\verb{}
+Identify the vertices within \code{boundary_width} edges of the input mask. The
+mesh must be triangular.
 }

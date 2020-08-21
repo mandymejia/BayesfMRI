@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_diagnosticICA.R
 \name{UpdateTheta.diagnosticICA}
 \alias{UpdateTheta.diagnosticICA}
-\title{}
+\title{Parameter Estimates in EM Algorithm for Diagnostic ICA Model}
 \usage{
 UpdateTheta.diagnosticICA(
   template_mean,
@@ -15,23 +15,23 @@ UpdateTheta.diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{}
+\item{template_mean}{(A list of G matrices, each LxV) template mean estimates for each group 1 to G}
 
-\item{template_var}{}
+\item{template_var}{(A list of G matrices, each LxV) template variance estimates for each group 1 to G}
 
-\item{BOLD}{}
+\item{BOLD}{(LxV matrix) dimension-reduced fMRI data}
 
-\item{theta}{}
+\item{theta}{(list) current parameter estimates}
 
-\item{C_diag}{}
+\item{C_diag}{(Lx1) diagonal elements of residual covariance after dimension reduction}
 
-\item{return_MAP}{}
+\item{return_MAP}{If TRUE, returns the posterior mean and variance of the latent fields and group membership instead of the parameter estimates}
 
-\item{verbose}{}
+\item{verbose}{If TRUE, display progress of algorithm}
 }
 \value{
-
+An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
 }
 \description{
-
+Parameter Estimates in EM Algorithm for Diagnostic ICA Model
 }

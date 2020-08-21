@@ -2,16 +2,16 @@
 % Please edit documentation in R/boundary.R
 \name{radial_order}
 \alias{radial_order}
-\title{}
+\title{Order Vertices on Circular Manifold}
 \usage{
 radial_order(verts)
 }
 \arguments{
-\item{verts}{}
+\item{verts}{The vertices along rows (columns are dimensions)}
 }
 \value{
-
+Index ordering of \code{verts}
 }
 \description{
-
+Order vertices on circular manifold by radians (after 2D CMDS projection).
 }

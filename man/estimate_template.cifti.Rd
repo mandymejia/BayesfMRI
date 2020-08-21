@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_template.R
 \name{estimate_template.cifti}
 \alias{estimate_template.cifti}
-\title{}
+\title{Estimate Template for Template or Diagnostic ICA}
 \usage{
 estimate_template.cifti(
   cifti_fnames,
@@ -15,23 +15,33 @@ estimate_template.cifti(
 )
 }
 \arguments{
-\item{cifti_fnames}{}
+\item{cifti_fnames}{Vector of file paths of CIFTI-format fMRI timeseries
+(*.dtseries.nii) for template estimation}
 
-\item{cifti_fnames2}{}
+\item{cifti_fnames2}{Vector of file paths of "retest" CIFTI-format fMRI
+timeseries (*.dtseries.nii) for template estimation.  Must be from the same
+subjects and in the same order as cifti_fnames.  If none specified, will
+create pseudo test-retest data from single session.}
 
-\item{GICA_fname}{}
+\item{GICA_fname}{File path of CIFTI-format group ICA maps (ending in .d*.nii)}
 
-\item{inds}{}
+\item{inds}{Indicators of which group ICs to include in template. If NULL,
+use all group ICs.}
 
-\item{scale}{}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the
+spatial standard deviation before template estimation.}
 
-\item{brainstructures}{}
+\item{brainstructures}{Character vector indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+gray matter). Can also be \code{"all"} (obtain all three brain structures).
+Default: \code{c("left","right")} (cortical surface only).}
 
-\item{verbose}{}
+\item{verbose}{If TRUE, display progress updates}
 }
 \value{
 
 }
 \description{
-
+Estimate Template for Template or Diagnostic ICA
 }

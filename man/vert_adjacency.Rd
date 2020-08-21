@@ -2,15 +2,19 @@
 % Please edit documentation in R/boundary.R
 \name{vert_adjacency}
 \alias{vert_adjacency}
-\title{}
+\title{Vertex Adjacency Matrix}
 \usage{
 vert_adjacency(faces, v1, v2 = NULL)
 }
 \arguments{
-\item{faces}{}
+\item{faces}{a V x 3 matrix of integers. Each row defines a face by the index
+of three vertices.}
 
-\item{v1, v2}{}
+\item{v1, v2}{The first and second set of vertices. These are logical vectors
+the same length as \code{vertices} indicating the vertices in each set.
+If \code{v2} is \code{NULL} (default), set \code{v2} to \code{v1}. Can
+alternatively be a vector if integers corresponding to vertex indices.}
 }
 \description{
-
+Make adjacency matrix between two sets of vertices.
 }

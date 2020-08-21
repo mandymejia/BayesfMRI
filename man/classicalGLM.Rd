@@ -2,18 +2,20 @@
 % Please edit documentation in R/classicalGLM.R
 \name{classicalGLM}
 \alias{classicalGLM}
-\title{}
+\title{Fit classical massive univariate GLM to task fMRI data}
 \usage{
 classicalGLM(data, scale_BOLD = TRUE, scale_design = TRUE)
 }
 \arguments{
-\item{data}{}
+\item{data}{A list of sessions, where each session is a list with elements
+BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
+List element names represent session names.}
 
-\item{scale}{}
+\item{scale}{If TRUE, scale timeseries data so estimates represent percent signal change.  If FALSE, just center the data and design to exclude the baseline field.}
 }
 \value{
-
+A list of classical GLM task activation estimates, where each element represents a session.
 }
 \description{
-
+Fit classical massive univariate GLM to task fMRI data
 }

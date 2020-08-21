@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{LL_SQUAREM}
 \alias{LL_SQUAREM}
-\title{}
+\title{Helper function for SQUAREM for extracting log likelihood}
 \usage{
 LL_SQUAREM(
   theta_vec,
@@ -20,33 +20,33 @@ LL_SQUAREM(
 )
 }
 \arguments{
-\item{theta_vec}{}
+\item{theta_vec}{Vector of current parameter values}
 
-\item{template_mean}{}
+\item{template_mean}{Not used, but squarem will return error without}
 
-\item{template_var}{}
+\item{template_var}{Not used, but squarem will return error without}
 
-\item{mesh}{}
+\item{mesh}{Not used, but squarem will return error without}
 
-\item{BOLD}{}
+\item{BOLD}{Not used, but squarem will return error without}
 
-\item{C_diag}{}
+\item{C_diag}{Not used, but squarem will return error without}
 
-\item{s0_vec}{}
+\item{s0_vec}{Not used, but squarem will return error without}
 
-\item{D}{}
+\item{D}{Not used, but squarem will return error without}
 
-\item{Dinv_s0}{}
+\item{Dinv_s0}{Not used, but squarem will return error without}
 
-\item{common_smoothness}{}
+\item{common_smoothness}{Not used, but squarem will return error without}
 
-\item{verbose}{}
+\item{verbose}{Not used, but squarem will return error without}
 
-\item{dim_reduce_flag}{}
+\item{dim_reduce_flag}{Not used, but squarem will return error without}
 }
 \value{
-
+Negative log-likelihood given current values of parameters
 }
 \description{
-
+Helper function for SQUAREM for extracting log likelihood
 }

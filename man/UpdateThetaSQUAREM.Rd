@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{UpdateThetaSQUAREM}
 \alias{UpdateThetaSQUAREM}
-\title{}
+\title{Helper function for SQUAREM for estimating parameters}
 \usage{
 UpdateThetaSQUAREM(
   theta_vec,
@@ -20,33 +20,33 @@ UpdateThetaSQUAREM(
 )
 }
 \arguments{
-\item{theta_vec}{}
+\item{theta_vec}{Vector of initial parameter values}
 
-\item{template_mean}{}
+\item{template_mean}{Passed to UpdateTheta function}
 
-\item{template_var}{}
+\item{template_var}{Passed to UpdateTheta function}
 
-\item{mesh}{}
+\item{mesh}{Passed to UpdateTheta function}
 
-\item{BOLD}{}
+\item{BOLD}{Passed to UpdateTheta function}
 
-\item{C_diag}{}
+\item{C_diag}{Passed to UpdateTheta function}
 
-\item{s0_vec}{}
+\item{s0_vec}{Passed to UpdateTheta function}
 
-\item{D}{}
+\item{D}{Passed to UpdateTheta function}
 
-\item{Dinv_s0}{}
+\item{Dinv_s0}{Passed to UpdateTheta function}
 
-\item{common_smoothness}{}
+\item{common_smoothness}{Passed to UpdateTheta function}
 
-\item{verbose}{}
+\item{verbose}{Passed to UpdateTheta function}
 
-\item{dim_reduce_flag}{}
+\item{dim_reduce_flag}{Passed to UpdateTheta function}
 }
 \value{
-
+Vector of updated parameter values
 }
 \description{
-
+Helper function for SQUAREM for estimating parameters
 }

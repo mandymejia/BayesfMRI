@@ -31,7 +31,7 @@
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
-#' @importFrom ciftiTools read_cifti resample_gifti as.cifti
+#' @importFrom ciftiTools read_cifti resample_gifti as.xifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom gifti readGIfTI
 #' @importFrom INLA inla.pardiso.check inla.setOption

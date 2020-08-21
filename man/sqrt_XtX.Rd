@@ -2,18 +2,18 @@
 % Please edit documentation in R/utils_templateICA.R
 \name{sqrt_XtX}
 \alias{sqrt_XtX}
-\title{}
+\title{Compute matrix square root of X'X}
 \usage{
 sqrt_XtX(X, inverse = FALSE)
 }
 \arguments{
-\item{X}{}
+\item{X}{A numerical matrix}
 
-\item{inverse}{}
+\item{inverse}{if inverse=TRUE, compute inverse of square root}
 }
 \value{
-
+A matrix equalling the (inverse) matrix square root of X'X
 }
 \description{
-
+Compute matrix square root of X'X
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnosticICA.R
 \name{diagnosticICA}
 \alias{diagnosticICA}
-\title{}
+\title{Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)}
 \usage{
 diagnosticICA(
   template_mean,
@@ -16,25 +16,25 @@ diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{}
+\item{template_mean}{(A list of G matrices, each LxV) template mean estimates for each group 1 to G}
 
-\item{template_var}{}
+\item{template_var}{(A list of G matrices, each LxV) template variance estimates for each group 1 to G}
 
-\item{BOLD}{}
+\item{BOLD}{(TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
-\item{scale}{}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{maxQ}{}
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
 
-\item{maxiter}{}
+\item{maxiter}{Maximum number of EM iterations}
 
-\item{epsilon}{}
+\item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
-\item{verbose}{}
+\item{verbose}{If TRUE, display progress of algorithm}
 }
 \value{
-
+A list containing the posterior probabilities of group membership, the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
 }
 \description{
-
+Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)
 }

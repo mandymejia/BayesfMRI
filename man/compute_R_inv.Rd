@@ -2,20 +2,20 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{compute_R_inv}
 \alias{compute_R_inv}
-\title{}
+\title{Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S}
 \usage{
 compute_R_inv(mesh, kappa, C1 = 1/(4 * pi))
 }
 \arguments{
-\item{mesh}{\verb{}}
+\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
 
-\item{kappa}{}
+\item{kappa}{Current estimates of SPDE parameter kappa for each latent field}
 
-\item{C1}{}
+\item{C1}{Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2}
 }
 \value{
-
+A list containing R inverse and SPDE matrices
 }
 \description{
-
+Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S
 }
