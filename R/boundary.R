@@ -312,7 +312,7 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
   faces2$new <- faces2$new[!faces2$degen,]
 
   # Construct and return new mesh.
-  faces2$new <- rbind(faces[!faces2$rm,], faces2$new)
+  #faces2$new <- rbind(faces[!faces2$rm,], faces2$new)
   verts_remaining <- unique(as.vector(faces2$new))
   verts2 <- rep(NA, V_)
   verts2[verts_remaining] <- 1:length(verts_remaining)

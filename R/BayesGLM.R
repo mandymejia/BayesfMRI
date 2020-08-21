@@ -31,7 +31,7 @@
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
-#' @importFrom ciftiTools read_cifti resample_gifti make_xifti
+#' @importFrom ciftiTools read_cifti resample_gifti as.cifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom gifti readGIfTI
 #' @importFrom INLA inla.pardiso.check inla.setOption
@@ -422,7 +422,7 @@ BayesGLM <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      classicalGLM_cifti[[ss]] <- make_xifti(
+      classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = classicalGLM_left[[ss]],
         cortexR = classicalGLM_right[[ss]]
         #subcortVol = classicalGLM_vol$single_session,
@@ -431,7 +431,7 @@ BayesGLM <- function(cifti_fname,
                                              )
     }
     if(do_Bayesian){
-      BayesGLM_cifti[[ss]] <- make_xifti(
+      BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]
         #subcortVol = BayesGLM_vol$single_session,

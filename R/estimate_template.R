@@ -51,7 +51,7 @@ estimate_template.cifti <- function(
   no_right_mwall <- "right" %in% brainstructures && all(flat_CIFTI_map$cortex$medial_wall_mask$left)
   if (no_left_mwall || no_right_mwall) {
     GICA <- read_cifti(
-      GICA_fname,  full_volume=TRUE, brainstructures=brainstructures
+      GICA_fname, brainstructures=brainstructures
     )
     no_left_mwall <- "left" %in% brainstructures && all(GICA$meta$cortex$medial_wall_mask$left)
     no_right_mwall <- "right" %in% brainstructures && all(GICA$meta$cortex$medial_wall_mask$left)
