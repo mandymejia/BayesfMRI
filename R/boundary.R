@@ -1,6 +1,6 @@
 #' Identify Boundary Layers
 #' 
-#' Identify the vertices within `boundary_width` edges of the input mask. The
+#' Identify the vertices within \code{boundary_width} edges of the input mask. The
 #'  mesh must be triangular.
 #' 
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
