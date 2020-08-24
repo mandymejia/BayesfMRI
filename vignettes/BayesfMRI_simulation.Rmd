@@ -120,6 +120,19 @@ y <- y[!y_exclude,]
 y <- t(y)
 ```
 
+```{r Try making a CIFTI (xifti) object}
+library(ciftiTools)
+ciftiTools.setOption('wb_path',"C:\\workbench")
+cifti_data <- as.xifti(cortexL = t(y), cortexR = t(y))
+write_cifti(cifti_data, "simulated_response.dtseries.nii")
+```
+
+```{r Try analyzing using BayesGLM}
+design_X <- cbind(t1,t2)
+GLM_results <- BayesGLM(cifti_fname = "simulated_response.dtseries.nii",design = design_X)
+```
+
+
 ```{r make the mesh}
 library(INLA)
 in_mask <- which(binary_template == 1, arr.ind = T)
@@ -169,12 +182,12 @@ image.plot(classical_beta2, xaxt = "n", yaxt = "n",
 single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
 ```
 
+```{r}
+test <- BayesGLM()
+```
+
+
 ```{r Find the activations}
 active_betas_posterior <- 
   id_activations(model_obj = single_subject_result,method = "posterior",field_name = NULL,threshold = 0,alpha = 0.05,area.limit = NULL,type = NULL, n_sample = NULL)
 ```
-
-```{r Visualizing the results}
-
-```
-
