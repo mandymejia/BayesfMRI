@@ -1,8 +1,8 @@
 #' EM Algorithm for Diagnostic ICA Models
 #'
-#' @param template_mean (A list of G matrices, each LxV) template mean estimates for each group 1 to G
-#' @param template_var (A list of G matrices, each LxV) template variance estimates for each group 1 to G
-#' @param BOLD  (LxV matrix) dimension-reduced fMRI data
+#' @param template_mean (A list of G matrices, each VxL) template mean estimates for each group 1 to G
+#' @param template_var (A list of G matrices, each VxL) template variance estimates for each group 1 to G
+#' @param BOLD  (VxL matrix) dimension-reduced fMRI data
 #' @param theta0 (list) initial guess at mixing matrix A (LxL)
 #' @param C_diag (Lx1) diagonal elements of residual covariance after dimension reduction
 #' @param maxiter maximum number of EM iterations
@@ -10,15 +10,16 @@
 #' @param verbose If TRUE, display progress of algorithm
 #'
 #' @export
-#' @import SQUAREM
-#'
 #' @return  A list with 5 elements: theta (list of final parameter estimates), group_probs (posterior probabilities of group membership), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
 #'
 EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
 
-  ntime <- nrow(BOLD) #length of timeseries
-  nvox <- ncol(BOLD) #number of brain locations
-  L <- nrow(template_mean[[1]]) #number of ICs
+  #NOTE: This function expects the VxQ orientation for the templates and BOLD, since they are not transposed in diagnosticICA()
+  # The corresponding function for templateICA expects the QxV orientation, since they ARE transposed in templateICA()
+
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of brain locations
+  L <- ncol(template_mean[[1]]) #number of ICs
   G <- length(template_mean)
   if(L > nvox) stop('Cannot estimate more ICs than brain locations.')
   if(L > ntime) stop('Cannot estimate more ICs than time points.')
@@ -65,8 +66,8 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
   MAP = UpdateTheta.diagnosticICA(template_mean, template_var, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
 
   result <- list(group_probs = MAP$group_probs,
-                 subjICmean=t(MAP$ICmean),
-                 subjICvar=t(MAP$ICvar),
+                 subjICmean=MAP$ICmean,
+                 subjICvar=MAP$ICvar,
                  theta_MLE=theta,
                  success_flag=success,
                  error=err,
@@ -80,9 +81,9 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
 
 #' Parameter Estimates in EM Algorithm for Diagnostic ICA Model
 #'
-#' @param template_mean (A list of G matrices, each LxV) template mean estimates for each group 1 to G
-#' @param template_var (A list of G matrices, each LxV) template variance estimates for each group 1 to G
-#' @param BOLD  (LxV matrix) dimension-reduced fMRI data
+#' @param template_mean (A list of G matrices, each VxL) template mean estimates for each group 1 to G
+#' @param template_var (A list of G matrices, each VxL) template variance estimates for each group 1 to G
+#' @param BOLD  (VxL matrix) dimension-reduced fMRI data
 #' @param theta (list) current parameter estimates
 #' @param C_diag (Lx1) diagonal elements of residual covariance after dimension reduction
 #' @param return_MAP If TRUE, returns the posterior mean and variance of the latent fields and group membership instead of the parameter estimates
@@ -92,8 +93,8 @@ EM_diagnosticICA = function(template_mean, template_var, BOLD, theta0, C_diag, m
 #'
 UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
 
-  L <- nrow(BOLD)
-  nvox <- ncol(BOLD)
+  L <- ncol(BOLD)
+  nvox <- nrow(BOLD)
   G <- length(template_mean)
 
   #initialize new objects
@@ -123,12 +124,12 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
     exp_part3 <- 0
     for(v in 1:nvox){
 
-      y_v = BOLD[,v]
-      s0_gv = template_mean[[g]][,v]
+      y_v = BOLD[v,]
+      s0_gv = template_mean[[g]][v,]
 
       #mean and cov of y(v)|z
       mu_yz_v <- A %*% s0_gv
-      Sigma_yz_v <- A %*% diag(template_var[[g]][,v]) %*% t(A) + C
+      Sigma_yz_v <- A %*% diag(template_var[[g]][v,]) %*% t(A) + C
 
       exp_part3_v <- t(y_v - mu_yz_v) %*% solve(Sigma_yz_v) %*% (y_v - mu_yz_v)
       exp_part3 <- exp_part3 + exp_part3_v
@@ -168,19 +169,19 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
 
   if(verbose) cat('Computing posterior moments of s (IC maps) \n')
 
-  mu_sy <- array(NA, dim=c(L,nvox))
-  mu_mut_sy <- array(NA, dim=c(L,L,nvox))
-  var_sy <- array(NA, dim=c(L,nvox)) #only needed if return_MAP=TRUE
+  mu_sy <- array(NA, dim=c(nvox,L))
+  mu_mut_sy <- array(NA, dim=c(nvox,L,L))
+  var_sy <- array(NA, dim=c(nvox,L)) #only needed if return_MAP=TRUE
   for(v in 1:nvox){
 
     mu_sy_v <- rep(0, L)
     mu_mut_sy_v <- Sigma_sy_v <- array(0, dim=c(L,L))
     for(g in 1:G){
 
-      D_gv_inv <- diag(1/template_var[[g]][,v])
-      s0_gv <- template_mean[[g]][,v]
+      D_gv_inv <- diag(1/template_var[[g]][v,])
+      s0_gv <- template_mean[[g]][v,]
       Sigma_syz_gv <- solve(At_Cinv_A + D_gv_inv) #posterior covariance of s|z=g
-      mu_syz_gv <- Sigma_syz_gv %*% (At_Cinv %*% BOLD[,v] + D_gv_inv %*% s0_gv) #posterior mean of s|z=g
+      mu_syz_gv <- Sigma_syz_gv %*% (At_Cinv %*% BOLD[v,] + D_gv_inv %*% s0_gv) #posterior mean of s|z=g
       mu_mut_syz_gv <- mu_syz_gv %*% t(mu_syz_gv) + Sigma_syz_gv #posterior second moment of s|z=g
 
       mu_sy_v <- mu_sy_v + pr_zy[g]*mu_syz_gv #weighted sum over g=1..G --> posterior mean of s
@@ -189,9 +190,9 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
 
     }
 
-    mu_sy[,v] <- mu_sy_v
-    mu_mut_sy[,,v] <- mu_mut_sy_v
-    var_sy[,v] <- diag(Sigma_sy_v) #only needed if return_MAP=TRUE
+    mu_sy[v,] <- mu_sy_v
+    mu_mut_sy[v,,] <- mu_mut_sy_v
+    var_sy[v,] <- diag(Sigma_sy_v) #only needed if return_MAP=TRUE
 
   }
 
@@ -213,14 +214,14 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
   A_part1 <- A_part2 <- matrix(0, L, L)
   for(v in 1:nvox){
 
-    y_v = BOLD[,v]
+    y_v = BOLD[v,]
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
     ##########################################
 
-    A_part1 = A_part1 + y_v %*% t(mu_sy[,v]) #LxL
-    A_part2 = A_part2 + mu_mut_sy[,,v] #LxL
+    A_part1 = A_part1 + y_v %*% t(mu_sy[v,]) #LxL
+    A_part2 = A_part2 + mu_mut_sy[v,,] #LxL
 
   }
 

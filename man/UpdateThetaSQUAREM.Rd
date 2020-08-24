@@ -15,8 +15,7 @@ UpdateThetaSQUAREM(
   D,
   Dinv_s0,
   common_smoothness,
-  verbose,
-  dim_reduce_flag
+  verbose
 )
 }
 \arguments{
@@ -41,8 +40,6 @@ UpdateThetaSQUAREM(
 \item{common_smoothness}{Passed to UpdateTheta function}
 
 \item{verbose}{Passed to UpdateTheta function}
-
-\item{dim_reduce_flag}{Passed to UpdateTheta function}
 }
 \value{
 Vector of updated parameter values

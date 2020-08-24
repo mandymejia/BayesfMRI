@@ -16,8 +16,7 @@ EM_templateICA.spatial(
   common_smoothness = TRUE,
   maxiter = 100,
   epsilon = 0.001,
-  verbose = FALSE,
-  dim_reduce_flag
+  verbose = FALSE
 )
 
 EM_templateICA.independent(
@@ -51,11 +50,9 @@ EM_templateICA.independent(
 \item{epsilon}{smallest proportion change between iterations (e.g. .001)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
-
-\item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
 }
 \value{
-A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+A list: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs, for non-spatial model) or subjICcov (covariance matrix of subject-level ICs, for spatial model -- note that only diagonal and values for neighbors are computed), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
 }
 \description{
 EM Algorithms for Template ICA Models

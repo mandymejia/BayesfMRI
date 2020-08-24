@@ -15,8 +15,7 @@ LL_SQUAREM(
   D,
   Dinv_s0,
   common_smoothness,
-  verbose,
-  dim_reduce_flag
+  verbose
 )
 }
 \arguments{
@@ -41,8 +40,6 @@ LL_SQUAREM(
 \item{common_smoothness}{Not used, but squarem will return error without}
 
 \item{verbose}{Not used, but squarem will return error without}
-
-\item{dim_reduce_flag}{Not used, but squarem will return error without}
 }
 \value{
 Negative log-likelihood given current values of parameters

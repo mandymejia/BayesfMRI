@@ -19,7 +19,6 @@ UpdateTheta.spatial(
   common_smoothness = TRUE,
   verbose = FALSE,
   return_MAP = FALSE,
-  dim_reduce_flag,
   update = c("all", "kappa", "A")
 )
 
@@ -56,8 +55,6 @@ UpdateTheta.independent(
 \item{verbose}{If TRUE, print progress updates for slow steps.}
 
 \item{return_MAP}{If TRUE, returns the posterior mean and precision of the latent fields instead of the parameter estimates}
-
-\item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
 
 \item{update}{Which parameters to update. Either "all", "A" or "kappa".}
 }

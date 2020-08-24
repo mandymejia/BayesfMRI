@@ -17,10 +17,14 @@
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param verbose If TRUE, display progress updates
+#' @param out_fname (Required if templates are to be resampled to a lower spatial
+#' resolution, usually necessary for spatial template ICA.) The path and base name
+#' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
+#' template mean maps and "_var.dscalar.nii" for template variance maps.
 #'
 #' @return
 #' @export
-#' @importFrom ciftiTools read_cifti
+#' @importFrom ciftiTools read_cifti write_cifti
 estimate_template.cifti <- function(
   cifti_fnames,
   cifti_fnames2=NULL,
@@ -28,7 +32,8 @@ estimate_template.cifti <- function(
   inds=NULL,
   scale=TRUE,
   brainstructures=c('left','right'),
-  verbose=TRUE){
+  verbose=TRUE,
+  out_fname=NULL){
 
   # Check arguments.
   if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
@@ -205,6 +210,15 @@ estimate_template.cifti <- function(
     xifti_var$data$subcort <- template_var[flat_bs_labs[flat_bs_mask]=="subcortical",, drop=FALSE]
   }
 
-  list(mean_template=xifti_mean, var_template=xifti_var)
+  if(!is.null(out_fname)){
+    out_fname_mean <- paste0(out_fname, '_mean.dscalar.nii')
+    out_fname_var <- paste0(out_fname, '_var.dscalar.nii')
+    write_cifti(xifti_mean, out_fname_mean, verbose=verbose)
+    write_cifti(xifti_var, out_fname_var, verbose=verbose)
+  }
+
+  result <- list(template_mean=xifti_mean, template_var=xifti_var)
+  class(result) <- 'template.cifti'
+  return(result)
 }
 
