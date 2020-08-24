@@ -174,3 +174,7 @@ active_betas_posterior <-
   id_activations(model_obj = single_subject_result,method = "posterior",field_name = NULL,threshold = 0,alpha = 0.05,area.limit = NULL,type = NULL, n_sample = NULL)
 ```
 
+```{r Visualizing the results}
+
+```
+
