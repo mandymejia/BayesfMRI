@@ -4,3 +4,4 @@
 .Ruserdata
 R/BayesGLM_group.R
 .Rhistory
+inst/doc

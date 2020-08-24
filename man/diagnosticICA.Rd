@@ -16,11 +16,11 @@ diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{(A list of G matrices, each LxV) template mean estimates for each group 1 to G}
+\item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}
 
-\item{template_var}{(A list of G matrices, each LxV) template variance estimates for each group 1 to G}
+\item{template_var}{(A list of G matrices, each VxL) template variance estimates for each group 1 to G}
 
-\item{BOLD}{(TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
+\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
@@ -33,7 +33,7 @@ diagnosticICA(
 \item{verbose}{If TRUE, display progress of algorithm}
 }
 \value{
-A list containing the posterior probabilities of group membership, the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
+A list containing the posterior probabilities of group membership, the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
 }
 \description{
 Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)

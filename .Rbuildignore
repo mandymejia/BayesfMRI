@@ -1,4 +1,3 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^R/BayesGLM_group\.R$
-^R/estimate_template\.R$

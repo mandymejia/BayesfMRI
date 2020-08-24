@@ -13,9 +13,8 @@
 #' @param maxiter maximum number of EM iterations
 #' @param epsilon smallest proportion change between iterations (e.g. .001)
 #' @param verbose If TRUE, display progress of algorithm
-#' @param dim_reduce_flag If FALSE, data is in the original resolution (no dimension reduction).
 #'
-#' @return  A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+#' @return  A list: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs, for non-spatial model) or subjICcov (covariance matrix of subject-level ICs, for spatial model -- note that only diagonal and values for neighbors are computed), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
 #'
 #' @details \code{EM_templateICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA model with spatial priors on subject effects.
 #'
@@ -30,7 +29,7 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @import SQUAREM
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE, dim_reduce_flag){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -66,7 +65,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	# Positive change --> search for kappa_max, set kappa_min to kappa1.
 	# Negative change --> search for kappa_min, set kappa_max to kappa1.
 	kappa_min <- kappa_max <- theta0$kappa[1]
-	theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, dim_reduce_flag=dim_reduce_flag, update='kappa')
+	theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
 	kappa_diff0 <- theta1$kappa[1] - theta0$kappa[1]
 	theta <- theta0
 
@@ -79,7 +78,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  while(kappa_diff < 0){
 	    if(verbose) cat(paste0('... testing kappa = ',round(kappa_min,3),'\n '))
 	    theta$kappa <- rep(kappa_min, Q)
-	    theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, dim_reduce_flag=dim_reduce_flag, update='kappa')
+	    theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
 	    kappa_diff <- theta1$kappa[1] - theta$kappa[1]
 	    if(kappa_diff > 0) {
 	      #set minimum and stop here
@@ -98,7 +97,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  while(kappa_diff > 0){
 	    if(verbose) cat(paste0('... testing kappa = ',round(kappa_max, 3),'\n '))
 	    theta$kappa <- rep(kappa_max, Q)
-	    theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, dim_reduce_flag=dim_reduce_flag, update='kappa')
+	    theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
 	    kappa_diff <- theta1$kappa[1] - theta$kappa[1]
 	    if(kappa_diff < 0) {
 	      #set maximum and stop here
@@ -118,7 +117,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	while(kappa_change > epsilon){
 	  if(verbose) cat(paste0('... testing kappa = ',round(kappa_test, 3),'\n '))
 	  theta$kappa <- rep(kappa_test, Q)
-	  theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, dim_reduce_flag=dim_reduce_flag, update='kappa')
+	  theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
 	  kappa_diff <- theta1$kappa[1] - theta$kappa[1] #which direction is the estimate of kappa moving in?
 	  if(kappa_diff > 0) {
 	    kappa_min <- theta1$kappa[1]  #reset minimum to current value
@@ -141,7 +140,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
 	t00000 <- Sys.time()
-	result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE, dim_reduce_flag)
+	result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE)
 	if(verbose) print(Sys.time() - t00000)
 
 	path_A <- result_squarem$p.inter[,1:(Q^2)]
@@ -276,7 +275,6 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If TRUE, print progress updates for slow steps.
 #' @param return_MAP If TRUE, returns the posterior mean and precision of the latent fields instead of the parameter estimates
-#' @param dim_reduce_flag If FALSE, data is in the original resolution (no dimension reduction).
 #' @param update Which parameters to update. Either "all", "A" or "kappa".
 #'
 #' @return An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
@@ -288,7 +286,7 @@ NULL
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, dim_reduce_flag, update=c('all','kappa','A')){
+UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
   Q = nrow(template_mean)
   V = ncol(BOLD)
@@ -822,11 +820,10 @@ bdiag_m <- function(lmat) {
 #' @param Dinv_s0 Passed to UpdateTheta function
 #' @param common_smoothness Passed to UpdateTheta function
 #' @param verbose Passed to UpdateTheta function
-#' @param dim_reduce_flag Passed to UpdateTheta function
 #'
 #' @return Vector of updated parameter values
 #'
-UpdateThetaSQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose, dim_reduce_flag){
+UpdateThetaSQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
 
   Q = nrow(template_mean)
 
@@ -840,7 +837,7 @@ UpdateThetaSQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOL
 
   #update theta parameters
   if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
-  theta_new = UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=common_smoothness, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
+  theta_new = UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=common_smoothness, verbose=verbose)
 
   #convert theta_new list to vector format
   theta_new$A <- as.matrix(theta_new$A)
@@ -863,17 +860,16 @@ UpdateThetaSQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOL
 #' @param Dinv_s0  Not used, but squarem will return error without
 #' @param common_smoothness  Not used, but squarem will return error without
 #' @param verbose  Not used, but squarem will return error without
-#' @param dim_reduce_flag  Not used, but squarem will return error without
 #'
 #' @return Negative log-likelihood given current values of parameters
 #'
-LL_SQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose, dim_reduce_flag){
+LL_SQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
 
   LL <- names(theta_vec)[1]
   print(LL)
   LL <- as.numeric(LL)
   print(LL)
   return(-1*LL)
-}
 
+}
 

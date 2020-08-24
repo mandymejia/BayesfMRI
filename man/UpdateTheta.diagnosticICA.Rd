@@ -15,11 +15,11 @@ UpdateTheta.diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{(A list of G matrices, each LxV) template mean estimates for each group 1 to G}
+\item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}
 
-\item{template_var}{(A list of G matrices, each LxV) template variance estimates for each group 1 to G}
+\item{template_var}{(A list of G matrices, each VxL) template variance estimates for each group 1 to G}
 
-\item{BOLD}{(LxV matrix) dimension-reduced fMRI data}
+\item{BOLD}{(VxL matrix) dimension-reduced fMRI data}
 
 \item{theta}{(list) current parameter estimates}
 

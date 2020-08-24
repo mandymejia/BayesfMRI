@@ -1,9 +1,9 @@
 #' Center BOLD data across space and time and scale (optionally)
 #'
-#' @param BOLD (TxV matrix) fMRI timeseries data matrix
+#' @param BOLD (VxT matrix) fMRI timeseries data matrix
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
 #'
-#' @return Centered and scaled BOLD data (TxV matrix)
+#' @return Centered and scaled BOLD data (VxT matrix)
 #' @export
 #'
 #' @details The BOLD data is centered across time, which removes the mean image by subtracting the mean of each voxel timeseries, and across space,
@@ -21,15 +21,14 @@
 scale_BOLD <- function(BOLD, scale=FALSE){
 
   dat <- BOLD
-  ntime <- nrow(dat) #length of timeseries
-  nvox <- ncol(dat) #number of data locations
+  ntime <- ncol(dat) #length of timeseries
+  nvox <- nrow(dat) #number of data locations
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
 
   #center timeseries data across space and time and standardize scale
-  dat <- scale(dat, scale=FALSE) #center each voxel time series (remove mean image)
-  dat_t <- t(dat) #transpose image matrix
-  sig <- sqrt(mean(colVars(dat_t))) #variance across image, averaged across time, square root to get SD
-  dat <- t(scale(dat_t, scale=FALSE)) #center each image (centering across space)
+  dat_t <- scale(t(dat), scale=FALSE) #center each voxel time series (remove mean image)
+  sig <- sqrt(mean(rowVars(dat))) #variance across image, averaged across time, square root to get SD
+  dat <- scale(t(dat_t), scale=FALSE) #center each image (centering across space)
   if(scale) dat <- dat/sig #standardize by global SD
   dat_ctr <- dat
 

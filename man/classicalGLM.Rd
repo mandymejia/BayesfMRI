@@ -4,7 +4,7 @@
 \alias{classicalGLM}
 \title{Fit classical massive univariate GLM to task fMRI data}
 \usage{
-classicalGLM(data, scale = TRUE)
+classicalGLM(data, scale_BOLD = TRUE, scale_design = TRUE)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
