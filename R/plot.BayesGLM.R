@@ -5,7 +5,7 @@
 #' @param session_name The name of the session to plot the results from (defaults to the first session)
 #'
 #' @return Currently a list of final coefficient array images. This will change in future versions.
-#' @export
+#' @keywords internal
 plot.BayesGLM <- function(BayesGLM_object, mask, session_name = NULL) {
   # Create a conversion matrix
   in_binary_mask <- which(mask == 1, arr.ind = T)

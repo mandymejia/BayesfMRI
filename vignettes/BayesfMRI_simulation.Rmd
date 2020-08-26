@@ -18,6 +18,10 @@ knitr::opts_chunk$set(
 library(BayesfMRI)
 ```
 
+# Single Subject 
+
+## Data Generation
+
 Due to open access goals, brain tempate data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
 
 ```{r show template image activation profile and amplitude, message=F}
@@ -120,17 +124,7 @@ y <- y[!y_exclude,]
 y <- t(y)
 ```
 
-```{r Try making a CIFTI (xifti) object}
-library(ciftiTools)
-ciftiTools.setOption('wb_path',"C:\\workbench")
-cifti_data <- as.xifti(cortexL = t(y), cortexR = t(y))
-write_cifti(cifti_data, "simulated_response.dtseries.nii")
-```
 
-```{r Try analyzing using BayesGLM}
-design_X <- cbind(t1,t2)
-GLM_results <- BayesGLM(cifti_fname = "simulated_response.dtseries.nii",design = design_X)
-```
 
 
 ```{r make the mesh}
@@ -156,6 +150,8 @@ data <- list(
 convert_mat <- inla.spde.make.A(mesh = mesh, loc = in_mask)
 ```
 
+## Classical Analysis 
+
 ```{r Classical GLM}
 single_subject_classical <- classicalGLM(data = data, scale_BOLD = T, scale_design = T)
 par(mfrow=c(1,2), mar = c(1,1,1,5))
@@ -176,18 +172,140 @@ image.plot(classical_beta2, xaxt = "n", yaxt = "n",
                     max(single_subject_classical$single_session)))
 ```
 
-
+## Bayesian GLM Analysis
 ```{r Bayes GLM, warning=F, message=F}
+inla.setOption(pardiso.license="~/sys/licenses/pardiso.lic")
+inla.pardiso.check()
 # Run the Bayes
 single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
 ```
-
-```{r}
-test <- BayesGLM()
-```
-
 
 ```{r Find the activations}
 active_betas_posterior <- 
   id_activations(model_obj = single_subject_result,method = "posterior",field_name = NULL,threshold = 0,alpha = 0.05,area.limit = NULL,type = NULL, n_sample = NULL)
 ```
+
+```{r Make plots using view_xifti_surface, webgl=T}
+library(ciftiTools)
+posterior_mean_xifti <- as.xifti(
+  cortexL = as.matrix(single_subject_result$beta_estimates$single_session[,1]), 
+  surfL = list(vertices = mesh$loc, faces = mesh$graph$tv))
+view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral")
+```
+
+## Unused 
+
+<!-- ```{r Try making a CIFTI (xifti) object} -->
+<!-- library(ciftiTools) -->
+<!-- ciftiTools.setOption('wb_path',"~/Documents/workbench") -->
+<!-- cifti_data <- as.xifti(cortexL = t(y), cortexR = t(y)) -->
+<!-- write_cifti(cifti_data, "simulated_response.dtseries.nii") -->
+<!-- ``` -->
+
+<!-- ```{r Try analyzing using BayesGLM} -->
+<!-- design_X <- cbind(t1,t2) -->
+<!-- GLM_results <- BayesGLM(cifti_fname = "simulated_response.dtseries.nii",design = design_X, surfL_fname = "simulated_response.dtseries.nii", ) -->
+<!-- ``` -->
+
+# Group Analysis
+
+## Data Generation
+
+```{r Data generation for group-level analysis}
+# Load the binary template image
+data(binary_template)
+
+# Create the covariates
+library(neuRosim)
+# Task 1
+t1 <-
+  specifydesign(
+    onsets = seq(0, 200, by = 40),
+    durations = 1,
+    totaltime = 200,
+    TR = 1,
+    effectsize = 1.3,
+    conv = "double-gamma",
+    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+  )
+# Task 2
+t2 <-
+  specifydesign(
+    onsets = seq(20, 200, by = 40),
+    durations = 1,
+    totaltime = 200,
+    TR = 1,
+    effectsize = 1.3,
+    conv = "double-gamma",
+    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+  )
+
+# Set the values for the activations
+sample_size <- 10
+centers <- matrix(c(36,28, 12,28, 23,16), nrow = 3, byrow = T)
+sizes <- 2:4
+mean_smoothness <- 0.2
+
+# Create the responses
+y_i <- sapply(seq(sample_size), function(i) {
+  activation_regions <- mapply(function(cs,ss) {
+    region_out <-
+      specifyregion(
+        dim = c(45, 54),
+        coord = cs + c(sample(seq(-3,3),size = 1),sample(seq(-3,3),size = 1)),
+        radius = ss,
+        form = "sphere",
+        fading = runif(1,0.1,0.5))
+    return(region_out * rgamma(1,20, 20))
+    },cs = split(centers, row(centers)),ss = sizes, SIMPLIFY = F) 
+  # Create beta_1
+  beta_1 <- ifelse(binary_template == 0, NA, 0)
+  beta_1 <- beta_1 + Reduce(`+`,sapply(activation_regions[-3],`*`,
+                                       y = rgamma(1,20,20), simplify = F))
+  # Create beta_2
+  beta_2 <- ifelse(binary_template == 0, NA, 0)
+  beta_2 <- beta_2 + Reduce(`+`,sapply(activation_regions[-1],`*`,
+                                       y = rgamma(1,20,20), simplify = F))
+  # Create the mean response
+  task_1_means <- beta_1 %o% c(t1)
+  task_2_means <- beta_2 %o% c(t2)
+  y_means <- task_1_means + task_2_means
+  y_t <- apply(y_means, 1:2, function(bv) {
+    if(is.na(bv[1])) {
+      return(rep(NA,length(bv)))
+    } else {
+      out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2)
+      return(out)
+    }
+  })
+  y <- apply(y_t,1, identity)
+  y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+  y <- y[!y_exclude,]
+  y <- t(y)
+  return(y)
+}, simplify = F)
+```
+
+## Bayesian GE Analysis
+```{r}
+y_ge <- Reduce(rbind,y_i)
+X_ge <- cbind(rep(t1,10),rep(t2,10))
+# Make a session list (for INLA)
+session <- list(
+  BOLD = y_ge,
+  design = X_ge
+)
+# Make the data list (for INLA)
+data <- list(
+  GE_session = session
+)
+# Run the Bayes
+GE_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
+```
+
+## Bayesian FE Analysis
+
+## Joint Analysis
+
+## Two-level Analysis
+
