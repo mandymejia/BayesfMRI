@@ -21,6 +21,8 @@ scale_timeseries <- function(BOLD, scale=TRUE, transpose = TRUE){
 	}
 
 	local_means <- matrix(rowMeans(BOLD, na.rm=TRUE), nrow=nrow(BOLD), ncol=ncol(BOLD)) #the mean over time for each voxel (the mean image)
+	if(any(local_means < 1)) warning("Scaling to percent signal change when locations have means less than 1 may cause errors or produce aberrant results.")
+	if(any(local_means < 0.1)) stop("Some local means are less than 0.1. Please set scale_BOLD = FALSE.")
 	if(scale) BOLD <- t(100*(BOLD - local_means)/local_means) #scale to units of pct local signal change AND CENTER
 	if(!scale) BOLD <- t((BOLD - local_means)) #just center
 	return(BOLD)

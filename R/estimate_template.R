@@ -47,51 +47,43 @@ estimate_template.cifti <- function(
   }
 
   # Read GICA result
-  # First, obtain the mapping (used to infer brainstructures) with cifti_read_flat for cifti_fnames and cifti_fnames2).
   if(verbose) cat('\n Reading in GICA result')
-  flat_CIFTI_map <- ciftiTools:::map_cifti(GICA_fname)
-  #   Next, read the CIFTI. If cortex data to be included does not have a medial
-  #   wall, use cifti_read_separate to try to infer it from the NIFTI.
-  no_left_mwall <- "left" %in% brainstructures && all(flat_CIFTI_map$cortex$medial_wall_mask$left)
-  no_right_mwall <- "right" %in% brainstructures && all(flat_CIFTI_map$cortex$medial_wall_mask$left)
+  GICA <- read_cifti(
+    GICA_fname,
+    brainstructures=brainstructures
+  )
+  ## As of ciftiTools@1.3, default behavior is that a blank mwall mask will be deleted
+  ## So both a blank mwall, and no mwall at all, will be indicated by a NULL mwall entry
+  no_left_mwall <- "left" %in% brainstructures && is.null(GICA$meta$cortex$medial_wall_mask$left)
+  no_right_mwall <- "right" %in% brainstructures && is.null(GICA$meta$cortex$medial_wall_mask$left)
   if (no_left_mwall || no_right_mwall) {
-    GICA <- read_cifti(
-      GICA_fname,  full_volume=TRUE, brainstructures=brainstructures
-    )
-    no_left_mwall <- "left" %in% brainstructures && all(GICA$meta$cortex$medial_wall_mask$left)
-    no_right_mwall <- "right" %in% brainstructures && all(GICA$meta$cortex$medial_wall_mask$left)
-    if (no_left_mwall || no_right_mwall) {
-      warning(paste(
-        "No medial wall vertices were detected in the",
-        c("left cortex", "right cortex", "cortex")[no_left_mwall*1 + no_right_mwall*2],
-        "component of the GICA CIFTI."
-      ))
+    warning(paste(
+      "No medial wall vertices were detected in the",
+      c("left cortex", "right cortex", "cortex")[no_left_mwall*1 + no_right_mwall*2],
+      "component of the GICA CIFTI. Using all vertices.\n"
+    ))
+
     # Replace the empty medial wall mask(s).
-    } else {
+    if ("left" %in% brainstructures) { 
+      GICA$meta$cortex$medial_wall_mask$left <- rep(TRUE, nrow(GICA$data$cortex_left)) 
+    }
+    if ("right" %in% brainstructures) { 
+      GICA$meta$cortex$medial_wall_mask$right <- rep(TRUE, nrow(GICA$data$cortex_right)) 
+
       if ("left" %in% brainstructures) {
-        stopifnot(length(flat_CIFTI_map$cortex$medial_wall_mask$left) == length(GICA$meta$cortex$medial_wall_mask$left))
-        flat_CIFTI_map$cortex$medial_wall_mask$left <- GICA$meta$cortex$medial_wall_mask$left
-      }
-      if ("right" %in% brainstructures) {
-        stopifnot(length(flat_CIFTI_map$cortex$medial_wall_mask$right) == length(GICA$meta$cortex$medial_wall_mask$right))
-        flat_CIFTI_map$cortex$medial_wall_mask$right <- GICA$meta$cortex$medial_wall_mask$right
+        if (length(GICA$meta$cortex$medial_wall_mask$left) != length(GICA$meta$cortex$medial_wall_mask$right)) {
+          stop("Medial wall mask needed to be inferred from vertices, but left and right vertex counts did not match.")
+        }
       }
     }
-  # Also use the separate method if subcortical data is included (for visualization). Otherwise, use the convert method.
-  } else {
-    GICA <- read_cifti(
-      GICA_fname,
-      full_volume="subcortical" %in% brainstructures,
-      brainstructures=brainstructures
-    )
   }
 
   # Obtain the brainstructure mask for the flattened CIFTIs.
   #   It will remove any newly-detected medial wall vertices.
   flat_bs_labs <- c(
-    ifelse(flat_CIFTI_map$cortex$medial_wall_mask$left, "left", "mwall"),
-    ifelse(flat_CIFTI_map$cortex$medial_wall_mask$right, "right", "mwall"),
-    rep("subcortical", length(flat_CIFTI_map$subcort$labels))
+    ifelse(GICA$meta$cortex$medial_wall_mask$left, "left", "mwall"),
+    ifelse(GICA$meta$cortex$medial_wall_mask$right, "right", "mwall"),
+    rep("subcortical", length(GICA$meta$subcort$labels))
   )
   flat_bs_mask <- flat_bs_labs %in% brainstructures
 
