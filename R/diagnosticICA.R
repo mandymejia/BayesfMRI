@@ -110,8 +110,8 @@ diagnosticICA <- function(template_mean,
     DR1 <- dual_reg(BOLD1, template_mean_avg)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
-    fit <- DR1$A %*% DR1$S
-    BOLD2 <- BOLD1 - t(fit) #data without template ICs
+    fit <- t(DR1$S) %*% t(DR1$A)
+    BOLD2 <- BOLD1 - fit #data without template ICs
 
     #iii. ESTIMATE THE NUMBER OF REMAINING ICS
     #pesel function expects nxp data and will determine asymptotic framework
@@ -123,6 +123,7 @@ diagnosticICA <- function(template_mean,
     #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
     #if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2_hat,' NUISANCE COMPONENTS\n'))
     #ICA_BOLD2 <- icaimax(BOLD2, nc=Q2_hat, center=TRUE)
+    #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
 
     #iv. INSTEAD OF ESTIMATING ICS, JUST ESTIMATE PCS!
     #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
@@ -132,7 +133,6 @@ diagnosticICA <- function(template_mean,
     fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2_hat]) %*% vmat
 
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
-    #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
     BOLD3 <- BOLD1 - t(fit) #original data without nuisance ICs
 
   } else {
@@ -158,8 +158,8 @@ diagnosticICA <- function(template_mean,
   dat_DR <- dual_reg(BOLD3, template_mean_avg)
   HA <- H %*% dat_DR$A #apply dimension reduction
   theta0 <- list(A = HA)
-  theta00 <- theta0
-  theta00$nu0_sq = dat_list$sigma_sq
+  #theta00 <- theta0
+  #theta00$nu0_sq = dat_list$sigma_sq
 
   ### 4. RUN EM ALGORITHM!
 

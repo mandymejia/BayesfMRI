@@ -3,10 +3,10 @@
 #'
 #' @title EM Algorithms for Template ICA Models
 #'
-#' @param template_mean (QxV matrix) mean maps for each IC in template, where Q is the number of ICs, V is the number of data or mesh locations.
-#' @param template_var  (QxV matrix) between-subject variance maps for each IC in template
+#' @param template_mean (VxQ matrix) mean maps for each IC in template, where Q is the number of ICs, V is the number of data or mesh locations.
+#' @param template_var  (VxQ matrix) between-subject variance maps for each IC in template
 #' @param mesh NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
-#' @param BOLD  (QxV matrix) dimension-reduced fMRI data
+#' @param BOLD  (VxQ matrix) dimension-reduced fMRI data
 #' @param theta0 (list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
@@ -33,8 +33,8 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
-  ntime <- nrow(BOLD) #length of timeseries
-  nvox <- ncol(BOLD) #number of data locations
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of data locations
   if(ntime > nvox) warning('More time points than data locations. Are you sure?')
   if(ncol(template_mean) != nvox) stop('Templates and BOLD must have the same number of data locations (columns).')
 
@@ -51,9 +51,9 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	template_var[template_var < 1e-6] = 1e-6 #to prevent problems when inverting covariance
 
 	#pre-compute s0, D and D^{-1}*s0
-	V <- ncol(template_mean)
-	s0_vec = as.vector(t(template_mean))
-	D_vec <- as.vector(sqrt(t(template_var))) #template_var is QxV
+	V <- nrow(template_mean)
+	s0_vec = as.vector(template_mean) #grouped by IC
+	D_vec <- as.vector(sqrt(template_var)) #grouped by IC
 	D = Diagonal(V*Q, D_vec)
 	Dinv_s0 <- inla.qsolve(Q = D, B=matrix(s0_vec, ncol=1), method='solve')
 
@@ -180,12 +180,12 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
-  ntime <- nrow(BOLD) #length of timeseries
-  nvox <- ncol(BOLD) #number of brain locations
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of brain locations
   if(ntime > nvox) warning('More time points than brain locations. Are you sure?')
-  if(ncol(template_mean) != nvox) stop('Templates and BOLD must have the same number of brain locations (columns).')
+  if(nrow(template_mean) != nvox) stop('Templates and BOLD must have the same number of brain locations (columns).')
 
-  Q <- nrow(template_mean) #number of ICs
+  Q <- ncol(template_mean) #number of ICs
   if(Q > nvox) stop('Cannot estimate more ICs than brain locations.')
   if(Q > ntime) stop('Cannot estimate more ICs than time points.')
 
@@ -234,26 +234,25 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
   A = theta$A
   At_nu0Cinv = t(theta$A) %*% diag(1/(C_diag*theta$nu0_sq))
   At_nu0Cinv_A = At_nu0Cinv %*% theta$A
-  miu_s = matrix(NA, nrow=Q, ncol=nvox)
-  var_s = matrix(NA, nrow=Q, ncol=nvox)
+  miu_s = matrix(NA, nrow=nvox, ncol=Q)
+  var_s = matrix(NA, nrow=nvox, ncol=Q)
   for(v in 1:nvox){
-    y_v <- BOLD[,v]
-    s0_v <- template_mean[,v]
-    E_v_inv <- diag(1/template_var[,v])
+    y_v <- BOLD[v,]
+    s0_v <- template_mean[v,]
+    E_v_inv <- diag(1/template_var[v,])
     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
-    miu_s[,v] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
-    var_s[,v] <- diag(Sigma_s_v)
+    miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
+    var_s[v,] <- diag(Sigma_s_v)
   }
 
-  result <- list(subjICmean=t(miu_s),
-                 subjICvar=t(var_s),
+  result <- list(subjICmean=miu_s,
+                 subjICvar=var_s,
                  theta_MLE=theta,
                  success_flag=success,
                  error=err,
                  numiter=iter-1,
                  template_mean = template_mean,
                  template_var = template_var)
-  #names(result) <- c('subjICmean', 'subjICvar', 'theta_MLE', 'success_flag')
   return(result)
 }
 
@@ -263,8 +262,8 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
 #'
 #' @title Parameter Estimates in EM Algorithm for Template ICA Model
 #'
-#' @param template_mean (QxV matrix) mean maps for each IC in template
-#' @param template_var (QxV matrix) between-subject variance maps for each IC in template
+#' @param template_mean (VxQ matrix) mean maps for each IC in template
+#' @param template_var (VxQ matrix) between-subject variance maps for each IC in template
 #' @param BOLD dimension-reduced fMRI data
 #' @param mesh NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see `help(make_templateICA_mesh)`)
 #' @param theta A list of current parameter estimates (mixing matrix A, noise variance nu0_sq and (for spatial model) SPDE parameters kappa)
@@ -288,9 +287,9 @@ NULL
 #' @import Matrix
 UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
-  Q = nrow(template_mean)
-  V = ncol(BOLD)
-  ntime = nrow(BOLD)
+  Q = ncol(template_mean)
+  V = nrow(BOLD)
+  ntime = ncol(BOLD)
   spde = mesh$spde
 
   #initialize new parameter values
@@ -314,7 +313,7 @@ UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C
 
   if(verbose) cat('Computing Posterior Moments of S \n')
 
-  y_vec = as.vector(BOLD)
+  y_vec = as.vector(t(BOLD)) #grouped by locations
 
   if(verbose) cat('...posterior precision \n') # less than 1 sec
   #Compute SPDE matrices (F, G, GFinvG) and Sigma_inv (QVxQV), a sparse block diagonal matrix
@@ -574,8 +573,8 @@ UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C
 #' @export
 UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_diag, verbose){
 
-  Q = nrow(BOLD)
-  V = ncol(BOLD)
+  Q = ncol(BOLD)
+  V = nrow(BOLD)
 
   #initialize new objects
   theta_new = list(A = matrix(NA, Q, Q), nu0_sq = NA)
@@ -590,24 +589,24 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
   if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
-  miu_s = matrix(NA, nrow=Q, ncol=V)
-  miu_ssT = array(NA, dim=c(Q, Q, V))
+  miu_s = matrix(NA, nrow=V, ncol=Q)
+  miu_ssT = array(NA, dim=c(V, Q, Q))
 
   for(v in 1:V){
 
-    y_v = BOLD[,v]
-    s0_v = template_mean[,v]
+    y_v = BOLD[v,]
+    s0_v = template_mean[v,]
 
     ##########################################
     ### E-STEP FOR A AND nu0^2: POSTERIOR MOMENTS OF s_i(v)
     ##########################################
 
-    E_v_inv = diag(1/template_var[,v])
+    E_v_inv = diag(1/template_var[v,])
     Sigma_s_v = solve(E_v_inv + At_nu0Cinv_A)
     miu_s_v = Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
     miu_ssT_v = (miu_s_v %*% t(miu_s_v)) + Sigma_s_v #QxQ
-    miu_s[,v] = miu_s_v #save for M-step of nu0_sq
-    miu_ssT[,,v] = miu_ssT_v #save for M-step of nu0_sq
+    miu_s[v,] = miu_s_v #save for M-step of nu0_sq
+    miu_ssT[v,,] = miu_ssT_v #save for M-step of nu0_sq
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
@@ -825,7 +824,7 @@ bdiag_m <- function(lmat) {
 #'
 UpdateThetaSQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
 
-  Q = nrow(template_mean)
+  Q = ncol(template_mean)
 
   #convert theta vector to list format
   A <- theta_vec[1:(Q^2)]

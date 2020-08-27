@@ -144,12 +144,60 @@ UpdateTheta.diagnosticICA = function(template_mean, template_var, BOLD, theta, C
     pr_zy[g] <- 1/pr_zy_inv_g
   }
 
+
+  # #randomly split locations into buckets to avoid infinite exponentials (this creates pseudo-independent observations)
+  # random_vox <- sample(1:nvox, nvox, replace=FALSE) #randomly reorder voxels
+  # size_buckets <- 1000
+  # num_buckets <- ceiling(nvox/size_buckets) #number of buckets
+  #
+  # pr_zy_buckets <- matrix(NA, num_buckets, G)
+  # for(b in 1:num_buckets){
+  #
+  #   first_vox_b <- size_buckets*(b-1) + 1
+  #   last_vox_b <- min(first_vox_b + size_buckets - 1, nvox)
+  #   vox_b <- random_vox[first_vox_b:last_vox_b]
+  #
+  #   exp_part_v <- rep(NA, G)
+  #   pr_zy_v <- rep(NA, G)
+  #   for(g in 1:G){
+  #
+  #     #exp_part1 <- L*nvox*log(2*pi)
+  #     exp_part1 <- 0 #irrelevant as long as noninformative prior on z=g
+  #     exp_part2 <- sum(log(template_var[[g]][vox_b,])) #sum over v,ell
+  #
+  #     exp_part3 <- 0
+  #     for(v in vox_b){
+  #
+  #       y_v = BOLD[v,]
+  #       s0_gv = template_mean[[g]][v,]
+  #
+  #       #mean and cov of y(v)|z
+  #       mu_yz_v <- A %*% s0_gv
+  #       Sigma_yz_v <- A %*% diag(template_var[[g]][v,]) %*% t(A) + C
+  #
+  #       exp_part3_v <- t(y_v - mu_yz_v) %*% solve(Sigma_yz_v) %*% (y_v - mu_yz_v)
+  #       exp_part3 <- exp_part3 + exp_part3_v
+  #
+  #     }
+  #
+  #     exp_part_v[g] <- -0.5 * (exp_part1 + exp_part2 + exp_part3[1])
+  #   }
+  #
+  #   for(g in 1:G){
+  #     pr_zy_inv_g <- sum(exp(exp_part_v-exp_part_v[g])) # ( (e^M1 + e^M2 + e^M3) / e^M1 ) = e^(M1-M1) + e^(M2-M1) + e^(M3-M1) = 1 + e^(M2-M1) + e^(M3-M1)  <-- If any e^(Mk-Mg) Inf, the inverse will be zero so p(z=g|y)=0
+  #     pr_zy_v[g] <- 1/pr_zy_inv_g
+  #   }
+  #   pr_zy_buckets[b,] <- pr_zy_v
+  #
+  # }
+  # pr_zy <- colMeans(pr_zy_buckets)
+  #
   #fix numerical issues with very small values (values very close to 1 are numerically equal to 1, while values very close to zero are not)
   if(any(pr_zy==1)){
     pr_zy[pr_zy!=1] <- 0
   }
 
-  if(verbose) print(paste(pr_zy, collapse=','))
+  if(verbose) print(paste(round(pr_zy,3), collapse=','))
 
   # if(is.infinite(exp(max(exp_part)-min(exp_part)))) {
   #   #this is for two groups, need to generalize for G>2

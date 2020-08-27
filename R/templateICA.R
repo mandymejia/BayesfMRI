@@ -21,19 +21,15 @@
 #'
 templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL){
 
-  template_mean <- t(template_mean)
-  template_var <- t(template_var)
-  BOLD <- t(BOLD)
-
   if(!is.null(mesh)){
     flag <- inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
     inla.setOption(smtp='pardiso')
   }
 
-  ntime <- nrow(BOLD) #length of timeseries
-  nvox <- ncol(BOLD) #number of data locations
-  L <- nrow(template_mean) #number of ICs
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of data locations
+  L <- ncol(template_mean) #number of ICs
 
   #check that the number of data locations (nvox), time points (ntime) and ICs (L) makes sense
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
@@ -41,8 +37,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   if(L > ntime) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
 
   #check that all arguments have consistent number of data locations (nvox) and ICs (L)
-  if(ncol(template_mean) != nvox | ncol(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations (columns), but they do not.')
-  if(nrow(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
+  if(nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations (columns), but they do not.')
+  if(ncol(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
 
   #check that the supplied mesh object is of type templateICA_mesh
   do_spatial <- !is.null(mesh)
@@ -86,22 +82,30 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
     DR1 <- dual_reg(BOLD1, template_mean)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
-    fit <- DR1$A %*% DR1$S
+    fit <- t(DR1$S) %*% t(DR1$A)
     BOLD2 <- BOLD1 - fit #data without template ICs
 
     #iii. ESTIMATE THE NUMBER OF REMAINING ICS
     #pesel function expects nxp data and will determine asymptotic framework
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
-    pesel_BOLD2 <- pesel(BOLD2, npc.max=100, method='homogenous')
+    pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homogenous')
     Q2_hat <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
     if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2_hat,' NUISANCE COMPONENTS'))
 
     #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
-    ICA_BOLD2 <- icaimax(t(BOLD2), nc=Q2_hat, center=TRUE)
+    #if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2_hat,' NUISANCE COMPONENTS\n'))
+    #ICA_BOLD2 <- icaimax(BOLD2, nc=Q2_hat, center=TRUE)
+    #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
+
+    #iv. INSTEAD OF ESTIMATING ICS, JUST ESTIMATE PCS!
+    #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
+    #IF THE NUISANCE ICS ARE NOT OF INTEREST, CAN TAKE THIS APPROACH
+    svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2_hat, nv=0)
+    vmat <- diag(1/svd_BOLD2$d[1:Q2_hat]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
+    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2_hat]) %*% vmat
 
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
-    fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
-    BOLD3 <- BOLD1 - fit #original data without nuisance ICs
+    BOLD3 <- BOLD1 - t(fit) #original data without nuisance ICs
 
   } else {
 
@@ -125,15 +129,10 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
   dat_DR <- dual_reg(BOLD3, template_mean)
-
-  # Keep?
   HA <- H %*% dat_DR$A #apply dimension reduction
-  #HA <- orthonorm(HA)  #orthogonalize
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
-
-
 
   #initialize residual variance
   theta0$nu0_sq = dat_list$sigma_sq
