@@ -4,29 +4,10 @@
 \alias{excursions.no.spurious}
 \title{Calculation of excursion sets with the removal of small areas}
 \usage{
-excursions.no.spurious(
-  alpha,
-  u,
-  mu,
-  Q,
-  type,
-  n.iter = 10000,
-  Q.chol,
-  F.limit,
-  vars,
-  rho = NULL,
-  method = "EB",
-  ind,
-  max.size,
-  verbose = 0,
-  max.threads = 0,
-  seed,
-  area.limit,
-  use.continuous = FALSE,
-  factor = 0,
-  plot.progress = FALSE,
-  mesh
-)
+excursions.no.spurious(alpha, u, mu, Q, type, n.iter = 10000, Q.chol,
+  F.limit, vars, rho = NULL, method = "EB", ind, max.size,
+  verbose = 0, max.threads = 0, seed, area.limit,
+  use.continuous = FALSE, factor = 0, plot.progress = FALSE, mesh)
 }
 \arguments{
 \item{alpha}{Error probability for the excursion set.}

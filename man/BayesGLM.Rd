@@ -4,30 +4,14 @@
 \alias{BayesGLM}
 \title{Performs whole-brain spatial Bayesian GLM for fMRI task activation}
 \usage{
-BayesGLM(
-  cifti_fname,
-  surfL_fname = NULL,
-  surfR_fname = NULL,
-  sphereL_fname = NULL,
-  sphereR_fname = NULL,
-  brainstructures = c("left", "right", "subcortical"),
-  wb_path = NULL,
-  design = NULL,
-  onsets = NULL,
-  TR = NULL,
-  nuisance = NULL,
-  nuisance_include = c("drift", "dHRF"),
-  scale_BOLD = TRUE,
-  scale_design = TRUE,
-  GLM_method = "both",
-  session_names = NULL,
-  resamp_res = 10000,
-  num.threads = 4,
-  verbose = FALSE,
-  write_dir = NULL,
-  outfile = NULL,
-  return_INLA_result = FALSE
-)
+BayesGLM(cifti_fname, surfL_fname = NULL, surfR_fname = NULL,
+  sphereL_fname = NULL, sphereR_fname = NULL,
+  brainstructures = c("left", "right", "subcortical"), wb_path = NULL,
+  design = NULL, onsets = NULL, TR = NULL, nuisance = NULL,
+  nuisance_include = c("drift", "dHRF"), scale_BOLD = TRUE,
+  scale_design = TRUE, GLM_method = "both", session_names = NULL,
+  resamp_res = 10000, num.threads = 4, verbose = FALSE,
+  write_dir = NULL, outfile = NULL, return_INLA_result = FALSE)
 }
 \arguments{
 \item{cifti_fname}{File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}

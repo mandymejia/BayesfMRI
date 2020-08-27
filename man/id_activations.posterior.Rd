@@ -4,13 +4,8 @@
 \alias{id_activations.posterior}
 \title{Identifies areas of activation given an activation threshold and significance level using joint posterior probabilities}
 \usage{
-id_activations.posterior(
-  model_obj,
-  field_name = NULL,
-  threshold,
-  alpha = 0.05,
-  area.limit = NULL
-)
+id_activations.posterior(model_obj, field_name = NULL, threshold,
+  alpha = 0.05, area.limit = NULL)
 }
 \arguments{
 \item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
@@ -24,7 +19,7 @@ id_activations.posterior(
 \item{area.limit}{Below this value, activations will be considered spurious.  If NULL, no limit.}
 }
 \value{
-A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, an object of class excurobj (see \code{help(excursions.inla)} for more information).
+A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an object of class excurobj (see \code{help(excursions.inla)} for more information).
 }
 \description{
 For a given latent field, identifies locations that exceed a certain activation
