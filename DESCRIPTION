@@ -39,7 +39,7 @@ Imports:
     SQUAREM,
     stats
 Remotes:
-    mandymejia/ciftiTools@1.3
+    mandymejia/ciftiTools
 Suggests:
     parallel,
     knitr,

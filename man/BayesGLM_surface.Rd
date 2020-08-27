@@ -4,10 +4,19 @@
 \alias{BayesGLM_surface}
 \title{Applies spatial Bayesian GLM to task fMRI data on the cortical surface}
 \usage{
-BayesGLM_surface(data, vertices = NULL, faces = NULL, mesh = NULL,
-  mask = NULL, scale_BOLD = TRUE, scale_design = TRUE,
-  num.threads = 4, return_INLA_result = TRUE, outfile = NULL,
-  verbose = FALSE)
+BayesGLM_surface(
+  data,
+  vertices = NULL,
+  faces = NULL,
+  mesh = NULL,
+  mask = NULL,
+  scale_BOLD = TRUE,
+  scale_design = TRUE,
+  num.threads = 4,
+  return_INLA_result = TRUE,
+  outfile = NULL,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
@@ -23,6 +32,8 @@ List element names represent session names.}
 \item{mask}{(Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.}
 
 \item{scale_BOLD}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
+
+\item{scale_design}{If TRUE, scale the design matrix by dividing each column by its maximum, and then subtracting the scaled mean}
 
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 

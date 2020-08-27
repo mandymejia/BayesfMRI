@@ -4,8 +4,7 @@
 \alias{make_templateICA_mesh}
 \title{Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces}
 \usage{
-make_templateICA_mesh(mask = NULL, vertices = NULL, faces = NULL,
-  locs = NULL)
+make_templateICA_mesh(mask = NULL, vertices = NULL, faces = NULL, locs = NULL)
 }
 \arguments{
 \item{mask}{Brain mask (matrix of 0/1 or TRUE/FALSE) (only supply mask OR vertices and faces)}

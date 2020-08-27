@@ -4,8 +4,19 @@
 \alias{LL_SQUAREM}
 \title{Helper function for SQUAREM for extracting log likelihood}
 \usage{
-LL_SQUAREM(theta_vec, template_mean, template_var, mesh, BOLD, C_diag,
-  s0_vec, D, Dinv_s0, common_smoothness, verbose)
+LL_SQUAREM(
+  theta_vec,
+  template_mean,
+  template_var,
+  mesh,
+  BOLD,
+  C_diag,
+  s0_vec,
+  D,
+  Dinv_s0,
+  common_smoothness,
+  verbose
+)
 }
 \arguments{
 \item{theta_vec}{Vector of current parameter values}

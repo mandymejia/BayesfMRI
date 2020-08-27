@@ -4,9 +4,17 @@
 \alias{diagnosticICA.cifti}
 \title{Run diagnostic ICA based on CIFTI-format BOLD data and CIFTI-based template}
 \usage{
-diagnosticICA.cifti(cifti_fname, templates, brainstructures = c("left",
-  "right"), scale = TRUE, maxQ = NULL, maxiter = 100,
-  epsilon = 0.001, verbose = TRUE, write_dir = NULL)
+diagnosticICA.cifti(
+  cifti_fname,
+  templates,
+  brainstructures = c("left", "right"),
+  scale = TRUE,
+  maxQ = NULL,
+  maxiter = 100,
+  epsilon = 0.001,
+  verbose = TRUE,
+  write_dir = NULL
+)
 }
 \arguments{
 \item{cifti_fname}{File path of CIFTI-format timeseries data (ending in .dtseries.nii).}
