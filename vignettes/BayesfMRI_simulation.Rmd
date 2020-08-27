@@ -18,11 +18,11 @@ knitr::opts_chunk$set(
 library(BayesfMRI)
 ```
 
-# Single Subject 
+# Single Session Analysis 
 
 ## Data Generation
 
-Due to open access goals, brain tempate data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
+In the pursuit of open access goals, brain tempate data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
 
 ```{r show template image activation profile and amplitude, message=F}
 # Load the binary template image
@@ -88,7 +88,9 @@ beta_2 <- ifelse(binary_template == 0, NA, 0)
 beta_2 <- beta_2 + 0.8*(r2 + r3)
 ```
 
-```{r sim data plot, message=F, warning=F}
+Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
+
+```{r sim data plot, message=F, warning=F, echo=F}
 # Recreate the plot of the activation profile, activation amplitude, and 
 # the active regions
 library(fields)
@@ -106,15 +108,18 @@ image.plot(beta_2, xaxt = "n", yaxt = "n", zlim = c(0,1))
 image(beta_2 != 0, xaxt = "n", yaxt = "n", col = c("grey80", "red"))
 ```
 
-```{r create data}
+Next, the response data $y_t$ are created using the activation profiles. The errors are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. Finally, the response values are stored in a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series. As a note, the data will be scaled in the analysis. The scaling to percent signal change requires that values be significantly far from zero such that division by the maximum value for each voxel does not produce large numbers or negative numbers. 
+
+```{r create response data}
 task_1_means <- beta_1 %o% c(t1)
 task_2_means <- beta_2 %o% c(t2)
 y_means <- task_1_means + task_2_means
+# Create the response data with an AR(1) with coefficient 0.3 and a standard deviation of 2
 y_t <- apply(y_means, 1:2, function(bv) {
   if(is.na(bv[1])) {
     return(rep(NA,length(bv)))
   } else {
-    out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2)
+    out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2) # 250 prevents problems with scaling
     return(out)
   }
 })
@@ -124,17 +129,7 @@ y <- y[!y_exclude,]
 y <- t(y)
 ```
 
-
-
-
-```{r make the mesh}
-library(INLA)
-in_mask <- which(binary_template == 1, arr.ind = T)
-in_mask <- in_mask[,2:1]
-boundary <- inla.nonconvex.hull(in_mask, resolution = 100)
-mesh <- inla.mesh.2d(loc = in_mask, boundary = boundary, max.edge = c(2,4))
-# plot(mesh, main = "")
-```
+Finally, the data are formatted into a list of sessions (in this case, only one session) and the response is given the label `BOLD`, and the design matrix is given the name `design`.
 
 ```{r}
 # Make a session list (for INLA)
@@ -146,11 +141,13 @@ session <- list(
 data <- list(
   single_session = session
 )
-# Make a conversion matrix to transform back to an image
-convert_mat <- inla.spde.make.A(mesh = mesh, loc = in_mask)
 ```
 
+Now that the data are created and formatted properly, the analysis can begin!
+
 ## Classical Analysis 
+
+First, a classical GLM is run using the `classicalGLM()` function. Note the scaling of the BOLD signal and the design matrix. The resulting images of the point estimates for the coefficients can be seen below.
 
 ```{r Classical GLM}
 single_subject_classical <- classicalGLM(data = data, scale_BOLD = T, scale_design = T)
@@ -172,13 +169,30 @@ image.plot(classical_beta2, xaxt = "n", yaxt = "n",
                     max(single_subject_classical$single_session)))
 ```
 
+While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach.
+
 ## Bayesian GLM Analysis
-```{r Bayes GLM, warning=F, message=F}
+
+Now we start preparing for the Bayesian analysis of the GLM, which employs a stochastic partial differential equation prior on a triangular mesh over the surface of the image. This triangular mesh is very fine for areas within a binary mask, but becomes coarse for regions outside of the mask in order to more accurately determine neighborhoods of data points in regions where there is observed data. 
+
+```{r Make the mesh}
+mesh <- make_2d_mesh(t(binary_template))
+plot(mesh, main = "")
+```
+
+Next, the analysis can be performed in R using the `BayesGLM_surface()` function. The PARDISO software was created to optimize the inversions of the sparse, symmetric matrices that arise through the class of priors used by the `INLA` package in R. The use of PARDISO further decreases computation time by allowing for calculations to take place in parallel.
+
+```{r Bayes GLM, eval=F}
 inla.setOption(pardiso.license="~/sys/licenses/pardiso.lic")
 inla.pardiso.check()
 # Run the Bayes
 single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
 ```
+
+```{r}
+
+```
+
 
 ```{r Find the activations}
 active_betas_posterior <- 
@@ -206,6 +220,20 @@ view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral")
 <!-- design_X <- cbind(t1,t2) -->
 <!-- GLM_results <- BayesGLM(cifti_fname = "simulated_response.dtseries.nii",design = design_X, surfL_fname = "simulated_response.dtseries.nii", ) -->
 <!-- ``` -->
+
+<!-- # ```{r make the mesh} -->
+<!-- # library(INLA) -->
+<!-- # in_mask <- which(binary_template == 1, arr.ind = T) -->
+<!-- # in_mask <- in_mask[,2:1] -->
+<!-- # boundary <- inla.nonconvex.hull(in_mask, resolution = 100) -->
+<!-- # mesh <- inla.mesh.2d(loc = in_mask, boundary = boundary, max.edge = c(2,4)) -->
+<!-- # # plot(mesh, main = "") -->
+<!-- # ``` -->
+
+<!-- # ```{r} -->
+<!-- # # Make a conversion matrix to transform back to an image -->
+<!-- # convert_mat <- inla.spde.make.A(mesh = mesh, loc = in_mask) -->
+<!-- # ``` -->
 
 # Group Analysis
 

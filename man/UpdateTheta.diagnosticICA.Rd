@@ -4,15 +4,8 @@
 \alias{UpdateTheta.diagnosticICA}
 \title{Parameter Estimates in EM Algorithm for Diagnostic ICA Model}
 \usage{
-UpdateTheta.diagnosticICA(
-  template_mean,
-  template_var,
-  BOLD,
-  theta,
-  C_diag,
-  return_MAP = FALSE,
-  verbose = TRUE
-)
+UpdateTheta.diagnosticICA(template_mean, template_var, BOLD, theta, C_diag,
+  return_MAP = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}

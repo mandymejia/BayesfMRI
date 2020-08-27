@@ -4,16 +4,10 @@
 \alias{id_activations}
 \title{Identifies areas of activation}
 \usage{
-id_activations(
-  model_obj,
-  method = c("posterior", "2means"),
-  field_name = NULL,
-  threshold = NULL,
-  alpha = NULL,
-  area.limit = NULL,
-  type = c("point", "sequential"),
-  n_sample = NULL
-)
+id_activations(model_obj, method = c("posterior", "2means"),
+  field_name = NULL, threshold = NULL, alpha = NULL,
+  area.limit = NULL, type = c("point", "sequential"),
+  n_sample = NULL)
 }
 \arguments{
 \item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
@@ -33,7 +27,7 @@ id_activations(
 \item{n_sample}{The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.}
 }
 \value{
-A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, an object of class excurobj if method='posterior' (see \code{help(excursions.inla)} for more information) and is NULL if method='2means'.
+A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an object of class excurobj if method='posterior' (see \code{help(excursions.inla)} for more information) and is NULL if method='2means'.
 }
 \description{
 For each latent field, identifies locations that are activated
