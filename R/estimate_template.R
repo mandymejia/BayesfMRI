@@ -22,7 +22,7 @@
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 #' template mean maps and "_var.dscalar.nii" for template variance maps.
 #'
-#' @return
+#' @return A list of class \code{template.cifti}...
 #' @export
 #' @importFrom ciftiTools read_cifti write_cifti
 estimate_template.cifti <- function(
@@ -64,11 +64,11 @@ estimate_template.cifti <- function(
     ))
 
     # Replace the empty medial wall mask(s).
-    if ("left" %in% brainstructures) { 
-      GICA$meta$cortex$medial_wall_mask$left <- rep(TRUE, nrow(GICA$data$cortex_left)) 
+    if ("left" %in% brainstructures) {
+      GICA$meta$cortex$medial_wall_mask$left <- rep(TRUE, nrow(GICA$data$cortex_left))
     }
-    if ("right" %in% brainstructures) { 
-      GICA$meta$cortex$medial_wall_mask$right <- rep(TRUE, nrow(GICA$data$cortex_right)) 
+    if ("right" %in% brainstructures) {
+      GICA$meta$cortex$medial_wall_mask$right <- rep(TRUE, nrow(GICA$data$cortex_right))
 
       if ("left" %in% brainstructures) {
         if (length(GICA$meta$cortex$medial_wall_mask$left) != length(GICA$meta$cortex$medial_wall_mask$right)) {
