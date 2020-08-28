@@ -12,6 +12,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+library(rgl)
+knitr::knit_hooks$set(webgl = hook_webgl)
 ```
 
 ```{r setup}
@@ -22,7 +24,7 @@ library(BayesfMRI)
 
 ## Data Generation
 
-In the pursuit of open access goals, brain tempate data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
+In the pursuit of open access goals, brain template data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
 
 ```{r show template image activation profile and amplitude, message=F}
 set.seed(47401)
@@ -91,7 +93,7 @@ beta_2 <- beta_2 + 0.8*(r2 + r3)
 
 Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
 
-```{r sim data plot, message=F, warning=F, echo=F}
+```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=5}
 # Recreate the plot of the activation profile, activation amplitude, and 
 # the active regions
 library(fields)
@@ -132,7 +134,7 @@ y <- t(y)
 
 Finally, the data are formatted into a list of sessions (in this case, only one session) and the response is given the label `BOLD`, and the design matrix is given the name `design`.
 
-```{r}
+```{r Format for INLA}
 # Make a session list (for INLA)
 session <- list(
   BOLD = y,
@@ -150,7 +152,7 @@ Now that the data are created and formatted properly, the analysis can begin!
 
 First, a classical GLM is run using the `classicalGLM()` function. Note the scaling of the BOLD signal and the design matrix. The resulting images of the point estimates for the coefficients can be seen below.
 
-```{r Classical GLM}
+```{r Classical GLM, message=F, warning=F, fig.height=5, fig.width=7}
 single_subject_classical <- classicalGLM(data = data, scale_BOLD = T, scale_design = T)
 par(mfrow=c(1,2), mar = c(1,1,1,5))
 # Get beta 1
@@ -174,12 +176,14 @@ While there is a small increase in the average coefficient value around the true
 
 ## Bayesian GLM Analysis
 
-Now we start preparing for the Bayesian analysis of the GLM, which employs a stochastic partial differential equation prior on a triangular mesh over the surface of the image. This triangular mesh is very fine for areas within a binary mask, but becomes coarse for regions outside of the mask in order to more accurately determine neighborhoods of data points in regions where there is observed data. 
+Now we start preparing for the Bayesian analysis of the GLM, which employs a stochastic partial differential equation prior on a triangular mesh over the surface of the image. This triangular mesh is very fine for areas within a binary mask, but becomes coarse for regions outside of the mask in order to more accurately determine neighborhoods of data points in regions where there are observed data. 
 
-```{r Make the mesh}
+```{r Make the mesh, fig.width=7, fig.height=5}
 mesh <- make_2d_mesh(binary_template)
 plot(mesh, main = "")
 ```
+*Small note: INLA reads indices in a different order than the default R behavior. That is, the first index corresponds to columns and the second refers to rows. This is why the mesh appears to be a transposed image of a brain slice when compared to the activation amplitudes shown above.*
+
 
 Next, the analysis can be performed in R using the `BayesGLM_surface()` function. The PARDISO software was created to optimize the inversions of the sparse, symmetric matrices that arise through the class of priors used by the `INLA` package in R. The use of PARDISO further decreases computation time by allowing for calculations to take place in parallel.
 
@@ -200,8 +204,16 @@ single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
 <!-- #   id_activations(model_obj = single_subject_result,method = "posterior",field_name = NULL,threshold = 0,alpha = 0.05,area.limit = NULL,type = NULL, n_sample = NULL) -->
 <!-- # ``` -->
 
-```{r Make plots using view_xifti_surface, webgl=T}
+```{r Bring in the single subject result, include=F}
 single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results.rds")
+```
+
+```{r Plot the single-session mean results, fig.height=5, fig.width=7}
+plot.BayesGLM(single_subject_result, mask = binary_template)
+```
+
+
+```{r Make plots using view_xifti_surface, webgl=T}
 library(ciftiTools)
 posterior_mean_xifti <- as.xifti(
   cortexL = as.matrix(single_subject_result$beta_estimates$single_session[,1]), 
@@ -209,7 +221,7 @@ posterior_mean_xifti <- as.xifti(
 view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral")
 ```
 
-## Unused 
+<!-- ## Unused  -->
 
 <!-- ```{r Try making a CIFTI (xifti) object} -->
 <!-- library(ciftiTools) -->
@@ -237,105 +249,141 @@ view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral")
 <!-- # convert_mat <- inla.spde.make.A(mesh = mesh, loc = in_mask) -->
 <!-- # ``` -->
 
-# Group Analysis
+# Multi-session Analysis
+
+In some cases, a single subject may participate in more than one session of the task fMRI study, lending more power to the inference on the areas of activation. This additional data can also be leveraged with the Bayesian GLM using contrasts to bring the inference from multiple sessions together.
 
 ## Data Generation
 
-<!-- # ```{r Data generation for group-level analysis} -->
-<!-- # # Load the binary template image -->
-<!-- # data(binary_template) -->
-<!-- #  -->
-<!-- # # Create the covariates -->
-<!-- # library(neuRosim) -->
-<!-- # # Task 1 -->
-<!-- # t1 <- -->
-<!-- #   specifydesign( -->
-<!-- #     onsets = seq(0, 200, by = 40), -->
-<!-- #     durations = 1, -->
-<!-- #     totaltime = 200, -->
-<!-- #     TR = 1, -->
-<!-- #     effectsize = 1.3, -->
-<!-- #     conv = "double-gamma", -->
-<!-- #     param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15)) -->
-<!-- #   ) -->
-<!-- # # Task 2 -->
-<!-- # t2 <- -->
-<!-- #   specifydesign( -->
-<!-- #     onsets = seq(20, 200, by = 40), -->
-<!-- #     durations = 1, -->
-<!-- #     totaltime = 200, -->
-<!-- #     TR = 1, -->
-<!-- #     effectsize = 1.3, -->
-<!-- #     conv = "double-gamma", -->
-<!-- #     param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15)) -->
-<!-- #   ) -->
-<!-- #  -->
-<!-- # # Set the values for the activations -->
-<!-- # sample_size <- 10 -->
-<!-- # centers <- matrix(c(36,28, 12,28, 23,16), nrow = 3, byrow = T) -->
-<!-- # sizes <- 2:4 -->
-<!-- # mean_smoothness <- 0.2 -->
-<!-- #  -->
-<!-- # # Create the responses -->
-<!-- # y_i <- sapply(seq(sample_size), function(i) { -->
-<!-- #   activation_regions <- mapply(function(cs,ss) { -->
-<!-- #     region_out <- -->
-<!-- #       specifyregion( -->
-<!-- #         dim = c(45, 54), -->
-<!-- #         coord = cs + c(sample(seq(-3,3),size = 1),sample(seq(-3,3),size = 1)), -->
-<!-- #         radius = ss, -->
-<!-- #         form = "sphere", -->
-<!-- #         fading = runif(1,0.1,0.5)) -->
-<!-- #     return(region_out * rgamma(1,20, 20)) -->
-<!-- #     },cs = split(centers, row(centers)),ss = sizes, SIMPLIFY = F)  -->
-<!-- #   # Create beta_1 -->
-<!-- #   beta_1 <- ifelse(binary_template == 0, NA, 0) -->
-<!-- #   beta_1 <- beta_1 + Reduce(`+`,sapply(activation_regions[-3],`*`, -->
-<!-- #                                        y = rgamma(1,20,20), simplify = F)) -->
-<!-- #   # Create beta_2 -->
-<!-- #   beta_2 <- ifelse(binary_template == 0, NA, 0) -->
-<!-- #   beta_2 <- beta_2 + Reduce(`+`,sapply(activation_regions[-1],`*`, -->
-<!-- #                                        y = rgamma(1,20,20), simplify = F)) -->
-<!-- #   # Create the mean response -->
-<!-- #   task_1_means <- beta_1 %o% c(t1) -->
-<!-- #   task_2_means <- beta_2 %o% c(t2) -->
-<!-- #   y_means <- task_1_means + task_2_means -->
-<!-- #   y_t <- apply(y_means, 1:2, function(bv) { -->
-<!-- #     if(is.na(bv[1])) { -->
-<!-- #       return(rep(NA,length(bv))) -->
-<!-- #     } else { -->
-<!-- #       out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2) -->
-<!-- #       return(out) -->
-<!-- #     } -->
-<!-- #   }) -->
-<!-- #   y <- apply(y_t,1, identity) -->
-<!-- #   y_exclude <- apply(y,1, function(yv) any(is.na(yv))) -->
-<!-- #   y <- y[!y_exclude,] -->
-<!-- #   y <- t(y) -->
-<!-- #   return(y) -->
-<!-- # }, simplify = F) -->
-<!-- # ``` -->
-<!-- #  -->
-<!-- # ## Bayesian GE Analysis -->
-<!-- # ```{r} -->
-<!-- # y_ge <- Reduce(rbind,y_i) -->
-<!-- # X_ge <- cbind(rep(t1,10),rep(t2,10)) -->
-<!-- # # Make a session list (for INLA) -->
-<!-- # session <- list( -->
-<!-- #   BOLD = y_ge, -->
-<!-- #   design = X_ge -->
-<!-- # ) -->
-<!-- # # Make the data list (for INLA) -->
-<!-- # data <- list( -->
-<!-- #   GE_session = session -->
-<!-- # ) -->
-<!-- # # Run the Bayes -->
-<!-- # GE_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F) -->
-<!-- # ``` -->
-<!-- #  -->
-<!-- # ## Bayesian FE Analysis -->
-<!-- #  -->
-<!-- # ## Joint Analysis -->
-<!-- #  -->
-<!-- # ## Two-level Analysis -->
+Data were generated as in the single-session analysis, with a slight modification. Now the true activation fields for the different sessions were jittered in space, intensity, and smoothness. 
+
+```{r Make the multisession data, include=F}
+# Library and seed
+set.seed(47401)
+library(BayesfMRI)
+# Load the binary template image
+data(binary_template)
+# Create the covariates
+library(neuRosim)
+# Task 1
+t1 <-
+  specifydesign(
+    onsets = seq(0, 200, by = 40),
+    durations = 1,
+    totaltime = 200,
+    TR = 1,
+    effectsize = 1.3,
+    conv = "double-gamma",
+    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+  )
+# Task 2
+t2 <-
+  specifydesign(
+    onsets = seq(20, 200, by = 40),
+    durations = 1,
+    totaltime = 200,
+    TR = 1,
+    effectsize = 1.3,
+    conv = "double-gamma",
+    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+  )
+
+# Set the values for the activations
+num_session <- 2
+centers <- matrix(c(36,28, 12,28, 23,16), nrow = 3, byrow = T)
+sizes <- 2:4
+mean_smoothness <- 0.2
+
+# Create the responses
+y_i <- sapply(seq(num_session), function(i) {
+  activation_regions <- mapply(function(cs,ss) {
+    region_out <-
+      specifyregion(
+        dim = c(45, 54),
+        coord = cs + c(sample(seq(-3,3),size = 1),sample(seq(-3,3),size = 1)),
+        radius = ss,
+        form = "sphere",
+        fading = runif(1,0.1,0.5))
+    return(region_out * rgamma(1,20, 20))
+    },cs = split(centers, row(centers)),ss = sizes, SIMPLIFY = F) 
+  # Create beta_1
+  beta_1 <- ifelse(binary_template == 0, NA, 0)
+  beta_1 <- beta_1 + Reduce(`+`,sapply(activation_regions[-3],`*`,
+                                       y = rgamma(1,20,20), simplify = F))
+  # Create beta_2
+  beta_2 <- ifelse(binary_template == 0, NA, 0)
+  beta_2 <- beta_2 + Reduce(`+`,sapply(activation_regions[-1],`*`,
+                                       y = rgamma(1,20,20), simplify = F))
+  # Create the mean response
+  task_1_means <- beta_1 %o% c(t1)
+  task_2_means <- beta_2 %o% c(t2)
+  y_means <- task_1_means + task_2_means
+  # Use the mean responses to create the simulated response data
+  y_t <- apply(y_means, 1:2, function(bv) {
+    if(is.na(bv[1])) {
+      return(rep(NA,length(bv)))
+    } else {
+      out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2)
+      return(out)
+    }
+  })
+  y <- apply(y_t,1, identity)
+  y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+  y <- y[!y_exclude,]
+  y <- t(y)
+  return(list(y=y,betas = list(bbeta_1 = beta_1, bbeta_2 = beta_2)))
+}, simplify = F)
+names(y_i) <- paste("session",1:2,sep="_")
+# Create the sessions
+data <- sapply(y_i, function(yi) {
+  out <- list(BOLD = yi$y,
+              design = cbind(t1,t2))
+  return(out)
+},simplify = F)
+names(data) <- paste("session",1:2)
+```
+
+This resulted in the true activation amplitudes:
+
+```{r True Activation Amplitudes, fig.height=5, fig.width=7, echo=F}
+reshape2::melt(y_i) %>% 
+  dplyr::filter(L2 == "betas") %>% 
+  ggplot() +
+  geom_raster(aes(x = Var1, y = Var2, fill = value)) + 
+  scale_fill_gradient2("") +
+  facet_grid(L1~L3) +
+  labs(x="", y= "") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
+```
+
+
+```{r, eval = F}
+# Run the model in INLA
+multi_session_result <- BayesGLM_surface(data=data, mesh=mesh, verbose=F)
+```
+
+## Single Session Results
+
+```{r Bring in the multi-session results, include=F}
+multi_session_result <- readRDS("../scratch/501_multi_session_BayesGLM_results.rds")
+```
+
+```{r Separate sessions plot}
+plot.BayesGLM(multi_session_result, mask = binary_template)
+```
+
+## Combined Results
+
+The above results from the different sessions can be combined to improve the power of the inference on the coefficients.
+
+```{r Combining the multi-session results}
+contrasts_def <- rbind(
+  c(0.5,0.5),
+  c(0.5,0.5)
+)
+combined_session_results <- BayesGLM_group.within(multi_session_result, contrasts = contrasts_def)
+```
 

@@ -10,7 +10,12 @@ Authors@R: c(
            family = "Pham",
            email = "damondpham@gmail.com",
            role = c("ctb"),
-           comment = c(ORCID = "0000-0001-7563-4727")))
+           comment = c(ORCID = "0000-0001-7563-4727")),
+    person(given = "Daniel",
+           family = "Spencer",
+           email = "danieladamspencer@gmail.com",
+           role = "ctb",
+           comment = c(ORCID = "0000-0002-9705-3605")))
 Description: The two main functions are BayesGLM and templateICA.  BayesGLM performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface.  The templateICA function performs template ICA and spatial template ICA for subject-level brain network estimation. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
 License: GPL-3
 Depends: 
@@ -24,6 +29,7 @@ Imports:
     excursions,
     graphics,
     geometry,
+    ggplot2,
     ica,
     INLA (>= 0.0-1468840039),
     numDeriv,
@@ -33,13 +39,15 @@ Imports:
     methods,
     neuRosim,
     pesel,
+    RColorBrewer,
     rdist,
+    reshape2,
     rgl,
     sp,
     SQUAREM,
-    stats
+    stats,
 Remotes:
-    mandymejia/ciftiTools@1.3
+    mandymejia/ciftiTools
 Suggests:
     parallel,
     knitr,

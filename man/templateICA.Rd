@@ -4,10 +4,19 @@
 \alias{templateICA}
 \title{Perform template independent component analysis (ICA) using expectation-maximization (EM)}
 \usage{
-templateICA(template_mean, template_var, BOLD, scale = TRUE,
-  mesh = NULL, maxQ = NULL, common_smoothness = TRUE,
-  maxiter = 100, epsilon = 0.001, verbose = TRUE,
-  kappa_init = NULL)
+templateICA(
+  template_mean,
+  template_var,
+  BOLD,
+  scale = TRUE,
+  mesh = NULL,
+  maxQ = NULL,
+  common_smoothness = TRUE,
+  maxiter = 100,
+  epsilon = 0.001,
+  verbose = TRUE,
+  kappa_init = NULL
+)
 }
 \arguments{
 \item{template_mean}{(VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}

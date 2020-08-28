@@ -4,8 +4,16 @@
 \alias{EM_diagnosticICA}
 \title{EM Algorithm for Diagnostic ICA Models}
 \usage{
-EM_diagnosticICA(template_mean, template_var, BOLD, theta0, C_diag,
-  maxiter = 100, epsilon = 0.001, verbose = TRUE)
+EM_diagnosticICA(
+  template_mean,
+  template_var,
+  BOLD,
+  theta0,
+  C_diag,
+  maxiter = 100,
+  epsilon = 0.001,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}

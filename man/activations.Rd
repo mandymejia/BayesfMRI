@@ -4,9 +4,16 @@
 \alias{activations}
 \title{Identify areas of activation in each independent component map}
 \usage{
-activations(result, u = 0, alpha = 0.01, type = ">",
-  method_p = "BH", verbose = FALSE, which.ICs = NULL,
-  deviation = FALSE)
+activations(
+  result,
+  u = 0,
+  alpha = 0.01,
+  type = ">",
+  method_p = "BH",
+  verbose = FALSE,
+  which.ICs = NULL,
+  deviation = FALSE
+)
 }
 \arguments{
 \item{result}{Fitted stICA or tICA model object (of class stICA or tICA)}

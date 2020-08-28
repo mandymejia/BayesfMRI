@@ -4,8 +4,12 @@
 \alias{match_input}
 \title{Match user inputs to expected values}
 \usage{
-match_input(user, expected, fail_action = c("stop", "warning", "message",
-  "nothing"), user_value_label = NULL)
+match_input(
+  user,
+  expected,
+  fail_action = c("stop", "warning", "message", "nothing"),
+  user_value_label = NULL
+)
 }
 \arguments{
 \item{user}{Character vector of user input. These will be matched to

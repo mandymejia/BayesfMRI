@@ -14,9 +14,8 @@
 \item{session_name}{The name of the session to plot the results from (defaults to the first session)}
 }
 \value{
-Currently a list of final coefficient array images. This will change in future versions.
+A ggplot2 object
 }
 \description{
 Plot results from a BayesfMRI object
 }
-\keyword{internal}
