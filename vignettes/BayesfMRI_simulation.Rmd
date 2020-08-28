@@ -154,22 +154,31 @@ First, a classical GLM is run using the `classicalGLM()` function. Note the scal
 
 ```{r Classical GLM, message=F, warning=F, fig.height=5, fig.width=7}
 single_subject_classical <- classicalGLM(data = data, scale_BOLD = T, scale_design = T)
-par(mfrow=c(1,2), mar = c(1,1,1,5))
+library(purrr)
+library(ggplot2)
+wb_palette <- ciftiTools::ROY_BIG_BL(min = 0, max = 1, pos_half = FALSE)
 # Get beta 1
 classical_beta1 <- binary_template
 classical_beta1[classical_beta1 == 1] <- single_subject_classical$single_session[,1]
 classical_beta1[classical_beta1 == 0] <- NA
-image.plot(classical_beta1, xaxt = "n", yaxt = "n", 
-           zlim = c(min(single_subject_classical$single_session),
-                    max(single_subject_classical$single_session)))
 # Get beta 2
-par(mar=c(1,1,1,5))
 classical_beta2 <- binary_template
 classical_beta2[classical_beta2 == 1] <- single_subject_classical$single_session[,2]
 classical_beta2[classical_beta2 == 0] <- NA
-image.plot(classical_beta2, xaxt = "n", yaxt = "n",
-           zlim = c(min(single_subject_classical$single_session),
-                    max(single_subject_classical$single_session)))
+classical_bbeta <- list(bbeta1 = classical_beta1,
+                        bbeta2 = classical_beta2)
+reshape2::melt(classical_bbeta) %>% 
+  ggplot() +
+  geom_raster(aes(x = Var1, y = Var2, fill = value)) +
+  scale_fill_gradientn("",colors = wb_palette$color, 
+                       values = wb_palette$value, limits = c(-1,1), 
+                       na.value = "white") +
+  labs(x="",y="") +
+  facet_grid(.~L1) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
 ```
 
 While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach.
@@ -209,19 +218,13 @@ single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results
 ```
 
 ```{r Plot the single-session mean results, fig.height=5, fig.width=7}
-plot_BayesGLM_2d(single_subject_result, mask = binary_template)
+plot_BayesGLM_2d(single_subject_result, mask = binary_template, zlim = c(-1,1))
 ```
 
-
-```{r Make plots using view_xifti_surface, webgl=T}
-library(ciftiTools)
-posterior_mean_xifti <- as.xifti(
-  cortexL = as.matrix(single_subject_result$beta_estimates$single_session[,1]), 
-  surfL = list(vertices = mesh$loc, faces = mesh$graph$tv))
-view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral")
-```
 
 <!-- ## Unused  -->
+
+
 
 <!-- ```{r Try making a CIFTI (xifti) object} -->
 <!-- library(ciftiTools) -->
@@ -235,18 +238,12 @@ view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral")
 <!-- GLM_results <- BayesGLM(cifti_fname = "simulated_response.dtseries.nii",design = design_X, surfL_fname = "simulated_response.dtseries.nii", ) -->
 <!-- ``` -->
 
-<!-- # ```{r make the mesh} -->
-<!-- # library(INLA) -->
-<!-- # in_mask <- which(binary_template == 1, arr.ind = T) -->
-<!-- # in_mask <- in_mask[,2:1] -->
-<!-- # boundary <- inla.nonconvex.hull(in_mask, resolution = 100) -->
-<!-- # mesh <- inla.mesh.2d(loc = in_mask, boundary = boundary, max.edge = c(2,4)) -->
-<!-- # # plot(mesh, main = "") -->
-<!-- # ``` -->
-
-<!-- # ```{r} -->
-<!-- # # Make a conversion matrix to transform back to an image -->
-<!-- # convert_mat <- inla.spde.make.A(mesh = mesh, loc = in_mask) -->
+<!-- # ```{r Make plots using view_xifti_surface, webgl=T} -->
+<!-- # library(ciftiTools) -->
+<!-- # posterior_mean_xifti <- as.xifti( -->
+<!-- #   cortexL = as.matrix(single_subject_result$beta_estimates$single_session[,1]),  -->
+<!-- #   surfL = list(vertices = mesh$loc, faces = mesh$graph$tv)) -->
+<!-- # view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral") -->
 <!-- # ``` -->
 
 # Multi-session Analysis
@@ -348,11 +345,14 @@ This resulted in the true activation amplitudes:
 ```{r True Activation Amplitudes, fig.height=5, fig.width=7, echo=F}
 library(purrr)
 library(ggplot2)
+wb_palette2 <- ciftiTools::ROY_BIG_BL(min = 0, max = 1, pos_half = T)
 reshape2::melt(y_i) %>% 
   dplyr::filter(L2 == "betas") %>% 
   ggplot() +
   geom_raster(aes(x = Var1, y = Var2, fill = value)) + 
-  scale_fill_gradient2("") +
+  scale_fill_gradientn("",colors = wb_palette2$color, 
+                       values = wb_palette2$value, 
+                       na.value = "white") +
   facet_grid(L1~L3) +
   labs(x="", y= "") +
   theme_bw() +
@@ -374,7 +374,7 @@ multi_session_result <- readRDS("../scratch/501_multi_session_BayesGLM_results.r
 ```
 
 ```{r Separate sessions plot}
-plot_BayesGLM_2d(multi_session_result, mask = binary_template)
+plot_BayesGLM_2d(multi_session_result, mask = binary_template, zlim = c(-1.76,1.76))
 ```
 
 ## Combined Results

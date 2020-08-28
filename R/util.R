@@ -197,6 +197,7 @@ s2m_B <- function(B,sigma){
   return(out)
 }
 
+# This function was made unnecessary in R 3.6.0
 #' Array split
 #'
 #' Generalizes the `split` function to work with arrays of arbitrary dimension greater than 2.
@@ -205,19 +206,19 @@ s2m_B <- function(B,sigma){
 #' @param margin The margin at which the array should be split
 #'
 #' @return A list of subarrays split along the `margin` dimension
-#' @export
 #'
-asplit <- function(X,margin) {
-  if(length(dim(X)) < 2) stop("This will only work matrices or arrays of dimension 2 or higher.")
-  if(margin > length(dim(X))) stop("Dimension of X is less than margin.")
-  X_dim <- dim(X)
-  split_list <- split(X,slice.index(X,margin))
-  output <- lapply(split_list,function(j){
-    out <- array(j,dim = X_dim[-margin])
-    return(out)
-  })
-  return(output)
-}
+#'
+# asplit <- function(X,margin) {
+#   if(length(dim(X)) < 2) stop("This will only work matrices or arrays of dimension 2 or higher.")
+#   if(margin > length(dim(X))) stop("Dimension of X is less than margin.")
+#   X_dim <- dim(X)
+#   split_list <- split(X,slice.index(X,margin))
+#   output <- lapply(split_list,function(j){
+#     out <- array(j,dim = X_dim[-margin])
+#     return(out)
+#   })
+#   return(output)
+# }
 
 #' Boundary Mask
 #'
