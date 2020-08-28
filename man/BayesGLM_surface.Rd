@@ -4,19 +4,10 @@
 \alias{BayesGLM_surface}
 \title{Applies spatial Bayesian GLM to task fMRI data on the cortical surface}
 \usage{
-BayesGLM_surface(
-  data,
-  vertices = NULL,
-  faces = NULL,
-  mesh = NULL,
-  mask = NULL,
-  scale_BOLD = TRUE,
-  scale_design = TRUE,
-  num.threads = 4,
-  return_INLA_result = TRUE,
-  outfile = NULL,
-  verbose = FALSE
-)
+BayesGLM_surface(data, vertices = NULL, faces = NULL, mesh = NULL,
+  mask = NULL, scale_BOLD = TRUE, scale_design = TRUE,
+  num.threads = 4, return_INLA_result = TRUE, outfile = NULL,
+  verbose = FALSE, contrasts = NULL)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements

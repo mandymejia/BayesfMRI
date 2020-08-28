@@ -39,6 +39,7 @@ Imports:
     methods,
     neuRosim,
     pesel,
+    purrr,
     RColorBrewer,
     rdist,
     reshape2,

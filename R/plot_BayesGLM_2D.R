@@ -10,7 +10,7 @@
 #' @import dplyr
 #' @import ggplot2
 #' @export
-plot.BayesGLM_2d <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
+plot_BayesGLM_2d <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
   # Create a conversion matrix
   in_binary_mask <- which(mask == 1, arr.ind = T)
   in_binary_mask <- in_binary_mask[,2:1]

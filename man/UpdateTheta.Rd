@@ -6,30 +6,12 @@
 \alias{UpdateTheta.independent}
 \title{Parameter Estimates in EM Algorithm for Template ICA Model}
 \usage{
-UpdateTheta.spatial(
-  template_mean,
-  template_var,
-  mesh,
-  BOLD,
-  theta,
-  C_diag,
-  s0_vec,
-  D,
-  Dinv_s0,
-  common_smoothness = TRUE,
-  verbose = FALSE,
-  return_MAP = FALSE,
-  update = c("all", "kappa", "A")
-)
+UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag,
+  s0_vec, D, Dinv_s0, common_smoothness = TRUE, verbose = FALSE,
+  return_MAP = FALSE, update = c("all", "kappa", "A"))
 
-UpdateTheta.independent(
-  template_mean,
-  template_var,
-  BOLD,
-  theta,
-  C_diag,
-  verbose
-)
+UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag,
+  verbose)
 }
 \arguments{
 \item{template_mean}{(QxV matrix) mean maps for each IC in template}

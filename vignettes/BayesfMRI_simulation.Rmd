@@ -209,7 +209,7 @@ single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results
 ```
 
 ```{r Plot the single-session mean results, fig.height=5, fig.width=7}
-plot.BayesGLM(single_subject_result, mask = binary_template)
+plot_BayesGLM_2d(single_subject_result, mask = binary_template)
 ```
 
 
@@ -346,6 +346,8 @@ names(data) <- paste("session",1:2)
 This resulted in the true activation amplitudes:
 
 ```{r True Activation Amplitudes, fig.height=5, fig.width=7, echo=F}
+library(purrr)
+library(ggplot2)
 reshape2::melt(y_i) %>% 
   dplyr::filter(L2 == "betas") %>% 
   ggplot() +
@@ -372,7 +374,7 @@ multi_session_result <- readRDS("../scratch/501_multi_session_BayesGLM_results.r
 ```
 
 ```{r Separate sessions plot}
-plot.BayesGLM(multi_session_result, mask = binary_template)
+plot_BayesGLM_2d(multi_session_result, mask = binary_template)
 ```
 
 ## Combined Results
@@ -380,10 +382,14 @@ plot.BayesGLM(multi_session_result, mask = binary_template)
 The above results from the different sessions can be combined to improve the power of the inference on the coefficients.
 
 ```{r Combining the multi-session results}
-contrasts_def <- rbind(
-  c(0.5,0.5),
-  c(0.5,0.5)
-)
-combined_session_results <- BayesGLM_group.within(multi_session_result, contrasts = contrasts_def)
+contrasts_def <- list(
+  rbind(
+    c(0.5,0),
+    c(0.5,0)),
+  rbind(
+    c(0,0.5),
+    c(0,0.5)
+  ))
+combined_session_results <- BayesGLM_surface(data = multi_session_result, mesh = mesh, contrasts = contrasts_def, verbose = F)
 ```
 

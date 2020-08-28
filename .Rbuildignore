@@ -2,3 +2,4 @@
 ^\.Rproj\.user$
 ^R/BayesGLM_group\.R$
 ^vignettes/BayesfMRI_simulation\.Rmd$
+^scratch$
