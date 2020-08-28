@@ -1,12 +1,12 @@
 #' Identify Boundary Layers
-#' 
+#'
 #' Identify the vertices within \code{boundary_width} edges of the input mask. The
-#'  mesh must be triangular.
-#' 
+#' mesh must be triangular.
+#'
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
 #' @param mask a length-V logical vector. Each entry corresponds to the vertex
-#'  with the same index. TRUE indicates vertices within the input mask. 
+#'  with the same index. TRUE indicates vertices within the input mask.
 #' @param boundary_width a positive integer representing the width of the boundary
 #'  to compute. The furthest vertices from the input mask will be this number of
 #'  edges away from the closest vertex in the input mask. Default: \code{10}.
@@ -14,12 +14,12 @@
 #'  with the same index. For vertices within the boundary, the value will be the
 #'  number of vertices away from the closest vertex in the input mask.
 #'  Vertices inside the input mask but at the edge of it (touching vertices with
-#'  value 1) will have value 0. All other vertices will have value -1. 
+#'  value 1) will have value 0. All other vertices will have value -1.
 #'
 boundary_layers <- function(faces, mask, boundary_width=10){
   s <- ncol(faces)
   v <- max(faces)
-  # For quads, boundary_layers() would count opposite vertices on a face as 
+  # For quads, boundary_layers() would count opposite vertices on a face as
   #   adjacent--that's probably not desired.
   stopifnot(s == 3)
 
@@ -119,8 +119,8 @@ radial_order <- function(verts){
   # Order by the radians counter-clockwise from positive x-axis.
   # https://stackoverflow.com/questions/37345185/r-converting-cartesian-to-polar-and-sorting
   order(order(ifelse(
-    x[,1] < 0, 
-    atan(x[,2] / x[,1]) + pi, 
+    x[,1] < 0,
+    atan(x[,2] / x[,1]) + pi,
     ifelse(x[,2] < 0 , atan(x[,2] / x[,1]) + 2*pi, atan(x[,2] / x[,1]))
   )))
 }
@@ -129,9 +129,9 @@ radial_order <- function(verts){
 #'
 #' Make a boundary around a mask with two levels of decimation, and apply to a mask.
 #'
-#' The boundary consists of a \code{width1}-vertex-wide middle region and a 
+#' The boundary consists of a \code{width1}-vertex-wide middle region and a
 #'  \code{width2}-vertex-wide outer region, for a total of \code{width1 + width2} layers
-#'  of vertices surrounding the input mask. In the first layer, every \code{k1} 
+#'  of vertices surrounding the input mask. In the first layer, every \code{k1}
 #'  vertex within every \code{k1} layer (beginning with the innermost
 #'  layer) is retained; the rest are discarded. In the second layer, every
 #'  \code{k2} vertex within every \code{k2} layer (beginning with the innermost
@@ -144,13 +144,13 @@ radial_order <- function(verts){
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
 #' @param mask a length-V logical vector. Each entry corresponds to the vertex
-#'  with the same index. TRUE indicates vertices within the input mask. 
+#'  with the same index. TRUE indicates vertices within the input mask.
 #' @param width1,width2 the width of the middle/outer region. All vertices in the middle/outer region
 #'  are between 1 and \code{width1} edges away from the closest vertex in \code{mask}/middle region.
 #' @param k1,k2 roughly, the triangle size multiplier. Every \code{k1}/\code{k2} vertex within
 #'  every \code{k1}/\code{k2} layer (beginning with the innermost layer) will be retained;
 #'  the rest will be discarded. If the mesh originally has triangles of regular
-#'  size, the sides of the triangles in the middle/outer region will be about 
+#'  size, the sides of the triangles in the middle/outer region will be about
 #'  \code{k1}/\code{k2} as long.
 #'
 #' @return A new mesh (list with components "vertices" and "faces")
@@ -178,8 +178,8 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
   b_adjies <- vector("list", width)
   for (ii in 1:length(b_adjies)){
     b_adjies[[ii]] <- vert_adjacency(
-      faces, 
-      v1 = which(b_layers == ii-1), 
+      faces,
+      v1 = which(b_layers == ii-1),
       v2 = which(b_layers == ii)
     )
   }
@@ -191,7 +191,7 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
   if (width2 != 0) { lay_idxs <- c(lay_idxs, seq(width1+1, width1+width2, k2)) }
   lay_k <- c(1, rep(k1, width1), rep(k2, width2))
 
-  # At each iteration, we will calcuate these "layer facts":  
+  # At each iteration, we will calcuate these "layer facts":
   # Note: verts_pre must be in radial order: lay$verts[lay$rad_order],]
   get_layer_facts <- function(vertices, faces, b_layers, lay_idx, k, verts_pre=NULL){
     lay <- list(idx = lay_idx)
@@ -206,14 +206,14 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
     ## The vertices in radial order
     lay$verts_rad <- vertices[lay$verts[order(lay$rad_order)],]
     if (!is.null(verts_pre)) {
-      ## Adjust radial ordering so first vertex in this layer is closest to 
+      ## Adjust radial ordering so first vertex in this layer is closest to
       ##  first vertex in pre layer.
       rad_first <- which.min(
         apply(t(lay$verts_rad) - verts_pre[1,], 2, norm)
       )
       lay$rad_order <- ((lay$rad_order - rad_first) %% length(lay$rad_order)) + 1
       lay$verts_rad <- lay$verts_rad[c(
-        seq(rad_first, nrow(lay$verts_rad)), 
+        seq(rad_first, nrow(lay$verts_rad)),
         seq(1, rad_first-1)
       ),]
       ## Flip direction of radial ordering (clockwise/counter-clockwise, or rather
@@ -222,7 +222,7 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
       pre_samp <- even_sample(verts_pre, 12)
       lay_samp <- even_sample(lay$verts_rad, 12)
       flip <- mean(apply(pre_samp - lay_samp, 1, norm)) > mean(apply(pre_samp[nrow(pre_samp):1,] - lay_samp, 1, norm))
-      if (flip) { 
+      if (flip) {
         lay$rad_order <- (length(lay$rad_order) - lay$rad_order + 2) %% length(lay$rad_order)
         lay$rad_order[lay$rad_order==0] <- length(lay$rad_order)
         lay$verts_rad <- lay$verts_rad[nrow(lay$verts_rad):1,]
@@ -235,7 +235,7 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
   }
 
   lay_ii <- get_layer_facts(
-    vertices, faces, b_layers, 
+    vertices, faces, b_layers,
     lay_idxs[1], lay_k[1],
   )
 
@@ -249,12 +249,12 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
     )
     # plot_3d(lay_ii$verts_rad, 1:nrow(lay_ii$verts_rad))
     # plot_3d(vertices[lay_ii$verts,], lay_ii$rad_order)
-    
+
     # --------------------------------------------------------------------------
     # Remove faces between the layers. -----------------------------------------
     # --------------------------------------------------------------------------
     faces_btwn <- apply(
-      matrix(faces %in% which(b_layers %in% lay_pre$idx:lay_ii$idx), ncol=s), 
+      matrix(faces %in% which(b_layers %in% lay_pre$idx:lay_ii$idx), ncol=s),
       1, all
     )
     # Do not count faces that are all made of pre-layer vertices, or
@@ -264,7 +264,7 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
 
     # --------------------------------------------------------------------------
     # Make new faces. ----------------------------------------------------------
-    # Strategy: 
+    # Strategy:
     #   * Start with an arbitrary vertex from layer A.
     #   * Make a face between that vertex, the closest (first) in layer B, and
     #     the second in layer A next in radial order).
@@ -306,7 +306,7 @@ mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, 
   # ----------------------------------------------------------------------------
 
   # Remove degenerate faces.
-  faces2$degen <- (faces2$new[,1] == faces2$new[,2]) 
+  faces2$degen <- (faces2$new[,1] == faces2$new[,2])
   faces2$degen <- faces2$degen | (faces2$new[,1] == faces2$new[,3])
   faces2$degen <- faces2$degen | (faces2$new[,2] == faces2$new[,3])
   faces2$new <- faces2$new[!faces2$degen,]
