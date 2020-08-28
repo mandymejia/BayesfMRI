@@ -14,9 +14,9 @@ UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag,
   verbose)
 }
 \arguments{
-\item{template_mean}{(VxQ matrix) mean maps for each IC in template}
+\item{template_mean}{(QxV matrix) mean maps for each IC in template}
 
-\item{template_var}{(VxQ matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(QxV matrix) between-subject variance maps for each IC in template}
 
 \item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
 

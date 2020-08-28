@@ -19,3 +19,4 @@ Currently a list of final coefficient array images. This will change in future v
 \description{
 Plot results from a BayesfMRI object
 }
+\keyword{internal}

@@ -14,13 +14,13 @@ EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
   C_diag, maxiter = 100, epsilon = 0.001, verbose)
 }
 \arguments{
-\item{template_mean}{(VxQ matrix) mean maps for each IC in template, where Q is the number of ICs, V is the number of data or mesh locations.}
+\item{template_mean}{(QxV matrix) mean maps for each IC in template, where Q is the number of ICs, V is the number of data or mesh locations.}
 
-\item{template_var}{(VxQ matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(QxV matrix) between-subject variance maps for each IC in template}
 
 \item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)})}
 
-\item{BOLD}{(VxQ matrix) dimension-reduced fMRI data}
+\item{BOLD}{(QxV matrix) dimension-reduced fMRI data}
 
 \item{theta0}{(list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)}
 
