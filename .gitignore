@@ -9,3 +9,5 @@ R/BayesGLM_group.R
 .Rhistory
 inst/doc
 vignettes/simulated_response.dtseries.nii
+scratch/multi_session_result.RData
+scratch/single_subject_result.RData
