@@ -89,125 +89,30 @@ In the pursuit of open access goals, brain template data were taken from FSL, ra
 
 ```{r show template image activation profile and amplitude, message=F}
 set.seed(47401)
-# Load the binary template image
-data(binary_template)
-# Create the activation profiles
-library(neuRosim)
-# Task 1
-t1 <-
-  specifydesign(
-    onsets = seq(0, 200, by = 40),
-    durations = 1,
-    totaltime = 200,
-    TR = 1,
-    effectsize = 1.3,
-    conv = "double-gamma",
-    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+simulated_data <-
+  simulate_slice_data(
+    num_sessions = 1,
+    num_tasks = 2,
+    active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
+    active_size = 2:4,
+    beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
+    vary_active = F,
+    num_time = 200,
+    binary_template = NULL
   )
-t1 <- (t1 - mean(t1)) / max(t1)
-# Task 2
-t2 <-
-  specifydesign(
-    onsets = seq(20, 200, by = 40),
-    durations = 1,
-    totaltime = 200,
-    TR = 1,
-    effectsize = 1.3,
-    conv = "double-gamma",
-    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
-  )
-t2 <- (t2 - mean(t2)) / max(t2)
-# Region 1
-r1 <-
-  specifyregion(
-    dim = c(45, 54),
-    coord = c(36, 28),
-    radius = 2,
-    form = "sphere",
-    fading = 0.2
-  )
-# Region 2
-r2 <-
-  specifyregion(
-    dim = c(45, 54),
-    coord = c(12, 28), # Center of the activation
-    radius = 3, # How big is the activation regions
-    form = "sphere", # The activation are will be circular
-    fading = 0.2 # How fast does the activation region fade (0 is no fade, 1 is fast fade)
-  )
-# Region 3
-r3 <-
-  specifyregion(
-    dim = c(45, 54),
-    coord = c(23, 16),
-    radius = 4,
-    form = "sphere",
-    fading = 0.2
-  )
-# Create beta_1
-beta_1 <- ifelse(binary_template == 0, NA, 0)
-beta_1 <- beta_1 + r1 + r2
-# Create beta_2
-beta_2 <- ifelse(binary_template == 0, NA, 0)
-beta_2 <- beta_2 + 0.8*(r2 + r3)
 ```
 
 Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
 
 ```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=5}
-# Recreate the plot of the activation profile, activation amplitude, and 
-# the active regions
-library(fields)
-par(mar = c(4,2,1,1), mfrow = c(2,3))
-plot(t1, type= 'l', xlab = "Time", ylab = "", yaxt = "n", xaxt = "n")
-axis(1, at = seq(0,200,by  = 20))
-axis(2,at = seq(-0.2,1.4, by = 0.2))
-image.plot(beta_1, xaxt = "n", yaxt = "n")
-image(beta_1 != 0, xaxt = "n", yaxt = "n", col = c("grey80", "red"))
-par(mar=c(4,2,1,1))
-plot(t2, type= 'l', xlab = "Time", ylab = "", yaxt = "n", xaxt = "n")
-axis(1, at = seq(0,200,by  = 20))
-axis(2,at = seq(-0.2,1.4, by = 0.2))
-image.plot(beta_2, xaxt = "n", yaxt = "n", zlim = c(0,1))
-image(beta_2 != 0, xaxt = "n", yaxt = "n", col = c("grey80", "red"))
+plot_image_2D(simulated_data$betas$session_1)
 ```
 
-Next, the response data $y_t$ are created using the activation profiles. The errors are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. Finally, the response values are stored in a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series. As a note, the data will be scaled in the analysis. The scaling to percent signal change requires that values be significantly far from zero such that division by the maximum value for each voxel does not produce large numbers or negative numbers. 
+The response data $y_t$ are created using the activation profiles. The errors are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. Finally, the response values are stored in a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series. As a note, the data will be scaled in the analysis. The scaling to percent signal change requires that values be significantly far from zero such that division by the maximum value for each voxel does not produce large numbers or negative numbers. 
 
-```{r create response data}
-task_1_means <- beta_1 %o% c(t1)
-task_2_means <- beta_2 %o% c(t2)
-y_means <- task_1_means + task_2_means
-# Create the response data with an AR(1) with coefficient 0.3 and a standard deviation of 2
-y_t <- apply(y_means, 1:2, function(bv) {
-  if(is.na(bv[1])) {
-    return(rep(NA,length(bv)))
-  } else {
-    out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2) # 250 prevents problems with scaling
-    return(out)
-  }
-})
-y <- apply(y_t,1, identity)
-y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
-y <- y[!y_exclude,]
-y <- t(y)
-```
+The data for each session are formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Sessions are then combined into a list (in this example, there is a single session). 
 
-Finally, the data for each session is formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Sessions are then combined into a list (in this example, we only have a single session). 
-
-```{r Format for INLA}
-# Make a session list (for INLA)
-session <- list(
-  BOLD = y,
-  design = cbind(t1,t2)
-)
-# Make the data list (for INLA)
-data <- list(
-  single_session = session
-)
-```
-
-Now that the data are created and formatted properly, the analysis can begin!
+With the data created and formatted properly, the analysis can begin!
 
 ## Classical GLM 
 
@@ -216,40 +121,9 @@ The classical GLM is a massive univariate approach based on fitting a separate l
 We can fit a classical GLM to the data using the `classicalGLM()` function. Note that by default, the BOLD data and the design are scaled so that the estimated coefficients for each task represent the percent signal change associated with each task. For simulated data, we do not scale to avoid inducing changes to the true beta coefficient maps. The resulting images of the point estimates for the coefficients can be seen below.
 
 ```{r Classical GLM, message=F, warning=F, fig.height=5, fig.width=7}
-single_subject_classical <- classicalGLM(data = data, scale_BOLD = FALSE, scale_design = FALSE)
-library(purrr)
-library(ggplot2)
-wb_palette <- ciftiTools::ROY_BIG_BL(min = 0, max = 1, pos_half = FALSE)
-zmin <- -2
-zmax <- 2
-# Get beta 1
-classical_beta1 <- binary_template
-classical_beta1[classical_beta1 == 1] <- single_subject_classical$single_session[,1]
-classical_beta1[classical_beta1 == 0] <- NA
-classical_beta1[classical_beta1 < zmin] <- zmin
-classical_beta1[classical_beta1 > zmax] <- zmax
-# Get beta 2
-classical_beta2 <- binary_template
-classical_beta2[classical_beta2 == 1] <- single_subject_classical$single_session[,2]
-classical_beta2[classical_beta2 == 0] <- NA
-classical_beta2[classical_beta2 < zmin] <- zmin
-classical_beta2[classical_beta2 > zmax] <- zmax
-
-classical_bbeta <- list(bbeta1 = classical_beta1,
-                        bbeta2 = classical_beta2)
-
-reshape2::melt(classical_bbeta) %>% 
-  ggplot() +
-  geom_raster(aes(x = Var1, y = Var2, fill = value)) +
-  scale_fill_gradientn("",colors = wb_palette$color, 
-                       values = wb_palette$value, limits = c(zmin,zmax), 
-                       na.value = "white") +
-  labs(x="",y="") +
-  facet_grid(.~L1) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        axis.ticks = element_blank(),
-        axis.text = element_blank())
+single_subject_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
+classical_estimates <- vec_to_image(single_subject_classical$session_1, template_image = binary_template)
+plot_image_2D(classical_estimates, zlim = c(-1,1))
 ```
 
 While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach.
@@ -274,16 +148,6 @@ single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, scale_BOLD =
 saveRDS(single_subject_result, "../scratch/500_single_subject_BayesGLM_results.rds")
 ```
 
-<!-- # ```{r} -->
-<!-- #  -->
-<!-- # ``` -->
-<!-- #  -->
-<!-- #  -->
-<!-- # ```{r Find the activations} -->
-<!-- # active_betas_posterior <-  -->
-<!-- #   id_activations(model_obj = single_subject_result,method = "posterior",field_name = NULL,threshold = 0,alpha = 0.05,area.limit = NULL,type = NULL, n_sample = NULL) -->
-<!-- # ``` -->
-
 ```{r Bring in the single subject result, include=F}
 single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results.rds")
 ```
@@ -291,31 +155,6 @@ single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results
 ```{r Plot the single-session mean results, fig.height=5, fig.width=7}
 plot_BayesGLM_2d(single_subject_result, mask = binary_template, zlim = c(-0.5,0.5))
 ```
-
-
-<!-- ## Unused  -->
-
-
-
-<!-- ```{r Try making a CIFTI (xifti) object} -->
-<!-- library(ciftiTools) -->
-<!-- ciftiTools.setOption('wb_path',"~/Documents/workbench") -->
-<!-- cifti_data <- as.xifti(cortexL = t(y), cortexR = t(y)) -->
-<!-- write_cifti(cifti_data, "simulated_response.dtseries.nii") -->
-<!-- ``` -->
-
-<!-- ```{r Try analyzing using BayesGLM} -->
-<!-- design_X <- cbind(t1,t2) -->
-<!-- GLM_results <- BayesGLM(cifti_fname = "simulated_response.dtseries.nii",design = design_X, surfL_fname = "simulated_response.dtseries.nii", ) -->
-<!-- ``` -->
-
-<!-- # ```{r Make plots using view_xifti_surface, webgl=T} -->
-<!-- # library(ciftiTools) -->
-<!-- # posterior_mean_xifti <- as.xifti( -->
-<!-- #   cortexL = as.matrix(single_subject_result$beta_estimates$single_session[,1]),  -->
-<!-- #   surfL = list(vertices = mesh$loc, faces = mesh$graph$tv)) -->
-<!-- # view_xifti_surface(posterior_mean_xifti, mode = "widget", view = "lateral") -->
-<!-- # ``` -->
 
 # Multi-session Analysis
 
@@ -326,130 +165,47 @@ In some cases, a single subject may undergo more than one session in a task fMRI
 Data were generated as in the single-session analysis, with a slight modification. Now the true activation fields for the different sessions were jittered in space, intensity, and smoothness. 
 
 ```{r Make the multisession data, include=F}
-# Library and seed
+# Setting the seed for reproducibility
 set.seed(47401)
-library(BayesfMRI)
-# Load the binary template image
-data(binary_template)
-# Create the covariates
-library(neuRosim)
-
-
-
-              
-# Task 1
-t1 <-
-  specifydesign(
-    onsets = seq(0, 200, by = 40),
-    durations = 1,
-    totaltime = 200,
-    TR = 1,
-    effectsize = 1.3,
-    conv = 'double-gamma',
-    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+multi_data <-   
+  simulate_slice_data(
+    num_sessions = 2,
+    num_tasks = 2,
+    active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
+    active_size = 2:4,
+    beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
+    vary_active = T,
+    num_time = 200,
+    binary_template = NULL
   )
-# Task 2
-t2 <-
-  specifydesign(
-    onsets = seq(20, 200, by = 40),
-    durations = 1,
-    totaltime = 200,
-    TR = 1,
-    effectsize = 1.3,
-    conv = 'double-gamma',
-    param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
-  )
-
-# Set the values for the activations
-num_session <- 2
-centers <- matrix(c(36,28, 12,28, 23,16), nrow = 3, byrow = T)
-sizes <- 2:4
-mean_smoothness <- 0.2
-
-# Create the responses
-y_i <- sapply(seq(num_session), function(i) {
-  activation_regions <- mapply(function(cs,ss) {
-    region_out <-
-      specifyregion(
-        dim = c(45, 54),
-        coord = cs + c(sample(seq(-3,3),size = 1),sample(seq(-3,3),size = 1)),
-        radius = ss,
-        form = "sphere",
-        fading = runif(1,0.1,0.5))
-    return(region_out * rgamma(1,20, 20))
-    },cs = split(centers, row(centers)),ss = sizes, SIMPLIFY = F) 
-  # Create beta_1
-  beta_1 <- ifelse(binary_template == 0, NA, 0)
-  beta_1 <- beta_1 + Reduce(`+`,sapply(activation_regions[-3],`*`,
-                                       y = rgamma(1,20,20), simplify = F))
-  # Create beta_2
-  beta_2 <- ifelse(binary_template == 0, NA, 0)
-  beta_2 <- beta_2 + Reduce(`+`,sapply(activation_regions[-1],`*`,
-                                       y = rgamma(1,20,20), simplify = F))
-  # Create the mean response
-  task_1_means <- beta_1 %o% c(t1)
-  task_2_means <- beta_2 %o% c(t2)
-  y_means <- task_1_means + task_2_means
-  # Use the mean responses to create the simulated response data
-  y_t <- apply(y_means, 1:2, function(bv) {
-    if(is.na(bv[1])) {
-      return(rep(NA,length(bv)))
-    } else {
-      out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2)
-      return(out)
-    }
-  })
-  y <- apply(y_t,1, identity)
-  y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
-  y <- y[!y_exclude,]
-  y <- t(y)
-  return(list(y=y,betas = list(bbeta_1 = beta_1, bbeta_2 = beta_2)))
-}, simplify = F)
-
-
-names(y_i) <- paste("session",1:2,sep="_")
 ```
 
 This resulted in the true activation amplitudes:
 
 ```{r True Activation Amplitudes, fig.height=5, fig.width=7, echo=F}
-library(purrr)
-library(ggplot2)
-wb_palette2 <- ciftiTools::ROY_BIG_BL(min = 0, max = 1, pos_half = T)
-reshape2::melt(y_i) %>% 
-  dplyr::filter(L2 == "betas") %>% 
-  ggplot() +
-  geom_raster(aes(x = Var1, y = Var2, fill = value)) + 
-  scale_fill_gradientn("",colors = wb_palette2$color, 
-                       values = wb_palette2$value, 
-                       na.value = "white") +
-  facet_grid(L1~L3) +
-  labs(x="", y= "") +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        axis.ticks = element_blank(),
-        axis.text = element_blank())
+plot_image_2D(multi_data$betas$session_1)
+plot_image_2D(multi_data$betas$session_2)
 ```
 
 
 We can now format the simulated data for each session as a `session` object, and combine the sessions into a list:
 
-```{r}
-# Create the sessions
-data <- sapply(y_i, function(yi) {
-  out <- list(BOLD = yi$y,
-              design = cbind(t1,t2))
-  return(out)
-},simplify = F)
-names(data) <- paste("session",1:2)
-```
+<!-- # ```{r} -->
+<!-- # # Create the sessions -->
+<!-- # data <- sapply(y_i, function(yi) { -->
+<!-- #   out <- list(BOLD = yi$y, -->
+<!-- #               design = cbind(t1,t2)) -->
+<!-- #   return(out) -->
+<!-- # },simplify = F) -->
+<!-- # names(data) <- paste("session",1:2) -->
+<!-- # ``` -->
 
 
 The multi-session spatial Bayesian GLM can be estimated using the `BayesGLM_surface()` function. Expected computation time is approximately 10 minutes with PARDISO enabled. **Note: Model is pre-computed. Set `eval=TRUE` to compute.**
 
 ```{r, eval = FALSE}
 # Run the model in INLA
-multi_session_result <- BayesGLM_surface(data=data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose=F)
+multi_session_result <- BayesGLM_surface(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose=F)
 saveRDS(multi_session_result, "../scratch/501_multi_session_BayesGLM_results.rds")
 ```
 
