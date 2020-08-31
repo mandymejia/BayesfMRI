@@ -1,8 +1,7 @@
-#' Identify Boundary Layers
+#' Identify Boundary Layers.
 #'
-#' Identify the vertices within \code{boundary_width} edges of the input mask. The
-#' mesh must be triangular.
-#'
+#' @description Identify the vertices within \code{boundary_width} edges of the input mask.
+#' The mesh must be triangular.
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
 #' @param mask a length-V logical vector. Each entry corresponds to the vertex
@@ -15,6 +14,7 @@
 #'  number of vertices away from the closest vertex in the input mask.
 #'  Vertices inside the input mask but at the edge of it (touching vertices with
 #'  value 1) will have value 0. All other vertices will have value -1.
+#'
 #'
 boundary_layers <- function(faces, mask, boundary_width=10){
   s <- ncol(faces)
@@ -136,7 +136,7 @@ radial_order <- function(verts){
 #'  layer) is retained; the rest are discarded. In the second layer, every
 #'  \code{k2} vertex within every \code{k2} layer (beginning with the innermost
 #'  layer) is retained; the rest are discarded. It is recommended to make \code{width1}
-#'  a multiple of \{k1} and \code{width2} a multiple of \code{k2}.
+#'  a multiple of \code{k1} and \code{width2} a multiple of \code{k2}.
 #'
 #' Default boundary: a 4-vertex wide middle region with triangles twice as long,
 #'  and a 6-vertex wide outer region with triangles three times as long.
@@ -153,7 +153,7 @@ radial_order <- function(verts){
 #'  size, the sides of the triangles in the middle/outer region will be about
 #'  \code{k1}/\code{k2} as long.
 #'
-#' @return A new mesh (list with components "vertices" and "faces")
+#' @return A new mesh (list with components vertices and faces)
 #'
 mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, k2=3){
 

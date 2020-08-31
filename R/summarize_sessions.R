@@ -176,18 +176,18 @@ summarize_sessions <- function(result,
                                #no_cores = NULL,
                                nsamp_theta = 50,
                                nsamp_beta = 100){
-  
+
   flag <- inla.pardiso.check()
   if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
   inla.setOption(smtp='pardiso')
-  
+
   # Find the numnber of sessions and tasks
   session_names <- result$session_names # TO DO: have BayesGLM_surface return the design matrix.
   J <- length(session_names)
   K <- length(result$beta_names)
-  
+
   #### SET UP OR CHECK CONTRAST VECTOR(S)
-  
+
   # If contrasts is null, by default set up a contrast vector that will compute the average across subjects/sessions for each task
   if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
   if(is.null(contrasts)) {
@@ -198,14 +198,14 @@ summarize_sessions <- function(result,
       contrasts[[k]] <- contrast_allsubj_k
     }
   }
-  
+
   #Check that each contrast vector is numeric and length J*K
   num_contrasts <- length(contrasts)
   length_each_contrast <- sapply(contrasts, length)
   class_each_contrast <- sapply(contrasts, is.numeric)
   if(any(length_each_contrast != J*K)) stop('each contrast vector must be of length J*K')
   if(any(!class_each_contrast)) stop('each contrast vector must be numeric, but at least one is not')
-  
+
   #Check excursions settings
   if(exists(excursion_type)) {
     do_excur <- TRUE
@@ -217,27 +217,27 @@ summarize_sessions <- function(result,
   } else {
     excursion_type <- 'none'
   }
-  
+
   #Check quantiles argument
   if(!is.null(quantiles)){
     if(any(quantiles > 1 | quantiles < 0)) stop('All elements of quantiles argument must be between 0 and 1.')
   }
-  
-  
+
+
   # Mesh and SPDE object
   mesh <- result$mesh
   spde <- inla.spde2.matern(mesh)
   mask <- result$mask
-  
+
   #### GET THETA POSTERIOR FROM MULTI-SESSION MODEL
-  
+
   Q.theta <- result$Q.theta
   mu.theta <- result$mu.theta
-  
+
   #### DRAW SAMPLES FROM POSTERIOR OF THETA (Normal approximation)
-  
+
   theta.samp <- inla.qsample(n=nsamp_theta, Q = Q.theta, mu = mu.theta)
-  
+
   # ## Create index vectors
   # K <- (dim(theta.samp)[2] - 1)/2
   # n.mesh <- mesh$n
@@ -245,14 +245,14 @@ summarize_sessions <- function(result,
   # for(k in 1:K){
   #   ind_beta[[k]] <- 1:n.mesh + (k-1)*n.mesh
   # }
-  
+
   # ## Compute cross-products for single session
   # A.lst <- vector("list", K)
   # for(k in 1:K){
   #   A.lst[[k]] <- A
   # }
   # Amat.tot <- bdiag(A.lst)
-  
+
   Xcros <- Xycros <- vector('list', J)
   y_vec <- result$y
   X_list <- result$X #%*%Amat.tot #for multi-session data, make X a block diagonal matrix
@@ -261,12 +261,12 @@ summarize_sessions <- function(result,
     Xcros[[mm]] <- crossprod(X_list[[mm]])
     Xycros[[mm]] <- crossprod(X_list[[mm]], y_vec[inds_m])
   }
-  
+
   print('Computing posterior quantities of beta for each value of theta')
-  
+
   #get posterior quantities of beta, conditional on a value of theta
   #if(is.null(no_cores)) {
-  
+
   #apply is crashing R!  Try looping?
   beta.posteriors <- vector('list', length=nsamp_theta)
   for(isamp in 1:nsamp_theta){
@@ -282,7 +282,7 @@ summarize_sessions <- function(result,
                                                              alpha=alpha,
                                                              nsamp_beta=nsamp_beta) #20 sec/iter
   }
-  
+
   #   beta.posteriors <- apply(theta.samp, MARGIN=2,
   #                            FUN=beta.posterior.thetasamp,
   #                            spde=spde,
@@ -310,8 +310,8 @@ summarize_sessions <- function(result,
   #                            alpha=alpha)
   #   stopCluster(cl)
   # }
-  
-  
+
+
   # ### Computing posterior quantities of beta averaged over subjects (summing over theta)
   # #organize samples
   # mu.tot <- matrix(nrow=K*n.mesh, ncol=nsamp_theta)
@@ -327,21 +327,21 @@ summarize_sessions <- function(result,
   # ## Sum over samples using weights
   # betas.all <- matrix(0, nrow=n.mesh, ncol=K)
   # probs.all <- active.all <- array(0, dim=c(n.mesh, K, U)) #last dimension is for different activation thresholds
-  
+
   #posterior mean (average over all thetas)
   mu.bytheta <- lapply(beta.posteriors, function(x) return(x$mu)) #extract conditional posterior means
   mu.bytheta <- abind(mu.bytheta, along=3) #list to array
   mu.all <- matrix(NA, nrow=length(mask), ncol = num_contrasts)
   mu.all[mask,] <- apply(mu.bytheta, c(1,2), mean) #average over thetas
-  
-  
+
+
   # #posterior mean
   # beta.pop <- as.vector(mu.tot%*%wt)
   # for(k in 1:K){
   #   beta.pop.k <- beta.pop[ind_beta[[k]]]
   #   betas.all[,k] <- as.vector(beta.pop.k)
   # }
-  
+
   #posterior quantiles
   num_quantiles <- length(quantiles)
   if(num_quantiles > 0){
@@ -354,7 +354,7 @@ summarize_sessions <- function(result,
       quantiles.all[[iq]][mask,] <- apply(quantiles.bytheta, c(1,2), mean)
     }
   }
-  
+
   #posterior probabilities and excursion sets
   F.bytheta <- lapply(beta.posteriors, function(x) return(x$F))
   F.bytheta <- abind(F.bytheta, along=3)
@@ -364,8 +364,8 @@ summarize_sessions <- function(result,
   E.all[F.all > 1-alpha] <- 1 #active areas
   active.all <- matrix(NA, nrow=length(mask), ncol = num_contrasts)
   active.all[mask,] <- E.all
-  
-  
+
+
   # for(u in 1:U){
   #   for(k in 1:K){
   #     F.pop.uk <- as.vector(F.tot[[u]][[k]]%*%wt)
@@ -376,8 +376,8 @@ summarize_sessions <- function(result,
   #   }
   # }
   #
-  
-  
+
+
   # ### Computing posterior quantities of contrasts (summing over theta)
   # if(is.null(contrasts) == FALSE){
   #   #organize samples
@@ -423,13 +423,13 @@ summarize_sessions <- function(result,
   # } else{
   #   betas.all.contr <- probs.all.contr <- active.all.contr <- NULL
   # }
-  
+
   return(list(
-    posterior_means = mu.all
-    posterior_quantiles = quantiles.all
-    posterior_probs = F.all
+    posterior_means = mu.all,
+    posterior_quantiles = quantiles.all,
+    posterior_probs = F.all,
     posterior_active = active.all
   ))
-  
+
 }
 

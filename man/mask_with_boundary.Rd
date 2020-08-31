@@ -31,11 +31,21 @@ size, the sides of the triangles in the middle/outer region will be about
 \code{k1}/\code{k2} as long.}
 }
 \value{
-A new mesh (list with components "vertices" and "faces")
+A new mesh (list with components vertices and faces)
 }
 \description{
 Make a boundary around a mask with two levels of decimation, and apply to a mask.
 }
 \details{
+The boundary consists of a \code{width1}-vertex-wide middle region and a
+\code{width2}-vertex-wide outer region, for a total of \code{width1 + width2} layers
+of vertices surrounding the input mask. In the first layer, every \code{k1}
+vertex within every \code{k1} layer (beginning with the innermost
+layer) is retained; the rest are discarded. In the second layer, every
+\code{k2} vertex within every \code{k2} layer (beginning with the innermost
+layer) is retained; the rest are discarded. It is recommended to make \code{width1}
+a multiple of \code{k1} and \code{width2} a multiple of \code{k2}.
 
+Default boundary: a 4-vertex wide middle region with triangles twice as long,
+and a 6-vertex wide outer region with triangles three times as long.
 }
