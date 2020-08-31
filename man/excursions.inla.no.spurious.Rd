@@ -4,11 +4,28 @@
 \alias{excursions.inla.no.spurious}
 \title{Calculation of excursion sets with the removal of small areas}
 \usage{
-excursions.inla.no.spurious(result.inla, stack, name = NULL,
-  tag = NULL, u, alpha = 1, type, n.iter = 10000, F.limit,
-  u.link = FALSE, method, ind = NULL, max.size, verbose = 0,
-  max.threads = 0, seed = NULL, mesh, area.limit,
-  use.continuous = FALSE, plot.progress = FALSE)
+excursions.inla.no.spurious(
+  result.inla,
+  stack,
+  name = NULL,
+  tag = NULL,
+  u,
+  alpha = 1,
+  type,
+  n.iter = 10000,
+  F.limit,
+  u.link = FALSE,
+  method,
+  ind = NULL,
+  max.size,
+  verbose = 0,
+  max.threads = 0,
+  seed = NULL,
+  mesh,
+  area.limit,
+  use.continuous = FALSE,
+  plot.progress = FALSE
+)
 }
 \arguments{
 \item{result.inla}{Result object from INLA call.}

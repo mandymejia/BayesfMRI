@@ -4,8 +4,17 @@
 \alias{estimate_model}
 \title{Estimate INLA model}
 \usage{
-estimate_model(formula, data, A, spde, prec_initial, num.threads = 4,
-  int.strategy = "eb", verbose = FALSE, contrasts = NULL)
+estimate_model(
+  formula,
+  data,
+  A,
+  spde,
+  prec_initial,
+  num.threads = 4,
+  int.strategy = "eb",
+  verbose = FALSE,
+  contrasts = NULL
+)
 }
 \arguments{
 \item{formula}{Formula to put into inla}
