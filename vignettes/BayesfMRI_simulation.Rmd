@@ -77,6 +77,8 @@ install_github('mandymejia/BayesfMRI', ref='1.4')
 
 ```{r setup}
 library(BayesfMRI)
+library(INLA)
+inla.setOption(pardiso.license="~/pardiso.lic")
 ```
 
 # Single-Subject, Single-Session Analysis 
@@ -445,7 +447,7 @@ names(data) <- paste("session",1:2)
 
 The multi-session spatial Bayesian GLM can be estimated using the `BayesGLM_surface()` function. Expected computation time is approximately 10 minutes with PARDISO enabled. **Note: Model is pre-computed. Set `eval=TRUE` to compute.**
 
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 # Run the model in INLA
 multi_session_result <- BayesGLM_surface(data=data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose=F)
 saveRDS(multi_session_result, "../scratch/501_multi_session_BayesGLM_results.rds")
@@ -453,7 +455,7 @@ saveRDS(multi_session_result, "../scratch/501_multi_session_BayesGLM_results.rds
 
 ## Single Session Results
 
-```{r Bring in the multi-session results, include=F, eval=FALSE}
+```{r Bring in the multi-session results, include=F, eval=TRUE}
 multi_session_result <- readRDS("../scratch/501_multi_session_BayesGLM_results.rds")
 ```
 
@@ -467,18 +469,15 @@ The above results from the different sessions can be combined to improve the pow
 
 ```{r Combining the multi-session results}
 
-contrasts <- list()
-
-summarize_sessions(multi_session_result, )
-
-contrasts_def <- list(
-  rbind(
-    c(0.5,0),
-    c(0.5,0)),
-  rbind(
-    c(0,0.5),
-    c(0,0.5)
-  ))
-combined_session_results <- BayesGLM_surface(data = multi_session_result, mesh = mesh, contrasts = contrasts_def, scale_BOLD = FALSE, scale_design = FALSE, verbose = F)
+2+2
+# contrasts_def <- list(
+#   rbind(
+#     c(0.5,0),
+#     c(0.5,0)),
+#   rbind(
+#     c(0,0.5),
+#     c(0,0.5)
+#   ))
+#combined_session_results <- BayesGLM_surface(data = multi_session_result, mesh = mesh, contrasts = contrasts_def, scale_BOLD = FALSE, scale_design = FALSE, verbose = F)
 ```
 
