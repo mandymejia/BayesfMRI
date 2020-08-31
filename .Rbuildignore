@@ -3,4 +3,3 @@
 ^R/BayesGLM_group\.R$
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^scratch$
-^R/simulate_slice_data\.R$
