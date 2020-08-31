@@ -4,8 +4,16 @@
 \alias{diagnosticICA}
 \title{Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)}
 \usage{
-diagnosticICA(template_mean, template_var, BOLD, scale = TRUE,
-  maxQ = NULL, maxiter = 100, epsilon = 0.001, verbose = TRUE)
+diagnosticICA(
+  template_mean,
+  template_var,
+  BOLD,
+  scale = TRUE,
+  maxQ = NULL,
+  maxiter = 100,
+  epsilon = 0.001,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}

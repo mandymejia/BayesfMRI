@@ -4,12 +4,25 @@
 \alias{templateICA.cifti}
 \title{Run template ICA based on CIFTI-format BOLD data and CIFTI-based template}
 \usage{
-templateICA.cifti(cifti_fname, template, brainstructures = c("left",
-  "right"), spatial_model = FALSE, surfL_fname = NULL,
-  surfR_fname = NULL, resamp_res = NULL, sphereL_fname = NULL,
-  sphereR_fname = NULL, scale = TRUE, maxQ = NULL,
-  common_smoothness = TRUE, maxiter = 100, epsilon = 0.001,
-  verbose = TRUE, kappa_init = NULL, write_dir = NULL)
+templateICA.cifti(
+  cifti_fname,
+  template,
+  brainstructures = c("left", "right"),
+  spatial_model = FALSE,
+  surfL_fname = NULL,
+  surfR_fname = NULL,
+  resamp_res = NULL,
+  sphereL_fname = NULL,
+  sphereR_fname = NULL,
+  scale = TRUE,
+  maxQ = NULL,
+  common_smoothness = TRUE,
+  maxiter = 100,
+  epsilon = 0.001,
+  verbose = TRUE,
+  kappa_init = NULL,
+  write_dir = NULL
+)
 }
 \arguments{
 \item{cifti_fname}{File path of CIFTI-format timeseries data (ending in .dtseries.nii).}

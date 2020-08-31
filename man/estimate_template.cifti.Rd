@@ -4,9 +4,16 @@
 \alias{estimate_template.cifti}
 \title{Estimate Template for Template or Diagnostic ICA}
 \usage{
-estimate_template.cifti(cifti_fnames, cifti_fnames2 = NULL, GICA_fname,
-  inds = NULL, scale = TRUE, brainstructures = c("left", "right"),
-  verbose = TRUE, out_fname = NULL)
+estimate_template.cifti(
+  cifti_fnames,
+  cifti_fnames2 = NULL,
+  GICA_fname,
+  inds = NULL,
+  scale = TRUE,
+  brainstructures = c("left", "right"),
+  verbose = TRUE,
+  out_fname = NULL
+)
 }
 \arguments{
 \item{cifti_fnames}{Vector of file paths of CIFTI-format fMRI timeseries
@@ -37,6 +44,9 @@ Default: \code{c("left","right")} (cortical surface only).}
 resolution, usually necessary for spatial template ICA.) The path and base name
 prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 template mean maps and "_var.dscalar.nii" for template variance maps.}
+}
+\value{
+
 }
 \description{
 Estimate Template for Template or Diagnostic ICA

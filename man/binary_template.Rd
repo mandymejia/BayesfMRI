@@ -4,7 +4,9 @@
 \name{binary_template}
 \alias{binary_template}
 \title{Binary Template of Single Axial Slice of Resampled MNI152 Brain Image}
-\format{An object of class \code{"matrix" "array"}}
+\format{
+An object of class \code{"matrix" "array"}
+}
 \usage{
 data(binary_template)
 }

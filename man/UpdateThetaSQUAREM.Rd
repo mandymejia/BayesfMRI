@@ -4,8 +4,19 @@
 \alias{UpdateThetaSQUAREM}
 \title{Helper function for SQUAREM for estimating parameters}
 \usage{
-UpdateThetaSQUAREM(theta_vec, template_mean, template_var, mesh, BOLD,
-  C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose)
+UpdateThetaSQUAREM(
+  theta_vec,
+  template_mean,
+  template_var,
+  mesh,
+  BOLD,
+  C_diag,
+  s0_vec,
+  D,
+  Dinv_s0,
+  common_smoothness,
+  verbose
+)
 }
 \arguments{
 \item{theta_vec}{Vector of initial parameter values}
