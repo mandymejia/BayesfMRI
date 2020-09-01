@@ -2,112 +2,52 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{Performs whole-brain spatial Bayesian GLM for fMRI task activation}
+\title{Applies spatial Bayesian GLM to task fMRI data on the cortical surface}
 \usage{
 BayesGLM(
-  cifti_fname,
-  surfL_fname = NULL,
-  surfR_fname = NULL,
-  sphereL_fname = NULL,
-  sphereR_fname = NULL,
-  brainstructures = c("left", "right", "subcortical"),
-  wb_path = NULL,
-  design = NULL,
-  onsets = NULL,
-  TR = NULL,
-  nuisance = NULL,
-  nuisance_include = c("drift", "dHRF"),
+  data,
+  vertices = NULL,
+  faces = NULL,
+  mesh = NULL,
+  mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
-  GLM_method = "both",
-  session_names = NULL,
-  resamp_res = 10000,
   num.threads = 4,
-  verbose = FALSE,
-  write_dir = NULL,
+  return_INLA_result = TRUE,
   outfile = NULL,
-  return_INLA_result = FALSE
+  verbose = FALSE,
+  contrasts = NULL
 )
 }
 \arguments{
-\item{cifti_fname}{File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}
+\item{data}{A list of sessions, where each session is a list with elements
+BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
+List element names represent session names.}
 
-\item{surfL_fname}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
+\item{vertices}{A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.}
 
-\item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
+\item{faces}{A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.}
 
-\item{sphereL_fname}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
+\item{mesh}{A \code{inla.mesh} object.  Must be provided if and only if \code{vertices} and \code{faces} are not.}
 
-\item{sphereR_fname}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
+\item{mask}{(Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.}
 
-\item{brainstructures}{Character vector indicating which brain structure(s)
-to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
-cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
-gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
-
-\item{wb_path}{(Optional) Path to Connectome Workbench folder or executable.
-If not provided, should be set with
-\code{ciftiTools.setOption("wb_path", "path/to/workbench")}.}
-
-\item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}
-
-\item{onsets}{A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.}
-
-\item{TR}{The temporal resolution of the data in seconds.  Must be provided if onsets provided.}
-
-\item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
-
-\item{nuisance_include}{(Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).}
-
-\item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
-
-\item{scale_design}{If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.}
-
-\item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
-
-\item{session_names}{(Optional) A vector of names corresponding to each session.}
-
-\item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
+\item{scale_BOLD}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
 
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
-\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
-
-\item{write_dir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
-
-\item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
-
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
+
+\item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
+
+\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 }
 \value{
-An object of class BayesGLM, a list containing ...
+A list containing...
 }
 \description{
-Performs whole-brain spatial Bayesian GLM for fMRI task activation
+Applies spatial Bayesian GLM to task fMRI data on the cortical surface
 }
-\details{
-This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
-available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_path' argument is the full file path to the 'wb_command' executable file.
-
-The subcortical brain structure labels range from 3-21 and represent:
-3 Accumbens-L
-4 Accumbens-R
-5 Amygdala-L
-6 Amygdala-R
-7 Brain Stem
-8 Caudate-L
-9 Caudate-R
-10 Cerebellum-L
-11 Cerebellum-R
-12 Diencephalon-L
-13 Diencephalon-R
-14 Hippocampus-L
-15 Hippocampus-R
-16 Pallidum-L
-17 Pallidum-R
-18 Putamen-L
-19 Putamen-R
-20 Thalamus-L
-21 Thalamus-R
+\note{
+This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 }

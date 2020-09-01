@@ -100,7 +100,7 @@ single_subject_classical <- classicalGLM(data = data, scale_BOLD = T, scale_desi
 inla.setOption(pardiso.license="~/licenses/pardiso.lic")
 inla.pardiso.check()
 # Run the Bayes
-single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, verbose = F)
+single_subject_result <- BayesGLM(data = data, mesh = mesh, verbose = F)
 # Save the results
 saveRDS(single_subject_classical, "500_single_subject_classical_results.rds")
 saveRDS(single_subject_result, "500_single_subject_BayesGLM_results.rds")
