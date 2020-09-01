@@ -60,7 +60,7 @@
 #' 20 Thalamus-L
 #' 21 Thalamus-R
 #'
-BayesGLM <- function(cifti_fname,
+BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
                      sphereL_fname=NULL, sphereR_fname=NULL,
                      brainstructures=c('left','right','subcortical'),
@@ -317,7 +317,7 @@ BayesGLM <- function(cifti_fname,
     if(do_classical) classicalGLM_left <- classicalGLM(session_data,
                                                        scale_BOLD=scale_BOLD,
                                                        scale_design = scale_design)
-    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data,
+    if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
                                                       vertices = verts_left,
                                                       faces = faces_left,
                                                       scale_BOLD=scale_BOLD,
@@ -357,7 +357,7 @@ BayesGLM <- function(cifti_fname,
     if(do_classical) classicalGLM_right <- classicalGLM(session_data,
                                                         scale_BOLD=scale_BOLD,
                                                         scale_design = scale_design)
-    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data,
+    if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
                                                       vertices = verts_right,
                                                       faces = faces_right,
                                                       scale_BOLD=scale_BOLD,
@@ -480,7 +480,7 @@ BayesGLM <- function(cifti_fname,
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL){
+BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)

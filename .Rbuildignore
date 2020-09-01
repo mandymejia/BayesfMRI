@@ -1,7 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^R/BayesGLM_group\.R$
-^vignettes/BayesfMRI_simulation\.Rmd$
+^vignettes$
 ^scratch$
-^R/simulate_slice_data\.R$
 ^R/summarize_sessions\.R$
+^R/plot_image_2d\.R$
+^R/plot_BayesGLM_2d\.R$
+^R/simulate_slice_data\.R$
+^R/plot_BayesGLM_2D\.R$
