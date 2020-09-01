@@ -38,7 +38,7 @@ There are several prerequisites to using `BayesfMRI` for spatial Bayesian task f
 
 3. Enabling the PARDISO sparse matrix algebra library 
 
-**Note: Several chunks in this vignette have `eval=FALSE` to avoid re-installing packages and somewhat long computation times associated with model estimation.  To run the vignette from start to finish, set `eval=TRUE` for each chunk, make the appropriate changes as noted in comments, and comment out install lines after successfully installing packages.**
+**Note: Several chunks in this vignette have `eval=FALSE` to avoid re-installing packages and somewhat long computation times associated with model estimation.  To run the vignette from start to finish, set `eval=TRUE` for each chunk, make the appropriate changes as noted in comments, and comment out install lines after successfully installing packages.  To use pre-computed results, download and unzip the rds files in the vignettes directory.**
 
 ## 1. Installing R-INLA 
 
@@ -81,6 +81,7 @@ install_github('mandymejia/BayesfMRI', ref='1.4')
 
 
 ```{r setup}
+# Replace '~/pardiso.lic' with the actual path to the Connectome Workbench folder on your computer.
 library(INLA)
 if(Sys.info()['sysname'] != "Windows") {
   inla.setOption(pardiso.license="~/pardiso.lic")
@@ -129,8 +130,8 @@ With the data created and in the correct format, the analysis can begin!
 We can fit a classical GLM to the data using the `classicalGLM()` function. Note that by default, the BOLD data and the design are scaled so that the estimated coefficients for each task represent the percent signal change associated with each task. For simulated data, we do not scale to avoid inducing changes to the true beta coefficient maps. The resulting images of the point estimates for the coefficients can be seen below.
 
 ```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
-single_subject_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
-classical_estimates <- vec_to_image(single_subject_classical$session_1, template_image = binary_template)
+single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
+classical_estimates <- vec_to_image(single_session_classical$session_1, template_image = binary_template)
 plot_image_2D(classical_estimates, zlim = c(-1.5,1.5))
 ```
 
@@ -149,16 +150,16 @@ plot(mesh, main = "")
 Next, the spatial Bayesian GLM can be estimated using the `BayesGLM()` function. As in the classical GLM, we do not scale the timeseries or the design matrix to avoid inducing changes in the true beta coefficients. **Note: Model is pre-computed. Set `eval=TRUE` to compute. For this dataset, the expected computation time is approximately 5 minutes with PARDISO enabled.**
 
 ```{r Bayes GLM, eval=FALSE}
-single_subject_result <- BayesGLM(data = data, mesh = mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = F)
-saveRDS(single_subject_result, "../scratch/500_single_subject_BayesGLM_results.rds")
+single_session_result <- BayesGLM(data = simulated_data$data, mesh = mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=FALSE)
+saveRDS(single_session_result, "single_session_BayesGLM_results.rds")
 ```
 
-```{r Bring in the single subject result, include=F}
-single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results.rds")
+```{r Bring in the single subject result, include=F, eval=TRUE}
+single_session_result <- readRDS("single_session_BayesGLM_results.rds")
 ```
 
 ```{r Plot the single-session mean results, fig.height=3, fig.width=7}
-plot_BayesGLM_2d(single_subject_result, mask = binary_template, zlim = c(-1.5,1.5))
+plot_BayesGLM_2d(single_session_result, mask = binary_template, zlim = c(-1.5,1.5))
 ```
 
 # Single-Subject, Multi-Session Analysis 
@@ -203,14 +204,14 @@ The function `simulate_slice_data()` formats the data into a list of "session" o
 
 ```{r, eval = FALSE}
 # Run the model in INLA
-multi_session_result <- BayesGLM(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose=F)
-saveRDS(multi_session_result, "../scratch/501_multi_session_BayesGLM_results.rds")
+multi_session_result <- BayesGLM(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=FALSE)
+saveRDS(multi_session_result, "multi_session_BayesGLM_results.rds")
 ```
 
 ## Results
 
-```{r Bring in the multi-session results, include=F}
-multi_session_result <- readRDS("../scratch/501_multi_session_BayesGLM_results.rds")
+```{r Bring in the multi-session results, include=F, eval=TRUE}
+multi_session_result <- readRDS("multi_session_BayesGLM_results.rds")
 ```
 
 ```{r Separate sessions plot, fig.height=6, fig.width=7}
