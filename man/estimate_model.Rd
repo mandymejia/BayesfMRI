@@ -32,6 +32,9 @@ estimate_model(
 \item{int.strategy}{INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy}
 
 \item{verbose}{Logical indicating if should run in a verbose mode (default FALSE).}
+
+\item{contrasts}{A list of contrast vectors to be passed to
+\code{\link{inla}}.}
 }
 \value{
 Results from INLA

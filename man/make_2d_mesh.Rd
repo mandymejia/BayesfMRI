@@ -15,7 +15,3 @@ A \code{inla.mesh} object that can be used to run the \code{BayesGLM_surface} fu
 \description{
 Make a 2-D Mesh
 }
-\examples{
-data(binary_template)
-mesh_2d <- make_2d_mesh(binary_template)
-}

@@ -5,13 +5,15 @@
 #'   first column should contain colors (in HEX, character, or other format),
 #'   and the second column should contain locations for color breaks on the unit
 #'   interval describing the locations for color switching. This will default to
-#'   the output from \code{ROY_BIG_BL} palette from the \code{\link{ciftiTools}}
+#'   the output from \code{ROY_BIG_BL} palette from the \code{ciftiTools}
 #'   package.
 #' @param zlim A vector of length 2 describing the endpoints of the color
 #'   palette.
 #'
 #' @return A ggplot graphical object.
-#' @import dplyr ggplot2 purrr
+#' @import dplyr
+#' @import ggplot2
+#' @import purrr
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom reshape2 melt
 #' @export

@@ -15,6 +15,8 @@ mask_with_boundary(
 )
 }
 \arguments{
+\item{vertices}{An N x 3 matrix defining the locations of N vertices.}
+
 \item{faces}{a V x 3 matrix of integers. Each row defines a face by the index
 of three vertices.}
 

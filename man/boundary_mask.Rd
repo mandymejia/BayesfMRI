@@ -2,7 +2,7 @@
 % Please edit documentation in R/util.R
 \name{boundary_mask}
 \alias{boundary_mask}
-\title{Array split}
+\title{Boundary Mask}
 \usage{
 boundary_mask(faces, mask, boundary_width)
 }
@@ -15,22 +15,12 @@ input mask.}
 
 \item{boundary_width}{a positive integer. Vertices no more than this number
 of edges from any vertex in the input mask will be placed in the boundary mask.}
-
-\item{X}{An array of dimension greater than 1}
-
-\item{margin}{The margin at which the array should be split}
 }
 \value{
-A list of subarrays split along the \code{margin} dimension
-
-Boundary Mask
-
-Identify the vertices within \code{boundary_width} edges of the input mask. The
-faces must be triangular.
-
 The boundary mask, a length-V logical vector. TRUE indicates vertices
 within the boundary mask.
 }
 \description{
-Generalizes the \code{split} function to work with arrays of arbitrary dimension greater than 2.
+Identify the vertices within \code{boundary_width} edges of the input mask. The
+faces must be triangular.
 }

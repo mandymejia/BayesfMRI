@@ -34,6 +34,9 @@ List element names represent session names.}
 
 \item{scale_BOLD}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
 
+\item{scale_design}{If TRUE, scale the design matrix by dividing each column
+by its maximum value, and then subtracting the new column mean.}
+
 \item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
@@ -41,6 +44,9 @@ List element names represent session names.}
 \item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
 
 \item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
+
+\item{contrasts}{A list of contrast vectors to be passed to
+\code{\link{inla}}.}
 }
 \value{
 A list containing...

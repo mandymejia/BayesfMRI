@@ -1,6 +1,6 @@
 #' Create simulated slice data for the BayesGLM_surface function
 #'
-#' @param sessions a number
+#' @param num_sessions a number
 #' @param num_tasks a number
 #' @param active_centers a matrix, with the number of rows corresponding to the
 #'   number of activation regions. There should be two columns, corresponding

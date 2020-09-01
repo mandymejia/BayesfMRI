@@ -141,6 +141,7 @@ radial_order <- function(verts){
 #' Default boundary: a 4-vertex wide middle region with triangles twice as long,
 #'  and a 6-vertex wide outer region with triangles three times as long.
 #'
+#' @param vertices An N x 3 matrix defining the locations of N vertices.
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
 #' @param mask a length-V logical vector. Each entry corresponds to the vertex

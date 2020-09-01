@@ -468,10 +468,14 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
 #' @param mask (Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.
 #' @param scale_BOLD If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
+#' @param scale_design If TRUE, scale the design matrix by dividing each column
+#'   by its maximum value, and then subtracting the new column mean.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
+#' @param contrasts A list of contrast vectors to be passed to
+#'   \code{\link{inla}}.
 #'
 #' @return A list containing...
 #' @export
@@ -707,6 +711,8 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 #' @param num.threads Number of threads
 #' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
 #' @param verbose Logical indicating if should run in a verbose mode (default FALSE).
+#' @param contrasts A list of contrast vectors to be passed to
+#'   \code{\link{inla}}.
 #'
 #' @return Results from INLA
 #' @export

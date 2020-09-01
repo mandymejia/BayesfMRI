@@ -4,10 +4,6 @@
 #'
 #' @return  A \code{inla.mesh} object that can be used to run the \code{BayesGLM_surface} function with two-dimensional data
 #' @export
-#'
-#' @examples
-#' data(binary_template)
-#' mesh_2d <- make_2d_mesh(binary_template)
 make_2d_mesh <- function(mask) {
   in_mask <- which(mask == 1, arr.ind = T)
   in_mask <- in_mask[,2:1]
