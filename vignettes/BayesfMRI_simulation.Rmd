@@ -1,11 +1,13 @@
 ---
-title: "BayesfMRI_simulation"
+title: "BayesfMRI Demo with Simulated Data"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{BayesfMRI_simulation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -16,37 +18,40 @@ library(rgl)
 knitr::knit_hooks$set(webgl = hook_webgl)
 ```
 
-The BayesfMRI package has two primary capabilities:
-1. Bayesian GLM: Spatial Bayesian analysis of task fMRI data on the cortical surface
-2. Template ICA: Functional brain network estimation from resting-state fMRI using empirical priors
-
-This vignette will focus on (1), spatial Bayesian modeling of task fMRI data on the cortical surface, using a simulated dataset for illustration.  The spatial Bayesian GLM is based on fitting all vertices in each hemisphere in a single model, and assuming a spatial prior distribution on the latent field associated with each task (the unknown image of task activation). The type of priors used are stochastic partial differential equation (SPDE) priors, which are built for data on a triangular mesh, which is the format of cortical surface fMRI data.  We refer readers to [@mejia2020bayesian]
+The BayesfMRI package is designed to fit spatial Bayesian models to task fMRI data, with a focus on data that has been projected to the cortical surface. This vignette will use a simulated dataset for illustration.  The traditional analysis tool for task fMRI data is the classical general linear model (GLM), a "massive univariate" approach based on fitting a separate location to each location in the brain.  While computationally efficient and easy to understand, the classical GLM ignores information shared across neighboring vertices. This results in a loss of estimation efficiency (noisy estimates) and a loss of power to detect true activations.  The spatial Bayesian GLM implemented in this package is based on fitting all vertices in each hemisphere in a single model, and assuming a spatial prior distribution on the latent field associated with each task (the unknown image of task activation). The type of priors used are stochastic partial differential equation (SPDE) priors, which are built for data on a triangular mesh, which is the format of cortical surface fMRI data.  We refer readers to [@mejia2020bayesian] for further details.
 
 The main functions allow for analyzing several types of datasets:
-* Single-subject, single-session analysis through the `BayesGLM_surface` function
-* Single-subject, multi-session analysis through the `BayesGLM_surface` function
-* Multi-subject analysis through the `BayesGLM_group` function
+
+* Single-subject, single-session analysis through the `BayesGLM` function
+
+* Single-subject, multi-session analysis through the `BayesGLM` function
+
+* Multi-subject analysis through the `summarize_group` function
 
 # Prerequisites
 
 There are several prerequisites to using `BayesfMRI` for spatial Bayesian task fMRI modeling:
-1. Install the R-INLA package
-2. Install Connectome Workbench and the ciftiTools package (not required for this vignette, which only deals with simulated data)
-3. Enable the PARDISO sparse matrix algebra library 
 
-**Note: Several chunks in this vignette have `eval=FALSE` to avoid re-installing packages and long computation times associated with model estimation.  To run the vignette from start to finish, set `eval=TRUE` for each chunk, make the appropriate changes as noted in comments, and comment out install lines after successfully installing packages.**
+1. Installing the R-INLA package
 
-## 1. Install R-INLA 
+2. Installing Connectome Workbench and the ciftiTools package (not required for this vignette, which only deals with simulated data)
+
+3. Enabling the PARDISO sparse matrix algebra library 
+
+**Note: Several chunks in this vignette have `eval=FALSE` to avoid re-installing packages and somewhat long computation times associated with model estimation.  To run the vignette from start to finish, set `eval=TRUE` for each chunk, make the appropriate changes as noted in comments, and comment out install lines after successfully installing packages.**
+
+## 1. Installing R-INLA 
 
 Model estimation is based on integrated nested Laplace approximations (INLA), which is implemented in the R-INLA package. The INLA package must be installed prior to installation of the BayesfMRI package. For Linux systems other than Ubuntu1604, alternative Linux builds should be installed, which are available at \url{http://www.r-inla.org/events/alternativelinuxbuilds}.
 
 ```{r, eval=F}
-install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=FALSE)
+install.packages("INLA", repos=c(getOption("repos"), 
+                                 INLA="https://inla.r-inla-download.org/R/stable"), dep=FALSE)
 ```
 
-## 2. Install Connectome Workbench and ciftiTools 
+## 2. Installing Connectome Workbench and ciftiTools 
 
-To work directly with CIFTI files, the `ciftiTools` package should also be installed. (This is not actually required to run this vignette, which uses simulated data.) First, download the [Connectome Workbench](https://www.humanconnectome.org/software/connectome-workbench). Then install `ciftiTools` and use `ciftiTools.setOption` to point to the location of the workbench. 
+To work directly with CIFTI files, the `ciftiTools` package should also be installed. **This is not actually required to run this vignette, which uses simulated data.**  First, download the [Connectome Workbench](https://www.humanconnectome.org/software/connectome-workbench). Then install `ciftiTools` and use `ciftiTools.setOption` to point to the location of the workbench. 
 
 ```{r, eval=F}
 # Replace '/path/to/workbench' with the actual path to the Connectome Workbench folder on your computer.
@@ -55,15 +60,15 @@ library(ciftiTools)
 ciftiTools.setOption('wb_path', '/path/to/workbench')
 ```
 
-## 3. Enable PARDISO
+## 3. Enabling PARDISO
 
-The PARDISO software was created to optimize the inversions of the sparse, symmetric matrices that arise through the class of priors used by the `INLA` package in R. The use of PARDISO further decreases computation time by allowing for calculations to take place in parallel. To obtain a PARDISO/R-INLA license, run `inla.pardiso()` after installing and loading the `INLA` package. The license should be placed in a file titled "pardiso.lic", which is pointed to using the `inla.setOption()` function.  PARDISO is available for Linux and Mac.
+The PARDISO software was created to optimize the inversions of the sparse, symmetric matrices that arise through the class of priors used by the `INLA` package in R. The use of PARDISO further decreases computation time by allowing for calculations to take place in parallel. To obtain a PARDISO/R-INLA license, run `inla.pardiso()` after installing and loading the `INLA` package. The license should be placed in a file titled "pardiso.lic", which is pointed to using the `inla.setOption()` function.  PARDISO is available for Linux and Mac.  While PARDISO is highly recommended, `BayesGLM` can still be run but will take much longer.
 
-```{r, eval=F}
-# Replace '/path/to/pardiso.lic' with the actual path to the Connectome Workbench folder on your computer.
+```{r, eval=FALSE}
+# Replace '~/pardiso.lic' with the actual path to the Connectome Workbench folder on your computer.
 library(INLA)
 inla.pardiso()
-inla.setOption(pardiso.license="/path/to/pardiso.lic")
+inla.setOption(pardiso.license="~/pardiso.lic")
 inla.pardiso.check()
 ```
 
@@ -76,16 +81,276 @@ install_github('mandymejia/BayesfMRI', ref='1.4')
 
 
 ```{r setup}
-library(BayesfMRI)
 library(INLA)
 inla.setOption(pardiso.license="~/pardiso.lic")
+library(BayesfMRI)
 ```
+
+```{r, echo=FALSE, message=FALSE}
+
+library(ggplot2)
+library(dplyr)
+library(purrr)
+library(reshape2)
+library(neuRosim)
+
+data("binary_template", package = "BayesfMRI",envir = environment()) #we use this later
+
+#' Plot results from a BayesfMRI object for 2D Analyses
+#'
+#' @param BayesGLM_object An object of class "BayesfMRI"
+#' @param mask The mask used to convert from cortical surface to volumetric data
+#' @param session_name The name of the session to plot the results from (defaults to the first session)
+#' @param zlim The color limits for plotting the coefficient values. Defaults to the minimum and maximum of the point estimates
+#'
+#' @return A ggplot2 object
+#' @importFrom ciftiTools ROY_BIG_BL
+#' @importFrom INLA inla.spde.make.A
+#' @import dplyr
+#' @import ggplot2
+#' @import purrr
+#' @export
+plot_BayesGLM_2d <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
+  # Create a conversion matrix
+  in_binary_mask <- which(mask == 1, arr.ind = T)
+  in_binary_mask <- in_binary_mask[,2:1]
+  convert_mat_A <- INLA::inla.spde.make.A(mesh = BayesGLM_object$mesh, loc = in_binary_mask)
+  # Extract the point estimates
+  if(is.null(session_name)) session_name <- BayesGLM_object$session_names
+  point_estimates <- sapply(session_name, function(sn){
+    as.matrix(convert_mat_A %*% BayesGLM_object$beta_estimates[[sn]])
+  }, simplify = F)
+  if(is.null(zlim)) zlim <- c(min(unlist(point_estimates)),
+                              max(unlist(point_estimates)))
+  wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), pos_half = FALSE)
+  coef_images <- sapply(point_estimates, function(pe) {
+    out <- sapply(split(pe, col(pe)), function(beta) {
+      beta_out <- mask
+      beta_out[beta_out == 1] <- beta
+      beta_out[beta_out == 0] <- NA
+      return(beta_out)
+    }, simplify = F)
+    names(out) <- BayesGLM_object$beta_names
+    return(out)
+  }, simplify= F)
+  out_grob <- reshape2::melt(coef_images) %>%
+    ggplot() +
+    geom_raster(aes(x = Var1, y = Var2, fill = value)) +
+    scale_fill_gradientn("",colors = rev(wb_palette$color),
+                         # values = wb_palette$value,
+                         limits = zlim,
+                         na.value = "white") +
+    facet_grid(L1~L2) +
+    labs(x="", y="") +
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank())
+  return(out_grob)
+}
+
+#' Plot a 2D image using ggplot
+#'
+#' @param X A matrix or list of matrices to be plotted
+#' @param color_palette A color palette as a data frame with two columns. The
+#'   first column should contain colors (in HEX, character, or other format),
+#'   and the second column should contain locations for color breaks on the unit
+#'   interval describing the locations for color switching. This will default to
+#'   the output from \code{ROY_BIG_BL} palette from the \code{\link{ciftiTools}}
+#'   package.
+#' @param zlim A vector of length 2 describing the endpoints of the color
+#'   palette.
+#'
+#' @return A ggplot graphical object.
+#' @import dplyr ggplot2 purrr
+#' @importFrom ciftiTools ROY_BIG_BL
+#' @importFrom reshape2 melt
+#' @export
+plot_image_2D <- function(X, color_palette = NULL, zlim = NULL) {
+  if(class(X) == "matrix") X = list(single_activation_field = X)
+  if(class(X) != "list") stop("Expected a matrix or list for X.")
+  if(any(!sapply(X,function(x) {
+    "matrix" %in% class(x)
+  }, simplify = T))) {
+    stop("All list images should be matrices.")
+  }
+  requireNamespace("ggplot2")
+  requireNamespace("dplyr")
+  requireNamespace("purrr")
+  if(is.null(zlim)) {
+    zmin <- min(reshape2::melt(X)$value,na.rm = T)
+    zmax <- max(reshape2::melt(X)$value,na.rm = T)
+    zlim <- c(zmin,zmax)
+  }
+  if(is.null(color_palette)){
+    color_palette <- ciftiTools::ROY_BIG_BL(
+      min = zlim[1],
+      max = zlim[2],
+      mid = mean(zlim),
+      pos_half = FALSE
+    )
+  }
+  if(min(reshape2::melt(X)$value, na.rm = T) >= 0) {
+    color_palette <- ciftiTools::ROY_BIG_BL(
+      min = zlim[1],
+      max = zlim[2],
+      mid = mean(zlim),
+      pos_half = TRUE
+    )
+  }
+  out_grob <- reshape2::melt(X) %>%
+    dplyr::mutate(value = ifelse(value < min(zlim,na.rm = T),min(zlim,na.rm = T),value),
+                  value = ifelse(value > max(zlim,na.rm = T),max(zlim,na.rm = T),value)) %>%
+    ggplot() +
+    geom_raster(aes(x = Var1, y = Var2, fill = value)) +
+    scale_fill_gradientn("",colors = rev(color_palette$color),
+                         limits = zlim,
+                         na.value = "white") +
+    facet_grid(.~L1) +
+    labs(x="", y="") +
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank())
+  return(out_grob)
+}
+
+#' Create simulated slice data for the BayesGLM function
+#'
+#' @param sessions a number
+#' @param num_tasks a number
+#' @param active_centers a matrix, with the number of rows corresponding to the
+#'   number of activation regions. There should be two columns, corresponding
+#'   to the x- and y-coordinates for the centers.
+#' @param active_size a vector of length \code{nrow(active_centers)}
+#' @param beta_weights a matrix, with the number of rows equal to
+#'   \code{num_tasks} and the number of columns equal to the number of rows in
+#'   \code{active_centers}
+#' @param vary_active logical, if there are multiple sessions, should the
+#'   activation centers vary between sessions?
+#' @param num_time length of the time series that is generated
+#' @param binary_template (optional) a binary brain slice image
+#'
+#' @return A list in which the first element, \code{data}, is a list of
+#'   sessions, each with components \code{BOLD} (a matrix) and \code{design}
+#'   (a matrix). The second list element is named \code{betas}, which is a list
+#'   of sessions, each containing a list of the true values of the coefficients
+#'   used to generate the data to be analyzed.
+#' @export
+#' @importFrom neuRosim specifydesign specifyregion
+#'
+#' @examples
+#' data <- simulate_slice_data()
+simulate_slice_data <-
+  function(num_sessions = 1,
+           num_tasks = 2,
+           active_centers = NULL,
+           active_size = NULL,
+           beta_weights = NULL,
+           vary_active = T,
+           num_time = 200,
+           binary_template = NULL) {
+  epoch_length <- floor(num_time / 5)
+  onset_start <- seq(0,floor(epoch_length / 2), length.out = num_tasks)
+  tasks <- sapply(seq(num_tasks), function(tt) {
+    task_n <- neuRosim::specifydesign(
+      onsets = seq(onset_start[tt], num_time, by = epoch_length),
+      durations = 1,
+      totaltime = num_time,
+      TR = 1,
+      effectsize = 1.3,
+      conv = "double-gamma",
+      param = list(list(a1 = 6, a2 = 12, b1 = 0.9, b2 = 0.9, c = 0.15))
+    )
+    return(task_n)
+  }, simplify = T)
+  # Create the responses
+  if(is.null(binary_template)) {
+    data("binary_template", package = "BayesfMRI",envir = environment())
+  }
+  if(is.null(active_centers)){
+    bin_dims <- dim(binary_template)
+    active_centers <- rbind(
+      round(c(0.8,0.5) * bin_dims),
+      round(c(0.25,0.5) * bin_dims),
+      round(c(0.5,0.3) * bin_dims)
+    )
+  }
+  if(is.null(active_size)) {
+    active_size <- sample(2:4, size = nrow(active_centers))
+  }
+  if(is.null(beta_weights)) {
+    largest_margin <- max(num_tasks, nrow(active_centers))
+    base_weights <- stats::toeplitz(rev(seq(largest_margin)) / largest_margin)
+    beta_weights <- base_weights[seq(num_tasks),seq(nrow(active_centers))]
+  }
+  y_i <- sapply(seq(num_sessions), function(i) {
+    # Make the active regions
+    activation_regions <- mapply(function(cs,ss) {
+      if(vary_active) {
+        region_out <-
+          neuRosim::specifyregion(
+            dim = c(45, 54),
+            coord = cs + c(sample(seq(-3,3),size = 1),sample(seq(-3,3),size = 1)),
+            radius = ss,
+            form = "sphere",
+            fading = runif(1,0.1,0.5))
+        region_out <- region_out * rgamma(1,20, 20)
+      } else {
+        region_out <-
+          neuRosim::specifyregion(
+            dim = c(45, 54),
+            coord = cs,
+            radius = ss,
+            form = "sphere",
+            fading = 0.3)
+      }
+      return(region_out)
+    },cs = split(active_centers, row(active_centers)),ss = active_size,
+    SIMPLIFY = F)
+    # Make the coefficients using the active regions
+    beta_coefficients <- sapply(seq(num_tasks), function(j) {
+      beta_components <- mapply(`*`, x = beta_weights[j,],
+                                y = activation_regions, SIMPLIFY = F)
+      beta <- Reduce(`+`, beta_components)
+      beta[binary_template == 0] <- NA
+      return(beta)
+    }, simplify = F)
+    # Make the mean values for the BOLD data
+    task_means <- mapply(`%o%`,X = beta_coefficients,
+                         Y = split(tasks, col(tasks)), SIMPLIFY = F)
+    y_means <- Reduce(`+`, task_means)
+    # Use the mean responses to create the simulated response data
+    y_t <- apply(y_means, seq(length(dim(y_means)) - 1), function(bv) {
+      if(is.na(bv[1])) {
+        return(rep(NA,length(bv)))
+      } else {
+        out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2)
+        return(out)
+      }
+    })
+    # Remove any NA voxels and output the response as a matrix
+    y <- apply(y_t,1, identity)
+    y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+    y <- y[!y_exclude,]
+    y <- t(y)
+    # Return everything
+    return(list(session = list(BOLD=y, design = tasks), betas = beta_coefficients))
+  }, simplify = F)
+  names(y_i) <- paste("session",seq(num_sessions), sep ="_")
+  data <- sapply(y_i, `[[`, i = "session", simplify = F)
+  betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
+  return(list(data = data, betas = betas))
+}
+
+```
+
 
 # Single-Subject, Single-Session Analysis 
 
 ## Data Generation
 
-In the pursuit of open access goals, brain template data were taken from FSL, rather than SPM8, as is used in [@mejia2020bayesian], and the binary mask image used is $45 \times 54$ (rather than $46 \times 55$). Using tools from the `neuRosim` package, the simulated data are recreated below:
+The function `simulate_slice_data()` generates true beta maps and simulated fMRI timeseries data using tools from the `neuRosim` package. The size, location and intensities of the centers of activation can be varied. The data format is a 2-dimensional slice of dimensions $45 \times 54$, and the brain mask is based on an FSL brain template. The response data are created by convolving an activation profile with each true beta map, plus errors, which are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. The resulting fMRI timeseries data are then masked and vectorized into a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series.  For this example, we will simulate a single session of data with 2 tasks.
 
 ```{r show template image activation profile and amplitude, message=F}
 set.seed(47401)
@@ -96,7 +361,7 @@ simulated_data <-
     active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
     active_size = 2:4,
     beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
-    vary_active = F,
+    vary_active = FALSE,
     num_time = 200,
     binary_template = NULL
   )
@@ -104,34 +369,36 @@ simulated_data <-
 
 Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
 
-```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=5}
-plot_image_2D(simulated_data$betas$session_1)
+```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=3}
+plot_image_2D(simulated_data$betas$session_1, zlim=c(0,1.5))
 ```
 
-The response data $y_t$ are created using the activation profiles. The errors are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. Finally, the response values are stored in a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series. As a note, the data will be scaled in the analysis. The scaling to percent signal change requires that values be significantly far from zero such that division by the maximum value for each voxel does not produce large numbers or negative numbers. 
+For model estimation, the data for each session must be formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Multiple sessions are combined into a list (in this example, there is a single session). The function `simulate_slice_data()` returns the data already in this format:
 
-The data for each session are formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Sessions are then combined into a list (in this example, there is a single session). 
+```{r}
+names(simulated_data$data$session_1)
+is.session(simulated_data$data$session_1)
+```
 
-With the data created and formatted properly, the analysis can begin!
+
+With the data created and in the correct format, the analysis can begin!
 
 ## Classical GLM 
 
-The classical GLM is a massive univariate approach based on fitting a separate linear model to each vertex separately. While computationally efficient and easy to understand, the classical GLM ignores information shared across neighboring vertices. This results in a loss of estimation efficiency (noisy estimates) and a loss of power to detect true activations.  
-
 We can fit a classical GLM to the data using the `classicalGLM()` function. Note that by default, the BOLD data and the design are scaled so that the estimated coefficients for each task represent the percent signal change associated with each task. For simulated data, we do not scale to avoid inducing changes to the true beta coefficient maps. The resulting images of the point estimates for the coefficients can be seen below.
 
-```{r Classical GLM, message=F, warning=F, fig.height=5, fig.width=7}
+```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
 single_subject_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
 classical_estimates <- vec_to_image(single_subject_classical$session_1, template_image = binary_template)
-plot_image_2D(classical_estimates, zlim = c(-1,1))
+plot_image_2D(classical_estimates, zlim = c(-1.5,1.5))
 ```
 
-While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach.
+While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach due to the level of the noise in the estimates.
 
 
 ## Bayesian GLM 
 
-Now we start preparing to fit the spatial Bayesian GLM.  The data must be in triangular mesh format, which is already the case for cortical surface fMRI data.  For a slice of volumetric fMRI data as in this simulation, a triangular mesh can be constructed.  The mesh can be "padded" with boundary layers consisting of larger triangles to avoid undesirable boundary effects on the data locations. Here we use the `make_2d_mesh()` function to construct a mesh from a brain mask.  The plotted mesh below shows a fine mesh corresponding to data locations (inside the mask), surrounded by boundary layers of increasingly larger triangles.
+Now we start preparing to fit the spatial Bayesian GLM.  The data locations must be part of a triangular mesh.  This is the format of cortical surface fMRI data, but a triangular mesh can also be constructed for a slice of volumetric fMRI data as in this simulation.  Ideally the mesh will be "padded" with boundary layers of larger triangles to avoid undesirable boundary effects on the data locations. Here we use the `make_2d_mesh()` function to construct a mesh from a brain mask.  The plotted mesh below shows a fine mesh corresponding to data locations (inside the mask), surrounded by boundary layers of increasingly larger triangles.
 
 ```{r Make the mesh, fig.width=7, fig.height=5}
 mesh <- make_2d_mesh(binary_template)
@@ -139,12 +406,10 @@ plot(mesh, main = "")
 ```
 *Note: INLA reads indices in a different order than the default R behavior. That is, the first index corresponds to columns and the second refers to rows. This is why the mesh appears to be a transposed image of a brain slice when compared to the activation amplitudes shown above.*
 
-Next, the spatial Bayesian GLM can be estimated using the `BayesGLM_surface()` function. Expected computation time is approximately 5 minutes with PARDISO enabled. **Note: Model is pre-computed. Set `eval=TRUE` to compute.**
-
-# Run the Bayesian GLM
+Next, the spatial Bayesian GLM can be estimated using the `BayesGLM()` function. As in the classical GLM, we do not scale the timeseries or the design matrix to avoid inducing changes in the true beta coefficients. **Note: Model is pre-computed. Set `eval=TRUE` to compute. For this dataset, the expected computation time is approximately 5 minutes with PARDISO enabled.**
 
 ```{r Bayes GLM, eval=FALSE}
-single_subject_result <- BayesGLM_surface(data = data, mesh = mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = F)
+single_subject_result <- BayesGLM(data = data, mesh = mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = F)
 saveRDS(single_subject_result, "../scratch/500_single_subject_BayesGLM_results.rds")
 ```
 
@@ -152,13 +417,13 @@ saveRDS(single_subject_result, "../scratch/500_single_subject_BayesGLM_results.r
 single_subject_result <- readRDS("../scratch/500_single_subject_BayesGLM_results.rds")
 ```
 
-```{r Plot the single-session mean results, fig.height=5, fig.width=7}
-plot_BayesGLM_2d(single_subject_result, mask = binary_template, zlim = c(-0.5,0.5))
+```{r Plot the single-session mean results, fig.height=3, fig.width=7}
+plot_BayesGLM_2d(single_subject_result, mask = binary_template, zlim = c(-1.5,1.5))
 ```
 
-# Multi-session Analysis
+# Single-Subject, Multi-Session Analysis 
 
-In some cases, a single subject may undergo more than one session in a task fMRI study. The `BayesGLM()` function can combine multiple sessions into a single model, lending more efficiency to estimation of model parameters controlling the properties of each latent field. Estimates of task activation are computed for each session, which may be of individual interest. In addition, contrasts across sessions (e.g. the between-session average) can be modeled, increasing estimation efficiency and power to identify areas of activation. 
+In some cases, a single subject may undergo more than one session in a task fMRI study or be studied longitudinally. The `BayesGLM()` function can combine multiple sessions into a single model, lending more efficiency to estimation of model parameters controlling the properties of each latent field. Estimates of task activation are computed for each session, which may be of individual interest. In addition, contrasts across sessions (e.g. the between-session average) can be modeled, increasing estimation efficiency and power to identify areas of activation. 
 
 ## Data Generation
 
@@ -180,15 +445,22 @@ multi_data <-
   )
 ```
 
-This resulted in the true activation amplitudes:
+This results in the true activation amplitudes:
 
-```{r True Activation Amplitudes, fig.height=5, fig.width=7, echo=F}
-plot_image_2D(multi_data$betas$session_1)
-plot_image_2D(multi_data$betas$session_2)
+Session 1:
+
+```{r True Activation Amplitudes 1, fig.height=3, fig.width=7, echo=F}
+plot_image_2D(multi_data$betas$session_1, zlim=c(0,1.5))
+```
+
+Session 2: 
+
+```{r True Activation Amplitudes 2, fig.height=3, fig.width=7, echo=F}
+plot_image_2D(multi_data$betas$session_2, zlim=c(0,1.5))
 ```
 
 
-We can now format the simulated data for each session as a `session` object, and combine the sessions into a list:
+The function `simulate_slice_data()` formats the data into a list of "session" objects, which we can then pass to `BayesGLM` for analysis. **Note: Model is pre-computed. Set `eval=TRUE` to compute. Expected computation time is approximately 10 minutes with PARDISO enabled.**
 
 <!-- # ```{r} -->
 <!-- # # Create the sessions -->
@@ -200,40 +472,39 @@ We can now format the simulated data for each session as a `session` object, and
 <!-- # names(data) <- paste("session",1:2) -->
 <!-- # ``` -->
 
-
-The multi-session spatial Bayesian GLM can be estimated using the `BayesGLM_surface()` function. Expected computation time is approximately 10 minutes with PARDISO enabled. **Note: Model is pre-computed. Set `eval=TRUE` to compute.**
+ 
 
 ```{r, eval = FALSE}
 # Run the model in INLA
-multi_session_result <- BayesGLM_surface(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose=F)
+multi_session_result <- BayesGLM(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose=F)
 saveRDS(multi_session_result, "../scratch/501_multi_session_BayesGLM_results.rds")
 ```
 
-## Single Session Results
+## Results
 
-```{r Bring in the multi-session results, include=F, eval=TRUE}
+```{r Bring in the multi-session results, include=F}
 multi_session_result <- readRDS("../scratch/501_multi_session_BayesGLM_results.rds")
 ```
 
-```{r Separate sessions plot}
-plot_BayesGLM_2d(multi_session_result, mask = binary_template, zlim = c(-1,1))
+```{r Separate sessions plot, fig.height=6, fig.width=7}
+plot_BayesGLM_2d(multi_session_result, mask = binary_template, zlim = c(-1.5,1.5))
 ```
 
-## Combined Results
+<!-- ## Combined Results -->
 
-The above results from the different sessions can be combined to improve the power of the inference on the coefficients.
+<!-- The above results from the different sessions can be combined to improve the power of the inference on the coefficients. -->
 
-```{r Combining the multi-session results}
+<!-- ```{r Combining the multi-session results} -->
 
-2+2
-# contrasts_def <- list(
-#   rbind(
-#     c(0.5,0),
-#     c(0.5,0)),
-#   rbind(
-#     c(0,0.5),
-#     c(0,0.5)
-#   ))
-#combined_session_results <- BayesGLM_surface(data = multi_session_result, mesh = mesh, contrasts = contrasts_def, scale_BOLD = FALSE, scale_design = FALSE, verbose = F)
-```
+<!-- 2+2 -->
+<!-- # contrasts_def <- list( -->
+<!-- #   rbind( -->
+<!-- #     c(0.5,0), -->
+<!-- #     c(0.5,0)), -->
+<!-- #   rbind( -->
+<!-- #     c(0,0.5), -->
+<!-- #     c(0,0.5) -->
+<!-- #   )) -->
+<!-- #combined_session_results <- BayesGLM(data = multi_session_result, mesh = mesh, contrasts = contrasts_def, scale_BOLD = FALSE, scale_design = FALSE, verbose = F) -->
+<!-- ``` -->
 
