@@ -21,6 +21,7 @@
 #'   used to generate the data to be analyzed.
 #' @export
 #' @importFrom neuRosim specifydesign specifyregion
+#' @import stats
 #'
 #' @examples
 #' data <- simulate_slice_data()
