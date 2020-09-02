@@ -4,3 +4,4 @@
 ^vignettes$
 ^scratch$
 ^R/summarize_sessions\.R$
+^R/BayesGLM_vol3D\.R$
