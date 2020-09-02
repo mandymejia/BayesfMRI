@@ -3,8 +3,11 @@
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 #' List element names represent session names.
-#' @param scale_BOLD If TRUE, scale timeseries data so estimates represent percent signal change.  If FALSE, just center the BOLD response to exclude the baseline field.
-#' @param scale_design If TRUE, scale the design matrix by dividing each column by its maximum, and then subtracting the scaled mean
+#' @param scale_BOLD If TRUE, scale timeseries data so estimates represent
+#'   percent signal change.  If FALSE, just center the data and design to
+#'  exclude the baseline field.
+#' @param scale_design If TRUE, scale the design matrix by dividing each column
+#'   by its maximum value, and then subtracting the new column mean.
 #'
 #' @return A list of classical GLM task activation estimates, where each element represents a session.
 #' @export
@@ -51,7 +54,7 @@ classicalGLM <- function(data, scale_BOLD=TRUE, scale_design = TRUE){
       X_reg <- data[[s]]$design
     }
     XTX_inv <- try(solve(t(X_reg) %*% X_reg))
-    if(class(XTX_inv) == "try-error") {
+    if("try-error" %in% class(XTX_inv)) {
       stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     } else {
       GLM_result[[s]] <- t(XTX_inv %*% t(X_reg) %*% y_reg)

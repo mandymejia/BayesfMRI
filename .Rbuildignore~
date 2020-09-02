@@ -4,6 +4,7 @@
 ^vignettes$
 ^scratch$
 ^R/summarize_sessions\.R$
-^R/BayesGLM_vol3D\.R$
-^R/plot_BayesGLM_2D\.R$
 ^R/plot_image_2d\.R$
+^R/plot_BayesGLM_2d\.R$
+^R/simulate_slice_data\.R$
+^R/plot_BayesGLM_2D\.R$

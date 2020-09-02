@@ -2,7 +2,7 @@
 % Please edit documentation in R/boundary.R
 \name{boundary_layers}
 \alias{boundary_layers}
-\title{Identify Boundary Layers}
+\title{Identify Boundary Layers.}
 \usage{
 boundary_layers(faces, mask, boundary_width = 10)
 }
@@ -25,6 +25,6 @@ Vertices inside the input mask but at the edge of it (touching vertices with
 value 1) will have value 0. All other vertices will have value -1.
 }
 \description{
-Identify the vertices within \code{boundary_width} edges of the input mask. The
-mesh must be triangular.
+Identify the vertices within \code{boundary_width} edges of the input mask.
+The mesh must be triangular.
 }

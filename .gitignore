@@ -1,8 +1,10 @@
 .Rproj.user
 .Rhistory
 .RData
+*.rds
+*.out
+*.Rout
 .Ruserdata
 R/BayesGLM_group.R
 .Rhistory
 inst/doc
-scratch/

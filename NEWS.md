@@ -1,3 +1,8 @@
+# 1.4 
+
+* Added a vignette to show the functionality of the Bayesian GLM as applied to simulated slice data.
+* Added a function to generate simulated slice data  (`simulate_slice_data`) and create a triangular mesh (`make_2d_mesh`)
+
 # 1.3
 
 * Updated `ciftiTools` function calls with new names based on `ciftiTools@1.3`.
@@ -7,7 +12,7 @@
 
 # 1.2
 
-?
+* New, biweekly update for bug fixes
 
 # 1.1
 

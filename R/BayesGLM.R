@@ -60,7 +60,7 @@
 #' 20 Thalamus-L
 #' 21 Thalamus-R
 #'
-BayesGLM <- function(cifti_fname,
+BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
                      sphereL_fname=NULL, sphereR_fname=NULL,
                      brainstructures=c('left','right','subcortical'),
@@ -317,7 +317,7 @@ BayesGLM <- function(cifti_fname,
     if(do_classical) classicalGLM_left <- classicalGLM(session_data,
                                                        scale_BOLD=scale_BOLD,
                                                        scale_design = scale_design)
-    if(do_Bayesian) BayesGLM_left <- BayesGLM_surface(session_data,
+    if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
                                                       vertices = verts_left,
                                                       faces = faces_left,
                                                       scale_BOLD=scale_BOLD,
@@ -357,7 +357,7 @@ BayesGLM <- function(cifti_fname,
     if(do_classical) classicalGLM_right <- classicalGLM(session_data,
                                                         scale_BOLD=scale_BOLD,
                                                         scale_design = scale_design)
-    if(do_Bayesian) BayesGLM_right <- BayesGLM_surface(session_data,
+    if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
                                                       vertices = verts_right,
                                                       faces = faces_right,
                                                       scale_BOLD=scale_BOLD,
@@ -468,11 +468,14 @@ BayesGLM <- function(cifti_fname,
 #' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
 #' @param mask (Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.
 #' @param scale_BOLD If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
-#' @param scale_design If TRUE, scale the design matrix by dividing each column by its maximum, and then subtracting the scaled mean
+#' @param scale_design If TRUE, scale the design matrix by dividing each column
+#'   by its maximum value, and then subtracting the new column mean.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
+#' @param contrasts A list of contrast vectors to be passed to
+#'   \code{\link{inla}}.
 #'
 #' @return A list containing...
 #' @export
@@ -481,7 +484,7 @@ BayesGLM <- function(cifti_fname,
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE){
+BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -580,6 +583,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   #collect data and design matrices
   y_all <- c()
   X_all_list <- NULL
+  design <- vector('list', length=n_sess)
 
   for(s in 1:n_sess){
 
@@ -593,6 +597,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
     } else {
       design_s <- scale(data[[s]]$design, scale = F)
     }
+    design[[s]] <- design_s #after scaling but before nuisance regression
 
     #regress nuisance parameters from BOLD data and design matrix
     if('nuisance' %in% names(data[[s]])){
@@ -615,7 +620,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   }
 
   #construct betas and repls objects
-  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
+  replicates_list <- BayesfMRI:::organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
@@ -635,16 +640,16 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
   formula_str <- paste(formula_vec, collapse=' + ')
   formula <- as.formula(formula_str, env = globalenv())
 
-  model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+  model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose))
+  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
-  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
-  theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  beta_estimates <- BayesfMRI:::extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
+  theta_posteriors <- BayesfMRI:::get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
 
   #extract stuff needed for group analysis
   mu.theta <- INLA_result$misc$theta.mode
@@ -655,6 +660,7 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
     result <- list(INLA_result = INLA_result,
                    mesh = mesh,
                    mask = mask,
+                   design = design,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
@@ -663,11 +669,14 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
                    Q.theta = Q.theta, #for joint group model
                    y = y_all, #for joint group model
                    X = X_all_list, #for joint group model
+                   #model_data, #temporary
+                   #formula, #temporary
                    call = match.call())
   } else {
     result <- list(INLA_result = NULL,
                    mesh = mesh,
                    mask = mask,
+                   design = design,
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
@@ -676,6 +685,8 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
                    Q.theta = Q.theta, #for joint group model
                    y = y_all, #for joint group model
                    X = X_all_list, #for joint group model
+                   #model_data, #temporary
+                   #formula, #temporary
                    call = match.call())
   }
 
@@ -700,6 +711,8 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
 #' @param num.threads Number of threads
 #' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
 #' @param verbose Logical indicating if should run in a verbose mode (default FALSE).
+#' @param contrasts A list of contrast vectors to be passed to
+#'   \code{\link{inla}}.
 #'
 #' @return Results from INLA
 #' @export
@@ -707,13 +720,13 @@ BayesGLM_surface <- function(data, vertices = NULL, faces = NULL, mesh = NULL, m
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE){
+estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
                  verbose = verbose, keep = FALSE, num.threads = num.threads,
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE)) #required for excursions
+                 control.compute=list(config=TRUE), contrasts = contrasts) #required for excursions
   return(result)
 }
 
@@ -886,37 +899,4 @@ get_posterior_densities <- function(object, spde, beta_names=NULL){
   return(df)
 }
 
-
-#' Extracts posterior density estimates for hyperparameters
-#'
-#' @param object An object of class ‘"inla"’, a result of a call to \code{inla()}
-#' @param spde The model used for the latent fields in the \code{inla()} call, an object of class ‘"inla.spde"’
-#'
-#' @return Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
-#' @export
-#' @importFrom INLA inla.spde2.result
-#' @importFrom INLA inla.extract.el
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
-get_posterior_densities_vol3D <- function(object, spde){
-
-  hyper_names <- names(object$marginals.hyperpar)
-
-  for(h in hyper_names){
-    df.h <- inla.extract.el(object$marginals.hyperpar, h)
-    df.h <- as.data.frame(df.h)
-    names(df.h) <- c('x','y')
-    df.h$hyper_name <- h
-    df.h$beta_name <- ifelse(grepl('bbeta',h), #if bbeta appears in name
-                             gsub('.+bbeta','bbeta',h), #rename as bbeta*
-                             NA) #NA if this is the precision hyperparameter
-    df.h$theta_name <- ifelse(grepl('Theta',h), #if bbeta appears in name
-                              gsub(' for.+','',h), #rename as Theta*
-                              NA) #NA if this is the precision hyperparameter
-
-    if(h==hyper_names[1]) df <- df.h else df <- rbind(df, df.h)
-  }
-  return(df)
-}
 
