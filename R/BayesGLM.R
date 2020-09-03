@@ -1,3 +1,244 @@
+#'  Spatial Bayesian GLM for fMRI task activation on slice volumetric data
+#'
+#' @param BOLD A list of sessions, each with a three-dimensional array in which
+#'   the first two dimensions correspond to the size of the fMRI slice in space
+#'   and the last dimension corresponds to time
+#' @param binary_mask (optional) a binary brain slice image used to mask
+#'   the BOLD data and make a more efficient network mesh for the
+#'   neighborhood definitions
+#' @param design A TxK task design matrix (or list of such matrices, for
+#'   multiple-session modeling) with column names representing tasks. Each
+#'   column represents the expected BOLD response due to each task, a
+#'   convolution of the hemodynamic response function (HRF) and the task
+#'   stimulus.  Must be provided if and only if onsets=NULL.  Note that the
+#'   scale of the regressors will affect the scale and interpretation of the
+#'   beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is
+#'   recommended.
+#' @param onsets A matrix of onsets (first column) and durations (second column)
+#'   for each task in SECONDS, organized as a list where each element of the
+#'   list corresponds to one task. Names of list should be task names. (Or for
+#'   multi-session modeling, a list of such lists.)  Must be provided if and
+#'   only if design=NULL.
+#' @param TR The temporal resolution of the data in seconds.  Must be provided
+#'   if onsets provided.
+#' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
+#'   matrices, for multiple-session modeling).
+#' @param nuisance_include (Optional) Additional nuisance covariates to include.
+#'   Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
+#'   derivative of each column of design matrix).
+#' @param scale_BOLD If TRUE (default), scale timeseries data so estimates
+#'   represent percent signal change.  Else, center but do not scale.
+#' @param scale_design If TRUE (default), scale design matrix so maximum value
+#'   is equal to 1.  Else, do not scale.
+#' @param num.threads Maximum number of threads the inla-program will use for
+#'   model estimation
+#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only,
+#'   'classical' for the classical GLM only, or 'both' to return both classical
+#'   and Bayesian estimates of task activation.
+#' @param session_names (Optional) A vector of names corresponding to each
+#'   session.
+#' @param return_INLA_result If TRUE, object returned will include the INLA
+#'   model object (can be large).  Default is FALSE.  Required for running
+#'   \code{id_activations} on \code{BayesGLM} model object (but not for running
+#'   \code{BayesGLM_joint} to get posterior quantities of group means or
+#'   contrasts).
+#' @param outfile (Optional) File name (without extension) of output file for
+#'   BayesGLM result to use in Bayesian group modeling.
+#' @param verbose Logical indicating if INLA should run in a verbose mode
+#'   (default FALSE).
+#' @param contrasts A list of contrast vectors to be passed to
+#'   \code{\link{inla}}.
+#'
+#' @return An object of class BayesGLM, a list containing ...
+#' @export
+BayesGLM_2d <-
+  function(BOLD,
+           design = NULL,
+           onsets=NULL,
+           TR=NULL,
+           nuisance=NULL,
+           nuisance_include=c('drift','dHRF'),
+           binary_mask = NULL,
+           scale_BOLD = TRUE,
+           scale_design = TRUE,
+           num.threads = 4,
+           GLM_method = 'both',
+           session_names = NULL,
+           return_INLA_result = TRUE,
+           write_dir=NULL,
+           outfile = NULL,
+           verbose = FALSE,
+           contrasts = NULL) {
+    if(is.null(write_dir)){
+      write_dir <- getwd()
+    } else if(!file.exists(write_dir)){
+      stop('write_dir does not exist, check and try again.')
+    }
+    do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
+    do_classical <- (GLM_method %in% c('both','classical'))
+
+    if(do_Bayesian){
+      flag <- inla.pardiso.check()
+      if(grepl('FAILURE',flag)) {
+        warning('PARDISO IS NOT INSTALLED OR NOT WORKING.
+                                     PARDISO is required for computational
+                                     efficiency. See inla.pardiso().')
+      } else {
+        inla.setOption(smtp='pardiso')
+      }
+    }
+
+    image_dims <- head(dim(BOLD[[1]]),-1)
+    if (is.null(binary_mask))
+      binary_mask <- matrix(1, nrow = image_dims[1], ncol = image_dims[2])
+
+    mesh <- make_2d_mesh(binary_mask)
+
+    # Name sessions and check compatibility of multi-session arguments
+    n_sess <- length(BOLD)
+    if(n_sess==1){
+      if(is.null(session_names)) session_names <- 'single_session'
+    } else {
+      if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
+    }
+    if(length(session_names) != n_sess)
+      stop('If session_names is provided, it must be of the same length as BOLD')
+
+  cat('\n SETTING UP DATA \n')
+
+  if(is.null(design)) {
+    make_design <- TRUE
+    design <- vector('list', length=n_sess)
+  } else {
+    make_design <- FALSE
+  }
+
+  for(ss in 1:n_sess){
+    if(make_design){
+      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+      }
+  }
+
+  ### Check that design matrix names consistent across sessions
+  if(n_sess > 1){
+    tmp <- sapply(design, colnames)
+    tmp <- apply(tmp, 1, function(x) length(unique(x)))
+    if(max(tmp) > 1)
+      stop('task names must match across sessions for multi-session modeling')
+  }
+
+  cat('\n RUNNING MODEL \n')
+
+  classicalGLM <- NULL
+  BayesGLM <- NULL
+
+  ### FORMAT DESIGN MATRIX
+  for(ss in 1:n_sess){
+    if(scale_design){
+      design[[ss]] <- scale_design_mat(design[[ss]])
+      scale_design <- F
+    } else {
+      design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix
+        # to eliminate baseline
+    }
+  }
+
+  ### ADD ADDITIONAL NUISANCE REGRESSORS
+  for (ss in 1:n_sess) {
+    ntime <- nrow(design[[ss]])
+    if ('drift' %in% nuisance_include) {
+      drift <- (1:ntime) / ntime
+      if (!is.null(nuisance))
+        nuisance[[ss]] <-
+          cbind(nuisance[[ss]], drift, drift ^ 2)
+      else
+        nuisance[[ss]] <- cbind(drift, drift ^ 2)
+    }
+    if ('dHRF' %in% nuisance_include) {
+      dHRF <- gradient(design[[ss]])
+      if (!is.null(nuisance))
+        nuisance[[ss]] <-
+          cbind(nuisance[[ss]], dHRF)
+      else
+        nuisance[[ss]] <- dHRF
+    }
+  }
+
+  #set up session list
+  mat_BOLD <- sapply(BOLD, function(y_t) {
+    # Remove any NA voxels and output the response as a matrix
+    y <- apply(y_t,3, identity)
+    y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+    y <- y[!y_exclude,]
+    y <- t(y)
+  }, simplify = F)
+  session_data <- vector('list', n_sess)
+    names(session_data) <- session_names
+  for(ss in 1:n_sess){
+    sess <- list(BOLD = mat_BOLD[[ss]], design=design[[ss]])
+    if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+    session_data[[ss]] <- sess
+  }
+
+  ### FIT GLM(s)
+
+  if(!is.null(outfile)) outfile <- file.path(write_dir,paste0(outfile, '.Rdata'))
+
+  if(do_classical) classicalGLM <- classicalGLM(session_data,
+                                                     scale_BOLD=scale_BOLD,
+                                                     scale_design = scale_design)
+  if(do_Bayesian) BayesGLM <- BayesGLM(session_data,
+                                       mesh = mesh,
+                                       scale_BOLD=scale_BOLD,
+                                       scale_design = scale_design,
+                                       num.threads=num.threads,
+                                       return_INLA_result=return_INLA_result,
+                                       outfile = outfile,
+                                       verbose=verbose)
+
+  # Create a conversion matrix
+  in_binary_mask <- which(binary_mask == 1, arr.ind = T)
+  in_binary_mask <- in_binary_mask[,2:1]
+  convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
+  # Extract the point estimates
+  if(is.null(session_name)) session_name <- BayesGLM_object$session_names
+  point_estimates <- sapply(session_name, function(sn){
+    as.matrix(convert_mat_A %*% BayesGLM_object$beta_estimates[[sn]])
+  }, simplify = F)
+
+  classicalGLM_2d <- BayesGLM_2d <- vector('list', n_sess)
+  names(classicalGLM_2d) <- names(BayesGLM_2d) <- session_names
+  for(ss in 1:n_sess){
+    num_tasks <- ncol(design[[ss]])
+    if(do_classical){
+      classicalGLM_2d[[ss]] <- sapply(seq(num_tasks), function(tn) {
+        image_coef <- binary_mask
+        image_coef[image_coef == 1] <- classicalGLM[[ss]][,tn]
+        image_coef[binary_mask == 0] <- NA
+        return(image_coef)
+      },simplify = F)
+    }
+    if(do_Bayesian){
+      mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM$beta_estimates[[ss]])
+      BayesGLM_2d[[ss]] <- sapply(seq(num_tasks), function(tn) {
+        image_coef <- binary_mask
+        image_coef[image_coef == 1] <- mat_coefs[,tn]
+        image_coef[binary_mask == 0] <- NA
+        return(image_coef)
+      },simplify = F)
+    }
+  }
+
+  result <- list(betas_Bayesian = BayesGLM_2d,
+                 betas_classical = classicalGLM_2d,
+                 GLMs_Bayesian = BayesGLM,
+                 GLMs_classical = classicalGLM,
+                 design = design)
+  class(result) <- "BayesGLM_2d"
+  return(result)
+  }
+
 #' Performs whole-brain spatial Bayesian GLM for fMRI task activation
 #'
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
