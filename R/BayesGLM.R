@@ -185,10 +185,10 @@ BayesGLM_2d <-
 
   if(!is.null(outfile)) outfile <- file.path(write_dir,paste0(outfile, '.Rdata'))
 
-  if(do_classical) classicalGLM <- classicalGLM(session_data,
+  if(do_classical) classicalGLM_out <- classicalGLM(session_data,
                                                      scale_BOLD=scale_BOLD,
                                                      scale_design = scale_design)
-  if(do_Bayesian) BayesGLM <- BayesGLM(session_data,
+  if(do_Bayesian) BayesGLM_out <- BayesGLM(session_data,
                                        mesh = mesh,
                                        scale_BOLD=scale_BOLD,
                                        scale_design = scale_design,
@@ -202,9 +202,8 @@ BayesGLM_2d <-
   in_binary_mask <- in_binary_mask[,2:1]
   convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
   # Extract the point estimates
-  if(is.null(session_name)) session_name <- BayesGLM_object$session_names
-  point_estimates <- sapply(session_name, function(sn){
-    as.matrix(convert_mat_A %*% BayesGLM_object$beta_estimates[[sn]])
+  point_estimates <- sapply(session_names, function(sn){
+    as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
   }, simplify = F)
 
   classicalGLM_2d <- BayesGLM_2d <- vector('list', n_sess)
@@ -214,13 +213,13 @@ BayesGLM_2d <-
     if(do_classical){
       classicalGLM_2d[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
-        image_coef[image_coef == 1] <- classicalGLM[[ss]][,tn]
+        image_coef[image_coef == 1] <- classicalGLM_out[[ss]][,tn]
         image_coef[binary_mask == 0] <- NA
         return(image_coef)
       },simplify = F)
     }
     if(do_Bayesian){
-      mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM$beta_estimates[[ss]])
+      mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[ss]])
       BayesGLM_2d[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
         image_coef[image_coef == 1] <- mat_coefs[,tn]
@@ -232,8 +231,8 @@ BayesGLM_2d <-
 
   result <- list(betas_Bayesian = BayesGLM_2d,
                  betas_classical = classicalGLM_2d,
-                 GLMs_Bayesian = BayesGLM,
-                 GLMs_classical = classicalGLM,
+                 GLMs_Bayesian = BayesGLM_out,
+                 GLMs_classical = classicalGLM_out,
                  design = design)
   class(result) <- "BayesGLM_2d"
   return(result)
