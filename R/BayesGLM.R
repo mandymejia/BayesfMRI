@@ -233,7 +233,8 @@ BayesGLM_2d <-
                  betas_classical = classicalGLM_2d,
                  GLMs_Bayesian = BayesGLM_out,
                  GLMs_classical = classicalGLM_out,
-                 design = design)
+                 design = design,
+                 mask = binary_mask)
   class(result) <- "BayesGLM_2d"
   return(result)
   }
