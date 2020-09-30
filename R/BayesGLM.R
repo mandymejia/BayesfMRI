@@ -75,7 +75,8 @@ BayesGLM_cifti <- function(cifti_fname,
                      verbose=FALSE,
                      write_dir=NULL,
                      outfile=NULL,
-                     return_INLA_result=FALSE){
+                     return_INLA_result=FALSE,
+                     avg_betas_over_sessions = F){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
@@ -325,7 +326,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                                       num.threads=num.threads,
                                                       return_INLA_result=return_INLA_result,
                                                       outfile = file.path(write_dir,outfile_left),
-                                                      verbose=verbose)
+                                                      verbose=verbose,avg_betas_over_sessions = avg_betas_over_sessions)
 
   }
 
@@ -365,7 +366,8 @@ BayesGLM_cifti <- function(cifti_fname,
                                                       num.threads=num.threads,
                                                       return_INLA_result=return_INLA_result,
                                                       outfile = file.path(write_dir,outfile_right),
-                                                      verbose=verbose)
+                                                      verbose=verbose,
+                                                      avg_betas_over_sessions = avg_betas_over_sessions)
   }
 
   # ### SUBCORTICAL
