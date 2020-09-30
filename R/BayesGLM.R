@@ -476,6 +476,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #' @param contrasts A list of contrast vectors to be passed to
 #'   \code{\link{inla}}.
+#' @param avg_betas_over_sessions logical, in multisession analyses, should the average coefficients be calculated?
 #'
 #' @return A list containing...
 #' @export
@@ -484,7 +485,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL){
+BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -542,7 +543,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   zero_var <- sapply(data, function(x){
     x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
     x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
-    vars <- colVars(x$BOLD)
+    vars <- matrixStats::colVars(x$BOLD)
     return(vars < 1e-6)
   })
   zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
@@ -642,14 +643,48 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 
   model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
+  if(n_sess > 1 & avg_betas_over_sessions) {
+    diag_half <- Diagonal(n = mesh$n, x = 0.5)
+    full_half <- Reduce(cbind,rep(list(diag_half),K))
+    coef_lincombs <- sapply(seq(K),function(k) { inla.make.lincombs(nm = full_half)}, simplify = F)
+    # coef_lincombs <- sapply(seq(K), function(k) {
+    #   full_half[(seq(V) + (k-1)*V),]
+    # }, simplify = F)
+    renamed_lc <- mapply(function(lc,nm) {
+      output <- sapply(lc, function(llc) {
+        names(llc[[1]]) <- nm
+        return(llc)
+      }, simplify = F)
+      return(output)
+    },lc = coef_lincombs, nm = beta_names, SIMPLIFY = F)
+    my_lc <- Reduce(c,renamed_lc)
+    num_lc <- length(my_lc)
+    num_char <- as.character(nchar(as.character(num_lc)))
+    names(my_lc) <- sprintf(paste0("lc%0",num_char,".0f"),seq(num_lc))
+    cat("Set linear combinations for averages across sessions\n")
+  } else {
+    my_lc <- NULL
+  }
+
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts))
+  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
   beta_estimates <- BayesfMRI:::extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
   theta_posteriors <- BayesfMRI:::get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  # The mean of the mean beta estimates across sessions
+  if(n_sess > 1 & avg_betas_over_sessions) {
+    avg_beta_means <- INLA_result$summary.lincomb.derived$mean
+    avg_beta_estimates <- sapply(seq(K), function(k) {
+      bbeta_out <- avg_beta_means[(seq(mesh$n) + (k-1)*mesh$n)]
+      return(bbeta_out)
+    }, simplify = F)
+    names(avg_beta_estimates) <- beta_names
+  } else {
+    avg_beta_estimates <- NULL
+  }
 
   #extract stuff needed for group analysis
   mu.theta <- INLA_result$misc$theta.mode
@@ -664,6 +699,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
                    mu.theta = mu.theta, #for joint group model
                    Q.theta = Q.theta, #for joint group model
@@ -680,6 +716,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
                    mu.theta = mu.theta, #for joint group model
                    Q.theta = Q.theta, #for joint group model
@@ -720,13 +757,14 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL){
+estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
                  verbose = verbose, keep = FALSE, num.threads = num.threads,
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts) #required for excursions
+                 control.compute=list(config=TRUE), contrasts = contrasts,
+                 lincomb = lincomb) #required for excursions
   return(result)
 }
 
