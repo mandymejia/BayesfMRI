@@ -212,7 +212,7 @@ BayesGLM_cifti <- function(cifti_fname,
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res,
-        sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
+        # sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
         write_dir=write_dir,
         wb_path=wb_path
       )
@@ -223,7 +223,7 @@ BayesGLM_cifti <- function(cifti_fname,
         cifti_fname[ss],
         brainstructures=brainstructures,
         resamp_res=resamp_res,
-        sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
+        # sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
         write_dir=write_dir,
         wb_path=wb_path
       )
