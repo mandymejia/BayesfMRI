@@ -1,3 +1,28 @@
+#' Bayesian GLM for 2-dimensional data
+#'
+#' @param data
+#' @param mask
+#' @param vertices
+#' @param faces
+#' @param mesh
+#' @param mask
+#' @param scale_BOLD
+#' @param scale_design
+#' @param num.threads
+#' @param return_INLA_result
+#' @param outfile
+#' @param verbose
+#' @param contrasts
+#' @param avg_betas_over_sessions
+#'
+#' @return
+#' @export
+#'
+#' @examples
+BayesGLM_2d <- function(data, mask, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE) {
+
+}
+
 #' Performs whole-brain spatial Bayesian GLM for fMRI task activation
 #'
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
@@ -228,15 +253,18 @@ BayesGLM_cifti <- function(cifti_fname,
         wb_path=wb_path
       )
     }
-
+    # There was an issue with drop = F here ######
     if(do_left) {
       cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
-      cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,, drop=FALSE] <- cifti_ss$data$cortex_left
+      cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
+      ntime <- ncol(cifti_left[[ss]])
     }
     if(do_right) {
       cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
-      cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,, drop=FALSE] <- cifti_ss$data$cortex_right
+      cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
+      ntime <- ncol(cifti_right[[ss]])
     }
+    ######
     #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
     #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
 
@@ -646,12 +674,9 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   if(n_sess > 1 & avg_betas_over_sessions) {
-    diag_half <- Diagonal(n = mesh$n, x = 0.5)
-    full_half <- Reduce(cbind,rep(list(diag_half),K))
-    coef_lincombs <- sapply(seq(K),function(k) { inla.make.lincombs(nm = full_half)}, simplify = F)
-    # coef_lincombs <- sapply(seq(K), function(k) {
-    #   full_half[(seq(V) + (k-1)*V),]
-    # }, simplify = F)
+    diag_coefs <- Diagonal(n = mesh$n, x = 1/n_sess)
+    full_coefs <- Reduce(cbind,rep(list(diag_coefs),n_sess))
+    coef_lincombs <- sapply(seq(K),function(k) { inla.make.lincombs(nm = full_coefs)}, simplify = F)
     renamed_lc <- mapply(function(lc,nm) {
       output <- sapply(lc, function(llc) {
         names(llc[[1]]) <- nm
@@ -682,7 +707,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
     avg_beta_estimates <- sapply(seq(K), function(k) {
       bbeta_out <- avg_beta_means[(seq(mesh$n) + (k-1)*mesh$n)]
       return(bbeta_out)
-    }, simplify = F)
+    }, simplify = T)
     names(avg_beta_estimates) <- beta_names
   } else {
     avg_beta_estimates <- NULL
