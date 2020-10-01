@@ -1,28 +1,3 @@
-#' Bayesian GLM for 2-dimensional data
-#'
-#' @param data
-#' @param mask
-#' @param vertices
-#' @param faces
-#' @param mesh
-#' @param mask
-#' @param scale_BOLD
-#' @param scale_design
-#' @param num.threads
-#' @param return_INLA_result
-#' @param outfile
-#' @param verbose
-#' @param contrasts
-#' @param avg_betas_over_sessions
-#'
-#' @return
-#' @export
-#'
-#' @examples
-BayesGLM_2d <- function(data, mask, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE) {
-
-}
-
 #' Performs whole-brain spatial Bayesian GLM for fMRI task activation
 #'
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).

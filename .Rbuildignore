@@ -9,3 +9,4 @@
 ^R/plot_image_2d\.R$
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^R/EM_functions\.R$
+^vignettes/BayesfMRI_HCP\.Rmd$
