@@ -1,4 +1,4 @@
-#'  Spatial Bayesian GLM for fMRI task activation on slice volumetric data
+#'  Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data
 #'
 #' @param BOLD A list of sessions, each with a three-dimensional array in which
 #'   the first two dimensions correspond to the size of the fMRI slice in space
