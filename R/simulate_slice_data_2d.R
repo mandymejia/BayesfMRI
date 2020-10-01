@@ -20,6 +20,7 @@
 #'   used to generate the data to be analyzed.
 #' @export
 #' @importFrom neuRosim specifydesign specifyregion
+#' @importFrom utils data head
 #' @import stats
 #'
 #' @examples

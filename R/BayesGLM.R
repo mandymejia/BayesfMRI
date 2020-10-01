@@ -42,12 +42,16 @@
 #'   \code{id_activations} on \code{BayesGLM} model object (but not for running
 #'   \code{BayesGLM_joint} to get posterior quantities of group means or
 #'   contrasts).
+#' @param write_dir (Optional) The path to a directory where results will be
+#'   saved. Defaults to the current working directory.
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @param verbose Logical indicating if INLA should run in a verbose mode
 #'   (default FALSE).
 #' @param contrasts A list of contrast vectors to be passed to
 #'   \code{\link{inla}}.
+#'
+#' @importFrom utils head
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export

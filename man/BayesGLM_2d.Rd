@@ -80,6 +80,9 @@ model object (can be large).  Default is FALSE.  Required for running
 \code{BayesGLM_joint} to get posterior quantities of group means or
 contrasts).}
 
+\item{write_dir}{(Optional) The path to a directory where results will be
+saved. Defaults to the current working directory.}
+
 \item{outfile}{(Optional) File name (without extension) of output file for
 BayesGLM result to use in Bayesian group modeling.}
 
