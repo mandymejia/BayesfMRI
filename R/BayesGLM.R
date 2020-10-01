@@ -861,7 +861,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   }
 
   #construct betas and repls objects
-  replicates_list <- BayesfMRI:::organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
+  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
@@ -881,16 +881,16 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   formula_str <- paste(formula_vec, collapse=' + ')
   formula <- as.formula(formula_str, env = globalenv())
 
-  model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+  model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts))
+  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
-  beta_estimates <- BayesfMRI:::extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
-  theta_posteriors <- BayesfMRI:::get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
+  theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
 
   #extract stuff needed for group analysis
   mu.theta <- INLA_result$misc$theta.mode
