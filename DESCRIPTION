@@ -55,6 +55,7 @@ Suggests:
     rmarkdown
 ImportsFrom: 
     grDevices chull rgb
+    utils data head
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
