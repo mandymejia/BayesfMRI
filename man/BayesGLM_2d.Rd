@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM_2d}
 \alias{BayesGLM_2d}
-\title{Spatial Bayesian GLM for fMRI task activation on slice volumetric data}
+\title{Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data}
 \usage{
 BayesGLM_2d(
   BOLD,
@@ -96,5 +96,5 @@ BayesGLM result to use in Bayesian group modeling.}
 An object of class BayesGLM, a list containing ...
 }
 \description{
-Spatial Bayesian GLM for fMRI task activation on slice volumetric data
+Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data
 }

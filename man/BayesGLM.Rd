@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{Applies spatial Bayesian GLM to task fMRI data on the cortical surface}
+\title{Applies spatial Bayesian GLM to task fMRI data}
 \usage{
 BayesGLM(
   data,
@@ -52,7 +52,7 @@ by its maximum value, and then subtracting the new column mean.}
 A list containing...
 }
 \description{
-Applies spatial Bayesian GLM to task fMRI data on the cortical surface
+Applies spatial Bayesian GLM to task fMRI data
 }
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.

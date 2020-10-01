@@ -703,7 +703,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
 
 
-#' Applies spatial Bayesian GLM to task fMRI data on the cortical surface
+#' Applies spatial Bayesian GLM to task fMRI data
 #'
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.

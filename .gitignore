@@ -4,6 +4,7 @@
 *.out
 *.Rout
 .Ruserdata
-R/BayesGLM_group.R
+R/BayesGLM_group_old.R
+R/summarize_sessions.R
 .Rhistory
 inst/doc
