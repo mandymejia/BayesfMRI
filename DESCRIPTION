@@ -28,6 +28,7 @@ Imports:
     dplyr,
     excursions,
     graphics,
+    grDevices,
     geometry,
     ggplot2,
     ica,
@@ -47,16 +48,14 @@ Imports:
     sp,
     SQUAREM,
     stats,
-    stringr
+    stringr,
+    utils
 Remotes:
     mandymejia/ciftiTools
 Suggests:
     parallel,
     knitr,
     rmarkdown
-ImportsFrom: 
-    grDevices chull rgb
-    utils data head
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1

@@ -32,7 +32,7 @@
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM_group <- function(results,
+BayesGLM2 <- function(results,
                            contrasts = NULL,
                            quantiles = NULL,
                            excursion_type=NULL,

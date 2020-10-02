@@ -17,7 +17,7 @@
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom reshape2 melt
 #' @export
-plot_image_2D <- function(X, color_palette = NULL, zlim = NULL) {
+plot_image_slice <- function(X, color_palette = NULL, zlim = NULL) {
   if(class(X) == "matrix") X = list(single_activation_field = X)
   if(class(X) != "list") stop("Expected a matrix or list for X.")
   if(any(!sapply(X,function(x) {

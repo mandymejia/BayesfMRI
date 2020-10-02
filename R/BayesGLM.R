@@ -55,7 +55,7 @@
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
-BayesGLM_2d <-
+BayesGLM_slice <-
   function(BOLD,
            design = NULL,
            onsets=NULL,
@@ -96,7 +96,7 @@ BayesGLM_2d <-
     if (is.null(binary_mask))
       binary_mask <- matrix(1, nrow = image_dims[1], ncol = image_dims[2])
 
-    mesh <- make_2d_mesh(binary_mask)
+    mesh <- make_slice_mesh(binary_mask)
 
     # Name sessions and check compatibility of multi-session arguments
     n_sess <- length(BOLD)
@@ -210,12 +210,12 @@ BayesGLM_2d <-
     as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
   }, simplify = F)
 
-  classicalGLM_2d <- BayesGLM_2d <- vector('list', n_sess)
-  names(classicalGLM_2d) <- names(BayesGLM_2d) <- session_names
+  classicalGLM_slice <- BayesGLM_slice <- vector('list', n_sess)
+  names(classicalGLM_slice) <- names(BayesGLM_slice) <- session_names
   for(ss in 1:n_sess){
     num_tasks <- ncol(design[[ss]])
     if(do_classical){
-      classicalGLM_2d[[ss]] <- sapply(seq(num_tasks), function(tn) {
+      classicalGLM_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
         image_coef[image_coef == 1] <- classicalGLM_out[[ss]][,tn]
         image_coef[binary_mask == 0] <- NA
@@ -224,7 +224,7 @@ BayesGLM_2d <-
     }
     if(do_Bayesian){
       mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[ss]])
-      BayesGLM_2d[[ss]] <- sapply(seq(num_tasks), function(tn) {
+      BayesGLM_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
         image_coef[image_coef == 1] <- mat_coefs[,tn]
         image_coef[binary_mask == 0] <- NA
@@ -233,13 +233,13 @@ BayesGLM_2d <-
     }
   }
 
-  result <- list(betas_Bayesian = BayesGLM_2d,
-                 betas_classical = classicalGLM_2d,
+  result <- list(betas_Bayesian = BayesGLM_slice,
+                 betas_classical = classicalGLM_slice,
                  GLMs_Bayesian = BayesGLM_out,
                  GLMs_classical = classicalGLM_out,
                  design = design,
                  mask = binary_mask)
-  class(result) <- "BayesGLM_2d"
+  class(result) <- "BayesGLM_slice"
   return(result)
   }
 
@@ -717,7 +717,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #'   by its maximum value, and then subtracting the new column mean.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
-#' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
+#' @param outfile File name where results will be written (for use by \code{BayesGLM2}).
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #' @param contrasts A list of contrast vectors to be passed to
 #'   \code{\link{inla}}.

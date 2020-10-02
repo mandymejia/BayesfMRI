@@ -109,7 +109,7 @@ simulate_slice_data <-
       if(is.na(bv[1])) {
         return(rep(NA,length(bv)))
       } else {
-        out <- 250 + bv + arima.sim(list(ar = 0.3), n = 200, sd = 2)
+        out <- 250 + bv + arima.sim(list(ar = 0.3), n = num_time, sd = 2)
         return(out)
       }
     })

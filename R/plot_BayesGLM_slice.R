@@ -12,7 +12,9 @@
 #' @import ggplot2
 #' @import purrr
 #' @export
-plot_BayesGLM_2d <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
+plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
+  Var1 <- Var2 <- value <- NULL # to prevent package build warning at ggplot line
+
   # Create a conversion matrix
   in_binary_mask <- which(mask == 1, arr.ind = T)
   in_binary_mask <- in_binary_mask[,2:1]
