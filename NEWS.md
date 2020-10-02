@@ -1,3 +1,8 @@
+# 1.5
+
+* Added group-level BayesGLM function
+* Renamed some functions
+
 # 1.4 
 
 * Added a vignette to show the functionality of the Bayesian GLM as applied to simulated slice data.

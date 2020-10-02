@@ -1,6 +1,6 @@
 Package: BayesfMRI
 Title: Bayesian Methods for Functional MRI
-Version: 0.1.5
+Version: 0.1.5.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -24,7 +24,7 @@ Encoding: UTF-8
 Imports: 
     abind,
     gifti,
-    ciftiTools (>= 0.1.4),
+    ciftiTools (>= 0.1.5.0),
     dplyr,
     excursions,
     graphics,
