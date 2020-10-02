@@ -9,7 +9,103 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+There is an interest in examining the performance of the novel Bayesian GLM on a known dataset that has been analyzed through other methods. This validation can improve faith in the performance of the model, encouraging neuroscientists to apply the `BayesfMRI` package to their data and improving understanding of how the brain works. Better understanding of how the brain functions has the potential to improve the prevention and treatment of neurological disorders and injuries, which can improve the quality of life for almost one sixth of the world's population who suffer from neurological disorders [according to a UN Report](https://news.un.org/en/story/2007/02/210312-nearly-1-6-worlds-population-suffer-neurological-disorders-un-report). Additionally, [there is evidence](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6459001/) that the rate and cost of neurological disorders is increasing, affecting more people globally each year. Thus, the importance of this validation study cannot be understated in terms of the human cost.
 
+The neuroimaging data from the Human Connectome Project (HCP) is a well-known repository formed through a collaboration between the University of Southern California, Harvard University and the Martinos Center for Biomedical Imaging at Massachusetts General Hospital sponsored by the National Institutes of Health. The HCP is a large-scale effort to provide detailed phenotypical and neurological data to answer questions about anatomy and function within the brain. In this study, we focus on experiments in which subjects are asked to perform basic tasks such as moving their tongue. The data of interest in these experiments are functional magnetic resonance imaging (fMRI) scans, which provide a high-resolution unitless measure of the concentration of blood in different regions of the brain.
+
+These data are preprocessed to remove the effects of movement, body processes, drifts in the scanners' magnetic fields, and other noise sources to maximize the ability to detect the signal within the scans. In addition, the scans are transformed from their default volumetric representation (fMRI) to a more appropriate cortical surface representation (cs-fMRI) in order to account for the distances between points on the surface of the brain including folds an contours. It is believed that functions are localized within the brain to certain structures, and appropriate spatial organization further improves signal detection. 
+
+The experiments used in this study focus on basic motor functions, including finger tapping (left and right), toe tapping (left and right), and tongue movement over the course of each subject's 3.5 minute session, during which 284 functional volumes were acquired (one every 0.72 seconds). For each task, the subject is given a prompt to perform the task via a visual cue. For each task, the binary stimulus function is defined as 1 while the visual cue is shown and 0 otherwise. 
+
+```{r}
+data_dir <- "~/Desktop/BayesGLM_Validation"
+subjects <- list.files(data_dir)
+tasks <- c('cue','lf','lh','rf','rh','t') # Task data frame columns
+names_tasks <- c('cue','left foot','left hand','right foot','right hand','tongue')
+colors_tasks <- c('black',brewer.pal(5, 'Set2'))
+cols_LH <- c(1,4:6) #cue, right foot, right hand, tongue
+cols_RH <- c(1:3,6) #cue, left foot, left hand, tongue
+cols_list <- list(cols_LH, cols_RH)
+TR = 0.72 #temporal resolution of data
+thetas <- NULL # No starting values for precision parameters
+for(subject in subjects) {
+  dir_s <- file.path(data_dir, subject, 'MNINonLinear', 'fsaverage_LR32k')
+  fname_gifti_left <- file.path(dir_s, paste0(subject,'.L.midthickness.32k_fs_LR.surf.gii'))
+  fname_gifti_right <- file.path(dir_s, paste0(subject,'.R.midthickness.32k_fs_LR.surf.gii'))
+  fname_gifti2_left <- file.path(dir_s, paste0(subject,'.L.inflated.32k_fs_LR.surf.gii'))
+  fname_gifti2_right <- file.path(dir_s, paste0(subject,'.R.inflated.32k_fs_LR.surf.gii'))
+  fname_sphere_left <- file.path(dir_s, paste0(subject,'.L.sphere.32k_fs_LR.surf.gii'))
+  fname_sphere_right <- file.path(dir_s, paste0(subject,'.R.sphere.32k_fs_LR.surf.gii'))
+  for(visit in 1:2) {
+    dir1_s <- file.path(data_dir,subject, 'MNINonLinear', 'Results', 'tfMRI_MOTOR_LR')
+    dir2_s <- file.path(data_dir,subject, 'MNINonLinear', 'Results', 'tfMRI_MOTOR_RL')
+    fname1_ts <- file.path(dir1_s,'tfMRI_MOTOR_LR_Atlas.dtseries.nii')
+    fname2_ts <- file.path(dir2_s,'tfMRI_MOTOR_RL_Atlas.dtseries.nii')
+    if(visit == 2){
+      #unzip files from retest dataset
+      fname_zip_s <- file.path(data_dir,'retest',paste0(subject,'_3T_tfMRI_MOTOR_preproc.zip'))
+      fname1_EVs <- paste0(dir1_s, '/EVs/', tasks, '.txt')
+      fname2_EVs <- paste0(dir2_s, '/EVs/', tasks, '.txt')
+      fname1_motion <- file.path(dir1_s,'Movement_Regressors.txt')
+      fname2_motion <- file.path(dir2_s,'Movement_Regressors.txt')
+      dir_unzip_s <- file.path(main_dir,'data')
+      unzip(fname_zip_s, exdir=dir_unzip_s, files=c(fname1_ts, fname2_ts, fname1_EVs, fname2_EVs, fname1_motion, fname2_motion))
+      fname1_ts <- file.path(dir_unzip_s, fname1_ts)
+      fname2_ts <- file.path(dir_unzip_s, fname2_ts)
+    }
+    #analyze hemispheres separately due to different in set of tasks
+    for(h in 1:2){
+
+      #h=1 -- left hemisphere
+      #h=2 -- right hemisphere
+      hem <- c('left','right')[h]
+
+      cols_h <- cols_list[[h]]
+      tasks_h <- tasks[cols_h]
+      names_tasks_h <- names_tasks[cols_h]
+      K <- length(tasks_h)
+
+      #Set up list of onsets
+      onsets1 <- onsets2 <- vector('list', length=K)
+      names(onsets1) <- names(onsets2) <- names_tasks_h
+      for(t in tasks_h){
+        ind_t <- which(tasks_h==t)
+        fname1_t <- file.path(dir1_s,'EVs',paste0(t,'.txt'))
+        onsets1[[ind_t]] <- read.table(fname1_t, header=FALSE)
+        fname2_t <- file.path(dir2_s,'EVs',paste0(t,'.txt'))
+        onsets2[[ind_t]] <- read.table(fname2_t, header=FALSE)
+      }
+
+      #Set up nuisance regressors
+      motion1 <- as.matrix(read.table(file.path(dir1_s,'Movement_Regressors.txt'), header=FALSE))
+      motion2 <- as.matrix(read.table(file.path(dir2_s,'Movement_Regressors.txt'), header=FALSE))
+
+      outfile_svh <- file.path('../results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
+  		result_svh <- BayesGLM_cifti(fname_cifti = c(fname1_ts, fname2_ts),
+           fname_gifti_left = fname_gifti_left,
+           fname_gifti_right = fname_gifti_right,
+           fname_gifti2_left = fname_gifti2_left,
+           fname_gifti2_right = fname_gifti2_right,
+           fname_sphere_left = fname_sphere_left,
+           fname_sphere_right = fname_sphere_right,
+           brainstructures = hem,
+           wb_cmd = wb_cmd,
+           onsets = list(onsets1, onsets2),
+           TR = TR,
+           nuisance = list(motion1, motion2),
+           nuisance_include = c('drift','dHRF'),
+           GLM_method = 'both',
+           session_names = c('LR','RL'),
+           resample = 5000,
+           num.threads = 16,
+           verbose = TRUE,
+           outdir = outdir,
+           outfile = outfile_svh,
+           avg_betas_over_sessions = T)
+  		fname_svh <- file.path(outdir, paste0(outfile_svh,'.Rdata'))
+  		save(result_svh, file=fname_svh)
+    }
+  }
+}
 ```
 
