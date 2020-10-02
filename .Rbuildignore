@@ -1,9 +1,9 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^R/BayesGLM_group\.R$
 ^vignettes$
 ^scratch$
 ^R/summarize_sessions\.R$
 ^R/BayesGLM_vol3D\.R$
-^R/plot_BayesGLM_2D\.R$
-^R/plot_image_2d\.R$
+^R/plot_BayesGLM_slice\.R$
+^R/plot_image_slice\.R$
+^R/BayesGLM2_old\.R$
