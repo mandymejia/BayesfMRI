@@ -7,3 +7,5 @@
 ^R/plot_BayesGLM_2D\.R$
 ^R/plot_image_2d\.R$
 ^R/BayesGLM_group_old\.R$
+^R/BayesGLM_group_old2\.R$
+^R/BayesGLM_group2\.R$
