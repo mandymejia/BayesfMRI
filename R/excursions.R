@@ -40,7 +40,15 @@ find.connected <- function(ind,mesh){
 # excurobj.  area.limit is a limit for the area of the sets. NULL is returned if all sets have areas
 # larger than area.limit. If factor>0 the set is expanded by an amount given by factor*area.limit.
 
-
+#' Find smallest activation
+#' 
+#' @param res Undocumented
+#' @param mesh Undocumented
+#' @param area.limit Undocumented
+#' @param factor Undocumented
+#' @param area.el Undocumented
+#' 
+#' @importFrom grDevices chull
 find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 
   if (class(res) == "excurobj") {

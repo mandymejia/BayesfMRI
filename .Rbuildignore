@@ -9,3 +9,6 @@
 ^R/BayesGLM_group_old\.R$
 ^R/BayesGLM_group_old2\.R$
 ^R/BayesGLM_group2\.R$
+^R/plot_BayesGLM_slice\.R$
+^R/plot_image_slice\.R$
+^R/BayesGLM2_old\.R$

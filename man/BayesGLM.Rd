@@ -41,7 +41,7 @@ by its maximum value, and then subtracting the new column mean.}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
 
-\item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
+\item{outfile}{File name where results will be written (for use by \code{BayesGLM2}).}
 
 \item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 

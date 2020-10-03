@@ -7,6 +7,7 @@
 R/BayesGLM_group_old.R
 R/BayesGLM_group2.R
 R/BayesGLM_group_old2.R
+R/BayesGLM2_old.R
 R/summarize_sessions.R
 .Rhistory
 inst/doc

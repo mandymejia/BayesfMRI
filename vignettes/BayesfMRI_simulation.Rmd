@@ -95,7 +95,7 @@ library(ggplot2)
 library(purrr)
 library(reshape2)
 
-plot_image_2D <- function(X, color_palette = NULL, zlim = NULL) {
+plot_image_slice <- function(X, color_palette = NULL, zlim = NULL) {
   if(class(X) == "matrix") X = list(single_activation_field = X)
   if(class(X) != "list") stop("Expected a matrix or list for X.")
   if(any(!sapply(X,function(x) {
@@ -144,7 +144,7 @@ plot_image_2D <- function(X, color_palette = NULL, zlim = NULL) {
   return(out_grob)
 }
 
-plot_BayesGLM_2d <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
+plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
   # Create a conversion matrix
   in_binary_mask <- which(mask == 1, arr.ind = T)
   in_binary_mask <- in_binary_mask[,2:1]
@@ -210,7 +210,7 @@ simulated_data <-
 Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
 
 ```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=3}
-plot_image_2D(simulated_data$betas$session_1, zlim=c(0,1.5))
+plot_image_slice(simulated_data$betas$session_1, zlim=c(0,1.5))
 ```
 
 For model estimation, the data for each session must be formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Multiple sessions are combined into a list (in this example, there is a single session). The function `simulate_slice_data()` returns the data already in this format:
@@ -229,17 +229,17 @@ We can fit a classical GLM to the data using the `classicalGLM()` function. Note
 ```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
 single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
 classical_estimates <- vec_to_image(single_session_classical$session_1, template_image = binary_template)
-plot_image_2D(classical_estimates, zlim = c(-1.5,1.5))
+plot_image_slice(classical_estimates, zlim = c(-1.5,1.5))
 ```
 
 While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach due to the level of the noise in the estimates.
 
 ## Bayesian GLM 
 
-Now we start preparing to fit the spatial Bayesian GLM.  The data locations must be part of a triangular mesh.  This is the format of cortical surface fMRI data, but a triangular mesh can also be constructed for a slice of volumetric fMRI data as in this simulation.  Ideally the mesh will be "padded" with boundary layers of larger triangles to avoid undesirable boundary effects on the data locations. Here we use the `make_2d_mesh()` function to construct a mesh from a brain mask.  The plotted mesh below shows a fine mesh corresponding to data locations (inside the mask), surrounded by boundary layers of increasingly larger triangles.
+Now we start preparing to fit the spatial Bayesian GLM.  The data locations must be part of a triangular mesh.  This is the format of cortical surface fMRI data, but a triangular mesh can also be constructed for a slice of volumetric fMRI data as in this simulation.  Ideally the mesh will be "padded" with boundary layers of larger triangles to avoid undesirable boundary effects on the data locations. Here we use the `make_slice_mesh()` function to construct a mesh from a brain mask.  The plotted mesh below shows a fine mesh corresponding to data locations (inside the mask), surrounded by boundary layers of increasingly larger triangles.
 
 ```{r Make the mesh, fig.width=7, fig.height=5}
-mesh <- make_2d_mesh(binary_template)
+mesh <- make_slice_mesh(binary_template)
 plot(mesh, main = "")
 ```
 *Note: INLA reads indices in a different order than the default R behavior. That is, the first index corresponds to columns and the second refers to rows. This is why the mesh appears to be a transposed image of a brain slice when compared to the activation amplitudes shown above.*
@@ -256,7 +256,7 @@ single_session_result <- readRDS("single_session_BayesGLM_results.rds")
 ```
 
 ```{r Plot the single-session mean results, fig.height=3, fig.width=7}
-plot_BayesGLM_2d(single_session_result, mask = binary_template, zlim = c(-1.5,1.5))
+plot_BayesGLM_slice(single_session_result, mask = binary_template, zlim = c(-1.5,1.5))
 ```
 
 # Single-Subject, Multi-Session Analysis 
@@ -288,13 +288,13 @@ This results in the true activation amplitudes:
 Session 1:
 
 ```{r True Activation Amplitudes 1, fig.height=3, fig.width=7, echo=F}
-plot_image_2D(multi_data$betas$session_1, zlim=c(0,1.5))
+plot_image_slice(multi_data$betas$session_1, zlim=c(0,1.5))
 ```
 
 Session 2: 
 
 ```{r True Activation Amplitudes 2, fig.height=3, fig.width=7, echo=F}
-plot_image_2D(multi_data$betas$session_2, zlim=c(0,1.5))
+plot_image_slice(multi_data$betas$session_2, zlim=c(0,1.5))
 ```
 
 The function `simulate_slice_data()` formats the data into a list of "session" objects, which we can then pass to `BayesGLM` for analysis. **Note: Model is pre-computed. Set `eval=TRUE` to compute. Expected computation time is approximately 10 minutes with PARDISO enabled.**
@@ -312,7 +312,7 @@ multi_session_result <- readRDS("multi_session_BayesGLM_results.rds")
 ```
 
 ```{r Separate sessions plot, fig.height=6, fig.width=7}
-plot_BayesGLM_2d(multi_session_result, mask = binary_template, zlim = c(-1.5,1.5))
+plot_BayesGLM_slice(multi_session_result, mask = binary_template, zlim = c(-1.5,1.5))
 ```
 
 <!-- ## Combined Results -->
