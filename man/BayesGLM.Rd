@@ -16,7 +16,8 @@ BayesGLM(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL
+  contrasts = NULL,
+  avg_betas_over_sessions = FALSE
 )
 }
 \arguments{
@@ -47,6 +48,8 @@ by its maximum value, and then subtracting the new column mean.}
 
 \item{contrasts}{A list of contrast vectors to be passed to
 \code{\link{inla}}.}
+
+\item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}
 }
 \value{
 A list containing...

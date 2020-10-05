@@ -721,15 +721,16 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #' @param contrasts A list of contrast vectors to be passed to
 #'   \code{\link{inla}}.
+#' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
 #' @return A list containing...
 #' @export
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption
+#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL){
+BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -887,14 +888,45 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
+  if(n_sess > 1 & avg_betas_over_sessions) {
+    diag_coefs <- Diagonal(n = mesh$n, x = 1/n_sess)
+    full_coefs <- Reduce(cbind,rep(list(diag_coefs),n_sess))
+    coef_lincombs <- sapply(seq(K),function(k) { inla.make.lincombs(nm = full_coefs)}, simplify = F)
+    renamed_lc <- mapply(function(lc,nm) {
+      output <- sapply(lc, function(llc) {
+        names(llc[[1]]) <- nm
+        return(llc)
+      }, simplify = F)
+      return(output)
+    },lc = coef_lincombs, nm = beta_names, SIMPLIFY = F)
+    my_lc <- Reduce(c,renamed_lc)
+    num_lc <- length(my_lc)
+    num_char <- as.character(nchar(as.character(num_lc)))
+    names(my_lc) <- sprintf(paste0("lc%0",num_char,".0f"),seq(num_lc))
+    cat("Set linear combinations for averages across sessions\n")
+  } else {
+    my_lc <- NULL
+  }
+
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts))
+  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
   theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  # The mean of the mean beta estimates across sessions
+  if(n_sess > 1 & avg_betas_over_sessions) {
+    avg_beta_means <- INLA_result$summary.lincomb.derived$mean
+    avg_beta_estimates <- sapply(seq(K), function(k) {
+      bbeta_out <- avg_beta_means[(seq(mesh$n) + (k-1)*mesh$n)]
+      return(bbeta_out)
+    }, simplify = T)
+    names(avg_beta_estimates) <- beta_names
+  } else {
+    avg_beta_estimates <- NULL
+  }
 
   #extract stuff needed for group analysis
   mu.theta <- INLA_result$misc$theta.mode
@@ -909,6 +941,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
                    mu.theta = mu.theta, #for joint group model
                    Q.theta = Q.theta, #for joint group model
@@ -925,6 +958,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
                    mu.theta = mu.theta, #for joint group model
                    Q.theta = Q.theta, #for joint group model
