@@ -1,0 +1,427 @@
+#' Performs group-level Bayesian GLM estimation and inference using the joint approach described in Mejia et al. (2019)
+#'
+#' @param results Either (1) a list of length M of objects of class BayesGLM,
+#' or (2) a character vector of length M of file names output from the BayesGLM function.
+#' M is the number of subjects.
+#' @param contrasts (Optional) A list of vectors, each length M*K, specifying the contrast(s)
+#' of interest across subjects, where M is the number of subjects and K is the number of tasks.
+#' See Details for more information. Default is to compute the average for each task across subjects.
+#' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
+#' @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="),
+#' or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.
+#' @param gamma (For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).
+#' @param alpha (For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).
+#' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
+#' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
+#' @param no_cores The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.
+#' @param verbose Logical indicating if progress updates should be displayed.
+#'
+#' @details Each contrast vector specifies a group-level summary of interest.  Let M be the number of subjects and K be the number of tasks.
+#' For example, the contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average for the first task;
+#' `c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))` represents the difference between the first M1 subjects and the remaining M2 subjects (M1+M2=M) for the first task;
+#' `rep( c(1/M,-1/M,rep(0, K-2)) ,M)` represents the difference between the first two tasks, averaged over all subjects.
+#'
+#' @return A list containing the estimates, PPMs and areas of activation for each contrast.
+#' @export
+#' @importFrom INLA inla.spde2.matern inla.spde.make.A
+#' @importFrom MASS mvrnorm
+#' @importFrom Matrix bdiag crossprod
+#' @import parallel
+#' @importFrom stringr str_sub
+#' @import abind
+#'
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#'
+BayesGLM2 <- function(results,
+                           contrasts = NULL,
+                           quantiles = NULL,
+                           excursion_type=NULL,
+                           gamma = 0,
+                           alpha = 0.05,
+                           nsamp_theta = 50,
+                           nsamp_beta = 100,
+                           no_cores = NULL,
+                           verbose = TRUE){
+
+  flag <- inla.pardiso.check()
+  if(grepl('FAILURE',flag)) {
+    warning('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is recommended for computational efficiency. See inla.pardiso().')
+  } else {
+    inla.setOption(smtp='pardiso')
+  }
+
+  #Check if results are model objects or file paths
+
+  result_class <- sapply(results, class)
+  names(result_class) <- NULL
+  problem <- FALSE
+  is_RDS <- function(x){
+    if(!is.character(x)) {
+      return(FALSE)
+    } else {
+      last3 <- str_sub(x, -3, -1)
+      return(last3 %in% c('rds','RDS','Rds'))
+    }
+  }
+  if(result_class[1] == 'character'){
+    if(any(!is_RDS(results))) problem <- TRUE
+  } else if(result_class[1] == 'BayesGLM'){
+    if(any(result_class != 'BayesGLM')) problem <- TRUE
+  } else {
+    problem <- TRUE
+  }
+  if(problem) stop('All elements of results argument must be BayesGLM or a character file path to an RDS object.')
+
+  #if using files, grab the first model result for checks
+  M <- length(results)
+  use_files <- (result_class[1]=='character')
+  use_objects <- (result_class[1]=='BayesGLM')
+  if(use_files) {
+    fnames <- results
+    results <- vector('list', length=M)
+    results[[1]] <- readRDS(fnames[1])
+    if(class(results[[1]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
+  }
+
+
+  #Check that subject-level models are single-session models
+  num_sessions <- length(results[[1]]$session_names)
+  if(num_sessions>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
+
+
+  #### SET UP OR CHECK CONTRAST VECTOR(S)
+
+  #TO DO: Generalize to multi-session models (just need to expand the contrasts vector to summarize across sessions as well as subjects)
+
+  # If contrasts is null, by default set up a contrast vector that will compute the average across subjects for each task
+  K <- length(results[[1]]$beta_names) #number of tasks
+  beta_names <- results[[1]]$beta_names
+  if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
+  if(is.null(contrasts)) {
+    if(verbose) cat('Setting up contrast vectors to compute the average across subjects for each task. If other contrasts are desired, provide a contrasts argument.\n')
+    contrasts <- vector('list', length=K)
+    names(contrasts) <- paste0(beta_names,'_avg')
+    for(k in 1:K){
+      contrast_onesubj_k <- c(rep(0, k-1), 1/M, rep(0, K-k)) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K
+      contrast_allsubj_k <- rep(contrast_onesubj_k, M)
+      contrasts[[k]] <- contrast_allsubj_k
+    }
+  }
+
+  #Check that each contrast vector is numeric and length J*K
+  num_contrasts <- length(contrasts)
+  length_each_contrast <- sapply(contrasts, length)
+  class_each_contrast <- sapply(contrasts, is.numeric)
+  if(any(length_each_contrast != M*K)) stop('each contrast vector must be of length M*K')
+  if(any(!class_each_contrast)) stop('each contrast vector must be numeric, but at least one is not')
+
+  #Check excursions settings
+  if(is.null(excursion_type)) do_excur <- FALSE else do_excur <- TRUE
+  if(do_excur) {
+    if(length(excursion_type) == 1) excursion_type <- rep(excursion_type, num_contrasts)
+    if(length(gamma) == 1) gamma <- rep(gamma, num_contrasts)
+    if(length(alpha) == 1) alpha <- rep(alpha, num_contrasts)
+    if(length(gamma) != num_contrasts) stop('Length of gamma must match number of contrasts or be equal to one.')
+    if(length(alpha) != num_contrasts) stop('Length of alpha must match number of contrasts or be equal to one.')
+    if(length(excursion_type) != num_contrasts) stop('Length of excursion_type must match number of contrasts or be equal to one.')
+  } else {
+    excursion_type <- 'none'
+  }
+
+  # Mesh and SPDE object
+  mesh <- results[[1]]$mesh
+  spde <- inla.spde2.matern(mesh)
+  Amat <- inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
+  Amat <- Amat[mesh$idx$loc,]
+  Amat.tot <- bdiag(rep(list(Amat), K)) #Psi_m from paper (VKxNK)
+
+  #Check quantiles argument
+  if(!is.null(quantiles)){
+    if(any(quantiles > 1 | quantiles < 0)) stop('All elements of quantiles argument must be between 0 and 1.')
+  }
+
+  # Collecting theta posteriors from subject models
+  Qmu_theta <- Q_theta <- 0
+
+  # Collecting X and y cross-products from subject models (for posterior distribution of beta)
+  Xcros.all <- Xycros.all <- vector("list", M)
+
+  for(m in 1:M){
+
+    if(use_files & (m > 1)){
+      results[[m]] <- readRDS(fnames[m])
+      if(class(results[[m]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
+    }
+
+    #Check match of beta names
+    beta_names_m <- results[[m]]$beta_names
+    if(!all.equal(beta_names_m, beta_names, check.attributes=FALSE)) stop('All subjects must have the same tasks in the same order.')
+
+    #Check that mesh has same neighborhood structure
+    faces_m <- results[[m]]$mesh$faces
+    if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
+
+    #Check that model is single session
+    num_sessions_m <- length(results[[m]]$session_names)
+    if(num_sessions_m>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
+
+    #Collect posterior mean and precision of hyperparameters
+    mu_theta_m <- results[[m]]$mu.theta
+    Q_theta_m <- results[[m]]$Q.theta
+    #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
+    Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
+    Q_theta <- Q_theta + Q_theta_m
+    rm(mu_theta_m, Q_theta_m)
+
+    #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
+    y_vec <- results[[m]]$y
+    X_list <- results[[m]]$X
+    Xmat <- X_list[[1]]%*%Amat.tot
+    Xcros.all[[m]] <- crossprod(Xmat)
+    Xycros.all[[m]] <- crossprod(Xmat, y_vec)
+
+    if(m > 1) results[[m]] <- c(0) #to save memory
+  }
+  mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+
+  #### DRAW SAMPLES FROM q(theta|y)
+
+  #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
+  if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+  theta.samp <- inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+
+  #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
+
+  if(verbose) cat('Computing weights for each theta sample \n')
+  logwt <- rep(NA, nsamp_theta)
+  for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
+  #weights to apply to each posterior sample of theta
+  wt.tmp <- exp(logwt - max(logwt))
+  wt <- wt.tmp/(sum(wt.tmp))
+
+  #get posterior quantities of beta, conditional on a value of theta
+  if(verbose) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
+  if(is.null(no_cores)){
+    #6 minutes in simuation
+    beta.posteriors <- apply(theta.samp,
+                             MARGIN=2,
+                             FUN=beta.posterior.thetasamp,
+                             spde=spde,
+                             Xcros = Xcros.all,
+                             Xycros = Xycros.all,
+                             contrasts=contrasts,
+                             quantiles=quantiles,
+                             excursion_type=excursion_type,
+                             gamma=gamma,
+                             alpha=alpha,
+                             nsamp_beta=nsamp_beta)
+  } else {
+    #2 minutes in simulation (4 cores)
+    max_no_cores <- min(detectCores() - 1, 25)
+    no_cores <- min(max_no_cores, no_cores)
+    cl <- makeCluster(no_cores)
+    beta.posteriors <- parApply(cl, theta.samp,
+                                MARGIN=2,
+                                FUN=beta.posterior.thetasamp,
+                                spde=spde,
+                                Xcros = Xcros.all,
+                                Xycros = Xycros.all,
+                                contrasts=contrasts,
+                                quantiles=quantiles,
+                                excursion_type=excursion_type,
+                                gamma=gamma,
+                                alpha=alpha,
+                                nsamp_beta=nsamp_beta)
+    stopCluster(cl)
+  }
+
+
+
+  ## Sum over samples using weights
+
+  if(verbose) cat('Computing weighted summaries over beta samples \n')
+
+  ## Posterior mean of each contrast
+  betas.all <- lapply(beta.posteriors, function(x) return(x$mu))
+  betas.wt <- mapply(function(x, a){return(x*a)}, betas.all, wt, SIMPLIFY=FALSE) #apply weight to each element of betas.all (one for each theta sample)
+  betas.summ <- apply(abind(betas.wt, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+
+  ## Posterior quantiles of each contrast
+  num_quantiles <- length(quantiles)
+  if(num_quantiles > 0){
+    quantiles.summ <- vector('list', num_quantiles)
+    names(quantiles.summ) <- quantiles
+    for(iq in 1:num_quantiles){
+      quantiles.all_iq <- lapply(beta.posteriors, function(x) return(x$quantiles[[iq]]))
+      betas.wt_iq <- mapply(function(x, a){return(x*a)}, quantiles.all_iq, wt, SIMPLIFY=FALSE) #apply weight to each element of quantiles.all_iq (one for each theta sample)
+      quantiles.summ[[iq]] <- apply(abind(betas.wt_iq, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+    }
+  } else {
+    quantiles.summ <- NULL
+  }
+
+  ## Posterior probabilities and activations
+  if(do_excur){
+    ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
+    ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
+    ppm.summ <- apply(abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
+    active <- array(0, dim=dim(ppm.summ))
+    for(l in 1:num_contrasts){
+      active[ppm.summ[,l] > (1-alpha[l]),l] <- 1
+    }
+  } else {
+    ppm.summ <- active <- NULL
+  }
+
+  ### Save all results
+  result <- list(estimates = betas.summ,
+                 quantiles = quantiles.summ,
+                 ppm = ppm.summ,
+                 active = active,
+                 contrasts = contrasts,
+                 gamma = gamma,
+                 alpha = alpha,
+                 nsamp_theta = nsamp_theta,
+                 nsamp_beta = nsamp_beta,
+                 Amat = Amat)
+
+  return(result)
+
+}
+
+
+#' Internal function used in joint approach to group-analysis
+#'
+#' @param theta A single sample of theta (hyperparameters) from q(theta|y)
+#' @param spde A SPDE object from inla.spde2.matern() function.
+#' @param Xcros A crossproduct of design matrix.
+#' @param Xycros A crossproduct of design matrix and BOLD y.
+#' @param contrasts A list of vectors of length M*K specifying the contrasts of interest.
+#' @param quantiles Vector of posterior quantiles to return in addition to the posterior mean
+#' @param excursion_type Vector of excursion function type (">", "<", "!=") for each contrast
+#' @param gamma Vector of activation thresholds for each contrast
+#' @param alpha Significance level for activation for the excursion sets
+#' @param nsamp_beta The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))
+#'
+#' @return A list containing...
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' @importFrom excursions excursions.mc
+#' @importFrom Matrix Diagonal
+#' @importFrom INLA inla.spde2.precision inla.qsample inla.qsolve
+#'
+beta.posterior.thetasamp <- function(theta,
+                                     spde,
+                                     Xcros,
+                                     Xycros,
+                                     contrasts,
+                                     quantiles,
+                                     excursion_type,
+                                     gamma,
+                                     alpha,
+                                     nsamp_beta=100){
+
+  n.mesh <- spde$n.spde
+
+  # print('contructing joint precision')
+  prec.error <- exp(theta[1])
+  theta_spde <- matrix(theta[-1], nrow=2) #2xK matrix of the hyperparameters (2 per task)
+  K <- ncol(theta_spde)
+  M <- length(Xcros)
+
+  #contruct prior precision matrix for beta, Q_theta for given sampled value of thetas
+  Q.beta <- list()
+  for(k in 1:K) {
+    theta_k <- theta_spde[,k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
+    Q.beta[[k]] <- inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+  }
+  Q <- bdiag(Q.beta) #Q_theta in the paper
+
+  N <- dim(Q.beta[[1]])[1] #number of mesh locations
+  if(N != n.mesh) stop('Length of betas does not match number of vertices in mesh. Inform developer.')
+
+  beta.samples <- NULL
+  #~5 seconds per subject with PARDISO
+  # print('Looping over subjects or sessions')
+  for(mm in 1:M){
+
+    #compute posterior mean and precision of beta|theta
+    Q.m <- prec.error*Xcros[[mm]] + Q #Q_m in paper
+    mu.m <- inla.qsolve(Q.m, prec.error*Xycros[[mm]]) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
+
+    #draw samples from pi(beta_m|theta,y)
+    beta.samp.m <- inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
+
+    #concatenate samples over models
+    beta.samples <- rbind(beta.samples, beta.samp.m) #will be a (N*K*M) x nsamp_beta matrix
+
+  }
+
+  if(excursion_type[1] == 'none') do_excur <- FALSE else do_excur <- TRUE
+
+  # Loop over contrasts
+  num_contrasts <- length(contrasts)
+  mu.contr <- matrix(NA, nrow=n.mesh, ncol=num_contrasts)
+  if(do_excur) F.contr <- mu.contr else F.contr <- NULL
+  if(!is.null(quantiles)){
+    num_quantiles <- length(quantiles)
+    quantiles.contr <- rep(list(mu.contr), num_quantiles)
+    names(quantiles.contr) <- quantiles
+  } else {
+    num_quantiles <- 0
+    quantiles.contr <- NULL
+  }
+  for(l in 1:num_contrasts){
+
+    #Construct "A" matrix from paper (linear combinations)
+    ctr.mat <- kronecker(t(contrasts[[l]]), Diagonal(n.mesh, 1))
+
+    #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
+    samples_l <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
+    mu.contr[,l] <- rowMeans(samples_l) #compute mean over beta samples
+    if(num_quantiles > 0){
+      for(iq in 1:num_quantiles){
+        quantiles.contr[[iq]][,l] <- apply(samples_l, 1, quantile, quantiles[iq])
+      }
+    }
+
+    # Estimate excursions set for current contrast
+    if(do_excur){
+      excur_l <- excursions.mc(samples_l, u = gamma[l], type = excursion_type[l], alpha = alpha[l])
+      F.contr[,l] <- excur_l$F
+    }
+  }
+
+  result <- list(mu = mu.contr, quantiles=quantiles.contr, F = F.contr)
+  return(result)
+}
+
+
+#' Internal function used in joint approach to group-analysis for combining across models
+#'
+#' @param theta A vector of hyperparameter values at which to compute the posterior log density
+#' @param spde A SPDE object from inla.spde2.matern() function, determines prior precision matrix
+#' @param mu_theta Posterior mean from combined subject-level models.
+#' @param Q_theta Posterior precision matrix from combined subject-level models.
+#' @param M Number of subjects
+#' @return A list containing...
+#'
+#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#'
+F.logwt <- function(theta, spde, mu_theta, Q_theta, M){
+  #mu_theta - posterior mean from combined subject-level models
+  #Q_theta - posterior precision matrix from combined subject-level models
+  #M - number of subjects
+  a <- 1; b <- 5e-5
+  n.spde <- (length(theta) - 1)/2
+  mu.tmp <- spde$f$hyper$theta1$param[1:2]
+  mu <- rep(mu.tmp, n.spde)
+  Q.tmp <- matrix(spde$f$hyper$theta1$param[-(1:2)], 2, 2, byrow = TRUE)
+  Q <- kronecker(diag(1, n.spde, n.spde), Q.tmp)
+
+  ## Prior density
+  pr.delta <- dgamma(exp(theta[1]), a, b, log = TRUE) #log prior density on residual precision
+  pr.tk <- as.vector(-t(theta[-1] - mu)%*%Q%*%(theta[-1] - mu))/2 + log(det(Q))/2 - dim(Q)[1]*log(2*pi)/2 #joint log prior density on 2K spde parameters
+  pr.theta <- pr.delta + pr.tk
+
+  (1-M)*pr.theta
+}

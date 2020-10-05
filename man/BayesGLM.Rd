@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{Applies spatial Bayesian GLM to task fMRI data on the cortical surface}
+\title{Applies spatial Bayesian GLM to task fMRI data}
 \usage{
 BayesGLM(
   data,
@@ -16,7 +16,8 @@ BayesGLM(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL
+  contrasts = NULL,
+  avg_betas_over_sessions = FALSE
 )
 }
 \arguments{
@@ -41,18 +42,20 @@ by its maximum value, and then subtracting the new column mean.}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
 
-\item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
+\item{outfile}{File name where results will be written (for use by \code{BayesGLM2}).}
 
 \item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
 
 \item{contrasts}{A list of contrast vectors to be passed to
 \code{\link{inla}}.}
+
+\item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}
 }
 \value{
 A list containing...
 }
 \description{
-Applies spatial Bayesian GLM to task fMRI data on the cortical surface
+Applies spatial Bayesian GLM to task fMRI data
 }
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.

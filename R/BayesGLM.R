@@ -1,3 +1,248 @@
+#'  Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data
+#'
+#' @param BOLD A list of sessions, each with a three-dimensional array in which
+#'   the first two dimensions correspond to the size of the fMRI slice in space
+#'   and the last dimension corresponds to time
+#' @param binary_mask (optional) a binary brain slice image used to mask
+#'   the BOLD data and make a more efficient network mesh for the
+#'   neighborhood definitions
+#' @param design A TxK task design matrix (or list of such matrices, for
+#'   multiple-session modeling) with column names representing tasks. Each
+#'   column represents the expected BOLD response due to each task, a
+#'   convolution of the hemodynamic response function (HRF) and the task
+#'   stimulus.  Must be provided if and only if onsets=NULL.  Note that the
+#'   scale of the regressors will affect the scale and interpretation of the
+#'   beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is
+#'   recommended.
+#' @param onsets A matrix of onsets (first column) and durations (second column)
+#'   for each task in SECONDS, organized as a list where each element of the
+#'   list corresponds to one task. Names of list should be task names. (Or for
+#'   multi-session modeling, a list of such lists.)  Must be provided if and
+#'   only if design=NULL.
+#' @param TR The temporal resolution of the data in seconds.  Must be provided
+#'   if onsets provided.
+#' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
+#'   matrices, for multiple-session modeling).
+#' @param nuisance_include (Optional) Additional nuisance covariates to include.
+#'   Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
+#'   derivative of each column of design matrix).
+#' @param scale_BOLD If TRUE (default), scale timeseries data so estimates
+#'   represent percent signal change.  Else, center but do not scale.
+#' @param scale_design If TRUE (default), scale design matrix so maximum value
+#'   is equal to 1.  Else, do not scale.
+#' @param num.threads Maximum number of threads the inla-program will use for
+#'   model estimation
+#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only,
+#'   'classical' for the classical GLM only, or 'both' to return both classical
+#'   and Bayesian estimates of task activation.
+#' @param session_names (Optional) A vector of names corresponding to each
+#'   session.
+#' @param return_INLA_result If TRUE, object returned will include the INLA
+#'   model object (can be large).  Default is FALSE.  Required for running
+#'   \code{id_activations} on \code{BayesGLM} model object (but not for running
+#'   \code{BayesGLM_joint} to get posterior quantities of group means or
+#'   contrasts).
+#' @param write_dir (Optional) The path to a directory where results will be
+#'   saved. Defaults to the current working directory.
+#' @param outfile (Optional) File name (without extension) of output file for
+#'   BayesGLM result to use in Bayesian group modeling.
+#' @param verbose Logical indicating if INLA should run in a verbose mode
+#'   (default FALSE).
+#' @param contrasts A list of contrast vectors to be passed to
+#'   \code{\link{inla}}.
+#'
+#' @importFrom utils head
+#'
+#' @return An object of class BayesGLM, a list containing ...
+#' @export
+BayesGLM_slice <-
+  function(BOLD,
+           design = NULL,
+           onsets=NULL,
+           TR=NULL,
+           nuisance=NULL,
+           nuisance_include=c('drift','dHRF'),
+           binary_mask = NULL,
+           scale_BOLD = TRUE,
+           scale_design = TRUE,
+           num.threads = 4,
+           GLM_method = 'both',
+           session_names = NULL,
+           return_INLA_result = TRUE,
+           write_dir=NULL,
+           outfile = NULL,
+           verbose = FALSE,
+           contrasts = NULL) {
+    if(is.null(write_dir)){
+      write_dir <- getwd()
+    } else if(!file.exists(write_dir)){
+      stop('write_dir does not exist, check and try again.')
+    }
+    do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
+    do_classical <- (GLM_method %in% c('both','classical'))
+
+    if(do_Bayesian){
+      flag <- inla.pardiso.check()
+      if(grepl('FAILURE',flag)) {
+        warning('PARDISO IS NOT INSTALLED OR NOT WORKING.
+                                     PARDISO is required for computational
+                                     efficiency. See inla.pardiso().')
+      } else {
+        inla.setOption(smtp='pardiso')
+      }
+    }
+
+    image_dims <- head(dim(BOLD[[1]]),-1)
+    if (is.null(binary_mask))
+      binary_mask <- matrix(1, nrow = image_dims[1], ncol = image_dims[2])
+
+    mesh <- make_slice_mesh(binary_mask)
+
+    # Name sessions and check compatibility of multi-session arguments
+    n_sess <- length(BOLD)
+    if(n_sess==1){
+      if(is.null(session_names)) session_names <- 'single_session'
+    } else {
+      if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
+    }
+    if(length(session_names) != n_sess)
+      stop('If session_names is provided, it must be of the same length as BOLD')
+
+  cat('\n SETTING UP DATA \n')
+
+  if(is.null(design)) {
+    make_design <- TRUE
+    design <- vector('list', length=n_sess)
+  } else {
+    make_design <- FALSE
+  }
+
+  for(ss in 1:n_sess){
+    if(make_design){
+      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+      }
+  }
+
+  ### Check that design matrix names consistent across sessions
+  if(n_sess > 1){
+    tmp <- sapply(design, colnames)
+    tmp <- apply(tmp, 1, function(x) length(unique(x)))
+    if(max(tmp) > 1)
+      stop('task names must match across sessions for multi-session modeling')
+  }
+
+  cat('\n RUNNING MODEL \n')
+
+  classicalGLM <- NULL
+  BayesGLM <- NULL
+
+  ### FORMAT DESIGN MATRIX
+  for(ss in 1:n_sess){
+    if(scale_design){
+      design[[ss]] <- scale_design_mat(design[[ss]])
+      scale_design <- F
+    } else {
+      design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix
+        # to eliminate baseline
+    }
+  }
+
+  ### ADD ADDITIONAL NUISANCE REGRESSORS
+  for (ss in 1:n_sess) {
+    ntime <- nrow(design[[ss]])
+    if ('drift' %in% nuisance_include) {
+      drift <- (1:ntime) / ntime
+      if (!is.null(nuisance))
+        nuisance[[ss]] <-
+          cbind(nuisance[[ss]], drift, drift ^ 2)
+      else
+        nuisance[[ss]] <- cbind(drift, drift ^ 2)
+    }
+    if ('dHRF' %in% nuisance_include) {
+      dHRF <- gradient(design[[ss]])
+      if (!is.null(nuisance))
+        nuisance[[ss]] <-
+          cbind(nuisance[[ss]], dHRF)
+      else
+        nuisance[[ss]] <- dHRF
+    }
+  }
+
+  #set up session list
+  mat_BOLD <- sapply(BOLD, function(y_t) {
+    # Remove any NA voxels and output the response as a matrix
+    y <- apply(y_t,3, identity)
+    y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+    y <- y[!y_exclude,]
+    y <- t(y)
+  }, simplify = F)
+  session_data <- vector('list', n_sess)
+    names(session_data) <- session_names
+  for(ss in 1:n_sess){
+    sess <- list(BOLD = mat_BOLD[[ss]], design=design[[ss]])
+    if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+    session_data[[ss]] <- sess
+  }
+
+  ### FIT GLM(s)
+
+  if(!is.null(outfile)) outfile <- file.path(write_dir,paste0(outfile, '.Rdata'))
+
+  if(do_classical) classicalGLM_out <- classicalGLM(session_data,
+                                                     scale_BOLD=scale_BOLD,
+                                                     scale_design = scale_design)
+  if(do_Bayesian) BayesGLM_out <- BayesGLM(session_data,
+                                       mesh = mesh,
+                                       scale_BOLD=scale_BOLD,
+                                       scale_design = scale_design,
+                                       num.threads=num.threads,
+                                       return_INLA_result=return_INLA_result,
+                                       outfile = outfile,
+                                       verbose=verbose)
+
+  # Create a conversion matrix
+  in_binary_mask <- which(binary_mask == 1, arr.ind = T)
+  in_binary_mask <- in_binary_mask[,2:1]
+  convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
+  # Extract the point estimates
+  point_estimates <- sapply(session_names, function(sn){
+    as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
+  }, simplify = F)
+
+  classicalGLM_slice <- BayesGLM_slice <- vector('list', n_sess)
+  names(classicalGLM_slice) <- names(BayesGLM_slice) <- session_names
+  for(ss in 1:n_sess){
+    num_tasks <- ncol(design[[ss]])
+    if(do_classical){
+      classicalGLM_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
+        image_coef <- binary_mask
+        image_coef[image_coef == 1] <- classicalGLM_out[[ss]][,tn]
+        image_coef[binary_mask == 0] <- NA
+        return(image_coef)
+      },simplify = F)
+    }
+    if(do_Bayesian){
+      mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[ss]])
+      BayesGLM_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
+        image_coef <- binary_mask
+        image_coef[image_coef == 1] <- mat_coefs[,tn]
+        image_coef[binary_mask == 0] <- NA
+        return(image_coef)
+      },simplify = F)
+    }
+  }
+
+  result <- list(betas_Bayesian = BayesGLM_slice,
+                 betas_classical = classicalGLM_slice,
+                 GLMs_Bayesian = BayesGLM_out,
+                 GLMs_classical = classicalGLM_out,
+                 design = design,
+                 mask = binary_mask)
+  class(result) <- "BayesGLM_slice"
+  return(result)
+  }
+
 #' Performs whole-brain spatial Bayesian GLM for fMRI task activation
 #'
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
@@ -458,7 +703,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
 
 
-#' Applies spatial Bayesian GLM to task fMRI data on the cortical surface
+#' Applies spatial Bayesian GLM to task fMRI data
 #'
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
@@ -472,19 +717,20 @@ BayesGLM_cifti <- function(cifti_fname,
 #'   by its maximum value, and then subtracting the new column mean.
 #' @param num.threads Maximum number of threads the inla-program will use for model estimation
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
-#' @param outfile File name where results will be written (for use by \code{BayesGLM_group}).
+#' @param outfile File name where results will be written (for use by \code{BayesGLM2}).
 #' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
 #' @param contrasts A list of contrast vectors to be passed to
 #'   \code{\link{inla}}.
+#' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
 #' @return A list containing...
 #' @export
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption
+#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL){
+BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -620,7 +866,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   }
 
   #construct betas and repls objects
-  replicates_list <- BayesfMRI:::organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
+  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
@@ -640,16 +886,47 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
   formula_str <- paste(formula_vec, collapse=' + ')
   formula <- as.formula(formula_str, env = globalenv())
 
-  model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+  model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+
+  if(n_sess > 1 & avg_betas_over_sessions) {
+    diag_coefs <- Diagonal(n = mesh$n, x = 1/n_sess)
+    full_coefs <- Reduce(cbind,rep(list(diag_coefs),n_sess))
+    coef_lincombs <- sapply(seq(K),function(k) { inla.make.lincombs(nm = full_coefs)}, simplify = F)
+    renamed_lc <- mapply(function(lc,nm) {
+      output <- sapply(lc, function(llc) {
+        names(llc[[1]]) <- nm
+        return(llc)
+      }, simplify = F)
+      return(output)
+    },lc = coef_lincombs, nm = beta_names, SIMPLIFY = F)
+    my_lc <- Reduce(c,renamed_lc)
+    num_lc <- length(my_lc)
+    num_char <- as.character(nchar(as.character(num_lc)))
+    names(my_lc) <- sprintf(paste0("lc%0",num_char,".0f"),seq(num_lc))
+    cat("Set linear combinations for averages across sessions\n")
+  } else {
+    my_lc <- NULL
+  }
 
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts))
+  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
-  beta_estimates <- BayesfMRI:::extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
-  theta_posteriors <- BayesfMRI:::get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
+  theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  # The mean of the mean beta estimates across sessions
+  if(n_sess > 1 & avg_betas_over_sessions) {
+    avg_beta_means <- INLA_result$summary.lincomb.derived$mean
+    avg_beta_estimates <- sapply(seq(K), function(k) {
+      bbeta_out <- avg_beta_means[(seq(mesh$n) + (k-1)*mesh$n)]
+      return(bbeta_out)
+    }, simplify = T)
+    names(avg_beta_estimates) <- beta_names
+  } else {
+    avg_beta_estimates <- NULL
+  }
 
   #extract stuff needed for group analysis
   mu.theta <- INLA_result$misc$theta.mode
@@ -664,6 +941,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
                    mu.theta = mu.theta, #for joint group model
                    Q.theta = Q.theta, #for joint group model
@@ -680,6 +958,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
                    mu.theta = mu.theta, #for joint group model
                    Q.theta = Q.theta, #for joint group model
