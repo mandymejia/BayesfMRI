@@ -19,14 +19,22 @@ The experiments used in this study focus on basic motor functions, including fin
 
 ```{r}
 library(ciftiTools)
-ciftiTools::ciftiTools.setOption("wb_path", "/Applications/workbench/bin_macosx64/wb_command")
-wb_cmd <- "/Applications/workbench/bin_macosx64/wb_command"
+# ciftiTools::ciftiTools.setOption("wb_path", "/Applications/workbench/bin_macosx64/wb_command")
+# wb_cmd <- "/Applications/workbench/bin_macosx64/wb_command"
+ciftiTools::ciftiTools.setOption("wb_path", "~/workbench/bin_rh_linux64/wb_command")
+wb_cmd <- "~/workbench/bin_rh_linux64/wb_command"
 library(INLA)
 inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
 library(BayesfMRI)
-data_dir <- "~/Desktop/BayesGLM_Validation"
-subjects <- list.files(data_dir)
-subjects <- subjects[-which(is.na(as.numeric(subjects)))]
+main_dir <- "~/Desktop/BayesGLM_Validation/HCP"
+# data_dir <- "~/Desktop/BayesGLM_Validation"
+data_dir <- "/N/dcwan/projects/hcp"
+# subjects <- list.files(data_dir)
+# subjects <- subjects[-which(is.na(as.numeric(subjects)))]
+load(file.path(main_dir,"subjects.Rdata"))
+# data_dir <- "~/Desktop/BayesGLM_Validation"
+# subjects <- list.files(data_dir)
+# subjects <- subjects[-which(is.na(as.numeric(subjects)))]
 tasks <- c('cue','lf','lh','rf','rh','t') # Task data frame columns
 names_tasks <- c('cue','left foot','left hand','right foot','right hand','tongue')
 colors_tasks <- c('black',RColorBrewer::brewer.pal(5, 'Set2'))
@@ -87,6 +95,7 @@ for(subject in subjects) {
       motion1 <- as.matrix(read.table(file.path(dir1_s,'Movement_Regressors.txt'), header=FALSE))
       motion2 <- as.matrix(read.table(file.path(dir2_s,'Movement_Regressors.txt'), header=FALSE))
 
+      # outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
       outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
   		result_svh <- BayesGLM_cifti(cifti_fname = c(fname1_ts, fname2_ts),
            surfL_fname = fname_gifti_left,

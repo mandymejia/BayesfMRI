@@ -184,7 +184,12 @@ plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim
 }
 
 ```
-
+ 1,
+    num_tasks = 2,
+    active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
+    active_size = 2:4,
+    beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
+    vary_active = F
 
 # Single-Subject, Single-Session Analysis 
 
@@ -196,12 +201,7 @@ The function `simulate_slice_data()` generates true beta maps and simulated fMRI
 set.seed(47401)
 simulated_data <-
   simulate_slice_data(
-    num_sessions = 1,
-    num_tasks = 2,
-    active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
-    active_size = 2:4,
-    beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
-    vary_active = FALSE,
+    num_sessions =ALSE,
     num_time = 200,
     binary_template = NULL
   )
