@@ -307,7 +307,7 @@ BayesGLM_slice <-
 #'
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
-                     sphereL_fname=NULL, sphereR_fname=NULL,
+                     # sphereL_fname=NULL, sphereR_fname=NULL,
                      brainstructures=c('left','right','subcortical'),
                      wb_path=NULL,
                      design=NULL, onsets=NULL, TR=NULL,
@@ -320,7 +320,8 @@ BayesGLM_cifti <- function(cifti_fname,
                      verbose=FALSE,
                      write_dir=NULL,
                      outfile=NULL,
-                     return_INLA_result=FALSE){
+                     return_INLA_result=FALSE,
+                     avg_betas_over_sessions = FALSE){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
@@ -456,7 +457,7 @@ BayesGLM_cifti <- function(cifti_fname,
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res,
-        sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
+        # sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
         write_dir=write_dir,
         wb_path=wb_path
       )
@@ -467,7 +468,7 @@ BayesGLM_cifti <- function(cifti_fname,
         cifti_fname[ss],
         brainstructures=brainstructures,
         resamp_res=resamp_res,
-        sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
+        # sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
         write_dir=write_dir,
         wb_path=wb_path
       )
@@ -475,11 +476,13 @@ BayesGLM_cifti <- function(cifti_fname,
 
     if(do_left) {
       cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
-      cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,, drop=FALSE] <- cifti_ss$data$cortex_left
+      cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
+      ntime <- ncol(cifti_left[[ss]])
     }
     if(do_right) {
       cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
-      cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,, drop=FALSE] <- cifti_ss$data$cortex_right
+      cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
+      ntime <- ncol(cifti_right[[ss]])
     }
     #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
     #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
@@ -992,6 +995,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 #' @param verbose Logical indicating if should run in a verbose mode (default FALSE).
 #' @param contrasts A list of contrast vectors to be passed to
 #'   \code{\link{inla}}.
+#' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
 #'
 #' @return Results from INLA
 #' @export
@@ -999,13 +1003,13 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL){
+estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
                  verbose = verbose, keep = FALSE, num.threads = num.threads,
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts) #required for excursions
+                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) #required for excursions
   return(result)
 }
 

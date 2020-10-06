@@ -18,6 +18,9 @@ These data are preprocessed to remove the effects of movement, body processes, d
 The experiments used in this study focus on basic motor functions, including finger tapping (left and right), toe tapping (left and right), and tongue movement over the course of each subject's 3.5 minute session, during which 284 functional volumes were acquired (one every 0.72 seconds). For each task, the subject is given a prompt to perform the task via a visual cue. For each task, the binary stimulus function is defined as 1 while the visual cue is shown and 0 otherwise. 
 
 ```{r}
+library(ciftiTools)
+ciftiTools::ciftiTools.setOption("wb_path", "/Applications/workbench/bin_macosx64/wb_command")
+wb_cmd <- "/Applications/workbench/bin_macosx64/wb_command"
 library(INLA)
 inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
 library(BayesfMRI)
@@ -84,7 +87,7 @@ for(subject in subjects) {
       motion1 <- as.matrix(read.table(file.path(dir1_s,'Movement_Regressors.txt'), header=FALSE))
       motion2 <- as.matrix(read.table(file.path(dir2_s,'Movement_Regressors.txt'), header=FALSE))
 
-      outfile_svh <- file.path('../results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
+      outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
   		result_svh <- BayesGLM_cifti(cifti_fname = c(fname1_ts, fname2_ts),
            surfL_fname = fname_gifti_left,
            surfR_fname = fname_gifti_right,
