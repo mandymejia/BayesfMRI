@@ -201,7 +201,8 @@ The function `simulate_slice_data()` generates true beta maps and simulated fMRI
 set.seed(47401)
 simulated_data <-
   simulate_slice_data(
-    num_sessions =ALSE,
+    num_sessions = 1,
+    num_tasks = 2,
     num_time = 200,
     binary_template = NULL
   )
@@ -210,7 +211,7 @@ simulated_data <-
 Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
 
 ```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=3}
-plot_image_slice(simulated_data$betas$session_1, zlim=c(0,1.5))
+plot_slice(simulated_data$betas$session_1, zlim=c(0,1.5))
 ```
 
 For model estimation, the data for each session must be formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Multiple sessions are combined into a list (in this example, there is a single session). The function `simulate_slice_data()` returns the data already in this format:
@@ -229,7 +230,7 @@ We can fit a classical GLM to the data using the `classicalGLM()` function. Note
 ```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
 single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
 classical_estimates <- vec_to_image(single_session_classical$session_1, template_image = binary_template)
-plot_image_slice(classical_estimates, zlim = c(-1.5,1.5))
+plot_slice(classical_estimates, zlim = c(-1.5,1.5))
 ```
 
 While there is a small increase in the average coefficient value around the true areas of activation, these areas are difficult to distinguish using the classical GLM approach due to the level of the noise in the estimates.

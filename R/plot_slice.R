@@ -11,13 +11,14 @@
 #'   palette.
 #'
 #' @return A ggplot graphical object.
-#' @import dplyr
 #' @import ggplot2
 #' @import purrr
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom reshape2 melt
+#' @importFrom utils data
+#' @importFrom dplyr mutate
 #' @export
-plot_image_slice <- function(X, color_palette = NULL, zlim = NULL) {
+plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   if(class(X) == "matrix") X = list(single_activation_field = X)
   if(class(X) != "list") stop("Expected a matrix or list for X.")
   if(any(!sapply(X,function(x) {
@@ -25,8 +26,9 @@ plot_image_slice <- function(X, color_palette = NULL, zlim = NULL) {
   }, simplify = T))) {
     stop("All list images should be matrices.")
   }
+  # Make R CMD check happy
+  Var1 <- Var2 <- value <- NULL
   requireNamespace("ggplot2")
-  requireNamespace("dplyr")
   requireNamespace("purrr")
   if(is.null(zlim)) {
     zmin <- min(reshape2::melt(X)$value,na.rm = T)

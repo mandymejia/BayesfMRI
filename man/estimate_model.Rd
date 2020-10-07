@@ -13,7 +13,8 @@ estimate_model(
   num.threads = 4,
   int.strategy = "eb",
   verbose = FALSE,
-  contrasts = NULL
+  contrasts = NULL,
+  lincomb = NULL
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ estimate_model(
 
 \item{contrasts}{A list of contrast vectors to be passed to
 \code{\link{inla}}.}
+
+\item{lincomb}{A linear combinations object created with \code{inla.make.lincomb}}
 }
 \value{
 Results from INLA

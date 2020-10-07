@@ -14,11 +14,10 @@
 #' @param num_time length of the time series that is generated
 #' @param binary_template (optional) a binary brain slice image
 #'
-#' @return A list in which the first element, \code{data}, is a list of
-#'   sessions, each with components \code{BOLD} (a matrix) and \code{design}
-#'   (a matrix). The second list element is named \code{betas}, which is a list
-#'   of sessions, each containing a list of the true values of the coefficients
-#'   used to generate the data to be analyzed.
+#' @return A list in which the first element, \code{BOLD}, is a list of
+#'   T by N response matrices corresponding to sessions, and the second element,
+#'    \code{design}, is a list of \code{num_time} by \code{num_tasks} predictor
+#'    matrices corrsponding to sessions.
 #' @export
 #' @importFrom neuRosim specifydesign specifyregion
 #' @import stats
@@ -122,7 +121,9 @@ simulate_slice_data <-
     return(list(session = list(BOLD=y,design = tasks), betas = beta_coefficients))
   }, simplify = F)
   names(y_i) <- paste("session",seq(num_sessions), sep ="_")
-  data <- sapply(y_i, `[[`, i = "session", simplify = F)
-  betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
-  return(list(data = data, betas = betas))
+  BOLD <- sapply(y_i,function(y_is) return(y_is$session$BOLD), simplify = F)
+  design <- sapply(y_i, function(y_is) return(y_is$session$design), simplify = F)
+  # data <- sapply(y_i, `[[`, i = "session", simplify = F)
+  # betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
+  return(list(BOLD = BOLD, design = design))
 }

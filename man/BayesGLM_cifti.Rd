@@ -8,8 +8,6 @@ BayesGLM_cifti(
   cifti_fname,
   surfL_fname = NULL,
   surfR_fname = NULL,
-  sphereL_fname = NULL,
-  sphereR_fname = NULL,
   brainstructures = c("left", "right", "subcortical"),
   wb_path = NULL,
   design = NULL,
@@ -26,7 +24,8 @@ BayesGLM_cifti(
   verbose = FALSE,
   write_dir = NULL,
   outfile = NULL,
-  return_INLA_result = FALSE
+  return_INLA_result = FALSE,
+  avg_betas_over_sessions = FALSE
 )
 }
 \arguments{
@@ -35,10 +34,6 @@ BayesGLM_cifti(
 \item{surfL_fname}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
 
 \item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
-
-\item{sphereL_fname}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
-
-\item{sphereR_fname}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -79,6 +74,8 @@ If not provided, should be set with
 \item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
 
 \item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
+
+\item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}
 }
 \value{
 An object of class BayesGLM, a list containing ...

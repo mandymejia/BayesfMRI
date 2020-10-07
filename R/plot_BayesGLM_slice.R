@@ -8,7 +8,6 @@
 #' @return A ggplot2 object
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom INLA inla.spde.make.A
-#' @import dplyr
 #' @import ggplot2
 #' @import purrr
 #' @export

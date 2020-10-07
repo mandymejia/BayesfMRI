@@ -170,17 +170,17 @@ BayesGLM_slice <-
   }
 
   #set up session list
-  mat_BOLD <- sapply(BOLD, function(y_t) {
-    # Remove any NA voxels and output the response as a matrix
-    y <- apply(y_t,3, identity)
-    y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
-    y <- y[!y_exclude,]
-    y <- t(y)
-  }, simplify = F)
+  # mat_BOLD <- sapply(BOLD, function(y_t) {
+  #   # Remove any NA voxels and output the response as a matrix
+  #   y <- apply(y_t,3, identity)
+  #   y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+  #   y <- y[!y_exclude,]
+  #   y <- t(y)
+  # }, simplify = F)
   session_data <- vector('list', n_sess)
     names(session_data) <- session_names
   for(ss in 1:n_sess){
-    sess <- list(BOLD = mat_BOLD[[ss]], design=design[[ss]])
+    sess <- list(BOLD = BOLD[[ss]], design=design[[ss]])
     if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
     session_data[[ss]] <- sess
   }
@@ -248,8 +248,6 @@ BayesGLM_slice <-
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
 #' @param surfL_fname File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".
 #' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
-#' @param sphereL_fname File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
-#' @param sphereR_fname File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -273,6 +271,7 @@ BayesGLM_slice <-
 #' @param write_dir (Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.
 #' @param outfile (Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
+#' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
 #' @return An object of class BayesGLM, a list containing ...
 #' @export
@@ -307,7 +306,6 @@ BayesGLM_slice <-
 #'
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
-                     # sphereL_fname=NULL, sphereR_fname=NULL,
                      brainstructures=c('left','right','subcortical'),
                      wb_path=NULL,
                      design=NULL, onsets=NULL, TR=NULL,
