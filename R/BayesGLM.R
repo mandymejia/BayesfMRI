@@ -685,6 +685,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n DONE! \n')
 
+  class(result) <- "BayesGLM_CIFTI"
   return(result)
 }
 
@@ -949,5 +950,4 @@ BayesGLM <- function(
   }
 
   return(result)
-
 }
