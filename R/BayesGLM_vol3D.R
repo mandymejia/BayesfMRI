@@ -7,7 +7,7 @@
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
 #' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  If FALSE, just center the data and design to exclude the baseline field.
-#' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
+#' @inheritParams return_INLA_result_Param_FALSE
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @param GLM If TRUE, classical GLM estimates will also be returned
 #' @inheritParams num.threads_Param
