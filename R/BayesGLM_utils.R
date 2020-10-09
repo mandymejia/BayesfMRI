@@ -3,9 +3,10 @@
 #' Check arguments and packages for \code{\link{BayesGLM}}, 
 #'  \code{\link{BayesGLM_slice}}, and \code{\link{BayesGLM_cifti}}.
 #' 
+#' @param require_PARDISO Is PARDISO required? Default: \code{TRUE}.
+#' @return \code{NULL}, invisibly
 #' 
-#' @keywords internal
-#' 
+#' @keywords internal 
 check_BayesGLM <- function(require_PARDISO=TRUE){
 
   # Check packages -------------------------------------------------------------
@@ -29,10 +30,14 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
     }
     #inla.pardiso()
   }
+
+  invisible(NULL)
 }
 
 #' Estimate INLA model
 #'
+#' @inheritSection INLA_Description INLA Requirement
+#' 
 #' @param formula Formula to put into inla
 #' @param data Dataset
 #' @param A Large, sparse observation matrix
@@ -45,11 +50,10 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
 #'
 #' @return Results from INLA
-#' @export
+#' 
 #' @importFrom INLA inla
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' 
+#' @export
 estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
@@ -70,8 +74,8 @@ estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, 
 #' @return A formula representing the Bayesian GLM to be passed to `inla()`
 #'
 #' @importFrom stats as.formula
-#'
-#'
+#' 
+#' @keywords internal
 make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 
   # Example:
@@ -99,6 +103,8 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
   return(formula_str)
 }
 
+#' Make data list for \code{estimate_model}
+#' 
 #' Make data list to be passed to \code{estimate_model}
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
@@ -109,8 +115,8 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 #' @return List
 #'
 #' @importFrom Matrix bdiag
-#'
-#'
+#' 
+#' @keywords internal
 make_data_list <- function(y, X, betas, repls){
 
   # Check length/dimensions of y, X, elements of betas and repls all match
@@ -138,7 +144,7 @@ make_data_list <- function(y, X, betas, repls){
 
 #' Extract Estimates of Activation
 #'
-#' @description Obtains the posterior mean or other summary statistic for each latent field
+#' Obtains the posterior mean or other summary statistic for each latent field
 #'
 #' @param object An object of class ‘"inla"’, a result of a call to inla
 #' @param session_names Vector of fMRI session names
@@ -147,6 +153,7 @@ make_data_list <- function(y, X, betas, repls){
 #'
 #' @return Estimates from inla model
 #'
+#' @keywords internal 
 extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 
   if(class(object) != "inla"){
@@ -192,16 +199,20 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 
 #' Extracts posterior density estimates for hyperparameters
 #'
-#' @param object An object of class ‘"inla"’, a result of a call to \code{inla()}
-#' @param spde The model used for the latent fields in the \code{inla()} call, an object of class ‘"inla.spde"’
+#' @inheritSection INLA_Description INLA Requirement
+#' 
+#' @param object An object of class \code{"inla"}, a result of a call to 
+#'  \code{inla()}
+#' @param spde The model used for the latent fields in the \code{inla()} call, 
+#'  an object of class \code{"inla.spde"}
 #' @param beta_names (Optional) Descriptive names of model regressors (tasks).
 #'
-#' @return Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
+#' @return Long-form data frame containing posterior densities for the 
+#'  hyperparameters associated with each latent field
 #'
 #' @importFrom INLA inla.spde2.result
 #'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' @keywords internal 
 get_posterior_densities <- function(object, spde, beta_names=NULL){
 
   beta_names_model <- names(object$summary.random)

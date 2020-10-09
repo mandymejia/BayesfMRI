@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulate_slice_data.R
 \name{simulate_slice_data}
 \alias{simulate_slice_data}
-\title{Create simulated slice data for the BayesGLM_surface function}
+\title{Simulate slice data}
 \usage{
 simulate_slice_data(
   num_sessions = 1,

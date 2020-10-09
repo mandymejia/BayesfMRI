@@ -19,8 +19,8 @@ surface data) or \code{"BayesfMRI.spde"} object (see
 replicates vector and betas for sessions
 }
 \description{
-Organize replicates
+beta and repl vectors are of length \eqn{nvox X n_sess X n_task}.
+The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
+The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 }
-\details{
-beta and repl vectors are of length nvox X n_sess X n_task
-}
+\keyword{internal}

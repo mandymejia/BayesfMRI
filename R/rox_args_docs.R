@@ -1,3 +1,12 @@
+#' INLA
+#' 
+#' @section INLA Requirement:
+#'  This function requires the \code{INLA} package, which is not a CRAN package. 
+#'  See \url{http://www.r-inla.org/download} for easy installation instructions.
+#'  
+#' @name INLA_Description
+NULL
+
 #' avg_betas_over_sessions
 #' 
 #' @param avg_betas_over_sessions Average estimates for betas over multiple 

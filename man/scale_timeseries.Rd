@@ -9,9 +9,12 @@ scale_timeseries(BOLD, scale = TRUE, transpose = TRUE)
 \arguments{
 \item{BOLD}{Input fMRI data (V x T)}
 
-\item{scale}{Option for scaling units to percent local signal change AND centering. If false, only centers.}
+\item{scale}{Option for scaling units to percent local signal change AND
+centering. If false, only centers.}
 
-\item{transpose}{Check orientation of data, which, if TRUE, will transpose the data when the number of time points is greater than the number of voxels. Note: this is not always true for subcortical regions.}
+\item{transpose}{Check orientation of data, which, if TRUE, will transpose
+the data when the number of time points is greater than the number of voxels.
+Note: this is not always true for subcortical regions.}
 }
 \value{
 Scale to units of percent local signal change and centers

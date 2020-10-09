@@ -20,3 +20,13 @@ find.smallest.activation(res, mesh, area.limit, factor, area.el)
 \description{
 Find smallest activation
 }
+\details{
+Internal function that find the smalles excursion set. If res is is of class excurobj, the
+continuous function is not used to calculate the area of the connected components. Instead the
+function uses the approximation that the contribution from each element
+\eqn{\phi_i} is \eqn{\int \phi_i(s)ds = C_ii}.
+The argument area.el contains these integrals. The argument is thus only used if res is of class
+excurobj.  area.limit is a limit for the area of the sets. NULL is returned if all sets have areas
+larger than area.limit. If factor>0 the set is expanded by an amount given by factor*area.limit.
+}
+\keyword{internal}

@@ -1,14 +1,28 @@
-#' Performs group-level Bayesian GLM estimation and inference using the joint approach described in Mejia et al. (2019)
+#' Group-level Bayesian GLM
+#' 
+#' Performs group-level Bayesian GLM estimation and inference using the joint 
+#'  approach described in Mejia et al. (2019)
 #'
+#' Each contrast vector specifies a group-level summary of interest. Let M be 
+#'  the number of subjects and K be the number of tasks. For example, the 
+#'  contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average 
+#'  for the first task; `c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))` 
+#'  represents the difference between the first M1 subjects and the remaining M2 
+#'  subjects (M1+M2=M) for the first task; `rep( c(1/M,-1/M,rep(0, K-2)) ,M)` 
+#'  represents the difference between the first two tasks, averaged over all 
+#'  subjects.
+#' 
+#' @inheritSection INLA_Description INLA Requirement
+#' 
 #' @param results Either (1) a list of length M of objects of class BayesGLM,
-#' or (2) a character vector of length M of file names output from the BayesGLM function.
-#' M is the number of subjects.
+#'  or (2) a character vector of length M of file names output from the BayesGLM function.
+#'  M is the number of subjects.
 #' @param contrasts (Optional) A list of vectors, each length M*K, specifying the contrast(s)
-#' of interest across subjects, where M is the number of subjects and K is the number of tasks.
-#' See Details for more information. Default is to compute the average for each task across subjects.
+#'  of interest across subjects, where M is the number of subjects and K is the number of tasks.
+#'  See Details for more information. Default is to compute the average for each task across subjects.
 #' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
 #' @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="),
-#' or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.
+#'  or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.
 #' @param gamma (For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).
 #' @param alpha (For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).
 #' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
@@ -16,20 +30,14 @@
 #' @param no_cores The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.
 #' @inheritParams verbose_Param_direct_TRUE
 #'
-#' @details Each contrast vector specifies a group-level summary of interest.  Let M be the number of subjects and K be the number of tasks.
-#' For example, the contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average for the first task;
-#' `c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))` represents the difference between the first M1 subjects and the remaining M2 subjects (M1+M2=M) for the first task;
-#' `rep( c(1/M,-1/M,rep(0, K-2)) ,M)` represents the difference between the first two tasks, averaged over all subjects.
-#'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
-#' @export
+#' 
 #' @importFrom INLA inla.spde2.matern inla.spde.make.A
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
 #' @import parallel
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' 
+#' @export 
 BayesGLM2 <- function(results,
                            contrasts = NULL,
                            quantiles = NULL,
@@ -298,8 +306,12 @@ BayesGLM2 <- function(results,
 }
 
 
+#' Beta posterior theta sampling
+#' 
 #' Internal function used in joint approach to group-analysis
-#'
+#' 
+#' @inheritSection INLA_Description INLA Requirement
+#' 
 #' @param theta A single sample of theta (hyperparameters) from q(theta|y)
 #' @param spde A SPDE object from inla.spde2.matern() function.
 #' @param Xcros A crossproduct of design matrix.
@@ -311,12 +323,13 @@ BayesGLM2 <- function(results,
 #' @param alpha Significance level for activation for the excursion sets
 #' @param nsamp_beta The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))
 #'
-#' @return A list containing...
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #' @importFrom excursions excursions.mc
 #' @importFrom Matrix Diagonal
 #' @importFrom INLA inla.spde2.precision inla.qsample inla.qsolve
-#'
+#' 
+#' @return A list containing...
+#' 
+#' @keywords internal
 beta.posterior.thetasamp <- function(theta,
                                      spde,
                                      Xcros,
@@ -404,17 +417,20 @@ beta.posterior.thetasamp <- function(theta,
 }
 
 
+#' F logwt
+#' 
 #' Internal function used in joint approach to group-analysis for combining across models
 #'
+#' @inheritSection INLA_Description INLA Requirement
+#' 
 #' @param theta A vector of hyperparameter values at which to compute the posterior log density
 #' @param spde A SPDE object from inla.spde2.matern() function, determines prior precision matrix
 #' @param mu_theta Posterior mean from combined subject-level models.
 #' @param Q_theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' 
+#' @keywords internal
 F.logwt <- function(theta, spde, mu_theta, Q_theta, M){
   #mu_theta - posterior mean from combined subject-level models
   #Q_theta - posterior precision matrix from combined subject-level models

@@ -1,10 +1,14 @@
 #' Scale the BOLD timeseries
 #'
 #' @param BOLD Input fMRI data (V x T)
-#' @param scale Option for scaling units to percent local signal change AND centering. If false, only centers.
-#' @param transpose Check orientation of data, which, if TRUE, will transpose the data when the number of time points is greater than the number of voxels. Note: this is not always true for subcortical regions.
+#' @param scale Option for scaling units to percent local signal change AND 
+#' 	centering. If false, only centers.
+#' @param transpose Check orientation of data, which, if TRUE, will transpose 
+#' 	the data when the number of time points is greater than the number of voxels. 
+#' 	Note: this is not always true for subcortical regions.
 #'
 #' @return Scale to units of percent local signal change and centers
+#' 
 #' @export
 scale_timeseries <- function(BOLD, scale=TRUE, transpose = TRUE){
 

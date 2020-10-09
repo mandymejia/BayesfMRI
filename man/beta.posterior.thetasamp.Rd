@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM2.R
 \name{beta.posterior.thetasamp}
 \alias{beta.posterior.thetasamp}
-\title{Internal function used in joint approach to group-analysis}
+\title{Beta posterior theta sampling}
 \usage{
 beta.posterior.thetasamp(
   theta,
@@ -44,6 +44,10 @@ A list containing...
 \description{
 Internal function used in joint approach to group-analysis
 }
-\note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
+
+\keyword{internal}

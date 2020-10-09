@@ -24,3 +24,4 @@ within the boundary mask.
 Identify the vertices within \code{boundary_width} edges of the input mask. The
 faces must be triangular.
 }
+\keyword{internal}

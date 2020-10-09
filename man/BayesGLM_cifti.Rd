@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM_cifti}
 \alias{BayesGLM_cifti}
-\title{Performs whole-brain spatial Bayesian GLM for fMRI task activation}
+\title{BayesGLM for CIFTI}
 \usage{
 BayesGLM_cifti(
   cifti_fname,
@@ -98,33 +98,50 @@ posterior quantities of group means or contrasts.}
 \item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}
 }
 \value{
-An object of class BayesGLM, a list containing ...
+An object of class \code{"BayesGLM"}, a list containing...
 }
 \description{
 Performs whole-brain spatial Bayesian GLM for fMRI task activation
 }
-\details{
-This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
-available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_path' argument is the full file path to the 'wb_command' executable file.
+\section{Connectome Workbench Requirement}{
 
-The subcortical brain structure labels range from 3-21 and represent:
-3 Accumbens-L
-4 Accumbens-R
-5 Amygdala-L
-6 Amygdala-R
-7 Brain Stem
-8 Caudate-L
-9 Caudate-R
-10 Cerebellum-L
-11 Cerebellum-R
-12 Diencephalon-L
-13 Diencephalon-R
-14 Hippocampus-L
-15 Hippocampus-R
-16 Pallidum-L
-17 Pallidum-R
-18 Putamen-L
-19 Putamen-R
-20 Thalamus-L
-21 Thalamus-R
+This function uses a system wrapper for the 'wb_command' executable. The
+user must first download and install the Connectome Workbench, available
+from https://www.humanconnectome.org/software/get-connectome-workbench .
+The \code{wb_path} argument is the full file path to the Connectome
+Workbench folder. (The full file path to the 'wb_cmd' executable also
+works.)
 }
+
+\section{Label Levels}{
+
+\code{xifti$meta$subcort$labels} is a factor with the following levels:
+
+\enumerate{
+\item{Cortex-L}
+\item{Cortex-R}
+\item{Accumbens-L}
+\item{Accumbens-R}
+\item{Amygdala-L}
+\item{Amygdala-R}
+\item{Brain Stem}
+\item{Caudate-L}
+\item{Caudate-R}
+\item{Cerebellum-L}
+\item{Cerebellum-R}
+\item{Diencephalon-L}
+\item{Diencephalon-R}
+\item{Hippocampus-L}
+\item{Hippocampus-R}
+\item{Pallidum-L}
+\item{Pallidum-R}
+\item{Putamen-L}
+\item{Putamen-R}
+\item{Thalamus-L}
+\item{Thalamus-R}
+}
+
+These correspond to the same structures as given by
+\code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox.
+}
+

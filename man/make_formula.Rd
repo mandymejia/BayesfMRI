@@ -19,3 +19,4 @@ A formula representing the Bayesian GLM to be passed to \code{inla()}
 \description{
 Make Formula
 }
+\keyword{internal}

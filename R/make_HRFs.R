@@ -1,14 +1,22 @@
+#' Make HRFs
+#' 
 #' Create HRF design matrix columns from onsets and durations
 #'
-#' @param onsets A matrix of onsets (first column) and durations (second column) for each task in SECONDS (set duration to zero for event related design), organized as a list where each element of the list corresponds to one task. Names of list indicate task names.
+#' @param onsets A matrix of onsets (first column) and durations (second column) 
+#'  for each task in SECONDS (set duration to zero for event related design), 
+#'  organized as a list where each element of the list corresponds to one task. 
+#'  Names of list indicate task names.
 #' @param TR Temporal resolution of fMRI data, in SECONDS.
 #' @param duration Length of fMRI timeseries, in SCANS.
-#' @param downsample Downsample factor for convolving stimulus boxcar or stick function with canonical HRF
+#' @param downsample Downsample factor for convolving stimulus boxcar or stick 
+#'  function with canonical HRF
 #'
 #' @return Design matrix containing one HRF column for each task
-#' @export
+#' 
 #' @importFrom neuRosim canonicalHRF
 #' @importFrom stats convolve
+#' 
+#' @export
 #'
 make_HRFs <- function(onsets, TR, duration, downsample=100){
 

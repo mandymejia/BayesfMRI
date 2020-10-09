@@ -6,6 +6,12 @@
 \usage{
 check_BayesGLM(require_PARDISO = TRUE)
 }
+\arguments{
+\item{require_PARDISO}{Is PARDISO required? Default: \code{TRUE}.}
+}
+\value{
+\code{NULL}, invisibly
+}
 \description{
 Check arguments and packages for \code{\link{BayesGLM}},
 \code{\link{BayesGLM_slice}}, and \code{\link{BayesGLM_cifti}}.

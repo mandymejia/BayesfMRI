@@ -1,5 +1,11 @@
-# Internal function that fins connected components on a mesh. It  takes a vector of indices for
-# nodes in a mesh and returns a list of the connected components in that vector
+#' Find connected indices on mesh
+#' 
+#' @param ind indices
+#' @param mesh The inla.mesh
+#' 
+#' @return list of connected components in \code{ind}
+#' 
+#' @keywords internal 
 find.connected <- function(ind,mesh){
   if(class(mesh) != "inla.mesh"){
     stop("mesh should be of class inla.mesh")
@@ -32,15 +38,17 @@ find.connected <- function(ind,mesh){
   return(sets)
 }
 
-# Internal function that find the smalles excursion set. If res is is of class excurobj, the
-# continuous function is not used to calculate the area of the connected components. Instead the
-# function uses the approximation that the contribution from each element
-# \phi_i is \int \phi_i(s)ds = C_ii.
-# The argument area.el contains these integrals. The argument is thus only used if res is of class
-# excurobj.  area.limit is a limit for the area of the sets. NULL is returned if all sets have areas
-# larger than area.limit. If factor>0 the set is expanded by an amount given by factor*area.limit.
-
 #' Find smallest activation
+#' 
+#' Find smallest activation
+#' 
+#' Internal function that find the smalles excursion set. If res is is of class excurobj, the
+#'  continuous function is not used to calculate the area of the connected components. Instead the
+#'  function uses the approximation that the contribution from each element
+#'  \eqn{\phi_i} is \eqn{\int \phi_i(s)ds = C_ii}.
+#'  The argument area.el contains these integrals. The argument is thus only used if res is of class
+#'  excurobj.  area.limit is a limit for the area of the sets. NULL is returned if all sets have areas
+#'  larger than area.limit. If factor>0 the set is expanded by an amount given by factor*area.limit.
 #' 
 #' @param res Undocumented
 #' @param mesh Undocumented
@@ -50,6 +58,7 @@ find.connected <- function(ind,mesh){
 #' 
 #' @import sp
 #' 
+#' @keywords internal 
 find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 
   # Check to see that the INLA package is installed
@@ -121,11 +130,14 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
   return(list(ind.rem = ind.rem, smallest.area = min.area))
 }
 
+#' Excursion sets with removal
+#' 
 #' Calculation of excursion sets with the removal of small areas
 #'
-#' @description Function similar to the excursions function, but which also takes a mesh as input
-#' and computes modified excursion sets where all regions with areas smaller than area.limit are
-#' removed in the internal calculations.
+#' Function similar to the excursions function, but which also takes a mesh as input
+#'  and computes modified excursion sets where all regions with areas smaller than area.limit are
+#'  removed in the internal calculations.
+#' 
 #' @param alpha Error probability for the excursion set.
 #' @param u Excursion or contour level.
 #' @param mu Expectation vector.
@@ -162,10 +174,11 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #'
 #' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
 #' the same elements as the output of \code{continuous}.
-#' @export
+#' 
 #' @import excursions
 #' @importFrom INLA inla.mesh.projector
-#'
+#' 
+#' @export
 excursions.no.spurious <- function(alpha,
                                    u,
                                    mu,
@@ -468,17 +481,20 @@ excursions.no.spurious <- function(alpha,
 
 }
 
+#' Excursion sets with INLA and removal
+#' 
 #' Calculation of excursion sets with the removal of small areas
 #'
-#' @description Function similar to the excursions.inla function, but which also takes a mesh as input
-#' and computes modified excursion sets where all regions with areas smaller than area.limit are
-#' removed in the internal calculations.
+#' Function similar to the excursions.inla function, but which also takes a mesh as input
+#'  and computes modified excursion sets where all regions with areas smaller than area.limit are
+#'  removed in the internal calculations.
+#' 
 #' @param result.inla Result object from INLA call.
 #' @param stack The stack object used in the INLA call.
 #' @param name The name of the component for which to do the calculation. This argument should
-#' only be used if a stack object is not provided, use the tag argument otherwise.
+#'  only be used if a stack object is not provided, use the tag argument otherwise.
 #' @param tag The tag of the component in the stack for which to do the calculation. This argument
-#' should only be used if a stack object is provided, use the name argument otherwise.
+#'  should only be used if a stack object is provided, use the name argument otherwise.
 #' @param u Excursion or contour level.
 #' @param alpha Error probability for the excursion set.
 #' @param type Type of region:
@@ -501,14 +517,15 @@ excursions.no.spurious <- function(alpha,
 #' @inheritParams seed_Param
 #' @param mesh The mesh on which the model is defined.
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
-#' numbere are removed.
+#'  number are removed.
 #' @param use.continuous Logical parameter indicating whether the areas of the excursion sets
-#' should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
-#' function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.
+#'  should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
+#'  function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.
 #' @param plot.progress Logical parameter that indicates whether the results should be plotted.
 #'
-#' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
-#' the same elements as the output of \code{continuous}.
+#' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. 
+#'  Otherwise a list with the same elements as the output of \code{continuous}.
+#' 
 #' @export
 excursions.inla.no.spurious <- function(result.inla,
                             stack,

@@ -1,20 +1,22 @@
 #' Identify Boundary Layers.
 #'
-#' @description Identify the vertices within \code{boundary_width} edges of the input mask.
-#' The mesh must be triangular.
+#' Identify the vertices within \code{boundary_width} edges of the input mask.
+#'  The mesh must be triangular.
+#' 
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
 #' @inheritParams mask_Param_vertices
 #' @param boundary_width a positive integer representing the width of the boundary
 #'  to compute. The furthest vertices from the input mask will be this number of
 #'  edges away from the closest vertex in the input mask. Default: \code{10}.
+#' 
 #' @return a length-V numeric vector. Each entry corresponds to the vertex
 #'  with the same index. For vertices within the boundary, the value will be the
 #'  number of vertices away from the closest vertex in the input mask.
 #'  Vertices inside the input mask but at the edge of it (touching vertices with
 #'  value 1) will have value 0. All other vertices will have value -1.
 #'
-#'
+#' @keywords internal 
 boundary_layers <- function(faces, mask, boundary_width=10){
   s <- ncol(faces)
   v <- max(faces)
@@ -63,6 +65,10 @@ boundary_layers <- function(faces, mask, boundary_width=10){
 #'  the same length as \code{vertices} indicating the vertices in each set.
 #'  If \code{v2} is \code{NULL} (default), set \code{v2} to \code{v1}. Can
 #'  alternatively be a vector if integers corresponding to vertex indices.
+#'
+#' @return Adjacency matrix
+#' 
+#' @keywords internal 
 vert_adjacency <- function(faces, v1, v2=NULL){
   v_all <- unique(as.vector(faces))
   # Arguments.
@@ -109,7 +115,10 @@ vert_adjacency <- function(faces, v1, v2=NULL){
 #' Order vertices on circular manifold by radians (after 2D CMDS projection).
 #'
 #' @inheritParams vertices_Param
+#' 
 #' @return Index ordering of \code{vertices}
+#' 
+#' @keywords internal 
 radial_order <- function(vertices){
   # Use CMDS to project onto 2-dimensional subspace. Scale each dimension.
   x <- scale(cmdscale(dist(vertices)))
@@ -153,6 +162,7 @@ radial_order <- function(vertices){
 #'
 #' @return A new mesh (list with components vertices and faces)
 #'
+#' @keywords internal 
 mask_with_boundary <- function(vertices, faces, mask, width1=4, k1=2, width2=6, k2=3){
 
   # ----------------------------------------------------------------------------

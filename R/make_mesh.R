@@ -1,14 +1,18 @@
 #' Make Mesh
 #'
 #' Make triangular mesh from faces and vertices.
+#' 
+#' @inheritSection INLA_Description INLA Requirement
 #'
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #'
 #' @return Triangular mesh from matrices and vertices
-#' @export
+#' 
 #' @importFrom INLA inla.mesh.create
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' 
+#' @export
+#' 
 make_mesh <- function(vertices, faces){
 
   # Check index of faces

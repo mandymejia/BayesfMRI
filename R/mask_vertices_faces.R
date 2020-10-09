@@ -9,7 +9,9 @@
 #' @inheritParams mask_Param_vertices
 #'
 #' @return List containing masked vertices and faces matrices
+#' 
 #' @export
+#' 
 mask_vertices_faces <- function(vertices, faces, mask){
 
   # Number of vertices

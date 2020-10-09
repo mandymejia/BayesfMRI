@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{Applies spatial Bayesian GLM to task fMRI data}
+\title{BayesGLM}
 \usage{
 BayesGLM(
   data,
@@ -22,7 +22,8 @@ BayesGLM(
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
-BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
+BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
+for more details.
 List element names represent session names.}
 
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
@@ -36,7 +37,8 @@ faces in the mesh.}
 \item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
 surface data).}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each vertex is to be included.}
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
+vertex is to be included.}
 
 \item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
 change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
@@ -53,7 +55,8 @@ Default: \code{TRUE}. Required for running \code{\link{id_activations}}
 after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 
-\item{outfile}{File name where results will be written (for use by \code{BayesGLM2}).}
+\item{outfile}{File name where results will be written (for use by
+\code{BayesGLM2}).}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
@@ -68,6 +71,9 @@ A list containing...
 \description{
 Applies spatial Bayesian GLM to task fMRI data
 }
-\note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
+

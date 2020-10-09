@@ -8,6 +8,7 @@
 #'   of the entries are zero
 #'
 #' @return A list of masked values from \code{vec_data}
+#' 
 #' @export
 vec2image <- function(vec_data, template_image) {
   each_col <- sapply(split(vec_data, col(vec_data)), function(vd) {

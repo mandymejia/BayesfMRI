@@ -2,7 +2,7 @@
 % Please edit documentation in R/excursions.R
 \name{excursions.no.spurious}
 \alias{excursions.no.spurious}
-\title{Calculation of excursion sets with the removal of small areas}
+\title{Excursion sets with removal}
 \usage{
 excursions.no.spurious(
   alpha,
@@ -90,6 +90,9 @@ If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a 
 the same elements as the output of \code{continuous}.
 }
 \description{
+Calculation of excursion sets with the removal of small areas
+}
+\details{
 Function similar to the excursions function, but which also takes a mesh as input
 and computes modified excursion sets where all regions with areas smaller than area.limit are
 removed in the internal calculations.

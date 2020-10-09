@@ -7,18 +7,25 @@
 get_posterior_densities(object, spde, beta_names = NULL)
 }
 \arguments{
-\item{object}{An object of class ‘"inla"’, a result of a call to \code{inla()}}
+\item{object}{An object of class \code{"inla"}, a result of a call to
+\code{inla()}}
 
-\item{spde}{The model used for the latent fields in the \code{inla()} call, an object of class ‘"inla.spde"’}
+\item{spde}{The model used for the latent fields in the \code{inla()} call,
+an object of class \code{"inla.spde"}}
 
 \item{beta_names}{(Optional) Descriptive names of model regressors (tasks).}
 }
 \value{
-Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
+Long-form data frame containing posterior densities for the
+hyperparameters associated with each latent field
 }
 \description{
 Extracts posterior density estimates for hyperparameters
 }
-\note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
+
+\keyword{internal}

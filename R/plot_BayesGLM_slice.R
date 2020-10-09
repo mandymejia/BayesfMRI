@@ -6,13 +6,24 @@
 #' @param zlim The color limits for plotting the coefficient values. Defaults to the minimum and maximum of the point estimates
 #'
 #' @return A ggplot2 object
+#' 
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom INLA inla.spde.make.A
-#' @import 2
-#' @import purrr
+#' 
 #' @export
 plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
   Var1 <- Var2 <- value <- NULL # to prevent package build warning at ggplot line
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("`plot_slice` requires the `ggplot` package. Please install it.", call. = FALSE)
+  }
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
+  }
+
 
   # Create a conversion matrix
   in_binary_mask <- which(mask == 1, arr.ind = T)

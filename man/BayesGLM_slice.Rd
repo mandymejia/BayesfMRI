@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM_slice}
 \alias{BayesGLM_slice}
-\title{Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data}
+\title{BayesGLM for 2D slice}
 \usage{
 BayesGLM_slice(
   BOLD,
@@ -86,7 +86,7 @@ BayesGLM result to use in Bayesian group modeling.}
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 }
 \value{
-An object of class BayesGLM, a list containing ...
+An object of class \code{"BayesGLM"}, a list containing...
 }
 \description{
 Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data

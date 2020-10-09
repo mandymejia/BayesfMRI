@@ -7,8 +7,8 @@
 #' @inheritParams scale_design_Param
 #'
 #' @return A list of classical GLM task activation estimates, where each element represents a session.
+#' 
 #' @export
-#'
 classicalGLM <- function(data, scale_BOLD=TRUE, scale_design = TRUE){
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks

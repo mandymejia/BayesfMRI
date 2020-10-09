@@ -1,3 +1,5 @@
+#'  BayesGLM for 2D slice
+#' 
 #'  Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data
 #'
 #' @param BOLD A list of sessions, each with a three-dimensional array in which
@@ -43,7 +45,8 @@
 #'
 #' @importFrom utils head
 #'
-#' @return An object of class BayesGLM, a list containing ...
+#' @return An object of class \code{"BayesGLM"}, a list containing...
+#' 
 #' @export
 BayesGLM_slice <- function(
   BOLD,
@@ -217,8 +220,48 @@ BayesGLM_slice <- function(
   return(result)
   }
 
+#' BayesGLM for CIFTI
+#' 
 #' Performs whole-brain spatial Bayesian GLM for fMRI task activation
 #'
+#' @section Connectome Workbench Requirement:
+#'  This function uses a system wrapper for the 'wb_command' executable. The 
+#'  user must first download and install the Connectome Workbench, available 
+#'  from https://www.humanconnectome.org/software/get-connectome-workbench . 
+#'  The \code{wb_path} argument is the full file path to the Connectome 
+#'  Workbench folder. (The full file path to the 'wb_cmd' executable also 
+#'  works.)
+#' 
+#' @section Label Levels:
+#'  \code{xifti$meta$subcort$labels} is a factor with the following levels:
+#' 
+#'  \enumerate{
+#'    \item{Cortex-L}
+#'    \item{Cortex-R}
+#'    \item{Accumbens-L}
+#'    \item{Accumbens-R}
+#'    \item{Amygdala-L}
+#'    \item{Amygdala-R}
+#'    \item{Brain Stem}
+#'    \item{Caudate-L}
+#'    \item{Caudate-R}
+#'    \item{Cerebellum-L}
+#'    \item{Cerebellum-R}
+#'    \item{Diencephalon-L}
+#'    \item{Diencephalon-R}
+#'    \item{Hippocampus-L}
+#'    \item{Hippocampus-R}
+#'    \item{Pallidum-L}
+#'    \item{Pallidum-R}
+#'    \item{Putamen-L}
+#'    \item{Putamen-R}
+#'    \item{Thalamus-L}
+#'    \item{Thalamus-R}
+#'  }
+#' 
+#'  These correspond to the same structures as given by 
+#'  \code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox. 
+#' 
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
 #' @param surfL_fname File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".
 #' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
@@ -264,36 +307,13 @@ BayesGLM_slice <- function(
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
-#' @return An object of class BayesGLM, a list containing ...
-#' @export
+#' @return An object of class \code{"BayesGLM"}, a list containing...
+#' 
 #' @importFrom ciftiTools read_cifti resample_gifti as.xifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom INLA inla.pardiso.check inla.setOption
-#'
-#' @details This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
-#' available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_path' argument is the full file path to the 'wb_command' executable file.
-#'
-#' The subcortical brain structure labels range from 3-21 and represent:
-#' 3 Accumbens-L
-#' 4 Accumbens-R
-#' 5 Amygdala-L
-#' 6 Amygdala-R
-#' 7 Brain Stem
-#' 8 Caudate-L
-#' 9 Caudate-R
-#' 10 Cerebellum-L
-#' 11 Cerebellum-R
-#' 12 Diencephalon-L
-#' 13 Diencephalon-R
-#' 14 Hippocampus-L
-#' 15 Hippocampus-R
-#' 16 Pallidum-L
-#' 17 Pallidum-R
-#' 18 Putamen-L
-#' 19 Putamen-R
-#' 20 Thalamus-L
-#' 21 Thalamus-R
-#'
+#' 
+#' @export 
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
                      brainstructures=c('left','right','subcortical'),
@@ -691,31 +711,38 @@ BayesGLM_cifti <- function(cifti_fname,
 
 
 
+#' BayesGLM
+#' 
 #' Applies spatial Bayesian GLM to task fMRI data
+#' 
+#' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions, where each session is a list with elements
-#' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
+#'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session} 
+#'  for more details.
 #' List element names represent session names.
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @inheritParams mesh_Param_inla
-#' @param mask (Optional) A length \eqn{V} logical vector indicating if each vertex is to be included.
+#' @param mask (Optional) A length \eqn{V} logical vector indicating if each 
+#'  vertex is to be included.
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_result_Param_TRUE
-#' @param outfile File name where results will be written (for use by \code{BayesGLM2}).
+#' @param outfile File name where results will be written (for use by 
+#'  \code{BayesGLM2}).
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_betas_over_sessions_Param
 #' 
 #' @return A list containing...
-#' @export
+#' 
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' 
+#' @export
 BayesGLM <- function(
   data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, 
   scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, 
@@ -883,7 +910,12 @@ BayesGLM <- function(
 
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc))
+  system.time(
+    INLA_result <- estimate_model(
+      formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, 
+      num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc
+    )
+  )
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result

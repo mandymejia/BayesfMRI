@@ -3,9 +3,8 @@
 #' @param x  A vector or matrix. If a matrix, compute gradient of each column of x. 
 #'
 #' @return Gradient of x
+#' 
 #' @export
-#'
-#'
 gradient <- function(x){
 
 	isMatrix <- is.matrix(x)

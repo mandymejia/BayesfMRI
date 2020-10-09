@@ -1,8 +1,23 @@
+#' BayesGLM for 3D volume
+#' 
 #' Applies spatial Bayesian GLM to task fMRI data for 3D subcortical volumes
 #'
+#' The subcortical data is separated into regions, whose sizes range 
+#'  from approximately 100 voxels to approximately 9000 voxels.  Smaller regions 
+#'  are grouped together to improve model fit.
+#'  The \code{groups_df} argument specifies which regions are grouped together.  
+#'  This argument should be a data frame with R rows (the number of regions) and 
+#'  three columns: label, region, and group.
+#'  The label column is the numerical identifier of each region; the region 
+#'  column contains the region names, and the group column contains the model 
+#'  group assignments (e.g. 1,2,3). Regions to be excluded
+#'  from analysis are indicated by NA in the group assignment.
+#' 
+#' @inheritSection INLA_Description INLA Requirement
+#' 
 #' @param data A list of sessions, where each session is a list with elements
-#' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
-#' List element names represent session names.
+#'  BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
+#'  List element names represent session names.
 #' @param locations Vx3 matrix of x,y,z coordinates of each voxel
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
@@ -14,16 +29,10 @@
 #' @inheritParams verbose_Param_inla
 #'
 #' @return A list containing...
-#' @export
+#' 
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check
-#'
-#' @details The subcortical data is separated into regions, whose sizes range from approximately 100 voxels to approximately 9000 voxels.  Smaller regions are grouped together to improve model fit.
-#' The \code{groups_df} argument specifies which regions are grouped together.  This argument should be a data frame with R rows (the number of regions) and three columns: label, region, and group.
-#' The label column is the numerical identifier of each region; the region column contains the region names, and the group column contains the model group assignments (e.g. 1,2,3). Regions to be excluded
-#' from analysis are indicated by NA in the group assignment.
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' 
+#' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
 
   # Check to see that the INLA package is installed
@@ -230,16 +239,19 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
 #' Extracts posterior density estimates for hyperparameters
 #'
-#' @param object An object of class ‘"inla"’, a result of a call to \code{inla()}
-#' @param spde The model used for the latent fields in the \code{inla()} call, an object of class ‘"inla.spde"’
+#' @inheritSection INLA_Description INLA Requirement
+#' 
+#' @param object An object of class \code{"inla"}, a result of a call to 
+#'  \code{inla()}
+#' @param spde The model used for the latent fields in the \code{inla()} call, 
+#'  an object of class \code{"inla.spde"}
 #'
-#' @return Long-form data frame containing posterior densities for the hyperparameters associated with each latent field
+#' @return Long-form data frame containing posterior densities for the 
+#'  hyperparameters associated with each latent field
+#' 
+#' @importFrom INLA inla.spde2.result inla.extract.el
+#' 
 #' @export
-#' @importFrom INLA inla.spde2.result
-#' @importFrom INLA inla.extract.el
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
 get_posterior_densities_vol3D <- function(object, spde){
 
   hyper_names <- names(object$marginals.hyperpar)

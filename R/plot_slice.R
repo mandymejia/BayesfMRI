@@ -11,6 +11,7 @@
 #'   palette.
 #'
 #' @return A ggplot graphical object.
+#' 
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom reshape2 melt
 #' @importFrom utils data
