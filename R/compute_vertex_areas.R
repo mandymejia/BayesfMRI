@@ -1,6 +1,6 @@
 #' Compute surface areas of each vertex in a triangular mesh.
 #'
-#' @param mesh object of type mesh
+#' @inheritParams mesh_Param_inla
 #'
 #' @return Vector of areas
 #' @export

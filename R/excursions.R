@@ -141,9 +141,9 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #'       \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}
 #' @param ind Indices of the nodes that should be analysed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
-#' @param verbose Set to TRUE for verbose mode (optional).
-#' @param max.threads Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).
-#' @param seed Random seed (optional).
+#' @inheritParams verbose_Param_direct_FALSE
+#' @inheritParams max.threads_Param
+#' @inheritParams seed_Param
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
 #' numbere are removed.
 #' @param use.continuous Logical parameter indicating whether the areas of the excursion sets
@@ -173,7 +173,7 @@ excursions.no.spurious <- function(alpha,
                                    method='EB',
                                    ind,
                                    max.size,
-                                   verbose=0,
+                                   verbose=FALSE,
                                    max.threads=0,
                                    seed,
                                    area.limit,
@@ -490,9 +490,9 @@ excursions.no.spurious <- function(alpha,
 #'       \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}
 #' @param ind Indices of the nodes that should be analysed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
-#' @param verbose Set to TRUE for verbose mode (optional).
-#' @param max.threads Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).
-#' @param seed Random seed (optional).
+#' @inheritParams verbose_Param_direct_FALSE
+#' @inheritParams max.threads_Param
+#' @inheritParams seed_Param
 #' @param mesh The mesh on which the model is defined.
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
 #' numbere are removed.
@@ -517,7 +517,7 @@ excursions.inla.no.spurious <- function(result.inla,
                             method,
                             ind=NULL,
                             max.size,
-                            verbose=0,
+                            verbose=FALSE,
                             max.threads=0,
                             seed=NULL,
                             mesh,

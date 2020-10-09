@@ -7,7 +7,8 @@
 compute_vertex_areas(mesh)
 }
 \arguments{
-\item{mesh}{object of type mesh}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data).}
 }
 \value{
 Vector of areas

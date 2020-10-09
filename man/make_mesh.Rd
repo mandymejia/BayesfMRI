@@ -7,9 +7,13 @@
 make_mesh(vertices, faces)
 }
 \arguments{
-\item{vertices}{Matrix of vertices}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{Matrix of faces}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 }
 \value{
 Triangular mesh from matrices and vertices

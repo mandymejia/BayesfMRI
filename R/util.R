@@ -204,8 +204,7 @@ s2m_B <- function(B,sigma){
 #'
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
-#' @param mask a length-V logical vector. TRUE indicates vertices within the
-#'  input mask.
+#' @inheritParams mask_Param_vertices
 #' @param boundary_width a positive integer. Vertices no more than this number
 #'  of edges from any vertex in the input mask will be placed in the boundary mask.
 #' @return The boundary mask, a length-V logical vector. TRUE indicates vertices

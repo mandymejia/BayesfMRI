@@ -14,7 +14,7 @@
 #' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
 #' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
 #' @param no_cores The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.
-#' @param verbose Logical indicating if progress updates should be displayed.
+#' @inheritParams verbose_Param_direct_TRUE
 #'
 #' @details Each contrast vector specifies a group-level summary of interest.  Let M be the number of subjects and K be the number of tasks.
 #' For example, the contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average for the first task;

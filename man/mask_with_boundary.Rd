@@ -15,13 +15,16 @@ mask_with_boundary(
 )
 }
 \arguments{
-\item{vertices}{An N x 3 matrix defining the locations of N vertices.}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{a V x 3 matrix of integers. Each row defines a face by the index
-of three vertices.}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 
-\item{mask}{a length-V logical vector. Each entry corresponds to the vertex
-with the same index. TRUE indicates vertices within the input mask.}
+\item{mask}{A length \eqn{V} logical vector indicating if each vertex is
+within the input mask.}
 
 \item{width1, width2}{the width of the middle/outer region. All vertices in the middle/outer region
 are between 1 and \code{width1} edges away from the closest vertex in \code{mask}/middle region.}

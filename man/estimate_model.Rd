@@ -28,14 +28,14 @@ estimate_model(
 
 \item{prec_initial}{Initial precision}
 
-\item{num.threads}{Number of threads}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
 \item{int.strategy}{INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy}
 
-\item{verbose}{Logical indicating if should run in a verbose mode (default FALSE).}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{A list of contrast vectors to be passed to
-\code{\link{inla}}.}
+\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 
 \item{lincomb}{A linear combinations object created with \code{inla.make.lincomb}}
 }

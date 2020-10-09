@@ -2,7 +2,7 @@
 #'
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param n_task Number of regressors or tasks
-#' @param mesh Object of type inla.mesh (for surface data, see \code{help(make_mesh)}) or BayesfMRI.spde (for subcortical data, see \code{help(create_spde_vol3D)}).
+#' @inheritParams mesh_Param_either
 #'
 #' @return replicates vector and betas for sessions
 #'

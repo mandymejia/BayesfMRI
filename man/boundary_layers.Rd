@@ -10,8 +10,8 @@ boundary_layers(faces, mask, boundary_width = 10)
 \item{faces}{a V x 3 matrix of integers. Each row defines a face by the index
 of three vertices.}
 
-\item{mask}{a length-V logical vector. Each entry corresponds to the vertex
-with the same index. TRUE indicates vertices within the input mask.}
+\item{mask}{A length \eqn{V} logical vector indicating if each vertex is
+within the input mask.}
 
 \item{boundary_width}{a positive integer representing the width of the boundary
 to compute. The furthest vertices from the input mask will be this number of

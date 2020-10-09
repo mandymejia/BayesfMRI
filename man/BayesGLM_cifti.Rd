@@ -55,25 +55,33 @@ If not provided, should be set with
 
 \item{nuisance_include}{(Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).}
 
-\item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
+\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
+change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
+centered.}
 
-\item{scale_design}{If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
 
-\item{session_names}{(Optional) A vector of names corresponding to each session.}
+\item{session_names}{(Optional) A vector of names corresponding to each
+session.}
 
 \item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
 
-\item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
-\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
 \item{write_dir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
 
 \item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{FALSE}. Required for running \code{\link{id_activations}}
+after, but not for running \code{\link{BayesGLM_joint}} after to get
+posterior quantities of group means or contrasts.}
 
 \item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}
 }

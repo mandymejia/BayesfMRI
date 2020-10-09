@@ -2,8 +2,8 @@
 #'
 #' Make triangular mesh from faces and vertices.
 #'
-#' @param vertices Matrix of vertices
-#' @param faces Matrix of faces
+#' @inheritParams vertices_Param
+#' @inheritParams faces_Param
 #'
 #' @return Triangular mesh from matrices and vertices
 #' @export

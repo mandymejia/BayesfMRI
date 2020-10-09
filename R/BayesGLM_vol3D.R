@@ -10,8 +10,8 @@
 #' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is TRUE. Required for running \code{id_activations} on \code{BayesGLM} model object.
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @param GLM If TRUE, classical GLM estimates will also be returned
-#' @param num.threads Maximum number of threads the inla-program will use for model estimation
-#' @param verbose Boolean indicating if the inla-program should run in a verbose mode (default FALSE).
+#' @inheritParams num.threads_Param
+#' @inheritParams verbose_Param_inla
 #'
 #' @return A list containing...
 #' @export

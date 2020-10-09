@@ -18,7 +18,7 @@ excursions.no.spurious(
   method = "EB",
   ind,
   max.size,
-  verbose = 0,
+  verbose = FALSE,
   max.threads = 0,
   seed,
   area.limit,
@@ -63,11 +63,13 @@ excursions.no.spurious(
 
 \item{max.size}{Maximum number of nodes to include in the set of interest (optional).}
 
-\item{verbose}{Set to TRUE for verbose mode (optional).}
+\item{verbose}{Should occasional updates be printed? Default: \code{FALSE}.}
 
-\item{max.threads}{Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).}
+\item{max.threads}{The maximum number of threads to use in the inla-program
+for model estimation. \code{0} (default) will use the maximum number of
+threads allowed by the system.}
 
-\item{seed}{Random seed (optional).}
+\item{seed}{Random seed (optional). Default: \code{NULL}.}
 
 \item{area.limit}{Positive number. All connected excursion sets with an area smaller than this
 numbere are removed.}

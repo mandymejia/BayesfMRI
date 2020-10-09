@@ -6,9 +6,6 @@
 \usage{
 radial_order(verts)
 }
-\arguments{
-\item{verts}{The vertices along rows (columns are dimensions)}
-}
 \value{
 Index ordering of \code{verts}
 }

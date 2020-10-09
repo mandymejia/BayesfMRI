@@ -58,14 +58,15 @@ derivative of each column of design matrix).}
 the BOLD data and make a more efficient network mesh for the
 neighborhood definitions}
 
-\item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates
-represent percent signal change.  Else, center but do not scale.}
+\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
+change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
+centered.}
 
-\item{scale_design}{If TRUE (default), scale design matrix so maximum value
-is equal to 1.  Else, do not scale.}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{num.threads}{Maximum number of threads the inla-program will use for
-model estimation}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only,
 'classical' for the classical GLM only, or 'both' to return both classical
@@ -74,11 +75,10 @@ and Bayesian estimates of task activation.}
 \item{session_names}{(Optional) A vector of names corresponding to each
 session.}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA
-model object (can be large).  Default is FALSE.  Required for running
-\code{id_activations} on \code{BayesGLM} model object (but not for running
-\code{BayesGLM_joint} to get posterior quantities of group means or
-contrasts).}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{TRUE}. Required for running \code{\link{id_activations}}
+after, but not for running \code{\link{BayesGLM_joint}} after to get
+posterior quantities of group means or contrasts.}
 
 \item{write_dir}{(Optional) The path to a directory where results will be
 saved. Defaults to the current working directory.}
@@ -86,11 +86,9 @@ saved. Defaults to the current working directory.}
 \item{outfile}{(Optional) File name (without extension) of output file for
 BayesGLM result to use in Bayesian group modeling.}
 
-\item{verbose}{Logical indicating if INLA should run in a verbose mode
-(default FALSE).}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{A list of contrast vectors to be passed to
-\code{\link{inla}}.}
+\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 }
 \value{
 An object of class BayesGLM, a list containing ...

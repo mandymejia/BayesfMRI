@@ -4,8 +4,7 @@
 #' The mesh must be triangular.
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
-#' @param mask a length-V logical vector. Each entry corresponds to the vertex
-#'  with the same index. TRUE indicates vertices within the input mask.
+#' @inheritParams mask_Param_vertices
 #' @param boundary_width a positive integer representing the width of the boundary
 #'  to compute. The furthest vertices from the input mask will be this number of
 #'  edges away from the closest vertex in the input mask. Default: \code{10}.
@@ -109,11 +108,11 @@ vert_adjacency <- function(faces, v1, v2=NULL){
 #'
 #' Order vertices on circular manifold by radians (after 2D CMDS projection).
 #'
-#' @param verts The vertices along rows (columns are dimensions)
-#' @return Index ordering of \code{verts}
-radial_order <- function(verts){
+#' @inheritParams vertices_Param
+#' @return Index ordering of \code{vertices}
+radial_order <- function(vertices){
   # Use CMDS to project onto 2-dimensional subspace. Scale each dimension.
-  x <- scale(cmdscale(dist(verts)))
+  x <- scale(cmdscale(dist(vertices)))
   # Remove zero-values to stay in the domain of the trig functions.
   x <- matrix(ifelse(abs(x) < 1e-8, sign(x)*1e-8, x), ncol=ncol(x))
   # Order by the radians counter-clockwise from positive x-axis.
@@ -141,11 +140,9 @@ radial_order <- function(verts){
 #' Default boundary: a 4-vertex wide middle region with triangles twice as long,
 #'  and a 6-vertex wide outer region with triangles three times as long.
 #'
-#' @param vertices An N x 3 matrix defining the locations of N vertices.
-#' @param faces a V x 3 matrix of integers. Each row defines a face by the index
-#'  of three vertices.
-#' @param mask a length-V logical vector. Each entry corresponds to the vertex
-#'  with the same index. TRUE indicates vertices within the input mask.
+#' @inheritParams vertices_Param
+#' @inheritParams faces_Param
+#' @inheritParams mask_Param_vertices
 #' @param width1,width2 the width of the middle/outer region. All vertices in the middle/outer region
 #'  are between 1 and \code{width1} edges away from the closest vertex in \code{mask}/middle region.
 #' @param k1,k2 roughly, the triangle size multiplier. Every \code{k1}/\code{k2} vertex within

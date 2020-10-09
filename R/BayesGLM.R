@@ -26,30 +26,21 @@
 #' @param nuisance_include (Optional) Additional nuisance covariates to include.
 #'   Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
 #'   derivative of each column of design matrix).
-#' @param scale_BOLD If TRUE (default), scale timeseries data so estimates
-#'   represent percent signal change.  Else, center but do not scale.
-#' @param scale_design If TRUE (default), scale design matrix so maximum value
-#'   is equal to 1.  Else, do not scale.
-#' @param num.threads Maximum number of threads the inla-program will use for
-#'   model estimation
+#' @inheritParams scale_BOLD_Param
+#' @inheritParams scale_design_Param
+#' @inheritParams num.threads_Param
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only,
 #'   'classical' for the classical GLM only, or 'both' to return both classical
 #'   and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
-#' @param return_INLA_result If TRUE, object returned will include the INLA
-#'   model object (can be large).  Default is FALSE.  Required for running
-#'   \code{id_activations} on \code{BayesGLM} model object (but not for running
-#'   \code{BayesGLM_joint} to get posterior quantities of group means or
-#'   contrasts).
+#' @inheritParams return_INLA_result_Param_TRUE
 #' @param write_dir (Optional) The path to a directory where results will be
 #'   saved. Defaults to the current working directory.
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLM result to use in Bayesian group modeling.
-#' @param verbose Logical indicating if INLA should run in a verbose mode
-#'   (default FALSE).
-#' @param contrasts A list of contrast vectors to be passed to
-#'   \code{\link{inla}}.
+#' @inheritParams verbose_Param_inla
+#' @inheritParams contrasts_Param_inla
 #'
 #' @importFrom utils head
 #'
@@ -261,16 +252,17 @@ BayesGLM_slice <-
 #' @param TR The temporal resolution of the data in seconds.  Must be provided if onsets provided.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
 #' @param nuisance_include (Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).
-#' @param scale_BOLD If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
-#' @param scale_design If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.
+#' @inheritParams scale_BOLD_Param
+#' @inheritParams scale_design_Param
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
-#' @param session_names (Optional) A vector of names corresponding to each session.
+#' @param session_names (Optional) A vector of names corresponding to each
+#'   session.
 #' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
-#' @param num.threads Maximum number of threads the inla-program will use for model estimation
-#' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
+#' @inheritParams num.threads_Param
+#' @inheritParams verbose_Param_inla
 #' @param write_dir (Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.
 #' @param outfile (Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.
-#' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
+#' @inheritParams return_INLA_result_Param_FALSE
 #' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
 #' @return An object of class BayesGLM, a list containing ...
@@ -709,21 +701,19 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 #' List element names represent session names.
-#' @param vertices A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.
-#' @param faces A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.
-#' @param mesh A `inla.mesh` object.  Must be provided if and only if `vertices` and `faces` are not.
-#' @param mask (Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.
-#' @param scale_BOLD If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.
-#' @param scale_design If TRUE, scale the design matrix by dividing each column
-#'   by its maximum value, and then subtracting the new column mean.
-#' @param num.threads Maximum number of threads the inla-program will use for model estimation
-#' @param return_INLA_result If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).
+#' @inheritParams vertices_Param
+#' @inheritParams faces_Param
+#' @inheritParams mesh_Param_inla
+#' @param mask (Optional) A length \eqn{V} logical vector indicating if each vertex is to be included.
+#' @inheritParams scale_BOLD_Param
+#' @inheritParams scale_design_Param
+#' @inheritParams num.threads_Param
+#' @inheritParams return_INLA_result_Param_TRUE
 #' @param outfile File name where results will be written (for use by \code{BayesGLM2}).
-#' @param verbose Logical indicating if INLA should run in a verbose mode (default FALSE).
-#' @param contrasts A list of contrast vectors to be passed to
-#'   \code{\link{inla}}.
-#' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
-#'
+#' @inheritParams verbose_Param_inla
+#' @inheritParams contrasts_Param_inla
+#' @inheritParams avg_betas_over_sessions_Param
+#' 
 #' @return A list containing...
 #' @export
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
@@ -731,7 +721,10 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @importFrom matrixStats colVars
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
-BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE){
+BayesGLM <- function(
+  data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, 
+  scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, 
+  outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -911,7 +904,7 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 
   #estimate model using INLA
   cat('\n ...... estimating model with INLA')
-  system.time(INLA_result <- BayesfMRI:::estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc))
+  system.time(INLA_result <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc))
   cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
@@ -988,11 +981,10 @@ BayesGLM <- function(data, vertices = NULL, faces = NULL, mesh = NULL, mask = NU
 #' @param A Large, sparse observation matrix
 #' @param spde The spatial model, an object of class inla.spde
 #' @param prec_initial Initial precision
-#' @param num.threads Number of threads
+#' @inheritParams num.threads_Param
 #' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
-#' @param verbose Logical indicating if should run in a verbose mode (default FALSE).
-#' @param contrasts A list of contrast vectors to be passed to
-#'   \code{\link{inla}}.
+#' @inheritParams verbose_Param_inla
+#' @inheritParams contrasts_Param_inla
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
 #'
 #' @return Results from INLA
