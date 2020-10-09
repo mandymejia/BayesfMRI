@@ -4,10 +4,15 @@
 \alias{radial_order}
 \title{Order Vertices on Circular Manifold}
 \usage{
-radial_order(verts)
+radial_order(vertices)
+}
+\arguments{
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 }
 \value{
-Index ordering of \code{verts}
+Index ordering of \code{vertices}
 }
 \description{
 Order vertices on circular manifold by radians (after 2D CMDS projection).

@@ -229,7 +229,7 @@ We can fit a classical GLM to the data using the `classicalGLM()` function. Note
 
 ```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
 single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
-classical_estimates <- vec_to_image(single_session_classical$session_1, template_image = binary_template)
+classical_estimates <- vec2image(single_session_classical$session_1, template_image = binary_template)
 plot_slice(classical_estimates, zlim = c(-1.5,1.5))
 ```
 

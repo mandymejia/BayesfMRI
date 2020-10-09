@@ -9,7 +9,7 @@
 #'
 #' @return A list of masked values from \code{vec_data}
 #' @export
-vec_to_image <- function(vec_data, template_image) {
+vec2image <- function(vec_data, template_image) {
   each_col <- sapply(split(vec_data, col(vec_data)), function(vd) {
     out <- template_image
     out[out == 1] <- vd
