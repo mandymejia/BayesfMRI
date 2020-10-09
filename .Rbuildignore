@@ -4,13 +4,7 @@
 ^scratch$
 ^R/summarize_sessions\.R$
 ^R/BayesGLM_vol3D\.R$
-^R/plot_BayesGLM_2D\.R$
-^R/plot_image_2d\.R$
-^R/BayesGLM_group_old\.R$
-^R/BayesGLM_group_old2\.R$
-^R/BayesGLM_group2\.R$
 ^R/plot_BayesGLM_slice\.R$
-^R/plot_image_slice\.R$
 ^R/BayesGLM2_old\.R$
 ^vignettes/BayesfMRI_HCP\.Rmd$
 ^R/simulate_slice_data_1\.R$
