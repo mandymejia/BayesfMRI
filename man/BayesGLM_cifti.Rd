@@ -22,7 +22,6 @@ BayesGLM_cifti(
   resamp_res = 10000,
   num.threads = 4,
   verbose = FALSE,
-  write_dir = NULL,
   outfile = NULL,
   return_INLA_result = FALSE,
   avg_betas_over_sessions = FALSE
@@ -85,9 +84,11 @@ for model estimation. Default: \code{4}.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{write_dir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
-
-\item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
+\item{outfile}{(Optional) File name (without extension) of output file for
+\code{"BayesGLM"} result to use in Bayesian group modeling.
+\code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
+cortex and right cortex results, respectively. Default: \code{NULL}
+(do not save the results to any file).}
 
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
 Default: \code{FALSE}. Required for running \code{\link{id_activations}}

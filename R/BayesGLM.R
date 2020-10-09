@@ -36,8 +36,6 @@
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
 #' @inheritParams return_INLA_result_Param_TRUE
-#' @param write_dir (Optional) The path to a directory where results will be
-#'   saved. Defaults to the current working directory.
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
@@ -61,16 +59,10 @@ BayesGLM_slice <- function(
   GLM_method = 'both',
   session_names = NULL,
   return_INLA_result = TRUE,
-  write_dir=NULL,
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL) {
-            
-  if(is.null(write_dir)){
-    write_dir <- getwd()
-  } else if(!file.exists(write_dir)){
-    stop('write_dir does not exist, check and try again.')
-  }
+
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
@@ -171,8 +163,6 @@ BayesGLM_slice <- function(
 
   ### FIT GLM(s)
 
-  if(!is.null(outfile)) outfile <- file.path(write_dir,paste0(outfile, '.Rdata'))
-
   if(do_classical) classicalGLM_out <- classicalGLM(session_data,
                                                      scale_BOLD=scale_BOLD,
                                                      scale_design = scale_design)
@@ -266,8 +256,11 @@ BayesGLM_slice <- function(
 #' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
-#' @param write_dir (Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.
-#' @param outfile (Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.
+#' @param outfile (Optional) File name (without extension) of output file for 
+#'  \code{"BayesGLM"} result to use in Bayesian group modeling. 
+#'  \code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
+#'  cortex and right cortex results, respectively. Default: \code{NULL}
+#'  (do not save the results to any file).
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
@@ -313,7 +306,6 @@ BayesGLM_cifti <- function(cifti_fname,
                      resamp_res=10000,
                      num.threads=4,
                      verbose=FALSE,
-                     write_dir=NULL,
                      outfile=NULL,
                      return_INLA_result=FALSE,
                      avg_betas_over_sessions = FALSE){
@@ -322,17 +314,6 @@ BayesGLM_cifti <- function(cifti_fname,
   do_classical <- (GLM_method %in% c('both','classical'))
 
   check_BayesGLM(require_PARDISO=do_Bayesian)
-
-  if(is.null(write_dir)){
-    write_dir <- getwd()
-  } else if(!file.exists(write_dir)){
-    stop('write_dir does not exist, check and try again.')
-  }
-  #TO DO: Check that the user has write permissions in write_dir
-  #TO DO: Damon: We could integrate ciftiTools::format_path() with this package too.
-  # It appends a directory to a file name and checks if it exists/is writeable/is readable.
-  #TO DO: Test this line of code for Windows systems.  May need to try both options for winslash argument with a tryCatch or if statement to keep the one that works.
-  write_dir <- normalizePath(write_dir) #generate full path
 
   # Check that arguments are compatible
   brainstructures <- ciftiTools:::match_input(
@@ -385,7 +366,7 @@ BayesGLM_cifti <- function(cifti_fname,
   #     for(ss in 1:n_sess){
   #       cifti_extn <- get_cifti_extn(cifti_fname[ss])
   #       cifti_fname2[ss] <- paste0(gsub(cifti_extn, '', cifti_fname[ss]), resamp_res, '.', cifti_extn)
-  #       cifti_fname2[ss] <- file.path(write_dir,basename(cifti_fname2[ss]))
+  #       cifti_fname2[ss] <- basename(cifti_fname2[ss])
   #       delete_helper_files <- FALSE
   #       if(ss==1){ make_helper_files <- TRUE } else { make_helper_files <- FALSE }
   #       resample_cifti(cifti_orig = cifti_fname[ss],
@@ -448,8 +429,6 @@ BayesGLM_cifti <- function(cifti_fname,
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res,
-        # sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
-        write_dir=write_dir,
         wb_path=wb_path
       )
       if(do_left) surf_left <- cifti_ss$surf$cortex_left
@@ -459,8 +438,6 @@ BayesGLM_cifti <- function(cifti_fname,
         cifti_fname[ss],
         brainstructures=brainstructures,
         resamp_res=resamp_res,
-        # sphereL_fname=sphereL_fname, sphereR_fname=sphereR_fname,
-        write_dir=write_dir,
         wb_path=wb_path
       )
     }
@@ -551,7 +528,15 @@ BayesGLM_cifti <- function(cifti_fname,
 
     ### FIT GLM(s)
 
-    if(!is.null(outfile)) outfile_left <- paste0(outfile, '_left.Rdata') else outfile_left <- NULL
+    if(!is.null(outfile)) {
+      if (endsWith(outfile, ".rds")) {
+        outfile_left <- gsub(".rds$", "_left.rds", outfile_left)
+      } else {
+        outfile_left <- paste0(outfile_left, "_left.rds")
+      }
+    } else {
+      outfile_left <- NULL
+    }
 
     if(do_classical) classicalGLM_left <- classicalGLM(session_data,
                                                        scale_BOLD=scale_BOLD,
@@ -563,7 +548,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                                       scale_design = scale_design,
                                                       num.threads=num.threads,
                                                       return_INLA_result=return_INLA_result,
-                                                      outfile = file.path(write_dir,outfile_left),
+                                                      outfile = outfile_left,
                                                       verbose=verbose)
 
   }
@@ -591,7 +576,15 @@ BayesGLM_cifti <- function(cifti_fname,
 
     ### FIT GLM
 
-    if(!is.null(outfile)) outfile_right <- paste0(outfile, '_right.Rdata') else outfile_right <- NULL
+    if(!is.null(outfile)) {
+      if (endsWith(outfile, ".rds")) {
+        outfile_right <- gsub(".rds$", "_right.rds", outfile_right)
+      } else {
+        outfile_right <- paste0(outfile_right, "_right.rds")
+      }
+    } else {
+      outfile_right <- NULL
+    }
 
     if(do_classical) classicalGLM_right <- classicalGLM(session_data,
                                                         scale_BOLD=scale_BOLD,
@@ -603,7 +596,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                                       scale_design = scale_design,
                                                       num.threads=num.threads,
                                                       return_INLA_result=return_INLA_result,
-                                                      outfile = file.path(write_dir,outfile_right),
+                                                      outfile = outfile_right,
                                                       verbose=verbose)
   }
 
@@ -758,7 +751,7 @@ BayesGLM <- function(
   }
 
   if(is.null(outfile)){
-    message('No value supplied for outfile, which is required for post-hoc group modeling.')
+    message('No value supplied for `outfile`, which is required for post-hoc group modeling.')
   }
 
   if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
@@ -952,7 +945,7 @@ BayesGLM <- function(
   class(result) <- "BayesGLM"
 
   if(!is.null(outfile)){
-    save(result, file=outfile)
+    saveRDS(result, file=outfile)
   }
 
   return(result)

@@ -18,7 +18,6 @@ BayesGLM_slice(
   GLM_method = "both",
   session_names = NULL,
   return_INLA_result = TRUE,
-  write_dir = NULL,
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL
@@ -78,9 +77,6 @@ session.}
 Default: \code{TRUE}. Required for running \code{\link{id_activations}}
 after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
-
-\item{write_dir}{(Optional) The path to a directory where results will be
-saved. Defaults to the current working directory.}
 
 \item{outfile}{(Optional) File name (without extension) of output file for
 BayesGLM result to use in Bayesian group modeling.}
