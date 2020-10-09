@@ -28,7 +28,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
   # Check to see that the INLA package is installed
   if (!requireNamespace("INLA", quietly = TRUE))
-    stop("This function requires the INLA package (see www.r-inla.org/download)")
+    stop("This function requires the `INLA` package (see www.r-inla.org/download)")
 
 
   # Check to see if PARDISO is installed

@@ -50,7 +50,7 @@ for model estimation. Default: \code{4}.}
 
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
 Default: \code{TRUE}. Required for running \code{\link{id_activations}}
-after, but not for running \code{\link{BayesGLM_joint}} after to get
+after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 
 \item{outfile}{File name where results will be written (for use by \code{BayesGLM2}).}

@@ -48,8 +48,14 @@ find.connected <- function(ind,mesh){
 #' @param factor Undocumented
 #' @param area.el Undocumented
 #' 
-#' @importFrom grDevices chull
+#' @import sp
+#' 
 find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("grDevices", quietly = TRUE)) {
+    stop("`find.smallest.activation` requires the `grDevices` package. Please install it.", call. = FALSE)
+  }
 
   if (class(res) == "excurobj") {
 
@@ -528,7 +534,7 @@ excursions.inla.no.spurious <- function(result.inla,
 
 {
   if (!requireNamespace("INLA", quietly = TRUE))
-    stop('This function requires the INLA package (see www.r-inla.org/download)')
+    stop('This function requires the `INLA` package (see www.r-inla.org/download)')
   if (missing(result.inla))
     stop('Must supply INLA result object')
   if (missing(method)) {

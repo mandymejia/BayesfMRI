@@ -27,8 +27,6 @@
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
 #' @import parallel
-#' @importFrom stringr str_sub
-#' @import abind
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
@@ -43,12 +41,19 @@ BayesGLM2 <- function(results,
                            no_cores = NULL,
                            verbose = TRUE){
 
-  flag <- inla.pardiso.check()
-  if(grepl('FAILURE',flag)) {
-    warning('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is recommended for computational efficiency. See inla.pardiso().')
-  } else {
-    inla.setOption(smtp='pardiso')
+  # TO DO: append `parallel::` to functions from this package
+  #   Then, remove the `@import parallel` line
+  #   Finally, add `parallel` to `Suggests:` the DESCRIPTION
+
+  if (!requireNamespace("abind", quietly = TRUE)) {
+    stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
   }
+  if (!requireNamespace("parallel", quietly = TRUE)) {
+    stop("`BayesGLM2` requires the `parallel` package. Please install it.", call. = FALSE)
+  }
+
+  # Check to see that the INLA package is installed
+  check_BayesGLM(require_PARDISO=TRUE)
 
   #Check if results are model objects or file paths
 
@@ -59,7 +64,10 @@ BayesGLM2 <- function(results,
     if(!is.character(x)) {
       return(FALSE)
     } else {
-      last3 <- str_sub(x, -3, -1)
+      # Damon: Replaced this line to reduce number of package dependencies:
+      #   stringr::str_sub(x, -3, -1)
+      # https://stackoverflow.com/questions/7963898/extracting-the-last-n-characters-from-a-string-in-r
+      last3 <- sub(".*(?=.{3}$)", "", x, perl=TRUE)
       return(last3 %in% c('rds','RDS','Rds'))
     }
   }
@@ -244,7 +252,7 @@ BayesGLM2 <- function(results,
   ## Posterior mean of each contrast
   betas.all <- lapply(beta.posteriors, function(x) return(x$mu))
   betas.wt <- mapply(function(x, a){return(x*a)}, betas.all, wt, SIMPLIFY=FALSE) #apply weight to each element of betas.all (one for each theta sample)
-  betas.summ <- apply(abind(betas.wt, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+  betas.summ <- apply(abind::abind(betas.wt, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
 
   ## Posterior quantiles of each contrast
   num_quantiles <- length(quantiles)
@@ -254,7 +262,7 @@ BayesGLM2 <- function(results,
     for(iq in 1:num_quantiles){
       quantiles.all_iq <- lapply(beta.posteriors, function(x) return(x$quantiles[[iq]]))
       betas.wt_iq <- mapply(function(x, a){return(x*a)}, quantiles.all_iq, wt, SIMPLIFY=FALSE) #apply weight to each element of quantiles.all_iq (one for each theta sample)
-      quantiles.summ[[iq]] <- apply(abind(betas.wt_iq, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+      quantiles.summ[[iq]] <- apply(abind::abind(betas.wt_iq, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
     }
   } else {
     quantiles.summ <- NULL
@@ -264,7 +272,7 @@ BayesGLM2 <- function(results,
   if(do_excur){
     ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
     ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
-    ppm.summ <- apply(abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
+    ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
     active <- array(0, dim=dim(ppm.summ))
     for(l in 1:num_contrasts){
       active[ppm.summ[,l] > (1-alpha[l]),l] <- 1

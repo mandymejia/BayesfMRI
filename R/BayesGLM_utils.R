@@ -1,4 +1,4 @@
-#' Check arguments and packages for BayesGLM[_slice/cifti]
+#' Check arguments and packages for BayesGLM-related functions
 #' 
 #' Check arguments and packages for \code{\link{BayesGLM}}, 
 #'  \code{\link{BayesGLM_slice}}, and \code{\link{BayesGLM_cifti}}.
@@ -12,18 +12,18 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 
   # Check to see that the INLA package is installed
   if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop("This function requires the INLA package. See www.r-inla.org/download")
+    stop("This function requires the `INLA` package. See www.r-inla.org/download")
   }
 
   # Check to see if PARDISO is installed
   if (!exists("inla.pardiso.check", mode = "function")) {
     warning(paste(
-      "Please update to the latest stable version of INLA for full functionality",
-      "and PARDISO compatibility. See www.r-inla.org/download\n"
+      "Please update to the latest stable version of `INLA` for full functionality",
+      "and `PARDISO` compatibility. See www.r-inla.org/download\n"
     ))
   } else {
     if (grepl("FAILURE", toupper(inla.pardiso.check()))) {
-      warning("Consider enabling PARDISO for faster computation. See `inla.pardiso()`")
+      warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
     } else {
       inla.setOption(smtp='pardiso')
     }

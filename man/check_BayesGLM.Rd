@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM_utils.R
 \name{check_BayesGLM}
 \alias{check_BayesGLM}
-\title{Check arguments and packages for BayesGLM\link{_slice/cifti}}
+\title{Check arguments and packages for BayesGLM-related functions}
 \usage{
 check_BayesGLM(require_PARDISO = TRUE)
 }

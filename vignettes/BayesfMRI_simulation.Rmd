@@ -127,10 +127,10 @@ plot_image_slice <- function(X, color_palette = NULL, zlim = NULL) {
       pos_half = TRUE
     )
   }
-  out_grob <- reshape2::melt(X) %>%
-    dplyr::mutate(value = ifelse(value < min(zlim,na.rm = T),min(zlim,na.rm = T),value),
-                  value = ifelse(value > max(zlim,na.rm = T),max(zlim,na.rm = T),value)) %>%
-    ggplot() +
+  out_grob <- reshape2::melt(X)
+  out_grob$value <- ifelse(out_grob$value < min(zlim, na.rm = T), min(zlim, na.rm = T), value)
+  out_grob$value <- ifelse(out_grob$value > max(zlim, na.rm = T), max(zlim, na.rm = T), value)
+  out_grob <- ggplot(out_grob) +
     geom_raster(aes(x = Var1, y = Var2, fill = value)) +
     scale_fill_gradientn("",colors = rev(color_palette$color),
                          limits = zlim,

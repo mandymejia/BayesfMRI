@@ -11,14 +11,27 @@
 #'   palette.
 #'
 #' @return A ggplot graphical object.
-#' @import ggplot2
-#' @import purrr
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom reshape2 melt
 #' @importFrom utils data
-#' @importFrom dplyr mutate
+#' 
 #' @export
 plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("`plot_slice` requires the `ggplot` package. Please install it.", call. = FALSE)
+  }
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("purrr", quietly = TRUE)) {
+    stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
+  }
+
+  # Hacky way to avoid R CMD CHECK problems. The other solution is Importing ggplot2.
+  ggplot <- geom_raster <- aes <- scale_fill_gradientn <- facet_grid <- NULL
+  labs <- theme_bw <- theme <- element_blank <- NULL
+
   if(class(X) == "matrix") X = list(single_activation_field = X)
   if(class(X) != "list") stop("Expected a matrix or list for X.")
   if(any(!sapply(X,function(x) {
@@ -28,8 +41,6 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   }
   # Make R CMD check happy
   Var1 <- Var2 <- value <- NULL
-  requireNamespace("ggplot2")
-  requireNamespace("purrr")
   if(is.null(zlim)) {
     zmin <- min(reshape2::melt(X)$value,na.rm = T)
     zmax <- max(reshape2::melt(X)$value,na.rm = T)
@@ -51,10 +62,10 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
       pos_half = TRUE
     )
   }
-  out_grob <- reshape2::melt(X) %>%
-    dplyr::mutate(value = ifelse(value < min(zlim,na.rm = T),min(zlim,na.rm = T),value),
-                  value = ifelse(value > max(zlim,na.rm = T),max(zlim,na.rm = T),value)) %>%
-    ggplot() +
+  out_grob <- reshape2::melt(X)
+  out_grob$value <- ifelse(out_grob$value < min(zlim, na.rm = T), min(zlim, na.rm = T), value)
+  out_grob$value <- ifelse(out_grob$value > max(zlim, na.rm = T), max(zlim, na.rm = T), value)
+  out_grob <- ggplot(out_grob) +
     geom_raster(aes(x = Var1, y = Var2, fill = value)) +
     scale_fill_gradientn("",colors = rev(color_palette$color),
                          limits = zlim,

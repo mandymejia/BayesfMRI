@@ -91,7 +91,7 @@ for model estimation. Default: \code{4}.}
 
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
 Default: \code{FALSE}. Required for running \code{\link{id_activations}}
-after, but not for running \code{\link{BayesGLM_joint}} after to get
+after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 
 \item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}

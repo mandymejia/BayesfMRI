@@ -76,7 +76,7 @@ session.}
 
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
 Default: \code{TRUE}. Required for running \code{\link{id_activations}}
-after, but not for running \code{\link{BayesGLM_joint}} after to get
+after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 
 \item{write_dir}{(Optional) The path to a directory where results will be

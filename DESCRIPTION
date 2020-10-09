@@ -22,38 +22,28 @@ Depends:
     R (>= 3.6.0)
 Encoding: UTF-8
 Imports: 
-    abind,
-    gifti,
-    ciftiTools (>= 0.1.5.0),
-    dplyr,
     excursions,
-    graphics,
-    grDevices,
-    geometry,
-    ggplot2,
-    ica,
+    parallel,
+    stats,
     INLA (>= 0.0-1468840039),
-    numDeriv,
     MASS,
     Matrix,
+    ciftiTools,
     matrixStats,
-    methods,
     neuRosim,
-    pesel,
-    purrr,
-    RColorBrewer,
-    rdist,
     reshape2,
-    rgl,
     sp,
-    SQUAREM,
-    stats,
-    stringr,
     utils
 Remotes:
     mandymejia/ciftiTools
 Suggests:
-    parallel,
+    abind,
+    rdist,
+    dplyr,
+    geometry,
+    grDevices,
+    ggplot2,
+    purrr,
     knitr,
     rmarkdown
 LazyData: true

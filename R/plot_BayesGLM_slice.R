@@ -8,7 +8,7 @@
 #' @return A ggplot2 object
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom INLA inla.spde.make.A
-#' @import ggplot2
+#' @import 2
 #' @import purrr
 #' @export
 plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {

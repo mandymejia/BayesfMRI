@@ -7,12 +7,20 @@
 #' @return SPDE object representing triangular mesh structure on data locations
 #' @export
 #' @importFrom INLA inla.mesh.create inla.spde2.generic
-#' @importFrom geometry delaunayn
 #' @importFrom Matrix sparseMatrix colSums Diagonal t solve
-#' @importFrom rdist cdist
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 #'
 create_spde_vol3D <- function(locs, labs, lab_set = NULL){
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("rdist", quietly = TRUE)) {
+    stop("`create_spde_vol3D` requires the `rdist` package. Please install it.", call. = FALSE)
+  }
+
+  # Check to see that the INLA package is installed
+  if (!requireNamespace("geometry", quietly = TRUE)) {
+    stop("`create_spde_vol3D` requires the `geometry` package. Please install it.", call. = FALSE)
+  }
 
   if(is.null(labs) & !is.null(lab_set)) stop('If labs is NULL, then lab_set must not be specified.')
 
@@ -34,7 +42,7 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
     P <- locs[ind,] #(x,y,z) coordinates of selected locations
 
     # In Triangulations for 3D data from original locations, note that there are big triangles that we don't want to keep.
-    # FV_orig <- delaunayn(P)
+    # FV_orig <- geometry::delaunayn(P)
     # open3d()
     # rgl.viewpoint(60)
     # rgl.light(120,60)
@@ -66,14 +74,14 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
     PP <- expand.grid(x, y, z) #full lattice within a cube surrounding the data locations
 
     # Create Triangulations for 3D data based on the grid
-    FV <- delaunayn(PP)
+    FV <- geometry::delaunayn(PP)
     # open3d()
     # rgl.viewpoint(60)
     # rgl.light(120,60)
     # tetramesh(FV, PP, alpha=0.7)
 
     # Remove locations that are far from original data locations
-    D <- cdist(P,PP)
+    D <- rdist::cdist(P,PP)
     md <- apply(D, 2, min)
     ind_keep <- md < max_dist
     indices <- which(ind_keep == 1)
@@ -102,7 +110,7 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
       # tetramesh(FV_new, P_new, alpha=0.7)
 
     # Create observation matrix A (this assumes that all original data locations appear in mesh)
-    D <- cdist(P,P_new)
+    D <- rdist::cdist(P,P_new)
     I_v <- apply(D, 1, function(x) {which(x == min(x))})
     A_v <- diag(1, nrow = nrow(P_new))
     A_all[[ii]] <- A_v[I_v,]

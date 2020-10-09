@@ -275,7 +275,6 @@ BayesGLM_slice <- function(
 #' @export
 #' @importFrom ciftiTools read_cifti resample_gifti as.xifti
 #' @importFrom matrixStats rowVars rowSums2
-#' @importFrom gifti readGIfTI
 #' @importFrom INLA inla.pardiso.check inla.setOption
 #'
 #' @details This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
