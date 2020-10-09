@@ -12,7 +12,6 @@
 #' @return True if all checks pass, or an (hopefully useful) error message
 #' 
 #' @export
-#'
 is.session <- function(sess){
 
   ## check number of fields

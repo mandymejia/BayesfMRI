@@ -17,7 +17,6 @@
 #' @importFrom stats convolve
 #' 
 #' @export
-#'
 make_HRFs <- function(onsets, TR, duration, downsample=100){
 
   K <- length(onsets) #number of tasks

@@ -66,7 +66,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
   }
 
   if(is.null(outfile)){
-    warning('No value supplied for outfile, which is required for group modeling (see help(BayesGLM2)).')
+    warning('No value supplied for outfile, which is required for group modeling (see `help(BayesGLM2)`).')
   }
 
   if(nrow(locations) != V) stop('The locations argument should have V rows, the number of data locations in BOLD.')

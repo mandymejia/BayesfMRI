@@ -12,7 +12,6 @@
 #' @importFrom INLA inla.mesh.create
 #' 
 #' @export
-#' 
 make_mesh <- function(vertices, faces){
 
   # Check index of faces
