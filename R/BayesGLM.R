@@ -6,21 +6,22 @@
 #' @param binary_mask (optional) a binary brain slice image used to mask
 #'   the BOLD data and make a more efficient network mesh for the
 #'   neighborhood definitions
-#' @param design A TxK task design matrix (or list of such matrices, for
-#'   multiple-session modeling) with column names representing tasks. Each
-#'   column represents the expected BOLD response due to each task, a
-#'   convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus.  Must be provided if and only if onsets=NULL.  Note that the
-#'   scale of the regressors will affect the scale and interpretation of the
-#'   beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is
-#'   recommended.
-#' @param onsets A matrix of onsets (first column) and durations (second column)
-#'   for each task in SECONDS, organized as a list where each element of the
+#' @param design,onsets,TR All or none must be provided.
+#' 
+#'   \code{design} is a \eqn{T x K} task design matrix (or list of such 
+#'   matrices, for multiple-session modeling) with column names representing 
+#'   tasks. Each column represents the expected BOLD response due to each task,
+#'   a convolution of the hemodynamic response function (HRF) and the task
+#'   stimulus. Note that the scale of the regressors will affect the scale and 
+#'   interpretation of the beta coefficients, so imposing a proper scale (e.g., 
+#'   set maximum to 1) is recommended.
+#' 
+#'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
+#'   for each task in seconds, organized as a list where each element of the
 #'   list corresponds to one task. Names of list should be task names. (Or for
-#'   multi-session modeling, a list of such lists.)  Must be provided if and
-#'   only if design=NULL.
-#' @param TR The temporal resolution of the data in seconds.  Must be provided
-#'   if onsets provided.
+#'   multi-session modeling, a list of such lists.) 
+#' 
+#'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
 #'   matrices, for multiple-session modeling).
 #' @param nuisance_include (Optional) Additional nuisance covariates to include.
@@ -247,9 +248,22 @@ BayesGLM_slice <-
 #' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
 #'  If not provided, should be set with
 #'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
-#' @param design A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.
-#' @param onsets A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.
-#' @param TR The temporal resolution of the data in seconds.  Must be provided if onsets provided.
+#' @param design,onsets,TR All or none must be provided.
+#' 
+#'   \code{design} is a \eqn{T x K} task design matrix (or list of such 
+#'   matrices, for multiple-session modeling) with column names representing 
+#'   tasks. Each column represents the expected BOLD response due to each task,
+#'   a convolution of the hemodynamic response function (HRF) and the task
+#'   stimulus. Note that the scale of the regressors will affect the scale and 
+#'   interpretation of the beta coefficients, so imposing a proper scale (e.g., 
+#'   set maximum to 1) is recommended.
+#' 
+#'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
+#'   for each task in seconds, organized as a list where each element of the
+#'   list corresponds to one task. Names of list should be task names. (Or for
+#'   multi-session modeling, a list of such lists.) 
+#' 
+#'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
 #' @param nuisance_include (Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).
 #' @inheritParams scale_BOLD_Param

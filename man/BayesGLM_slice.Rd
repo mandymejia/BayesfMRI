@@ -29,23 +29,22 @@ BayesGLM_slice(
 the first two dimensions correspond to the size of the fMRI slice in space
 and the last dimension corresponds to time}
 
-\item{design}{A TxK task design matrix (or list of such matrices, for
-multiple-session modeling) with column names representing tasks. Each
-column represents the expected BOLD response due to each task, a
-convolution of the hemodynamic response function (HRF) and the task
-stimulus.  Must be provided if and only if onsets=NULL.  Note that the
-scale of the regressors will affect the scale and interpretation of the
-beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is
-recommended.}
+\item{design, onsets, TR}{All or none must be provided.
 
-\item{onsets}{A matrix of onsets (first column) and durations (second column)
-for each task in SECONDS, organized as a list where each element of the
+\code{design} is a \eqn{T x K} task design matrix (or list of such
+matrices, for multiple-session modeling) with column names representing
+tasks. Each column represents the expected BOLD response due to each task,
+a convolution of the hemodynamic response function (HRF) and the task
+stimulus. Note that the scale of the regressors will affect the scale and
+interpretation of the beta coefficients, so imposing a proper scale (e.g.,
+set maximum to 1) is recommended.
+
+\code{onsets} is a matrix of onsets (first column) and durations (second column)
+for each task in seconds, organized as a list where each element of the
 list corresponds to one task. Names of list should be task names. (Or for
-multi-session modeling, a list of such lists.)  Must be provided if and
-only if design=NULL.}
+multi-session modeling, a list of such lists.)
 
-\item{TR}{The temporal resolution of the data in seconds.  Must be provided
-if onsets provided.}
+\code{TR} is the temporal resolution of the data in seconds.}
 
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such
 matrices, for multiple-session modeling).}
