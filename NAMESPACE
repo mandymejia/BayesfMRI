@@ -3,6 +3,7 @@
 export(BayesGLM)
 export(BayesGLM2)
 export(BayesGLM_cifti)
+export(BayesGLM_group)
 export(BayesGLM_slice)
 export(classicalGLM)
 export(compute_vertex_areas)

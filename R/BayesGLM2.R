@@ -425,3 +425,28 @@ F.logwt <- function(theta, spde, mu_theta, Q_theta, M){
 
   (1-M)*pr.theta
 }
+
+#' @rdname BayesGLM2
+#' @export
+BayesGLM_group <- function(
+  results,
+  contrasts = NULL,
+  quantiles = NULL,
+  excursion_type=NULL,
+  gamma = 0,
+  alpha = 0.05,
+  nsamp_theta = 50,
+  nsamp_beta = 100,
+  no_cores = NULL,
+  verbose = TRUE){
+  
+  BayesGLM2(
+    results=results,
+    contrasts=contrasts,
+    quantiles=quantiles,
+    excursion_type=excursion_type,
+    gamma=gamma, alpha=alpha,
+    nsamp_theta=nsamp_theta, nsamp_beta=nsamp_beta,
+    no_cores=no_cores, verbose=verbose
+  )
+}
