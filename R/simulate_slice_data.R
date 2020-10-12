@@ -1,5 +1,5 @@
 #' Simulate slice data
-#' 
+#'
 #' Create simulated slice data for the BayesGLM_surface function
 #'
 #' @param num_sessions a number
@@ -20,11 +20,11 @@
 #'   T by N response matrices corresponding to sessions, and the second element,
 #'    \code{design}, is a list of \code{num_time} by \code{num_tasks} predictor
 #'    matrices corrsponding to sessions.
-#' 
+#'
 #' @importFrom neuRosim specifydesign specifyregion
 #' @import stats
-#' 
-#' @export 
+#'
+#' @export
 #'
 #' @examples
 #' data <- simulate_slice_data()
@@ -51,6 +51,7 @@ simulate_slice_data <-
     )
     return(task_n)
   }, simplify = T)
+  colnames(tasks) <- paste0("task_",seq(num_tasks))
   # Create the responses
   if(is.null(binary_template)) {
     data("binary_template", package = "BayesfMRI",envir = environment())

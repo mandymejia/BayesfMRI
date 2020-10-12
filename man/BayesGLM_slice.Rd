@@ -20,7 +20,8 @@ BayesGLM_slice(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL
+  contrasts = NULL,
+  avg_betas_over_sessions = FALSE
 )
 }
 \arguments{
@@ -84,6 +85,8 @@ BayesGLM result to use in Bayesian group modeling.}
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+
+\item{avg_betas_over_sessions}{(logical) Should estimates for betas be averaged together over multiple sessions?}
 }
 \value{
 An object of class \code{"BayesGLM"}, a list containing...

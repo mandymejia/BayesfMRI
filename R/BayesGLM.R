@@ -1,5 +1,5 @@
 #'  BayesGLM for 2D slice
-#' 
+#'
 #'  Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data
 #'
 #' @param BOLD A list of sessions, each with a three-dimensional array in which
@@ -9,20 +9,20 @@
 #'   the BOLD data and make a more efficient network mesh for the
 #'   neighborhood definitions
 #' @param design,onsets,TR All or none must be provided.
-#' 
-#'   \code{design} is a \eqn{T x K} task design matrix (or list of such 
-#'   matrices, for multiple-session modeling) with column names representing 
+#'
+#'   \code{design} is a \eqn{T x K} task design matrix (or list of such
+#'   matrices, for multiple-session modeling) with column names representing
 #'   tasks. Each column represents the expected BOLD response due to each task,
 #'   a convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus. Note that the scale of the regressors will affect the scale and 
-#'   interpretation of the beta coefficients, so imposing a proper scale (e.g., 
+#'   stimulus. Note that the scale of the regressors will affect the scale and
+#'   interpretation of the beta coefficients, so imposing a proper scale (e.g.,
 #'   set maximum to 1) is recommended.
-#' 
+#'
 #'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
 #'   for each task in seconds, organized as a list where each element of the
 #'   list corresponds to one task. Names of list should be task names. (Or for
-#'   multi-session modeling, a list of such lists.) 
-#' 
+#'   multi-session modeling, a list of such lists.)
+#'
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
 #'   matrices, for multiple-session modeling).
@@ -42,11 +42,12 @@
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
+#' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
 #' @importFrom utils head
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
-#' 
+#'
 #' @export
 BayesGLM_slice <- function(
   BOLD,
@@ -64,7 +65,8 @@ BayesGLM_slice <- function(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL) {
+  contrasts = NULL,
+  avg_betas_over_sessions = FALSE) {
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
@@ -128,25 +130,35 @@ BayesGLM_slice <- function(
   }
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
-  for (ss in 1:n_sess) {
-    ntime <- nrow(design[[ss]])
-    if ('drift' %in% nuisance_include) {
-      drift <- (1:ntime) / ntime
-      if (!is.null(nuisance))
+  if(!is.null(nuisance)) {
+    for (ss in 1:n_sess) {
+      ntime <- nrow(design[[ss]])
+      if ('drift' %in% nuisance_include) {
+        drift <- (1:ntime) / ntime
         nuisance[[ss]] <-
           cbind(nuisance[[ss]], drift, drift ^ 2)
-      else
-        nuisance[[ss]] <- cbind(drift, drift ^ 2)
-    }
-    if ('dHRF' %in% nuisance_include) {
-      dHRF <- gradient(design[[ss]])
-      if (!is.null(nuisance))
+      }
+      if ('dHRF' %in% nuisance_include) {
+        dHRF <- gradient(design[[ss]])
         nuisance[[ss]] <-
           cbind(nuisance[[ss]], dHRF)
-      else
+      }
+    }
+  } else {
+    nuisance <- list()
+    for (ss in 1:n_sess) {
+      ntime <- nrow(design[[ss]])
+      if ('drift' %in% nuisance_include) {
+        drift <- (1:ntime) / ntime
+        nuisance[[ss]] <- cbind(drift, drift ^ 2)
+      }
+      if ('dHRF' %in% nuisance_include) {
+        dHRF <- gradient(design[[ss]])
         nuisance[[ss]] <- dHRF
+      }
     }
   }
+
 
   #set up session list
   # mat_BOLD <- sapply(BOLD, function(y_t) {
@@ -157,7 +169,7 @@ BayesGLM_slice <- function(
   #   y <- t(y)
   # }, simplify = F)
   session_data <- vector('list', n_sess)
-    names(session_data) <- session_names
+  names(session_data) <- session_names
   for(ss in 1:n_sess){
     sess <- list(BOLD = BOLD[[ss]], design=design[[ss]])
     if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
@@ -176,7 +188,9 @@ BayesGLM_slice <- function(
                                        num.threads=num.threads,
                                        return_INLA_result=return_INLA_result,
                                        outfile = outfile,
-                                       verbose=verbose)
+                                       verbose=verbose,
+                                       avg_betas_over_sessions =
+                                         avg_betas_over_sessions)
 
   # Create a conversion matrix
   in_binary_mask <- which(binary_mask == 1, arr.ind = T)
@@ -187,12 +201,14 @@ BayesGLM_slice <- function(
     as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
   }, simplify = F)
 
-  classicalGLM_slice <- BayesGLM_slice <- vector('list', n_sess)
-  names(classicalGLM_slice) <- names(BayesGLM_slice) <- session_names
+  avg_point_estimates <- as.matrix(convert_mat_A %*% BayesGLM_out$avg_beta_estimates)
+
+  classical_slice <- Bayes_slice <- vector('list', n_sess)
+  names(classical_slice) <- names(Bayes_slice) <- session_names
   for(ss in 1:n_sess){
     num_tasks <- ncol(design[[ss]])
     if(do_classical){
-      classicalGLM_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
+      classical_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
         image_coef[image_coef == 1] <- classicalGLM_out[[ss]][,tn]
         image_coef[binary_mask == 0] <- NA
@@ -201,17 +217,25 @@ BayesGLM_slice <- function(
     }
     if(do_Bayesian){
       mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[ss]])
-      BayesGLM_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
+      Bayes_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
         image_coef[image_coef == 1] <- mat_coefs[,tn]
         image_coef[binary_mask == 0] <- NA
         return(image_coef)
       },simplify = F)
+      if(n_sess > 1 & avg_betas_over_sessions) {
+        Bayes_slice$avg_over_sessions <- sapply(seq(num_tasks), function(tn) {
+          image_coef <- binary_mask
+          image_coef[image_coef == 1] <- avg_point_estimates[,tn]
+          image_coef[binary_mask == 0] <- NA
+          return(image_coef)
+        },simplify = F)
+      }
     }
   }
 
-  result <- list(betas_Bayesian = BayesGLM_slice,
-                 betas_classical = classicalGLM_slice,
+  result <- list(betas_Bayesian = Bayes_slice,
+                 betas_classical = classical_slice,
                  GLMs_Bayesian = BayesGLM_out,
                  GLMs_classical = classicalGLM_out,
                  design = design,
@@ -221,20 +245,20 @@ BayesGLM_slice <- function(
   }
 
 #' BayesGLM for CIFTI
-#' 
+#'
 #' Performs whole-brain spatial Bayesian GLM for fMRI task activation
 #'
 #' @section Connectome Workbench Requirement:
-#'  This function uses a system wrapper for the 'wb_command' executable. The 
-#'  user must first download and install the Connectome Workbench, available 
-#'  from https://www.humanconnectome.org/software/get-connectome-workbench . 
-#'  The \code{wb_path} argument is the full file path to the Connectome 
-#'  Workbench folder. (The full file path to the 'wb_cmd' executable also 
+#'  This function uses a system wrapper for the 'wb_command' executable. The
+#'  user must first download and install the Connectome Workbench, available
+#'  from https://www.humanconnectome.org/software/get-connectome-workbench .
+#'  The \code{wb_path} argument is the full file path to the Connectome
+#'  Workbench folder. (The full file path to the 'wb_cmd' executable also
 #'  works.)
-#' 
+#'
 #' @section Label Levels:
 #'  \code{xifti$meta$subcort$labels} is a factor with the following levels:
-#' 
+#'
 #'  \enumerate{
 #'    \item{Cortex-L}
 #'    \item{Cortex-R}
@@ -258,10 +282,10 @@ BayesGLM_slice <- function(
 #'    \item{Thalamus-L}
 #'    \item{Thalamus-R}
 #'  }
-#' 
-#'  These correspond to the same structures as given by 
-#'  \code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox. 
-#' 
+#'
+#'  These correspond to the same structures as given by
+#'  \code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox.
+#'
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
 #' @param surfL_fname File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".
 #' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
@@ -274,20 +298,20 @@ BayesGLM_slice <- function(
 #'  If not provided, should be set with
 #'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
 #' @param design,onsets,TR All or none must be provided.
-#' 
-#'   \code{design} is a \eqn{T x K} task design matrix (or list of such 
-#'   matrices, for multiple-session modeling) with column names representing 
+#'
+#'   \code{design} is a \eqn{T x K} task design matrix (or list of such
+#'   matrices, for multiple-session modeling) with column names representing
 #'   tasks. Each column represents the expected BOLD response due to each task,
 #'   a convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus. Note that the scale of the regressors will affect the scale and 
-#'   interpretation of the beta coefficients, so imposing a proper scale (e.g., 
+#'   stimulus. Note that the scale of the regressors will affect the scale and
+#'   interpretation of the beta coefficients, so imposing a proper scale (e.g.,
 #'   set maximum to 1) is recommended.
-#' 
+#'
 #'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
 #'   for each task in seconds, organized as a list where each element of the
 #'   list corresponds to one task. Names of list should be task names. (Or for
-#'   multi-session modeling, a list of such lists.) 
-#' 
+#'   multi-session modeling, a list of such lists.)
+#'
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
 #' @param nuisance_include (Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).
@@ -299,8 +323,8 @@ BayesGLM_slice <- function(
 #' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
-#' @param outfile (Optional) File name (without extension) of output file for 
-#'  \code{"BayesGLM"} result to use in Bayesian group modeling. 
+#' @param outfile (Optional) File name (without extension) of output file for
+#'  \code{"BayesGLM"} result to use in Bayesian group modeling.
 #'  \code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
 #'  cortex and right cortex results, respectively. Default: \code{NULL}
 #'  (do not save the results to any file).
@@ -308,12 +332,12 @@ BayesGLM_slice <- function(
 #' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
-#' 
+#'
 #' @importFrom ciftiTools read_cifti resample_gifti as.xifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom INLA inla.pardiso.check inla.setOption
-#' 
-#' @export 
+#'
+#' @export
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
                      brainstructures=c('left','right','subcortical'),
@@ -550,9 +574,9 @@ BayesGLM_cifti <- function(cifti_fname,
 
     if(!is.null(outfile)) {
       if (endsWith(outfile, ".rds")) {
-        outfile_left <- gsub(".rds$", "_left.rds", outfile_left)
+        outfile_left <- gsub(".rds$", "_left.rds", outfile)
       } else {
-        outfile_left <- paste0(outfile_left, "_left.rds")
+        outfile_left <- paste0(outfile, "_left.rds")
       }
     } else {
       outfile_left <- NULL
@@ -598,9 +622,9 @@ BayesGLM_cifti <- function(cifti_fname,
 
     if(!is.null(outfile)) {
       if (endsWith(outfile, ".rds")) {
-        outfile_right <- gsub(".rds$", "_right.rds", outfile_right)
+        outfile_right <- gsub(".rds$", "_right.rds", outfile)
       } else {
-        outfile_right <- paste0(outfile_right, "_right.rds")
+        outfile_right <- paste0(outfile, "_right.rds")
       }
     } else {
       outfile_right <- NULL
@@ -712,40 +736,40 @@ BayesGLM_cifti <- function(cifti_fname,
 
 
 #' BayesGLM
-#' 
+#'
 #' Applies spatial Bayesian GLM to task fMRI data
-#' 
+#'
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions, where each session is a list with elements
-#'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session} 
+#'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
 #'  for more details.
 #' List element names represent session names.
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @inheritParams mesh_Param_inla
-#' @param mask (Optional) A length \eqn{V} logical vector indicating if each 
+#' @param mask (Optional) A length \eqn{V} logical vector indicating if each
 #'  vertex is to be included.
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_result_Param_TRUE
-#' @param outfile File name where results will be written (for use by 
+#' @param outfile File name where results will be written (for use by
 #'  \code{BayesGLM2}).
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_betas_over_sessions_Param
-#' 
+#'
 #' @return A list containing...
-#' 
+#'
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
-#' 
+#'
 #' @export
 BayesGLM <- function(
-  data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL, 
-  scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE, 
+  data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL,
+  scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE,
   outfile = NULL, verbose=FALSE, contrasts = NULL, avg_betas_over_sessions = FALSE){
 
   #check whether data is a list OR a session (for single-session analysis)
@@ -788,7 +812,7 @@ BayesGLM <- function(
   zero_var <- sapply(data, function(x){
     x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
     x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
-    vars <- colVars(x$BOLD)
+    vars <- matrixStats::colVars(x$BOLD)
     return(vars < 1e-6)
   })
   zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
@@ -804,7 +828,7 @@ BayesGLM <- function(
 
   if(!is.null(mask)) {
     mask <- as.logical(mask)
-    mesh <- submesh.mesh(mask, mesh)
+    mesh <- excursions::submesh.mesh(mask, mesh)
     mesh$idx$loc <- mesh$idx$loc[!is.na(mesh$idx$loc)]
     for(s in 1:n_sess){
       data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
@@ -912,7 +936,7 @@ BayesGLM <- function(
   cat('\n ...... estimating model with INLA')
   system.time(
     INLA_result <- estimate_model(
-      formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1, 
+      formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
       num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc
     )
   )
