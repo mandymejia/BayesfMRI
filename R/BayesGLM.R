@@ -246,7 +246,7 @@ BayesGLM_slice <- function(
 
 #' BayesGLM for CIFTI
 #'
-#' Performs whole-brain spatial Bayesian GLM for fMRI task activation
+#' Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 #'
 #' @section Connectome Workbench Requirement:
 #'  This function uses a system wrapper for the 'wb_command' executable. The
@@ -256,44 +256,43 @@ BayesGLM_slice <- function(
 #'  Workbench folder. (The full file path to the 'wb_cmd' executable also
 #'  works.)
 #'
-#' @section Label Levels:
-#'  \code{xifti$meta$subcort$labels} is a factor with the following levels:
-#'
-#'  \enumerate{
-#'    \item{Cortex-L}
-#'    \item{Cortex-R}
-#'    \item{Accumbens-L}
-#'    \item{Accumbens-R}
-#'    \item{Amygdala-L}
-#'    \item{Amygdala-R}
-#'    \item{Brain Stem}
-#'    \item{Caudate-L}
-#'    \item{Caudate-R}
-#'    \item{Cerebellum-L}
-#'    \item{Cerebellum-R}
-#'    \item{Diencephalon-L}
-#'    \item{Diencephalon-R}
-#'    \item{Hippocampus-L}
-#'    \item{Hippocampus-R}
-#'    \item{Pallidum-L}
-#'    \item{Pallidum-R}
-#'    \item{Putamen-L}
-#'    \item{Putamen-R}
-#'    \item{Thalamus-L}
-#'    \item{Thalamus-R}
-#'  }
-#'
-#'  These correspond to the same structures as given by
-#'  \code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox.
-#'
+# @section Label Levels:
+#  \code{xifti$meta$subcort$labels} is a factor with the following levels:
+#
+#  \enumerate{
+#    \item{Cortex-L}
+#    \item{Cortex-R}
+#    \item{Accumbens-L}
+#    \item{Accumbens-R}
+#    \item{Amygdala-L}
+#    \item{Amygdala-R}
+#    \item{Brain Stem}
+#    \item{Caudate-L}
+#    \item{Caudate-R}
+#    \item{Cerebellum-L}
+#    \item{Cerebellum-R}
+#    \item{Diencephalon-L}
+#    \item{Diencephalon-R}
+#    \item{Hippocampus-L}
+#    \item{Hippocampus-R}
+#    \item{Pallidum-L}
+#    \item{Pallidum-R}
+#    \item{Putamen-L}
+#    \item{Putamen-R}
+#    \item{Thalamus-L}
+#    \item{Thalamus-R}
+#  }
+#
+#  These correspond to the same structures as given by
+#  \code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox.
+#
 #' @param cifti_fname File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
 #' @param surfL_fname File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".
 #' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".
 #' @param brainstructures Character vector indicating which brain structure(s)
-#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
-#'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
-#'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).
+#'  to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
+#'  cortical surface). Default: \code{c("left","right")} (entire cortical surface).
+#'  Note that the subcortical models have not yet been implemented. 
 #' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
 #'  If not provided, should be set with
 #'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
@@ -340,7 +339,7 @@ BayesGLM_slice <- function(
 #' @export
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
-                     brainstructures=c('left','right','subcortical'),
+                     brainstructures=c('left','right'),
                      wb_path=NULL,
                      design=NULL, onsets=NULL, TR=NULL,
                      nuisance=NULL, nuisance_include=c('drift','dHRF'),
@@ -361,7 +360,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   # Check that arguments are compatible
   brainstructures <- ciftiTools:::match_input(
-    brainstructures, c("left","right","subcortical","all"),
+    brainstructures, c("left","right"),
     user_value_label="brainstructures"
   )
   if ("all" %in% brainstructures) {
@@ -369,7 +368,8 @@ BayesGLM_cifti <- function(cifti_fname,
   }
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
-  do_sub <- ('subcortical' %in% brainstructures)
+  do_sub <- FALSE
+  #do_sub <- ('subcortical' %in% brainstructures)
 
   if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
@@ -456,7 +456,7 @@ BayesGLM_cifti <- function(cifti_fname,
   ### For each session, separate the CIFTI data into left/right/sub and read in files
   if(do_left) cifti_left <- vector('list', n_sess)
   if(do_right) cifti_right <- vector('list', n_sess)
-  if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
+  #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
 
   if(is.null(design)) {
     make_design <- TRUE
@@ -722,11 +722,11 @@ BayesGLM_cifti <- function(cifti_fname,
   result <- list(betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
                  GLMs_Bayesian = list(cortexL = BayesGLM_left,
-                                     cortexR = BayesGLM_right,
-                                     subcortical = BayesGLM_vol),
+                                     cortexR = BayesGLM_right),
+                                     #subcortical = BayesGLM_vol),
                  GLMs_classical = list(cortexL = classicalGLM_left,
-                                      cortexR = classicalGLM_right,
-                                      subcortical = classicalGLM_vol),
+                                      cortexR = classicalGLM_right),
+                                      #subcortical = classicalGLM_vol),
                  design = design)
 
   cat('\n DONE! \n')
