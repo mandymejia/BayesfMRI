@@ -12,8 +12,7 @@ organize_replicates(n_sess, n_task, mesh)
 \item{n_task}{Number of regressors or tasks}
 
 \item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data) or \code{"BayesfMRI.spde"} object (see
-\code{\link{create_spde_vol3D}} for subcortical data).}
+surface data)}
 }
 \value{
 replicates vector and betas for sessions

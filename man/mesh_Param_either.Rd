@@ -5,8 +5,7 @@
 \title{mesh: either}
 \arguments{
 \item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data) or \code{"BayesfMRI.spde"} object (see
-\code{\link{create_spde_vol3D}} for subcortical data).}
+surface data)}
 }
 \description{
 mesh: either
