@@ -719,6 +719,29 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
+  # Add average betas to the start of the list.
+  if(avg_betas_over_sessions) {
+    if(do_classical) {
+      classicalGLM_cifti <- c(
+        list(avg = as.xifti(
+          cortexL = Reduce(`+`,classicalGLM_left) / n_sess,
+          cortexR = Reduce(`+`,classicalGLM_right) / n_sess
+        )), 
+        classicalGLM_cifti
+      )
+    }
+
+    if (do_Bayesian) {
+      BayesGLM_cifti <- c(
+        list(avg = as.xifti(
+          cortexL = BayesGLM_left$avg_beta_estimates,
+          cortexR = BayesGLM_right$avg_beta_estimates
+        )), 
+        BayesGLM_cifti
+      )
+    }
+  }
+
   result <- list(betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
                  GLMs_Bayesian = list(cortexL = BayesGLM_left,
