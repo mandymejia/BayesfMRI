@@ -707,6 +707,9 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
                                              )
+      # Damon: once the new ciftiTools version is pushed, use the `col_names`
+      #   argument to `as.xifti` instead.
+      classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
       BayesGLM_cifti[[ss]] <- as.xifti(
@@ -716,6 +719,7 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
                                          )
+      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
   }
 
@@ -729,6 +733,7 @@ BayesGLM_cifti <- function(cifti_fname,
         )), 
         classicalGLM_cifti
       )
+      classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
 
     if (do_Bayesian) {
@@ -739,6 +744,7 @@ BayesGLM_cifti <- function(cifti_fname,
         )), 
         BayesGLM_cifti
       )
+      BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
   }
 
