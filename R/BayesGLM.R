@@ -700,6 +700,7 @@ BayesGLM_cifti <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
+      beta_names <- classicalGLM_cifti[[1]]$beta_names
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = classicalGLM_left[[ss]],
         cortexR = classicalGLM_right[[ss]]
@@ -712,6 +713,7 @@ BayesGLM_cifti <- function(cifti_fname,
       classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
+      beta_names <- BayesGLM_cifti[[1]]$beta_names
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]

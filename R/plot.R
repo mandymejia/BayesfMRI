@@ -19,12 +19,10 @@
 #' @export
 plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
 
-  # Check to see that the INLA package is installed
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("`plot_slice` requires the `ggplot` package. Please install it.", call. = FALSE)
   }
 
-  # Check to see that the INLA package is installed
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
   }
@@ -94,18 +92,17 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
 #' 
 #' @export
 plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NULL) {
-  Var1 <- Var2 <- value <- NULL # to prevent package build warning at ggplot line
 
-  # Check to see that the INLA package is installed
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("`plot_slice` requires the `ggplot` package. Please install it.", call. = FALSE)
   }
+  # to prevent package build warning at ggplot lines
+  ggplot <- geom_raster <- aes <- scale_fill_gradientn <- facet_grid <- NULL
+  labs <- theme_bw <- theme <- element_blank <- Var1 <- Var2 <- value <- NULL 
 
-  # Check to see that the INLA package is installed
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
   }
-
 
   # Create a conversion matrix
   in_binary_mask <- which(BayesGLM_object$mask == 1, arr.ind = T)
@@ -130,19 +127,18 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
     return(out)
   }, simplify= F)
 
-  reshape2::melt(coef_images) %>%
-    ggplot() +
-    geom_raster(aes(x = Var1, y = Var2, fill = value)) +
-    scale_fill_gradientn("",colors = rev(wb_palette$color),
-                         # values = wb_palette$value,
-                         limits = zlim,
-                         na.value = "white") +
-    facet_grid(L1~L2) +
-    labs(x="", y="") +
-    theme_bw() +
-    theme(panel.grid = element_blank(),
-          axis.ticks = element_blank(),
-          axis.text = element_blank())
+  ggplot(reshape2::melt(coef_images)) +
+  geom_raster(aes(x = Var1, y = Var2, fill = value)) +
+  scale_fill_gradientn("",colors = rev(wb_palette$color),
+                        # values = wb_palette$value,
+                        limits = zlim,
+                        na.value = "white") +
+  facet_grid(L1~L2) +
+  labs(x="", y="") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
 }
 
 #' S3 method: use \code{plot_BayesGLM_slice} to plot a \code{"BayesGLM"} object
@@ -156,4 +152,54 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
 #' 
 plot.BayesGLM <- function(x, ...){
   plot_BayesGLM_slice(x, ...)
+}
+
+#' S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_CIFTI"} object
+#' 
+#' @param x An object of class "BayesGLM_CIFTI"
+#' @param session Which session should be plotted? \code{NULL} (default) will
+#'  use the first.
+#' @param method "Bayesian" or "classical". \code{NULL} (default) will use
+#'  the Bayesian results if available, and the classical results if not. 
+#' @param idx The data columns to plot. Overrides the \code{idx} argument to
+#'  \code{\link[ciftiTools]{view_xifti_surface}}. \code{NULL} (default) will
+#'  use all the data columns. 
+#' @param zlim Overrides the \code{zlim} argument for 
+#'  \code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-.01, .01)}.
+#' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}
+#'
+#' @method plot BayesGLM_CIFTI
+#' 
+# @importFrom ciftiTools view_xifti_surface
+#' @export
+#' 
+plot.BayesGLM_CIFTI <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-.01, .01), ...){
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("This function requires the `ciftiTools` package. Please install it.")
+  }
+
+  # Method
+  if (is.null(method)) {
+    method <- ifelse(is.null(x$betas_Bayesian), "classical", "Bayesian")
+  }
+  method <- match.arg(method, c("classical", "Bayesian"))
+  method <- paste0("betas_", method)
+  if (is.null(x[[method]])) { 
+    stop(paste("Method", gsub("betas_", "", method, fixed=TRUE), "does not exist."))
+  }
+
+  # Session
+  if (is.null(session)) { session <- 1 }
+  if (is.null(x[[method]][[session]])) { 
+    stop(paste("Session", session, "of method", method, "does not exist."))
+  }
+
+  # Column index
+  if (is.null(idx)) { 
+    idx <- seq_len(ncol(do.call(rbind, x[[method]][[session]]$data)))
+  }
+
+  # Plot
+  ciftiTools::view_xifti_surface(x[[method]][[session]], idx=idx, zlim=zlim, ...)
 }
