@@ -165,7 +165,7 @@ plot.BayesGLM <- function(x, ...){
 #'  \code{\link[ciftiTools]{view_xifti_surface}}. \code{NULL} (default) will
 #'  use all the data columns. 
 #' @param zlim Overrides the \code{zlim} argument for 
-#'  \code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-.01, .01)}.
+#'  \code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-1, 1)}.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}
 #'
 #' @method plot BayesGLM_CIFTI
@@ -173,7 +173,7 @@ plot.BayesGLM <- function(x, ...){
 # @importFrom ciftiTools view_xifti_surface
 #' @export
 #' 
-plot.BayesGLM_CIFTI <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-.01, .01), ...){
+plot.BayesGLM_CIFTI <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-1, 1), ...){
 
   if (!requireNamespace("ciftiTools", quietly = TRUE)) {
     stop("This function requires the `ciftiTools` package. Please install it.")

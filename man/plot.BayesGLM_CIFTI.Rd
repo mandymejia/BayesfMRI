@@ -4,7 +4,7 @@
 \alias{plot.BayesGLM_CIFTI}
 \title{S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_CIFTI"} object}
 \usage{
-\method{plot}{BayesGLM_CIFTI}(x, session = NULL, method = NULL, idx = NULL, zlim = c(-0.01, 0.01), ...)
+\method{plot}{BayesGLM_CIFTI}(x, session = NULL, method = NULL, idx = NULL, zlim = c(-1, 1), ...)
 }
 \arguments{
 \item{x}{An object of class "BayesGLM_CIFTI"}
@@ -20,7 +20,7 @@ the Bayesian results if available, and the classical results if not.}
 use all the data columns.}
 
 \item{zlim}{Overrides the \code{zlim} argument for
-\code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-.01, .01)}.}
+\code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-1, 1)}.}
 
 \item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}}
 }
