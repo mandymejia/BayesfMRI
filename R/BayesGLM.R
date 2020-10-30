@@ -292,7 +292,7 @@ BayesGLM_slice <- function(
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 #'  cortical surface). Default: \code{c("left","right")} (entire cortical surface).
-#'  Note that the subcortical models have not yet been implemented. 
+#'  Note that the subcortical models have not yet been implemented.
 #' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
 #'  If not provided, should be set with
 #'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
@@ -700,7 +700,7 @@ BayesGLM_cifti <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      beta_names <- classicalGLM_cifti[[1]]$beta_names
+      # beta_names <- classicalGLM_cifti[[1]]$beta_names # This object no longer exists
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = classicalGLM_left[[ss]],
         cortexR = classicalGLM_right[[ss]]
@@ -710,10 +710,10 @@ BayesGLM_cifti <- function(cifti_fname,
                                              )
       # Damon: once the new ciftiTools version is pushed, use the `col_names`
       #   argument to `as.xifti` instead.
-      classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      # classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      beta_names <- BayesGLM_cifti[[1]]$beta_names
+      # beta_names <- BayesGLM_cifti[[1]]$beta_names # This object no longer exists
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]
@@ -721,21 +721,41 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
                                          )
-      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      # BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
   }
 
   # Add average betas to the start of the list.
   if(avg_betas_over_sessions) {
     if(do_classical) {
-      classicalGLM_cifti <- c(
-        list(avg = as.xifti(
-          cortexL = Reduce(`+`,classicalGLM_left) / n_sess,
-          cortexR = Reduce(`+`,classicalGLM_right) / n_sess
-        )), 
-        classicalGLM_cifti
-      )
-      classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      if(do_left & do_right) {
+        classicalGLM_cifti <- c(
+          list(avg = as.xifti(
+            cortexL = Reduce(`+`,classicalGLM_left) / n_sess,
+            cortexR = Reduce(`+`,classicalGLM_right) / n_sess
+          )),
+          classicalGLM_cifti
+        )
+      } else {
+        if(do_left) {
+          classicalGLM_cifti <- c(
+            list(avg = as.xifti(
+              cortexL = Reduce(`+`,classicalGLM_left) / n_sess
+            )),
+            classicalGLM_cifti
+          )
+        }
+        if(do_right) {
+          classicalGLM_cifti <- c(
+            list(avg = as.xifti(
+              cortexR = Reduce(`+`,classicalGLM_right) / n_sess
+            )),
+            classicalGLM_cifti
+          )
+        }
+      }
+
+      # classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
     }
 
     if (do_Bayesian) {
@@ -743,10 +763,10 @@ BayesGLM_cifti <- function(cifti_fname,
         list(avg = as.xifti(
           cortexL = BayesGLM_left$avg_beta_estimates,
           cortexR = BayesGLM_right$avg_beta_estimates
-        )), 
+        )),
         BayesGLM_cifti
       )
-      BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      # BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
   }
 
