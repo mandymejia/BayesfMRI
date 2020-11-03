@@ -17,7 +17,8 @@ BayesGLM(
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
-  avg_betas_over_sessions = FALSE
+  avg_betas_over_sessions = FALSE,
+  trim_INLA = TRUE
 )
 }
 \arguments{
@@ -64,6 +65,10 @@ posterior quantities of group means or contrasts.}
 
 \item{avg_betas_over_sessions}{Average estimates for betas over multiple
 sessions? Default: \code{FALSE}.}
+
+\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+result be trimmed to only what is necessary to use the
+\code{id_activations} function? Default value is \code{TRUE}.}
 }
 \value{
 A list containing...
