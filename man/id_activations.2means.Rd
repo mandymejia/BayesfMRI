@@ -14,14 +14,24 @@ id_activations.2means(
 \arguments{
 \item{model_obj}{An object of class \code{BayesGLM}}
 
-\item{field_name}{Name of latent field or vector of names on which to identify activations}
+\item{field_name}{Name of latent field or vector of names on which to identify
+activations}
 
-\item{type}{A string that should be either "point" or "sequential". The "point" type does a simple 2-means clustering to determine areas of activation. The "sequential" type uses the sequential 2-means variable selection method, as described in Li and Pati (2017). The "sequential" method takes significantly longer, but should do a better job of accounting for posterior variance.}
+\item{type}{A string that should be either "point" or "sequential". The
+"point" type does a simple 2-means clustering to determine areas of activation.
+The "sequential" type uses the sequential 2-means variable selection method,
+as described in Li and Pati (2017). The "sequential" method takes significantly
+longer, but should do a better job of accounting for posterior variance.}
 
-\item{n_sample}{The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.}
+\item{n_sample}{The number of samples to generate if the sequential 2-means
+type is chosen. By default, this takes a value of 1000.}
 }
 \value{
-A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, which is NULL for the 2means method.
+A nested list, where the first layer separates by session, and the
+second layer is another list of two elements: \code{active}, which gives a
+matrix of zeros and ones of the same dimention as
+\code{model_obj$beta_estimates${session_name}}, and \code{excur_result},
+which is \code{NULL} for the "2means" method.
 }
 \description{
 Identify activations using 2-means clustering methods

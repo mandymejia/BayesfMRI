@@ -136,37 +136,58 @@
 #
 # }
 
-#' Computes Bayesian GLM posterior means, quantiles and excursions sets (areas of activation) for summaries or contrasts across sessions within a single multi-session model
+#' Summarize sessions
+#' 
+#' Computes Bayesian GLM posterior means, quantiles and excursions sets 
+#'  (areas of activation) for summaries or contrasts across sessions within a 
+#'  single multi-session model
+#' 
+#' Performs posterior inference on summaries or contrasts across the sessions 
+#'  in a multi-session Bayesian GLM.  Let J be the number of sessions analyzed 
+#'  in the multi-session Bayesian GLM, and let K be the number of tasks. 
+#'  Computes the posterior mean of each contrast and produces excursions sets 
+#'  representing areas of activation (above a specified activation threshold 
+#'  gamma) for each contrast map based on the joint (across locations) posterior
+#'  distribution.
 #'
-#' @param result An object of class BayesGLM containing the results of a multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM)`.)
-#' @param contrasts (Optional) A list of vectors, each length J*K, specifying the contrast(s) of interest across sessions, where J is the number of sessions analyzed and K is the number of tasks.  See Details for more information. Default is to compute the average for each task across sessions.
-#' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
-#' @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="), or a vector thereof (each element corresponding to one contrast).  If none provided, no inference performed.
-#' @param gamma (For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).
-#' @param alpha (For inference only) Significance level for activation for the excursion set
+#' Each contrast vector specifies an across-session summary of interest. 
+#'  The default is one contrast vector for each task representing the across-session average.
+#'  Examples of contrast vectors include:
+#'  \code{rep(c(1/J, rep(0, J-1)), K)} represents the across-session average for the first task.
+#'  \code{rep( c(1/J,-1/J,rep(0, K-2)) ,J)} represents the difference between the first two tasks, averaged over all sessions.
+#' 
+#' @inheritSection INLA_Description INLA Requirement
+#' 
+#' @param result An object of class BayesGLM containing the results of a 
+#'  multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM)`.)
+#' @param contrasts (Optional) A list of vectors, each length J*K, specifying 
+#'  the contrast(s) of interest across sessions, where J is the number of 
+#'  sessions analyzed and K is the number of tasks.  See Details for more 
+#'  information. Default is to compute the average for each task across sessions.
+#' @param quantiles (Optional) Vector of posterior quantiles to return in 
+#'  addition to the posterior mean
+#' @param excursion_type (For inference only) The type of excursion function 
+#'  for the contrast (">", "<", "!="), or a vector thereof (each element 
+#'  corresponding to one contrast).  If none provided, no inference performed.
+#' @param gamma (For inference only) Activation threshold for the excursion set,
+#'  or a vector thereof (each element corresponding to one contrast).
+#' @param alpha (For inference only) Significance level for activation for the 
+#'  excursion set
 # @param no_cores (For inference only) The number of cores to use for sampling in parallel. If NULL, do not run in parallel.
-#' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
-#' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
-#'
-#' @details Performs posterior inference on summaries or contrasts across the sessions in a multi-session Bayesian GLM.  Let J be the number of sessions analyzed in the
-#' multi-session Bayesian GLM, and let K be the number of tasks.  Computes the posterior mean of each contrast and produces excursions sets representing areas of
-#' activation (above a specified activation threshold gamma) for each contrast map based on the joint (across locations) posterior distribution.
-#'
-#' Each contrast vector specifies an across-session summary of interest. The default is one contrast vector for each task representing the across-session average.
-#' Examples of contrast vectors include:
-#' `rep(c(1/J, rep(0, J-1)), K)` represents the across-session average for the first task
-#' `rep( c(1/J,-1/J,rep(0, K-2)) ,J)` represents the difference between the first two tasks, averaged over all sessions
-#'
+#' @param nsamp_theta Number of theta values to sample from posterior. Default 
+#'  is 50.
+#' @param nsamp_beta Number of beta vectors to sample conditional on each theta
+#'  value sampled. Default is 100.
 #'
 #' @return A list containing...
-#' @export
+#' 
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.qsample
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
 #' @importFrom abind abind
 #' @import parallel
-#'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' 
+#' @export
 summarize_sessions <- function(result,
                                contrasts = NULL,
                                quantiles = NULL,

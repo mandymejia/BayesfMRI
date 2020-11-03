@@ -1,6 +1,6 @@
 Package: BayesfMRI
 Title: Bayesian Methods for Functional MRI
-Version: 0.1.4
+Version: 0.1.6.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -16,45 +16,36 @@ Authors@R: c(
            email = "danieladamspencer@gmail.com",
            role = "ctb",
            comment = c(ORCID = "0000-0002-9705-3605")))
-Description: The two main functions are BayesGLM and templateICA.  BayesGLM performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface.  The templateICA function performs template ICA and spatial template ICA for subject-level brain network estimation. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
+Description: The main function is BayesGLM, which performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
 License: GPL-3
 Depends: 
     R (>= 3.6.0)
 Encoding: UTF-8
 Imports: 
-    abind,
-    gifti,
-    ciftiTools (>= 0.1.4),
-    dplyr,
     excursions,
-    graphics,
-    geometry,
-    ggplot2,
-    ica,
+    parallel,
+    stats,
     INLA (>= 0.0-1468840039),
-    numDeriv,
     MASS,
     Matrix,
+    ciftiTools,
     matrixStats,
-    methods,
     neuRosim,
-    pesel,
-    purrr,
-    RColorBrewer,
-    rdist,
     reshape2,
-    rgl,
     sp,
-    SQUAREM,
-    stats,
+    utils
 Remotes:
     mandymejia/ciftiTools
 Suggests:
-    parallel,
+    abind,
+    rdist,
+    dplyr,
+    geometry,
+    grDevices,
+    ggplot2,
+    purrr,
     knitr,
     rmarkdown
-ImportsFrom: 
-    grDevices chull rgb
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1

@@ -1,3 +1,5 @@
+#' Simulate slice data
+#'
 #' Create simulated slice data for the BayesGLM_surface function
 #'
 #' @param num_sessions a number
@@ -14,14 +16,15 @@
 #' @param num_time length of the time series that is generated
 #' @param binary_template (optional) a binary brain slice image
 #'
-#' @return A list in which the first element, \code{data}, is a list of
-#'   sessions, each with components \code{BOLD} (a matrix) and \code{design}
-#'   (a matrix). The second list element is named \code{betas}, which is a list
-#'   of sessions, each containing a list of the true values of the coefficients
-#'   used to generate the data to be analyzed.
-#' @export
+#' @return A list in which the first element, \code{BOLD}, is a list of
+#'   T by N response matrices corresponding to sessions, and the second element,
+#'    \code{design}, is a list of \code{num_time} by \code{num_tasks} predictor
+#'    matrices corrsponding to sessions.
+#'
 #' @importFrom neuRosim specifydesign specifyregion
 #' @import stats
+#'
+#' @export
 #'
 #' @examples
 #' data <- simulate_slice_data()
@@ -48,6 +51,7 @@ simulate_slice_data <-
     )
     return(task_n)
   }, simplify = T)
+  colnames(tasks) <- paste0("task_",seq(num_tasks))
   # Create the responses
   if(is.null(binary_template)) {
     data("binary_template", package = "BayesfMRI",envir = environment())
@@ -107,10 +111,10 @@ simulate_slice_data <-
     # Use the mean responses to create the simulated response data
     y_t <- apply(y_means, seq(length(dim(y_means)) - 1), function(bv) {
       if(is.na(bv[1])) {
-        return(as.numeric(rep(NA,length(bv))))
+        return(rep(NA,length(bv)))
       } else {
         out <- 250 + bv + arima.sim(list(ar = 0.3), n = num_time, sd = 2)
-        return(as.numeric(out))
+        return(out)
       }
     })
     # Remove any NA voxels and output the response as a matrix
@@ -122,7 +126,9 @@ simulate_slice_data <-
     return(list(session = list(BOLD=y,design = tasks), betas = beta_coefficients))
   }, simplify = F)
   names(y_i) <- paste("session",seq(num_sessions), sep ="_")
-  data <- sapply(y_i, `[[`, i = "session", simplify = F)
-  betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
-  return(list(data = data, betas = betas))
+  BOLD <- sapply(y_i,function(y_is) return(y_is$session$BOLD), simplify = F)
+  design <- sapply(y_i, function(y_is) return(y_is$session$design), simplify = F)
+  # data <- sapply(y_i, `[[`, i = "session", simplify = F)
+  # betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
+  return(list(BOLD = BOLD, design = design))
 }

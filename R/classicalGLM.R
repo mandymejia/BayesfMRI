@@ -3,15 +3,12 @@
 #' @param data A list of sessions, where each session is a list with elements
 #' BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 #' List element names represent session names.
-#' @param scale_BOLD If TRUE, scale timeseries data so estimates represent
-#'   percent signal change.  If FALSE, just center the data and design to
-#'  exclude the baseline field.
-#' @param scale_design If TRUE, scale the design matrix by dividing each column
-#'   by its maximum value, and then subtracting the new column mean.
+#' @inheritParams scale_BOLD_Param
+#' @inheritParams scale_design_Param
 #'
 #' @return A list of classical GLM task activation estimates, where each element represents a session.
+#' 
 #' @export
-#'
 classicalGLM <- function(data, scale_BOLD=TRUE, scale_design = TRUE){
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks

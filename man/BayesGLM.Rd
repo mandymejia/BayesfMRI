@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{Applies spatial Bayesian GLM to task fMRI data on the cortical surface}
+\title{BayesGLM}
 \usage{
 BayesGLM(
   data,
@@ -16,44 +16,69 @@ BayesGLM(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL
+  contrasts = NULL,
+  avg_betas_over_sessions = FALSE,
+  trim_INLA = TRUE
 )
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
-BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
+BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
+for more details.
 List element names represent session names.}
 
-\item{vertices}{A Vx3 matrix of vertex locations of the triangular mesh in Euclidean space.}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{A Wx3 matrix, where each row contains the vertex indices for a given face or triangle in the triangular mesh. W is the number of faces in the mesh.}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 
-\item{mesh}{A \code{inla.mesh} object.  Must be provided if and only if \code{vertices} and \code{faces} are not.}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data).}
 
-\item{mask}{(Optional) A logical or 0/1 vector of length V indicating which vertices are to be included.}
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
+vertex is to be included.}
 
-\item{scale_BOLD}{If TRUE, scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
+\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
+change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
+centered.}
 
-\item{scale_design}{If TRUE, scale the design matrix by dividing each column
-by its maximum value, and then subtracting the new column mean.}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{TRUE}. Required for running \code{\link{id_activations}}
+after, but not for running BayesGLM_joint after to get
+posterior quantities of group means or contrasts.}
 
-\item{outfile}{File name where results will be written (for use by \code{BayesGLM_group}).}
+\item{outfile}{File name where results will be written (for use by
+\code{BayesGLM2}).}
 
-\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{A list of contrast vectors to be passed to
-\code{\link{inla}}.}
+\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+
+\item{avg_betas_over_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{FALSE}.}
+
+\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+result be trimmed to only what is necessary to use the
+\code{id_activations} function? Default value is \code{TRUE}.}
 }
 \value{
 A list containing...
 }
 \description{
-Applies spatial Bayesian GLM to task fMRI data on the cortical surface
+Applies spatial Bayesian GLM to task fMRI data
 }
-\note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
+

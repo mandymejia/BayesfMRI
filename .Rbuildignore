@@ -1,12 +1,12 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^R/BayesGLM_group\.R$
 ^vignettes$
 ^scratch$
 ^R/summarize_sessions\.R$
 ^R/BayesGLM_vol3D\.R$
-^R/plot_BayesGLM_2D\.R$
-^R/plot_image_2d\.R$
-^vignettes/BayesfMRI_simulation\.Rmd$
-^R/EM_functions\.R$
+^R/vol2mesh\.R$
+^R/boundary\.R$
+^R/plot_BayesGLM_slice\.R$
+^R/BayesGLM2_old\.R$
 ^vignettes/BayesfMRI_HCP\.Rmd$
+^R/simulate_slice_data_1\.R$

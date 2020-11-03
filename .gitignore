@@ -1,9 +1,9 @@
 .Rproj.user
 .Rhistory
 .RData
+*~
 *.out
 *.Rout
 .Ruserdata
-R/BayesGLM_group.R
-.Rhistory
+R/summarize_sessions.R
 inst/doc

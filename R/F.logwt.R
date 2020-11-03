@@ -8,7 +8,7 @@
 #' @return A list containing...
 #' @importFrom INLA inla.spde2.matern
 #'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' @inheritSection INLA_Description INLA Requirement
 #'
 # F.logwt <- function(theta, spde, mu.theta, Q.theta, M){
 #   #mu.theta - posterior mean from combined subject-level models
