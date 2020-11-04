@@ -11,11 +11,11 @@
 #'   palette.
 #'
 #' @return A ggplot graphical object.
-#' 
+#'
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom reshape2 melt
 #' @importFrom utils data
-#' 
+#'
 #' @export
 plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
 
@@ -48,7 +48,7 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
       pos_half = FALSE
     )
   }
-  if(min(reshape2::melt(X)$value, na.rm = T) >= 0) {
+  if(min(unlist(X), na.rm = T) >= 0) {
     color_palette <- ciftiTools::ROY_BIG_BL(
       min = zlim[1],
       max = zlim[2],
@@ -62,11 +62,11 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   labs <- theme_bw <- theme <- element_blank <- NULL
   Var1 <- Var2 <- value <- NULL
 
-  out_grob <- reshape2::melt(X)
-  out_grob$value <- ifelse(out_grob$value < min(zlim, na.rm = T), min(zlim, na.rm = T), value)
-  out_grob$value <- ifelse(out_grob$value > max(zlim, na.rm = T), max(zlim, na.rm = T), value)
-  
-  ggplot(out_grob) +
+  X_df <- reshape2::melt(X)
+  X_df$value <- ifelse(X_df$value < min(zlim, na.rm = T), min(zlim, na.rm = T), X_df$value)
+  X_df$value <- ifelse(X_df$value > max(zlim, na.rm = T), max(zlim, na.rm = T), X_df$value)
+
+  out_grob <- ggplot(X_df) +
     geom_raster(aes(x = Var1, y = Var2, fill = value)) +
     scale_fill_gradientn("",colors = rev(color_palette$color),
                          limits = zlim,
@@ -77,6 +77,7 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
     theme(panel.grid = element_blank(),
           axis.ticks = element_blank(),
           axis.text = element_blank())
+  return(out_grob)
 }
 
 #' Plot results from a BayesGLM object for 2D Analyses
@@ -86,19 +87,19 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
 #' @param zlim The color limits for plotting the coefficient values. Defaults to the minimum and maximum of the point estimates
 #'
 #' @return A ggplot2 object
-#' 
+#'
 #' @importFrom ciftiTools ROY_BIG_BL
 #' @importFrom INLA inla.spde.make.A
-#' 
+#'
 #' @export
 plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NULL) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("`plot_slice` requires the `ggplot` package. Please install it.", call. = FALSE)
+    stop("`plot_slice` requires the `ggplot2` package. Please install it.", call. = FALSE)
   }
   # to prevent package build warning at ggplot lines
   ggplot <- geom_raster <- aes <- scale_fill_gradientn <- facet_grid <- NULL
-  labs <- theme_bw <- theme <- element_blank <- Var1 <- Var2 <- value <- NULL 
+  labs <- theme_bw <- theme <- element_blank <- Var1 <- Var2 <- value <- NULL
 
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
@@ -107,27 +108,35 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   # Create a conversion matrix
   in_binary_mask <- which(BayesGLM_object$mask == 1, arr.ind = T)
   in_binary_mask <- in_binary_mask[,2:1]
-  convert_mat_A <- INLA::inla.spde.make.A(mesh = BayesGLM_object$mesh, loc = in_binary_mask)
+  mesh <- make_slice_mesh(BayesGLM_object$mask)
+  convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
   # Extract the point estimates
-  if(is.null(session_name)) session_name <- BayesGLM_object$session_names
-  point_estimates <- sapply(session_name, function(sn){
-    as.matrix(convert_mat_A %*% BayesGLM_object$beta_estimates[[sn]])
-  }, simplify = F)
-  if(is.null(zlim)) zlim <- c(min(unlist(point_estimates)),
-                              max(unlist(point_estimates)))
+  if(is.null(session_name)) session_name <- BayesGLM_object$GLMs_Bayesian$session_names
+  # point_estimates <- sapply(session_name, function(sn){
+  #   as.matrix(convert_mat_A %*% BayesGLM_object$beta_estimates[[sn]])
+  # }, simplify = F)
+  point_estimates <- BayesGLM_object$betas_Bayesian
+  if(is.null(zlim)) zlim <- c(min(unlist(point_estimates), na.rm = T),
+                              max(unlist(point_estimates), na.rm = T))
   wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), pos_half = FALSE)
-  coef_images <- sapply(point_estimates, function(pe) {
-    out <- sapply(split(pe, col(pe)), function(beta) {
-      beta_out <- BayesGLM_object$mask
-      beta_out[beta_out == 1] <- beta
-      beta_out[beta_out == 0] <- NA
-      return(beta_out)
-    }, simplify = F)
-    names(out) <- BayesGLM_object$beta_names
-    return(out)
-  }, simplify= F)
+  # coef_images <- sapply(point_estimates, function(pe) {
+  #   out <- sapply(split(pe, col(pe)), function(beta) {
+  #     beta_out <- BayesGLM_object$mask
+  #     beta_out[beta_out == 1] <- beta
+  #     beta_out[beta_out == 0] <- NA
+  #     return(beta_out)
+  #   }, simplify = F)
+  #   names(out) <- BayesGLM_object$beta_names
+  #   return(out)
+  # }, simplify= F)
 
-  ggplot(reshape2::melt(coef_images)) +
+
+  # ggplot(reshape2::melt(coef_images)) +
+  point_df <- reshape2::melt(point_estimates)
+  if(!is.null(BayesGLM_object$GLMs_Bayesian)) {
+    point_df$L2 <- BayesGLM_object$GLMs_Bayesian$beta_names[point_df$L2]
+  }
+  out_grob <- ggplot(point_df) +
   geom_raster(aes(x = Var1, y = Var2, fill = value)) +
   scale_fill_gradientn("",colors = rev(wb_palette$color),
                         # values = wb_palette$value,
@@ -139,40 +148,41 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   theme(panel.grid = element_blank(),
         axis.ticks = element_blank(),
         axis.text = element_blank())
+  return(out_grob)
 }
 
 #' S3 method: use \code{plot_BayesGLM_slice} to plot a \code{"BayesGLM"} object
-#' 
+#'
 #' @param x An object of class "BayesGLM"
 #' @param ... Additional arguments to \code{\link{plot_BayesGLM_slice}}
 #'
 #' @method plot BayesGLM
-#' 
+#'
 #' @export
-#' 
+#'
 plot.BayesGLM <- function(x, ...){
   plot_BayesGLM_slice(x, ...)
 }
 
 #' S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_CIFTI"} object
-#' 
+#'
 #' @param x An object of class "BayesGLM_CIFTI"
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
 #' @param method "Bayesian" or "classical". \code{NULL} (default) will use
-#'  the Bayesian results if available, and the classical results if not. 
+#'  the Bayesian results if available, and the classical results if not.
 #' @param idx The data columns to plot. Overrides the \code{idx} argument to
 #'  \code{\link[ciftiTools]{view_xifti_surface}}. \code{NULL} (default) will
-#'  use all the data columns. 
-#' @param zlim Overrides the \code{zlim} argument for 
+#'  use all the data columns.
+#' @param zlim Overrides the \code{zlim} argument for
 #'  \code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-1, 1)}.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}
 #'
 #' @method plot BayesGLM_CIFTI
-#' 
+#'
 # @importFrom ciftiTools view_xifti_surface
 #' @export
-#' 
+#'
 plot.BayesGLM_CIFTI <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-1, 1), ...){
 
   if (!requireNamespace("ciftiTools", quietly = TRUE)) {
@@ -185,18 +195,18 @@ plot.BayesGLM_CIFTI <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
   }
   method <- match.arg(method, c("classical", "Bayesian"))
   method <- paste0("betas_", method)
-  if (is.null(x[[method]])) { 
+  if (is.null(x[[method]])) {
     stop(paste("Method", gsub("betas_", "", method, fixed=TRUE), "does not exist."))
   }
 
   # Session
   if (is.null(session)) { session <- 1 }
-  if (is.null(x[[method]][[session]])) { 
+  if (is.null(x[[method]][[session]])) {
     stop(paste("Session", session, "of method", method, "does not exist."))
   }
 
   # Column index
-  if (is.null(idx)) { 
+  if (is.null(idx)) {
     idx <- seq_len(ncol(do.call(rbind, x[[method]][[session]]$data)))
   }
 

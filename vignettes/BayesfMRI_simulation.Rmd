@@ -302,7 +302,7 @@ The function `simulate_slice_data()` formats the data into a list of "session" o
 
 ```{r, eval = F}
 # Run the model in INLA
-multi_session_result <- BayesGLM(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=FALSE)
+multi_session_result <- BayesGLM_slice(BOLD=multi_data$BOLD, design = multi_data$design, binary_mask = binary_template, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, trim_INLA = T, num.threads = 12, avg_betas_over_sessions = T)
 saveRDS(multi_session_result, "multi_session_BayesGLM_results.rds")
 ```
 
@@ -313,7 +313,7 @@ multi_session_result <- readRDS("multi_session_BayesGLM_results.rds")
 ```
 
 ```{r Separate sessions plot, fig.height=6, fig.width=7}
-plot_BayesGLM_slice(multi_session_result, mask = binary_template, zlim = c(-1.5,1.5))
+plot_BayesGLM_slice(multi_session_result)
 ```
 
 <!-- ## Combined Results -->
