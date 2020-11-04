@@ -127,7 +127,6 @@ BayesGLM_slice <- function(
   for(ss in 1:n_sess){
     if(scale_design){
       design[[ss]] <- scale_design_mat(design[[ss]])
-      scale_design <- F
     } else {
       design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix
         # to eliminate baseline
@@ -164,6 +163,7 @@ BayesGLM_slice <- function(
     }
   }
 
+  scale_design <- F # This is done to prevent double-scaling in BayesGLM
 
   #set up session list
   # mat_BOLD <- sapply(BOLD, function(y_t) {
@@ -540,7 +540,6 @@ BayesGLM_cifti <- function(cifti_fname,
   for(ss in 1:n_sess){
     if(scale_design){
       design[[ss]] <- scale_design_mat(design[[ss]])
-      scale_design <- F
     } else {
       design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
     }
@@ -559,6 +558,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
+  scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   ### LEFT HEMISPHERE
   if(do_left){
