@@ -771,10 +771,16 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if (do_Bayesian) {
+      # Need to include the missing locations for medial walls within th
+      # linear comnbinations or the xifti object will be mis-mapped.
+      avg_left <- BayesGLM_left$beta_estimates[[1]]
+      avg_left[!is.na(avg_left)] <- BayesGLM_left$avg_beta_estimates
+      avg_right <- BayesGLM_right$beta_estimates[[1]]
+      avg_right[!is.na(avg_right)] <- BayesGLM_right$avg_beta_estimates
       BayesGLM_cifti <- c(
         list(avg = as.xifti(
-          cortexL = BayesGLM_left$avg_beta_estimates,
-          cortexR = BayesGLM_right$avg_beta_estimates
+          cortexL = avg_left,
+          cortexR = avg_right
         )),
         BayesGLM_cifti
       )
