@@ -164,9 +164,9 @@ plot.BayesGLM <- function(x, ...){
   plot_BayesGLM_slice(x, ...)
 }
 
-#' S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_CIFTI"} object
+#' S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_cifti"} object
 #'
-#' @param x An object of class "BayesGLM_CIFTI"
+#' @param x An object of class "BayesGLM_cifti"
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
 #' @param method "Bayesian" or "classical". \code{NULL} (default) will use
@@ -178,12 +178,12 @@ plot.BayesGLM <- function(x, ...){
 #'  \code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-1, 1)}.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}
 #'
-#' @method plot BayesGLM_CIFTI
+#' @method plot BayesGLM_cifti
 #'
 # @importFrom ciftiTools view_xifti_surface
 #' @export
 #'
-plot.BayesGLM_CIFTI <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-1, 1), ...){
+plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-1, 1), ...){
 
   if (!requireNamespace("ciftiTools", quietly = TRUE)) {
     stop("This function requires the `ciftiTools` package. Please install it.")
