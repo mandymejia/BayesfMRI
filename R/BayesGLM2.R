@@ -35,7 +35,6 @@
 #' @importFrom INLA inla.spde2.matern inla.spde.make.A
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
-#' @import parallel
 #' 
 #' @export 
 BayesGLM2 <- function(results,
@@ -49,15 +48,8 @@ BayesGLM2 <- function(results,
                            no_cores = NULL,
                            verbose = TRUE){
 
-  # TO DO: append `parallel::` to functions from this package
-  #   Then, remove the `@import parallel` line
-  #   Finally, add `parallel` to `Suggests:` the DESCRIPTION
-
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
-  }
-  if (!requireNamespace("parallel", quietly = TRUE)) {
-    stop("`BayesGLM2` requires the `parallel` package. Please install it.", call. = FALSE)
   }
 
   # Check to see that the INLA package is installed
@@ -232,11 +224,15 @@ BayesGLM2 <- function(results,
                              alpha=alpha,
                              nsamp_beta=nsamp_beta)
   } else {
+    if (!requireNamespace("parallel", quietly = TRUE)) {
+      stop("`BayesGLM2` requires the `parallel` package. Please install it.", call. = FALSE)
+    }
+
     #2 minutes in simulation (4 cores)
-    max_no_cores <- min(detectCores() - 1, 25)
+    max_no_cores <- min(parallel::detectCores() - 1, 25)
     no_cores <- min(max_no_cores, no_cores)
-    cl <- makeCluster(no_cores)
-    beta.posteriors <- parApply(cl, theta.samp,
+    cl <- parallel::makeCluster(no_cores)
+    beta.posteriors <- parallel::parApply(cl, theta.samp,
                                 MARGIN=2,
                                 FUN=beta.posterior.thetasamp,
                                 spde=spde,
@@ -248,7 +244,7 @@ BayesGLM2 <- function(results,
                                 gamma=gamma,
                                 alpha=alpha,
                                 nsamp_beta=nsamp_beta)
-    stopCluster(cl)
+    parallel::stopCluster(cl)
   }
 
 
