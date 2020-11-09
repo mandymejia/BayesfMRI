@@ -240,7 +240,15 @@ BayesGLM_slice <- function(
     }
   }
 
-  result <- list(betas_Bayesian = Bayes_slice,
+  if (do_Bayesian) {
+    beta_names <- BayesGLM_out$beta_names
+  } else {
+    beta_names <- NULL
+  }
+
+  result <- list(session_names = session_names,
+                 beta_names = beta_names,
+                 betas_Bayesian = Bayes_slice,
                  betas_classical = classical_slice,
                  GLMs_Bayesian = BayesGLM_out,
                  GLMs_classical = classicalGLM_out,
@@ -596,16 +604,16 @@ BayesGLM_cifti <- function(cifti_fname,
                                                        scale_BOLD=scale_BOLD,
                                                        scale_design = scale_design)
     if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
-                                                      vertices = verts_left,
-                                                      faces = faces_left,
-                                                      scale_BOLD=scale_BOLD,
-                                                      scale_design = scale_design,
-                                                      num.threads=num.threads,
-                                                      return_INLA_result=return_INLA_result,
-                                                      outfile = outfile_left,
-                                                      verbose=verbose,
-                                                      avg_betas_over_sessions = avg_betas_over_sessions,
-                                                      trim_INLA = trim_INLA)
+                                              vertices = verts_left,
+                                              faces = faces_left,
+                                              scale_BOLD=scale_BOLD,
+                                              scale_design = scale_design,
+                                              num.threads=num.threads,
+                                              return_INLA_result=return_INLA_result,
+                                              outfile = outfile_left,
+                                              verbose=verbose,
+                                              avg_betas_over_sessions = avg_betas_over_sessions,
+                                              trim_INLA = trim_INLA)
 
   }
 
@@ -788,7 +796,19 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  result <- list(betas_Bayesian = BayesGLM_cifti,
+  if (do_Bayesian) {
+    if (do_left) {
+      beta_names <- BayesGLM_left$beta_names
+    } else {
+      beta_names <- BayesGLM_right$beta_names
+    }
+  } else {
+    beta_names <- NULL
+  }
+
+  result <- list(session_names = session_names,
+                 beta_names = beta_names,
+                 betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
                  GLMs_Bayesian = list(cortexL = BayesGLM_left,
                                      cortexR = BayesGLM_right),
@@ -921,7 +941,6 @@ BayesGLM <- function(
   #     data[[s]]$BOLD <- data[[s]]$BOLD[,!zero_var]
   #   }
   # }
-
 
   spde <- inla.spde2.matern(mesh)
 
