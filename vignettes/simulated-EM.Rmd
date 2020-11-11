@@ -43,17 +43,22 @@ simulated_data <-
   )
 ```
 
-```{r Make the mesh}
-mesh <- make_2d_mesh(binary_template)
+```{r Make the data to demo the function}
+BOLD <- simulated_data$BOLD
+design <- simulated_data$design
+mask <- binary_template
+mesh <- make_slice_mesh(binary_template)
 ```
+
 
 ```{r Grab values from the mesh}
 spde <- inla.spde2.matern(mesh)
 Cmat = spde$param.inla$M0
 Gmat = 1/2*(spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))
 GCinvG = spde$param.inla$M2 #this equals G %*% solve(C) %*% G
-tau <- 5
-kappa <- 0.8
+tau <- 1
+phi <- 1 / (4*pi)
+kappa2 <- 1
 source("../R/EM_functions.R")
 # Q_k <- spde_Q(kappa,tau,Cmat,Gmat) # deprecated
 
@@ -64,13 +69,15 @@ sigma2 <- 6
 ```
 
 ```{r Test different inversion methods}
-od <- organize_data(y = simulated_data$data$session_1$BOLD,
-                    X = simulated_data$data$session_1$design)
+od <- organize_data(y = simulated_data$BOLD$session_1,
+                    X = simulated_data$design$session_1)
 y <- od$y
 V <- Matrix::Diagonal(length(y),sigma2)
 X1 <- od$X[,seq(ncol(od$X)/2)]
 X <- od$X
 Psi <- Matrix::bdiag(rep(list(Psi_k),2))
+# Q_k <- spde_Q_tau(kappa = kappa,tau = tau,spde = spde)
+Q_k <- spde_Q_phi(kappa2 = kappa2,phi = phi,spde = spde)
 Q <- Matrix::bdiag(rep(list(Q_k),2))
 
 # Raw attempt
@@ -89,10 +96,10 @@ system.time(Sig_sparseQ <- solve(solve(Q,sparse = T) + crossprod(X%*%Psi)))
 # E(w) ----
 # Linear algebra trick (This is clearly the way to go)
 start_time <- proc.time()
-system.time(Sig_inv <- Q + crossprod(X%*%Psi))
+system.time(Sig_inv <- Q + crossprod(od$X%*%Psi)/ sigma2)
   #  user  system elapsed 
   # 0.068   0.015   0.083
-m <- t(X%*%Psi)%*%y / sigma2
+m <- t(od$X%*%Psi)%*%od$y / sigma2
 mu <- solve(Sig_inv,m)
 (total_time <- proc.time() - start_time)
   #  user  system elapsed 
@@ -106,11 +113,11 @@ system.time(Q_chol <- chol(Q, pivot = T))
 system.time(Q_chol_inv <- solve(Q_chol))
   #  user  system elapsed 
   # 0.135   0.018   0.154 
-A <- crossprod(X%*%Psi)/sigma2
+A <- crossprod(od$X%*%Psi)/sigma2
 system.time(Sigma <- Q_chol_inv %*% (A + diag(1,length(diag(A)))) %*% t(Q_chol_inv))
   #  user  system elapsed 
   # 3.172   0.120   3.291
-sigma2_hat <- crossprod(y) - 2*crossprod(y,X%*%Psi%*%mu) + crossprod(X%*%Psi%*%mu) + sum(colSums(A*Sigma))
+sigma2_hat <- crossprod(od$y) - 2*crossprod(od$y,od$X%*%Psi%*%mu) + crossprod(od$X%*%Psi%*%mu) + sum(colSums(A*Sigma))
 
 # R_2 ----
 log_det_Q <- sum(log(diag(chol(Q,pivot = T))))
