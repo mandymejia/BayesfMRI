@@ -127,7 +127,6 @@ BayesGLM_slice <- function(
   for(ss in 1:n_sess){
     if(scale_design){
       design[[ss]] <- scale_design_mat(design[[ss]])
-      scale_design <- F
     } else {
       design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix
         # to eliminate baseline
@@ -164,6 +163,7 @@ BayesGLM_slice <- function(
     }
   }
 
+  scale_design <- F # This is done to prevent double-scaling in BayesGLM
 
   #set up session list
   # mat_BOLD <- sapply(BOLD, function(y_t) {
@@ -240,7 +240,15 @@ BayesGLM_slice <- function(
     }
   }
 
-  result <- list(betas_Bayesian = Bayes_slice,
+  if (do_Bayesian) {
+    beta_names <- BayesGLM_out$beta_names
+  } else {
+    beta_names <- NULL
+  }
+
+  result <- list(session_names = session_names,
+                 beta_names = beta_names,
+                 betas_Bayesian = Bayes_slice,
                  betas_classical = classical_slice,
                  GLMs_Bayesian = BayesGLM_out,
                  GLMs_classical = classicalGLM_out,
@@ -540,7 +548,6 @@ BayesGLM_cifti <- function(cifti_fname,
   for(ss in 1:n_sess){
     if(scale_design){
       design[[ss]] <- scale_design_mat(design[[ss]])
-      scale_design <- F
     } else {
       design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
     }
@@ -559,6 +566,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
+  scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   ### LEFT HEMISPHERE
   if(do_left){
@@ -596,16 +604,16 @@ BayesGLM_cifti <- function(cifti_fname,
                                                        scale_BOLD=scale_BOLD,
                                                        scale_design = scale_design)
     if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
-                                                      vertices = verts_left,
-                                                      faces = faces_left,
-                                                      scale_BOLD=scale_BOLD,
-                                                      scale_design = scale_design,
-                                                      num.threads=num.threads,
-                                                      return_INLA_result=return_INLA_result,
-                                                      outfile = outfile_left,
-                                                      verbose=verbose,
-                                                      avg_betas_over_sessions = avg_betas_over_sessions,
-                                                      trim_INLA = trim_INLA)
+                                              vertices = verts_left,
+                                              faces = faces_left,
+                                              scale_BOLD=scale_BOLD,
+                                              scale_design = scale_design,
+                                              num.threads=num.threads,
+                                              return_INLA_result=return_INLA_result,
+                                              outfile = outfile_left,
+                                              verbose=verbose,
+                                              avg_betas_over_sessions = avg_betas_over_sessions,
+                                              trim_INLA = trim_INLA)
 
   }
 
@@ -771,10 +779,16 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if (do_Bayesian) {
+      # Need to include the missing locations for medial walls within th
+      # linear comnbinations or the xifti object will be mis-mapped.
+      avg_left <- BayesGLM_left$beta_estimates[[1]]
+      avg_left[!is.na(avg_left)] <- BayesGLM_left$avg_beta_estimates
+      avg_right <- BayesGLM_right$beta_estimates[[1]]
+      avg_right[!is.na(avg_right)] <- BayesGLM_right$avg_beta_estimates
       BayesGLM_cifti <- c(
         list(avg = as.xifti(
-          cortexL = BayesGLM_left$avg_beta_estimates,
-          cortexR = BayesGLM_right$avg_beta_estimates
+          cortexL = avg_left,
+          cortexR = avg_right
         )),
         BayesGLM_cifti
       )
@@ -782,7 +796,19 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  result <- list(betas_Bayesian = BayesGLM_cifti,
+  if (do_Bayesian) {
+    if (do_left) {
+      beta_names <- BayesGLM_left$beta_names
+    } else {
+      beta_names <- BayesGLM_right$beta_names
+    }
+  } else {
+    beta_names <- NULL
+  }
+
+  result <- list(session_names = session_names,
+                 beta_names = beta_names,
+                 betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
                  GLMs_Bayesian = list(cortexL = BayesGLM_left,
                                      cortexR = BayesGLM_right),
@@ -794,7 +820,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n DONE! \n')
 
-  class(result) <- "BayesGLM_CIFTI"
+  class(result) <- "BayesGLM_cifti"
   return(result)
 }
 
@@ -915,7 +941,6 @@ BayesGLM <- function(
   #     data[[s]]$BOLD <- data[[s]]$BOLD[,!zero_var]
   #   }
   # }
-
 
   spde <- inla.spde2.matern(mesh)
 

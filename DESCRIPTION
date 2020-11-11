@@ -23,7 +23,6 @@ Depends:
 Encoding: UTF-8
 Imports: 
     excursions,
-    parallel,
     stats,
     INLA (>= 0.0-1468840039),
     MASS,
@@ -43,6 +42,7 @@ Suggests:
     geometry,
     grDevices,
     ggplot2,
+    parallel,
     purrr,
     knitr,
     rmarkdown

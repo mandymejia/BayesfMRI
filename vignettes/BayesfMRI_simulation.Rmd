@@ -81,7 +81,7 @@ install_github('mandymejia/BayesfMRI')
 
 
 ```{r setup}
-# Replace '~/pardiso.lic' with the actual path to the pardiso license on your computer
+# Replace '~/pardiso.lic' with the actual path to the Connectome Workbench folder on your computer.
 library(INLA)
 if(Sys.info()['sysname'] != "Windows") {
   inla.setOption(pardiso.license="~/pardiso.lic")
@@ -107,10 +107,9 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   requireNamespace("dplyr")
   requireNamespace("purrr")
   if(is.null(zlim)) {
-    max_abs <- max(abs(reshape2::melt(X)$value), na.rm = T)
-    # zmin <- min(reshape2::melt(X)$value,na.rm = T)
-    # zmax <- max(reshape2::melt(X)$value,na.rm = T)
-    zlim <- c(-max_abs,max_abs)
+    zmin <- min(reshape2::melt(X)$value,na.rm = T)
+    zmax <- max(reshape2::melt(X)$value,na.rm = T)
+    zlim <- c(zmin,zmax)
   }
   if(is.null(color_palette)){
     color_palette <- ciftiTools::ROY_BIG_BL(
@@ -270,7 +269,6 @@ In some cases, a single subject may undergo more than one session in a task fMRI
 Data were generated as in the single-session analysis, with a slight modification. Now the true activation fields for the different sessions were jittered in space, intensity, and smoothness. 
 
 ```{r Make the multisession data, include=F}
-library(BayesfMRI)
 # Setting the seed for reproducibility
 set.seed(47401)
 multi_data <-   
@@ -303,10 +301,9 @@ plot_slice(multi_data$betas$session_2, zlim=c(0,1.5))
 The function `simulate_slice_data()` formats the data into a list of "session" objects, which we can then pass to `BayesGLM` for analysis. **Note: Model is pre-computed. Set `eval=TRUE` to compute. Expected computation time is approximately 10 minutes with PARDISO enabled.**
 
 ```{r, eval = F}
-mesh <- make_2d_mesh(binary_template)
 # Run the model in INLA
-multi_session_result <- BayesGLM(data=multi_data$data, mesh=mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, num.threads = parallel::detectCores() - 2, avg_betas_over_sessions = T)
-saveRDS(multi_session_result, "/Volumes/GoogleDrive/My Drive/BayesfMRI/scratch/BayesGLM_multisession_linear_combinations.rds")
+multi_session_result <- BayesGLM_slice(BOLD=multi_data$BOLD, design = multi_data$design, binary_mask = binary_template, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, trim_INLA = T, num.threads = 12, avg_betas_over_sessions = T)
+saveRDS(multi_session_result, "multi_session_BayesGLM_results.rds")
 ```
 
 ## Results
@@ -316,38 +313,9 @@ multi_session_result <- readRDS("multi_session_BayesGLM_results.rds")
 ```
 
 ```{r Separate sessions plot, fig.height=6, fig.width=7}
-plot_BayesGLM_slice(multi_session_result, mask = binary_template, zlim = c(-1.5,1.5))
+plot_BayesGLM_slice(multi_session_result)
 ```
 
-## Combined Results
+<!-- ## Combined Results -->
 
-```{r}
-average_betas <- function(BayesGLM_obj) {
-  n_sess <- length(BayesGLM_obj$beta_estimates)
-  avg_betas <- Reduce(`+`,BayesGLM_obj$beta_estimates)/n_sess
-  colnames(avg_betas) <- BayesGLM_obj$beta_names
-  return(avg_betas)
-}
-
-convert_verts_to_locs <- function(betas_mat, BayesGLM_obj, mask) {
-  in_binary_mask <- which(mask == 1, arr.ind = T)
-  in_binary_mask <- in_binary_mask[,2:1]
-  trans_mat <- inla.spde.make.A(mesh = BayesGLM_obj$mesh, loc = in_binary_mask)
-  locs_betas <- as.matrix(trans_mat %*% betas_mat)
-  locs_betas_in_mask <- sapply(split(locs_betas, col(locs_betas)), function(lb, mask) {
-    out <- mask
-    out[out == 1] <- lb
-    out[mask == 0] <- NA
-    return(out)
-  }, mask = mask, simplify = F)
-  return(locs_betas_in_mask)
-}
-
-plot_image_2D(locs_betas_in_mask)
-```
-
-
-```{r}
-
-```
 
