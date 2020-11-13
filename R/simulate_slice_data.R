@@ -119,8 +119,8 @@ simulate_slice_data <-
     })
     # Remove any NA voxels and output the response as a matrix
     y <- apply(y_t,1, identity)
-    y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
-    y <- y[!y_exclude,]
+    # y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+    # y <- y[!y_exclude,]
     y <- t(y)
     # Return everything
     return(list(session = list(BOLD=y,design = tasks), betas = beta_coefficients))
@@ -128,7 +128,8 @@ simulate_slice_data <-
   names(y_i) <- paste("session",seq(num_sessions), sep ="_")
   BOLD <- sapply(y_i,function(y_is) return(y_is$session$BOLD), simplify = F)
   design <- sapply(y_i, function(y_is) return(y_is$session$design), simplify = F)
+  betas <- sapply(y_i, function(y_is) return(y_is$betas), simplify = F)
   # data <- sapply(y_i, `[[`, i = "session", simplify = F)
   # betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
-  return(list(BOLD = BOLD, design = design))
+  return(list(BOLD = BOLD, design = design, beta_coefficients = betas))
 }

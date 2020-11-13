@@ -18,7 +18,10 @@
 #'
 #' @export
 plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
-
+  # Hacky way to avoid R CMD CHECK problems. The other solution is Importing ggplot2.
+  ggplot <- geom_raster <- aes <- scale_fill_gradientn <- facet_grid <- NULL
+  labs <- theme_bw <- theme <- element_blank <- NULL
+  Var1 <- Var2 <- value <- NULL
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("`plot_slice` requires the `ggplot` package. Please install it.", call. = FALSE)
   }
@@ -57,10 +60,7 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
     )
   }
 
-  # Hacky way to avoid R CMD CHECK problems. The other solution is Importing ggplot2.
-  ggplot <- geom_raster <- aes <- scale_fill_gradientn <- facet_grid <- NULL
-  labs <- theme_bw <- theme <- element_blank <- NULL
-  Var1 <- Var2 <- value <- NULL
+
 
   X_df <- reshape2::melt(X)
   X_df$value <- ifelse(X_df$value < min(zlim, na.rm = T), min(zlim, na.rm = T), X_df$value)
@@ -213,3 +213,103 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
   # Plot
   ciftiTools::view_xifti_surface(x[[method]][[session]], idx=idx, zlim=zlim, ...)
 }
+
+#' Melt a matrix into a data frame with identifiers for row and column
+#'
+#' This is meant to be a lightweight replacement for \code{reshape2::melt} that
+#' will only work with matrices.
+#'
+#' @param x A matrix
+#'
+#' @return A data frame with the number of rows equal to the number of elements
+#'   in \code{x}.
+#' @export
+#'
+#' @examples
+#' x <- matrix(rnorm(9),3,3)
+#' melt.mat(x)
+melt_mat <- function(x) {
+  out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
+  return(out)
+}
+
+#' Lightweight tile plot function
+#'
+#' This function has no dependencies outside of base R, but provides a
+#'   reasonable approximation to the functionality of
+#'   \code{ggplot2::geom_raster}.
+#'
+#' @param tile_df A data frame with three columns: \code{row}, \code{col}, and
+#'   \code{value} describing locations within a matrix. See
+#'   \code{\link{melt_mat}} for an example.
+#' @param col A color palette
+#' @param ncols The number of colors for a color palette, if \code{col} is not
+#'   provided.
+#' @param main Plot title (character)
+#' @param na.color The color that should be used to represent \code{NA} values
+#'   in the tile plot
+#'
+#' @return A tile plot done in base R graphics
+#' @export
+#'
+#' @examples
+#' x <- matrix(rnorm(50*50),50,50)
+#' x_df <- melt_mat(x)
+#' tile.plot(x_df)
+tile.plot <- function(tile_df, col = NULL, ncols = NULL,
+                      main = "", na.color  = "grey80") {
+  .pardefault <- par()
+  if(!is.null(col) & !is.null(ncols)) {
+    warning("Defining ncols based on col.")
+    ncols <- length(col)
+  }
+  if(is.null(col) & is.null(ncols)) {
+    ncols <- 100
+    col <- heat.colors(ncols)
+  } else {
+    if(is.null(ncols)) {
+      ncols <- length(col)
+    } else {
+      col <- heat.colors(ncols)
+    }
+  }
+  # legend_ticks <- round(quantile(seq(ncols), probs = seq(0,1,by = 0.2)))
+  legend_ticks <- round(seq(min(tile_df$value, na.rm = T),
+                      max(tile_df$value, na.rm = T), length.out = 6),
+                      digits = 3)
+  prob_breaks <- seq(0,1,length.out = ncols)
+  pb_diff <- prob_breaks[2] - prob_breaks[1]
+  col_quants <- quantile(tile_df$value,na.rm = T,probs = prob_breaks)
+  tile_cols <- vector("numeric",length(tile_df$value))
+  for(q in rev(seq(ncols))) {
+    tile_cols[tile_df$value <= col_quants[q]] <- col[q]
+  }
+  tile_cols[tile_cols == "0"] <- na.color
+  # if(!is.null(rep_quants)) {
+  #   sapply(rep_quants, function(rq))
+  # }
+  # col_cuts <- cut(tile_df$value, breaks = c(-Inf,col_quants), labels = col)
+  # col_cuts <- as.character(col_cuts)
+  rows <- max(tile_df$row)
+  cols <- max(tile_df$col)
+  # set NA color
+  # col_cuts[is.na(col_cuts)] <- na.color
+  par(mfrow = c(1,2), mar = c(1,1,2,1))
+  layout(mat = matrix(c(1,2),nrow = 1, ncol = 2),widths = c(1.7,0.3))
+  plot(c(0,rows), c(0,cols), type = 'n', xlab = "", ylab = "",
+       xaxt = "n", yaxt = "n", main = main)
+  rect(xleft = tile_df$row - 1,ybottom = tile_df$col - 1,
+       xright = tile_df$row, ytop = tile_df$col, col = tile_cols,
+       border = NA)
+  par(mar=c(1,1,2,4))
+  plot(c(0,1),c(0,1), type = "n", xaxt = "n", yaxt = "n", xlab = "",
+       ylab = "", bty = "n")
+  rect(xleft = 0,ybottom = prob_breaks,xright = 1,ytop = prob_breaks + pb_diff,
+       col = col, border = NA)
+  axis(side = 4,at = legend_ticks / max(tile_df$value, na.rm = T),
+       labels = rep("",6), srt = 45, tck = 0.5)
+  text(x = 1, adj = c(-1,0), pos = 4, y = legend_ticks / max(tile_df$value, na.rm = T),
+       labels = legend_ticks, srt = 0, xpd = NA)
+  suppressWarnings(par(.pardefault), classes = "warning")
+}
+

@@ -18,15 +18,13 @@ knitr::opts_chunk$set(
 library(BayesfMRI)
 ```
 
-This vignette is designed to make you familiar with the process of using the `BayesfMRI` package to perform analysis on cortical surface fMRI data.
+This vignette is designed to make you familiar with the process of using the `BayesfMRI` package to perform analysis using expectation maximization (EM) algorithms within the package. To begin, we will work with simulated data, working up to the use of cortical surface fMRI data.
 
-```{r Set INLA up}
-# Replace '~/pardiso.lic' with the actual path to the Connectome Workbench folder on your computer.
-library(INLA)
-# inla.pardiso()
-inla.setOption(pardiso.license="~/licenses/pardiso.lic")
-inla.pardiso.check()
-```
+# Simulated Data 
+
+## Data Generation
+
+The function `simulate_slice_data()` generates true beta maps and simulated fMRI timeseries data using tools from the `neuRosim` package. The size, location and intensities of the centers of activation can be varied. The data format is a 2-dimensional slice of dimensions $45 \times 54$, and the brain mask is based on an FSL brain template. The response data are created by convolving an activation profile with each true beta map, plus errors, which are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. The resulting fMRI timeseries data are then masked and vectorized into a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series.  For this example, we will simulate a single session of data with 2 tasks.
 
 ```{r Create data}
 set.seed(47401)
@@ -43,6 +41,69 @@ simulated_data <-
   )
 ```
 
+```{r plot coefficients}
+true_bbeta1 <- melt_mat(x = simulated_data$beta_coefficients$session_1[[1]])
+tile.plot(true_bbeta1, main = "True bbeta1")
+true_bbeta2 <- melt_mat(x = simulated_data$beta_coefficients$session_1[[2]])
+tile.plot(true_bbeta2, main = "True bbeta2")
+```
+
+
+```{r run em}
+BOLD = simulated_data$BOLD
+design = simulated_data$design
+binary_mask = binary_template
+onsets=NULL
+TR=NULL
+nuisance=NULL
+nuisance_include=c('drift','dHRF')
+scale_BOLD = TRUE
+scale_design = TRUE
+num.threads = 4
+GLM_method = 'both'
+session_names = NULL
+outfile = NULL
+verbose = FALSE
+
+data <- session_data
+scale_BOLD=scale_BOLD
+scale_design = scale_design
+num.threads=num.threads
+outfile = outfile
+verbose=verbose
+vertices = NULL
+faces = NULL
+mask = NULL
+
+
+
+em_result <- BayesGLMEM_slice(
+  BOLD = simulated_data$BOLD,
+  design = simulated_data$design,
+  binary_mask = binary_template,
+  onsets=NULL,
+  TR=NULL,
+  nuisance=NULL,
+  nuisance_include=c('drift','dHRF'),
+  scale_BOLD = FALSE,
+  scale_design = TRUE,
+  num.threads = 4,
+  tol = 0.1,
+  GLM_method = 'both',
+  session_names = NULL,
+  outfile = NULL,
+  verbose = TRUE
+)
+```
+
+
+
+
+
+
+
+
+# Extra Stuff (to be deleted)
 ```{r Make the data to demo the function}
 BOLD <- simulated_data$BOLD
 design <- simulated_data$design
