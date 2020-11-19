@@ -170,7 +170,7 @@ BayesGLMEM_slice <- function(
     session_data[[ss]] <- sess
   }
 
-  cat(str(binary_mask),"\n")
+  # cat(str(binary_mask),"\n")
 
   ### FIT GLM(s)
 
@@ -189,8 +189,8 @@ BayesGLMEM_slice <- function(
 
 
   # Extract the point estimates
-  cat(str(convert_mat_A),"\n")
-  cat(str(BayesGLM_out$beta_estimates),"\n")
+  # cat(str(convert_mat_A),"\n")
+  # cat(str(BayesGLM_out$beta_estimates),"\n")
   point_estimates <- sapply(session_names, function(sn){
     as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
   }, simplify = F)
@@ -216,7 +216,7 @@ BayesGLMEM_slice <- function(
         image_coef[binary_mask == 0] <- NA
         return(image_coef)
       },simplify = F)
-      names(Bayes_slice[[ss]]) <- beta_names
+      names(Bayes_slice[[ss]]) <- BayesGLM_out$beta_names
     }
   }
 
@@ -404,7 +404,7 @@ BayesGLMEM <- function(data,
   kappa2_new <- rep(4,K) # This is a value that matches BayesGLM
   phi_new <- 1 / (4*pi*kappa2_new*4) # This is a value that matches BayesGLM
   sigma2_new <- var(model_data$y)
-  Q_k <- mapply(spde_Q_phi, kappa2 = kappa2_new, phi = phi_new, MoreArgs = list(spde = spde), SIMPLIFY = F)
+  Q_k <- mapply(BayesfMRI:::spde_Q_phi, kappa2 = kappa2_new, phi = phi_new, MoreArgs = list(spde = spde), SIMPLIFY = F)
   Q_new <- Matrix::bdiag(Q_k)
   Sig_inv <- Q_new + A/sigma2_new
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / sigma2_new
@@ -434,24 +434,37 @@ BayesGLMEM <- function(data,
     for(k in seq(K)) {
       # k_inds <- seq(V) + (k-1)*V
       k_inds <- seq(n) + (k-1)*n
-      Qp <- Q_prime(kappa2[k], spde)
+      Qp <- BayesfMRI:::Q_prime(kappa2[k], spde)
       Tr_QEww <- (sum(Matrix::colSums(Qp%*%Sigma[k_inds,k_inds])) +
                     crossprod(mu[k_inds,],Q[k_inds,k_inds])%*%mu[k_inds,])@x
       phi_new[k] <- Tr_QEww / (4*pi*V)
+      # optim_output_k <-
+      #   optim(
+      #     par = kappa2[k],
+      #     fn = BayesfMRI:::neg_kappa_fn,
+      #     # method = "L-BFGS-B",
+      #     method = "Brent",
+      #     spde = spde,
+      #     phi = phi[k],
+      #     Sigma = Sigma[k_inds,k_inds],
+      #     mu = mu[k_inds,],
+      #     lower = 1e-4,
+      #     upper = 1e6
+      #   )
+      # kappa2_new[k] <- optim_output_k$par
       optim_output_k <-
-        optim(
-          par = kappa2[k],
-          fn = neg_kappa_fn,
-          method = "L-BFGS-B",
+        optimize(
+          f = BayesfMRI:::neg_kappa_fn,
           spde = spde,
           phi = phi[k],
           Sigma = Sigma[k_inds,k_inds],
           mu = mu[k_inds,],
-          lower = 1e-4
+          lower = kappa2[k]/2,
+          upper = kappa2[k]*2
         )
-      kappa2_new[k] <- optim_output_k$par
+      kappa2_new[k] <- optim_output_k$minimum
     }
-    Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
+    Qk_new <- mapply(BayesfMRI:::spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
                      MoreArgs = list(spde=spde), SIMPLIFY = F)
     Q_new <- Matrix::bdiag(Qk_new)
 
@@ -460,7 +473,7 @@ BayesGLMEM <- function(data,
     mu <- solve(Sig_inv,m)
     Q_chol <- chol(Q, pivot = T)
     Q_chol_inv <- solve(Q_chol)
-    Sigma <- Q_chol_inv %*% (A/sigma2 + diag(1,nrow(A))) %*% t(Q_chol_inv)
+    Sigma <- Q_chol_inv %*% (A/sigma2 + Q_chol%*% diag(1,nrow(A)) %*% Q_chol ) %*% t(Q_chol_inv)
 
 
     sigma2_new <-

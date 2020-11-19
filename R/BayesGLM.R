@@ -207,7 +207,7 @@ BayesGLM_slice <- function(
     as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
   }, simplify = F)
 
-  avg_point_estimates <- as.matrix(convert_mat_A %*% BayesGLM_out$avg_beta_estimates)
+  avg_point_estimates <- BayesGLM_out$avg_beta_estimates
 
   classical_slice <- Bayes_slice <- vector('list', n_sess)
   names(classical_slice) <- names(Bayes_slice) <- session_names
@@ -222,7 +222,7 @@ BayesGLM_slice <- function(
       },simplify = F)
     }
     if(do_Bayesian){
-      mat_coefs <- as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[ss]])
+      mat_coefs <- point_estimates[[ss]]
       Bayes_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
         image_coef <- binary_mask
         image_coef[image_coef == 1] <- mat_coefs[,tn]
@@ -1007,43 +1007,43 @@ BayesGLM <- function(
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   if(n_sess > 1 & avg_betas_over_sessions) {
-    diag_coefs <- Diagonal(n = mesh$n, x = 1/n_sess)
-    full_coefs <- Reduce(cbind,rep(list(diag_coefs),n_sess))
-    coef_lincombs <- sapply(seq(K),function(k) { inla.make.lincombs(nm = full_coefs)}, simplify = F)
-    renamed_lc <- mapply(function(lc,nm) {
-      output <- sapply(lc, function(llc) {
-        names(llc[[1]]) <- nm
-        return(llc)
-      }, simplify = F)
-      return(output)
-    },lc = coef_lincombs, nm = beta_names, SIMPLIFY = F)
-    my_lc <- Reduce(c,renamed_lc)
-    num_lc <- length(my_lc)
-    num_char <- as.character(nchar(as.character(num_lc)))
-    names(my_lc) <- sprintf(paste0("lc%0",num_char,".0f"),seq(num_lc))
     cat("Set linear combinations for averages across sessions\n")
-  } else {
-    my_lc <- NULL
-  }
-
-  #estimate model using INLA
-  cat('\n ...... estimating model with INLA')
-  system.time(
-    INLA_result <- estimate_model(
-      formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
-      num.threads=num.threads, verbose=verbose, contrasts = contrasts, lincomb = my_lc
+    diag_coefs <- Diagonal(n = V, x = 1/n_sess)
+    session_coefs <- Matrix::bdiag(rep(list(diag_coefs),length(beta_names))) # Just finished this line
+    full_coefs <- Reduce(cbind,rep(list(session_coefs),n_sess))
+    design_pred <- rbind(model_data$X, full_coefs)
+    response_pred <- rep(NA,dim(full_coefs)[1])
+    model_data$y <- c(model_data$y,response_pred)
+    #estimate model using INLA
+    cat('\n ...... estimating model with INLA')
+    system.time(
+      INLA_result <- estimate_model(
+        formula=formula, data=model_data, A=design_pred, spde, prec_initial=1,
+        num.threads=num.threads, verbose=verbose, contrasts = contrasts
+      )
     )
-  )
-  cat('\n ...... model estimation completed')
+    cat('\n ...... model estimation completed')
+  } else {
+    #estimate model using INLA
+    cat('\n ...... estimating model with INLA')
+    system.time(
+      INLA_result <- estimate_model(
+        formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
+        num.threads=num.threads, verbose=verbose, contrasts = contrasts
+      )
+    )
+    cat('\n ...... model estimation completed')
+  }
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
   theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
   # The mean of the mean beta estimates across sessions
   if(n_sess > 1 & avg_betas_over_sessions) {
-    avg_beta_means <- INLA_result$summary.lincomb.derived$mean
+    pred_idx <- which(is.na(model_data$y))
+    avg_beta_means <- INLA_result$summary.linear.predictor$mean[pred_idx]
     avg_beta_estimates <- sapply(seq(K), function(k) {
-      bbeta_out <- avg_beta_means[(seq(mesh$n) + (k-1)*mesh$n)]
+      bbeta_out <- avg_beta_means[(seq(V) + (k-1)*V)]
       return(bbeta_out)
     }, simplify = T)
     names(avg_beta_estimates) <- beta_names

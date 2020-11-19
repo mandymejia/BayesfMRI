@@ -13,6 +13,7 @@ BayesGLMEM(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   num.threads = 4,
+  tol = 1e-04,
   outfile = NULL,
   verbose = FALSE
 )

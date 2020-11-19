@@ -4,7 +4,14 @@
 \alias{tile.plot}
 \title{Lightweight tile plot function}
 \usage{
-tile.plot(tile_df, col = NULL, ncols = NULL, main = "", na.color = "grey80")
+tile.plot(
+  tile_df,
+  col = NULL,
+  ncols = NULL,
+  main = "",
+  zlim = NULL,
+  na.color = "grey80"
+)
 }
 \arguments{
 \item{tile_df}{A data frame with three columns: \code{row}, \code{col}, and

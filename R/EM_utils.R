@@ -42,7 +42,7 @@ Q_prime <- function(kappa2, spde) {
 #' @keywords internal
 neg_kappa_fn <- function(kappa2, spde, phi, Sigma, mu) {
   Qp <- Q_prime(kappa2, spde)
-  log_det_Q <- sum(log(diag(chol(Qp,pivot = T))))
+  log_det_Q <- sum(2*log(diag(chol(Qp,pivot = T)))) # compare direct determinant here
   trace_QEww <- sum(colSums(Qp*Sigma)) + crossprod(mu,Qp)%*%mu
   out <- (trace_QEww / (4*pi*phi) - log_det_Q)@x
   return(out)

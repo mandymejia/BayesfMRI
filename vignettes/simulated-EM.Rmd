@@ -50,53 +50,59 @@ tile.plot(true_bbeta2, main = "True bbeta2")
 
 
 ```{r run em}
-BOLD = simulated_data$BOLD
-design = simulated_data$design
-binary_mask = binary_template
-onsets=NULL
-TR=NULL
-nuisance=NULL
-nuisance_include=c('drift','dHRF')
-scale_BOLD = TRUE
-scale_design = TRUE
-num.threads = 4
-GLM_method = 'both'
-session_names = NULL
-outfile = NULL
-verbose = FALSE
+# BOLD = simulated_data$BOLD
+# design = simulated_data$design
+# binary_mask = binary_template
+# onsets=NULL
+# TR=NULL
+# nuisance=NULL
+# nuisance_include=c('drift','dHRF')
+# scale_BOLD = TRUE
+# scale_design = TRUE
+# num.threads = 4
+# tol = 1e-1
+# GLM_method = 'both'
+# session_names = NULL
+# outfile = NULL
+# verbose = TRUE
+# 
+# data <- session_data
+# scale_BOLD=scale_BOLD
+# scale_design = scale_design
+# num.threads=num.threads
+# outfile = outfile
+# verbose=verbose
+# vertices = NULL
+# faces = NULL
+# mask = binary_mask
 
-data <- session_data
-scale_BOLD=scale_BOLD
-scale_design = scale_design
-num.threads=num.threads
-outfile = outfile
-verbose=verbose
-vertices = NULL
-faces = NULL
-mask = NULL
 
-
-
-em_result <- BayesGLMEM_slice(
-  BOLD = simulated_data$BOLD,
-  design = simulated_data$design,
-  binary_mask = binary_template,
-  onsets=NULL,
-  TR=NULL,
-  nuisance=NULL,
-  nuisance_include=c('drift','dHRF'),
-  scale_BOLD = FALSE,
-  scale_design = TRUE,
-  num.threads = 4,
-  tol = 0.1,
-  GLM_method = 'both',
-  session_names = NULL,
-  outfile = NULL,
-  verbose = TRUE
+system.time(
+  em_result <- BayesGLMEM_slice(
+    BOLD = simulated_data$BOLD,
+    design = simulated_data$design,
+    binary_mask = binary_template,
+    onsets=NULL,
+    TR=NULL,
+    nuisance=NULL,
+    nuisance_include=c('drift','dHRF'),
+    scale_BOLD = FALSE,
+    scale_design = TRUE,
+    num.threads = 4,
+    tol = 1,
+    GLM_method = 'both',
+    session_names = NULL,
+    outfile = NULL,
+    verbose = T
+  )
 )
 ```
 
 
+```{r View results}
+tile.plot(melt_mat(em_result$betas_Bayesian$single_session$bbeta1), main = "Bayesian bbeta1")
+tile.plot(melt_mat(em_result$betas_classical$single_session[[1]]), main = "Classical bbeta1")
+```
 
 
 
@@ -167,6 +173,8 @@ mu <- solve(Sig_inv,m)
   # 0.106   0.020   0.125 
 
 # sigma2 ----
+library(INLA)
+inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
 inla.setOption(smtp="pardiso")
 system.time(Q_chol <- chol(Q, pivot = T))
    # user  system elapsed 

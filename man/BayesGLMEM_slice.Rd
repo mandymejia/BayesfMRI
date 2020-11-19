@@ -15,6 +15,7 @@ BayesGLMEM_slice(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   num.threads = 4,
+  tol = 1e-04,
   GLM_method = "both",
   session_names = NULL,
   outfile = NULL,

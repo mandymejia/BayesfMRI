@@ -119,8 +119,8 @@ simulate_slice_data <-
     })
     # Remove any NA voxels and output the response as a matrix
     y <- apply(y_t,1, identity)
-    # y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
-    # y <- y[!y_exclude,]
+    y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
+    y <- y[!y_exclude,]
     y <- t(y)
     # Return everything
     return(list(session = list(BOLD=y,design = tasks), betas = beta_coefficients))

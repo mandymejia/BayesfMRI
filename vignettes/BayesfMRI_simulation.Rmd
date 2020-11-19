@@ -289,13 +289,13 @@ This results in the true activation amplitudes:
 Session 1:
 
 ```{r True Activation Amplitudes 1, fig.height=3, fig.width=7, echo=F}
-plot_slice(multi_data$betas$session_1, zlim=c(0,1.5))
+tile.plot(melt_mat(multi_data$beta_coefficients$session_1[[1]]), zlim = c(0,1.5))
 ```
 
 Session 2: 
 
 ```{r True Activation Amplitudes 2, fig.height=3, fig.width=7, echo=F}
-plot_slice(multi_data$betas$session_2, zlim=c(0,1.5))
+tile.plot(melt_mat(multi_data$beta_coefficients$session_2[[1]]), zlim=c(0,1.5))
 ```
 
 The function `simulate_slice_data()` formats the data into a list of "session" objects, which we can then pass to `BayesGLM` for analysis. **Note: Model is pre-computed. Set `eval=TRUE` to compute. Expected computation time is approximately 10 minutes with PARDISO enabled.**
@@ -303,7 +303,7 @@ The function `simulate_slice_data()` formats the data into a list of "session" o
 ```{r, eval = F}
 # Run the model in INLA
 multi_session_result <- BayesGLM_slice(BOLD=multi_data$BOLD, design = multi_data$design, binary_mask = binary_template, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, trim_INLA = T, num.threads = 12, avg_betas_over_sessions = T)
-saveRDS(multi_session_result, "multi_session_BayesGLM_results.rds")
+saveRDS(multi_session_result, "~/Desktop/multi_session_BayesGLM_results_20201119.rds")
 ```
 
 ## Results
@@ -313,7 +313,11 @@ multi_session_result <- readRDS("multi_session_BayesGLM_results.rds")
 ```
 
 ```{r Separate sessions plot, fig.height=6, fig.width=7}
-plot_BayesGLM_slice(multi_session_result)
+# plot_BayesGLM_slice(multi_session_result)
+tile.plot(melt_mat(multi_session_result$betas_Bayesian$avg_over_sessions[[1]]),
+          main = "bbeta1",zlim = c(0,1))
+tile.plot(melt_mat(multi_session_result$betas_Bayesian$avg_over_sessions[[2]]),
+          main = "bbeta2", zlim = c(0,1))
 ```
 
 <!-- ## Combined Results -->
