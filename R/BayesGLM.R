@@ -1041,6 +1041,7 @@ BayesGLM <- function(
   # The mean of the mean beta estimates across sessions
   if(n_sess > 1 & avg_betas_over_sessions) {
     pred_idx <- which(is.na(model_data$y))
+    INLA_result$misc$configs$config[[1]]$pred_idx <- pred_idx
     avg_beta_means <- INLA_result$summary.linear.predictor$mean[pred_idx]
     avg_beta_estimates <- sapply(seq(K), function(k) {
       bbeta_out <- avg_beta_means[(seq(V) + (k-1)*V)]
