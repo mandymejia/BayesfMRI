@@ -19,7 +19,7 @@ trim_INLA_result <- function(INLA_result) {
         nconfig = INLA_result$misc$configs$nconfig,
         contents = INLA_result$misc$configs$contents,
         config = sapply(INLA_result$misc$configs$config, function(conf) {
-          return(conf[c('mean','Q','Qinv','log.posterior')])
+          return(conf[c('mean','Q','Qinv','log.posterior','pred_idx')])
         }, simplify = F)
       )
     )
