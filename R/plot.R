@@ -118,6 +118,8 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   point_estimates <- BayesGLM_object$betas_Bayesian
   if(is.null(zlim)) zlim <- c(min(unlist(point_estimates), na.rm = T),
                               max(unlist(point_estimates), na.rm = T))
+  # For new version of `ciftiTools`, change the following line to:
+  # wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), half = "pos")
   wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), pos_half = FALSE)
   # coef_images <- sapply(point_estimates, function(pe) {
   #   out <- sapply(split(pe, col(pe)), function(beta) {
