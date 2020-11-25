@@ -930,7 +930,8 @@ BayesGLM <- function(
     mask <- as.logical(mask)
     mesh_orig <- mesh #for later plotting
     mesh <- excursions::submesh.mesh(mask, mesh)
-    mesh$idx$loc <- mesh$idx$loc[!is.na(mesh$idx$loc)]
+    mask <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
+    mesh$idx$loc <- mesh$idx$loc[mask]
     for(s in 1:n_sess){
       data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
     }
