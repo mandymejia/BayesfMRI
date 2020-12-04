@@ -33,8 +33,6 @@ Imports:
     reshape2,
     sp,
     utils
-Remotes:
-    mandymejia/ciftiTools
 Suggests:
     abind,
     rdist,

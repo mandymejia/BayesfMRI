@@ -229,7 +229,7 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 #'
 #' @examples
 #' x <- matrix(rnorm(9),3,3)
-#' melt.mat(x)
+#' melt_mat(x)
 melt_mat <- function(x) {
   out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
   return(out)
@@ -248,11 +248,16 @@ melt_mat <- function(x) {
 #' @param ncols The number of colors for a color palette, if \code{col} is not
 #'   provided.
 #' @param main Plot title (character)
+#' @param zlim Color limits. \code{NULL} (default) will use the minimum and
+#'  maximum of the data.
 #' @param na.color The color that should be used to represent \code{NA} values
 #'   in the tile plot
 #'
 #' @return A tile plot done in base R graphics
 #' @export
+#' 
+#' @importFrom grDevices heat.colors
+#' @importFrom graphics axis layout par rect text
 #'
 #' @examples
 #' x <- matrix(rnorm(50*50),50,50)
