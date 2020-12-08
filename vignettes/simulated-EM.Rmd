@@ -42,41 +42,12 @@ simulated_data <-
 ```
 
 ```{r plot coefficients}
-true_bbeta1 <- melt_mat(x = simulated_data$beta_coefficients$session_1[[1]])
-tile.plot(true_bbeta1, main = "True bbeta1", zlim = c(0,1))
-true_bbeta2 <- melt_mat(x = simulated_data$beta_coefficients$session_1[[2]])
-tile.plot(true_bbeta2, main = "True bbeta2", zlim = c(0,1))
+tile.plot(simulated_data$beta_coefficients$session_1[[1]], main = "True bbeta1", zlim = c(0,1))
+tile.plot(simulated_data$beta_coefficients$session_1[[2]], main = "True bbeta2", zlim = c(0,1))
 ```
 
 
 ```{r run em}
-# BOLD = simulated_data$BOLD
-# design = simulated_data$design
-# binary_mask = binary_template
-# onsets=NULL
-# TR=NULL
-# nuisance=NULL
-# nuisance_include=c('drift','dHRF')
-# scale_BOLD = TRUE
-# scale_design = TRUE
-# num.threads = 4
-# tol = 1e-1
-# GLM_method = 'both'
-# session_names = NULL
-# outfile = NULL
-# verbose = TRUE
-# 
-# data <- session_data
-# scale_BOLD=scale_BOLD
-# scale_design = scale_design
-# num.threads=num.threads
-# outfile = outfile
-# verbose=verbose
-# vertices = NULL
-# faces = NULL
-# mask = binary_mask
-
-
 system.time(
   em_result <- BayesGLMEM_slice(
     BOLD = simulated_data$BOLD,
@@ -88,136 +59,49 @@ system.time(
     nuisance_include=c('drift','dHRF'),
     scale_BOLD = FALSE,
     scale_design = TRUE,
-    num.threads = 16,
-    tol = 1,
+    GLM_method = 'both',
+    EM_method = "joint",
+    pct_change_limit = 1,
+    session_names = NULL,
+    outfile = NULL,
+    verbose = F
+  )
+)
+```
+
+```{r Run the BayesGLM on the same data}
+library(INLA)
+inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
+system.time(
+  glm_result <- BayesGLM_slice(
+    BOLD = simulated_data$BOLD,
+    design = simulated_data$design,
+    binary_mask = binary_template,
+    onsets=NULL,
+    TR=NULL,
+    nuisance=NULL,
+    nuisance_include=c('drift','dHRF'),
+    scale_BOLD = FALSE,
+    scale_design = TRUE,
     GLM_method = 'both',
     session_names = NULL,
     outfile = NULL,
-    verbose = T
+    verbose = F,
+    return_INLA_result = T,
+    trim_INLA = T
   )
 )
 ```
 
 
 ```{r View results}
-tile.plot(melt_mat(em_result$betas_Bayesian$single_session$bbeta1), main = "Bayesian bbeta1")
-tile.plot(melt_mat(em_result$betas_classical$single_session[[1]]), main = "Classical bbeta1")
+tile.plot(em_result$betas_Bayesian$single_session$bbeta1, main = "Bayesian EM bbeta1", zlim = c(0,1))
+tile.plot(glm_result$betas_Bayesian$single_session[[1]], main = "Bayesian GLM bbeta1", zlim = c(0,1))
+tile.plot(em_result$betas_classical$single_session[[1]], main = "Classical bbeta1", zlim = c(0,1))
 ```
 
 
 
 
 
-
-# Extra Stuff (to be deleted)
-```{r Make the data to demo the function}
-BOLD <- simulated_data$BOLD
-design <- simulated_data$design
-mask <- binary_template
-mesh <- make_slice_mesh(binary_template)
-```
-
-
-```{r Grab values from the mesh}
-spde <- inla.spde2.matern(mesh)
-Cmat = spde$param.inla$M0
-Gmat = 1/2*(spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))
-GCinvG = spde$param.inla$M2 #this equals G %*% solve(C) %*% G
-tau <- 1
-phi <- 1 / (4*pi)
-kappa2 <- 1
-source("../R/EM_functions.R")
-# Q_k <- spde_Q(kappa,tau,Cmat,Gmat) # deprecated
-
-in_binary_mask <- which(binary_template == 1, arr.ind = T)
-in_binary_mask <- in_binary_mask[,2:1]
-Psi_k <- inla.spde.make.A(mesh,loc = in_binary_mask)
-sigma2 <- 6
-```
-
-```{r Test different inversion methods}
-od <- organize_data(y = simulated_data$BOLD$session_1,
-                    X = simulated_data$design$session_1)
-y <- od$y
-V <- Matrix::Diagonal(length(y),sigma2)
-X1 <- od$X[,seq(ncol(od$X)/2)]
-X <- od$X
-Psi <- Matrix::bdiag(rep(list(Psi_k),2))
-# Q_k <- spde_Q_tau(kappa = kappa,tau = tau,spde = spde)
-Q_k <- spde_Q_phi(kappa2 = kappa2,phi = phi,spde = spde)
-Q <- Matrix::bdiag(rep(list(Q_k),2))
-
-# Raw attempt
-system.time(Sig <- solve(solve(Q) + crossprod(X%*%Psi)))
- #  user  system elapsed 
- # 42.388   0.365  42.746
-library(Matrix)
-system.time(Sig_sparseQ <- solve(solve(Q,sparse = T) + crossprod(X%*%Psi)))
- #   user  system elapsed 
- # 45.306   0.299  45.631 
-
-# Woodbury
-# system.time(Sig_Woodbury <- Q - Q%*%t(X1%*%Psi)%*%solve(V + X1%*%Psi%*%Q%*%t(X1%*%Psi))%*%X1%*%Psi%*%Q)
-# Not feasible (> 1 hour)
-
-# E(w) ----
-# Linear algebra trick (This is clearly the way to go)
-start_time <- proc.time()
-system.time(Sig_inv <- Q + crossprod(od$X%*%Psi)/ sigma2)
-  #  user  system elapsed 
-  # 0.068   0.015   0.083
-m <- t(od$X%*%Psi)%*%od$y / sigma2
-mu <- solve(Sig_inv,m)
-(total_time <- proc.time() - start_time)
-  #  user  system elapsed 
-  # 0.106   0.020   0.125 
-
-# sigma2 ----
-library(INLA)
-inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
-inla.setOption(smtp="pardiso")
-system.time(Q_chol <- chol(Q, pivot = T))
-   # user  system elapsed 
-   #    0       0       0
-system.time(Q_chol_inv <- solve(Q_chol))
-  #  user  system elapsed 
-  # 0.135   0.018   0.154 
-A <- crossprod(od$X%*%Psi)/sigma2
-system.time(Sigma <- Q_chol_inv %*% (A + diag(1,length(diag(A)))) %*% t(Q_chol_inv))
-  #  user  system elapsed 
-  # 3.172   0.120   3.291
-sigma2_hat <- crossprod(od$y) - 2*crossprod(od$y,od$X%*%Psi%*%mu) + crossprod(od$X%*%Psi%*%mu) + sum(colSums(A*Sigma))
-
-# R_2 ----
-log_det_Q <- sum(log(diag(chol(Q,pivot = T))))
-
-# >> Tr(QE(ww')) ----
-system.time(trace_QEww <- sum(colSums(Q*Sigma)) + crossprod(mu,Q)%*%mu)
-  #  user  system elapsed 
-  # 0.627   0.002   0.628
-
-R_2 <- -log_det_Q/2 - trace_QEww/2
-
-system.time(log_det_Q <- crossprod(mu,Q)%*%mu/2)
-  #  user  system elapsed 
-  # 0.001   0.000   0.001 
-system.time(Q_inv <- solve(Q))
-# user  system elapsed 
-#   1.573   0.031   1.605
-system.time(Q_inv <- inla.qinv(Q))
-  #  user  system elapsed 
-  # 0.248   0.307   0.532 
-system.time(D <- Sig_inv%*%Q_inv)
-# user  system elapsed 
-#   0.647   0.016   0.663
-# system.time(lam_D <- eigen(D))
- #    user   system  elapsed 
- # 588.214    0.836 5631.636 # Don't take the elapsed time seriously, the computer went to sleep
-# system.time(chol_D <- chol(D)) # Not possible, as D is not symmetric
-system.time(D_inv <- solve(D))
- #   user  system elapsed 
- # 85.816   0.392  86.211
-# > sum(diag(D_inv))
-# [1] 3707.739
-```
 

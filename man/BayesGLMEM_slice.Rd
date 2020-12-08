@@ -14,9 +14,9 @@ BayesGLMEM_slice(
   binary_mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
-  num.threads = 4,
-  tol = 1e-04,
+  EM_method = "joint",
   GLM_method = "both",
+  pct_change_limit = 1,
   session_names = NULL,
   outfile = NULL,
   verbose = FALSE
@@ -62,12 +62,13 @@ centered.}
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{num.threads}{The maximum number of threads to use in the inla-program
-for model estimation. Default: \code{4}.}
-
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only,
 'classical' for the classical GLM only, or 'both' to return both classical
 and Bayesian estimates of task activation.}
+
+\item{pct_change_limit}{The numeric threshold for the percent
+(NOT probability) change below which the EM algorithm will stop updates
+(default = 1).}
 
 \item{session_names}{(Optional) A vector of names corresponding to each
 session.}

@@ -12,8 +12,8 @@ BayesGLMEM(
   mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
-  num.threads = 4,
-  tol = 1e-04,
+  EM_method = "joint",
+  pct_change_limit = 1,
   outfile = NULL,
   verbose = FALSE
 )
@@ -45,10 +45,15 @@ centered.}
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{num.threads}{Not used yet.}
+\item{EM_method}{Either "joint" or "separate" for choosing whether covariates
+should share hyperparameter values.}
 
-\item{outfile}{File name where results will be written (for use by
-\code{BayesGLM2}).}
+\item{pct_change_limit}{The numeric threshold for the percent
+(NOT probability) change below which the EM algorithm will stop updates
+(default = 1).}
+
+\item{outfile}{(Optional) File name (without extension) of output file for
+BayesGLMEM result to use in Bayesian group modeling.}
 
 \item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
 }
