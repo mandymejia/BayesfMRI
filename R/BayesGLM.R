@@ -916,20 +916,29 @@ BayesGLM <- function(
   #2. If sum(zero_var) > 0, remove zero_var locations from data and create Amat
   #   Else, let Amat = identity matrix
 
+  #remove zero var locations from mask
   if(sum(zero_var) > 0){
+    mask_orig <- mask
     if(!is.null(mask)) mask[zero_var==TRUE] <- 0
     if(is.null(mask)) mask <- !zero_var
+  } else {
+    mask_orig <- NULL
   }
 
+  #apply mask to mesh
   if(!is.null(mask)) {
     mask <- as.logical(mask)
+    mesh_orig <- mesh #for later plotting
     mesh <- excursions::submesh.mesh(mask, mesh)
-    mesh$idx$loc <- mesh$idx$loc[!is.na(mesh$idx$loc)]
+    mask <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
+    mesh$idx$loc <- mesh$idx$loc[mask]
     for(s in 1:n_sess){
       data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
     }
     V <- sum(mask)
     #zero_var <- zero_var[mask]
+  } else {
+    mesh_orig <- NULL
   }
 
   # #remove zero var locations from set of data locations, but leave in the mesh (if no mask provided)
@@ -1061,7 +1070,9 @@ BayesGLM <- function(
     if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
     result <- list(INLA_result = INLA_result,
                    mesh = mesh,
+                   mesh_orig = mesh_orig,
                    mask = mask,
+                   mask_orig = mask_orig,
                    design = design,
                    session_names = session_names,
                    beta_names = beta_names,
@@ -1078,7 +1089,9 @@ BayesGLM <- function(
   } else {
     result <- list(INLA_result = NULL,
                    mesh = mesh,
+                   mesh_orig = mesh_orig,
                    mask = mask,
+                   mask_orig = mask_orig,
                    design = design,
                    session_names = session_names,
                    beta_names = beta_names,
