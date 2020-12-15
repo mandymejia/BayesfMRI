@@ -32,6 +32,7 @@ Imports:
     neuRosim,
     reshape2,
     sp,
+    SQUAREM,
     utils
 Suggests:
     abind,

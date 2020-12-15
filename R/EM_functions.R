@@ -17,18 +17,26 @@
 #' @inheritParams scale_design_Param
 #' @param EM_method Either "joint" or "separate" for choosing whether covariates
 #'   should share hyperparameter values.
+#' @param use_SQUAREM (logical) Should the SQUAREM package be used to speed up
+#'   convergence?
+#' @param tol A small, positive scalar that determines when iterations should be
+#'   terminated.  Default is 1e-3. This is used only if \code{use_SQUAREM} is
+#'   \code{TRUE}.
 #' @param pct_change_limit The numeric threshold for the percent
 #'   (NOT probability) change below which the EM algorithm will stop updates
-#'   (default = 1).
+#'   (default = 1). This is used only if \code{use_SQUAREM} is \code{FALSE}.
+#' @param num_cores (optional) allows users to specify the number of cores used
+#'   to work in parallel across the different tasks
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLMEM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_direct_TRUE
 #'
 #' @return A list containing...
 #'
-#' @importFrom INLA inla.spde2.matern
+#' @importFrom INLA inla.spde2.matern inla.qinv inla.qsolve
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
+#' @importFrom SQUAREM squarem
 #'
 #' @export
 BayesGLMEM <- function(data,
@@ -39,7 +47,10 @@ BayesGLMEM <- function(data,
                        scale_BOLD = TRUE,
                        scale_design = TRUE,
                        EM_method = "joint",
+                       use_SQUAREM = TRUE,
+                       tol = 1e-3,
                        pct_change_limit = 1,
+                       num_cores = 1,
                        outfile = NULL,
                        verbose = FALSE) {
 
@@ -173,105 +184,135 @@ BayesGLMEM <- function(data,
     A <- Matrix::crossprod(model_data$X)
   }
   # Initial values for kappa and tau
-  kappa2_new <- ifelse(EM_method == "joint", 4, rep(4,K)) # This is a value that matches BayesGLM
-  phi_new <- 1 / (4*pi*kappa2_new*4) # This is a value that matches BayesGLM
-  sigma2_new <- var(model_data$y)
-  Q_k <- mapply(BayesfMRI:::spde_Q_phi, kappa2 = kappa2_new, phi = phi_new, MoreArgs = list(spde = spde), SIMPLIFY = F)
   if(EM_method == "joint") {
-    Q_new <- Matrix::bdiag(rep(Q_k,K))
+    kappa2 <- 4
   } else {
-    Q_new <- Matrix::bdiag(Q_k)
+    kappa2 <- rep(4,K)
   }
-  Sig_inv <- Q_new + A/sigma2_new
-  m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / sigma2_new
-  mu <- INLA::inla.qsolve(Sig_inv,m, method = "solve")
-  Sigma_new <- INLA::inla.qinv(Sig_inv)
-  max_pct_change <- Inf
-  # > EM algorithm ----
-  cat(".... performing the EM algorithm\n")
-  step <- 1
-  n <- spde$n.spde
-  while(max_pct_change > pct_change_limit | step < 11) {
-    Q <- Q_new
-    kappa2 <- kappa2_new
-    phi <- phi_new
-    sigma2 <- sigma2_new
-    Sigma <- Sigma_new
-    if(EM_method == "joint") {
-      # >> Joint Update ----
-      optim_output_k <-
-        optimize(
-          f = BayesfMRI:::neg_kappa_fn,
+  # kappa2 <- ifelse(EM_method == "joint", 4, rep(4,K)) # This is a value that matches BayesGLM
+  phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
+  sigma2 <- var(model_data$y)
+  theta <- c(kappa2, phi, sigma2)
+  # > Start EM algorithm ----
+  if(EM_method == "joint") {
+    # >>  Joint update ----
+    if(use_SQUAREM) {
+      squareem_output <-
+        squarem(
+          par = theta,
+          fixptfn = GLMEM_fixptjoint,
+          objfn = GLMEM_objfn,
+          control = list(tol = 1e-3, trace = verbose),
           spde = spde,
-          phi = phi_new,
-          Sigma = Sigma,
-          mu = mu,
-          lower = 0,
-          upper = 50
+          model_data = model_data,
+          Psi = Psi,
+          K = K,
+          A = A
         )
-      kappa2_new <- optim_output_k$minimum
-      Q_tildek <- BayesfMRI:::Q_prime(kappa2_new, spde)
-      Q_tilde <- Matrix::bdiag(rep(list(Q_tildek),K))
-      Tr_QEww <- (sum(Matrix::colSums(Q_tilde*Sigma)) +
-                    Matrix::crossprod(mu,Q_tilde%*%mu))@x
-      phi_new <- Tr_QEww / (4*pi*n*K)
+      theta_new <- squareem_output$par
+      kappa2_new <- theta_new[1]
+      phi_new <- theta_new[2]
+      sigma2_new <- theta_new[3]
     } else {
-      # >> Separate update ----
-      for(k in seq(K)) {
-        k_inds <- seq(n) + (k-1)*n
-        Qp <- BayesfMRI:::Q_prime(kappa2[k], spde)
-        Tr_QEww <- (sum(Matrix::colSums(Qp%*%Sigma[k_inds,k_inds])) +
-                      crossprod(mu[k_inds,],Q[k_inds,k_inds])%*%mu[k_inds,])@x
-        phi_new[k] <- Tr_QEww / (4*pi*V)
-        optim_output_k <-
-          optimize(
-            f = BayesfMRI:::neg_kappa_fn,
+      step <- 1
+      max_pct_change <- Inf
+      while(max_pct_change > pct_change_limit) {
+        theta_new <-
+          GLMEM_fixptjoint(
+            theta = theta,
             spde = spde,
-            phi = phi[k],
-            Sigma = Sigma[k_inds,k_inds],
-            mu = mu[k_inds,],
-            lower = kappa2[k]/2,
-            upper = kappa2[k]*2
+            model_data = model_data,
+            Psi = Psi,
+            K = K,
+            A = A
           )
-        kappa2_new[k] <- optim_output_k$minimum
+        kappa2_new <- theta_new[1]
+        phi_new <- theta_new[2]
+        sigma2_new <- theta_new[3]
+        sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
+        phi_pct_change <- 100*abs((phi_new - phi) / phi)
+        kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
+        max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
+        if(verbose) {
+          cat("Step",step, "kappa^2 (%change) =",kappa2_new,"(",kappa2_pct_change,")", "phi (%change) =", phi_new, "(", phi_pct_change,")", "sigma^2 (%change) =",sigma2_new,"(",sigma2_pct_change,")","\n")
+        }
+        kappa2 <- kappa2_new
+        phi <- phi_new
+        sigma2 <- sigma2_new
+        theta <- theta_new
+        step <- step+1
       }
     }
-    Qk_new <- mapply(BayesfMRI:::spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
-                     MoreArgs = list(spde=spde), SIMPLIFY = F)
-    if(EM_method == "joint") {
-      Q_new <- Matrix::bdiag(rep(Qk_new,K))
+  } else {
+    cat("Performing separate update. \n")
+    # >> Separate update ----
+    if(use_SQUAREM) {
+      squareem_output <-
+        squarem(
+          par = theta,
+          fixptfn = GLMEM_fixptseparate,
+          objfn = GLMEM_objfn,
+          control = list(tol = 1e-3, trace = verbose),
+          spde = spde,
+          model_data = model_data,
+          Psi = Psi,
+          K = K,
+          A = A,
+          num_cores = num_cores
+        )
+      theta_new <- squareem_output$par
+      kappa2_new <- theta_new[seq(K)]
+      phi_new <- theta_new[seq(K) + K]
+      sigma2_new <- theta_new[(2*K + 1)]
     } else {
-      Q_new <- Matrix::bdiag(Qk_new)
+      step <- 1
+      max_pct_change <- Inf
+      while(max_pct_change > pct_change_limit) {
+        cat("Fixed point function. \n")
+        theta_new <-
+          GLMEM_fixptseparate(
+            theta = theta,
+            spde = spde,
+            model_data = model_data,
+            Psi = Psi,
+            K = K,
+            A = A,
+            num_cores = num_cores
+          )
+        kappa2_new <- theta_new[seq(K)]
+        phi_new <- theta_new[seq(K) + K]
+        sigma2_new <- theta_new[(2*K + 1)]
+        sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
+        phi_pct_change <- 100*abs((phi_new - phi) / phi)
+        kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
+        max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
+        if(verbose) {
+          cat("Step",step, "kappa^2 (%change) =",kappa2_new,"(",kappa2_pct_change,")", "phi (%change) =", phi_new, "(", phi_pct_change,")", "sigma^2 (%change) =",sigma2_new,"(",sigma2_pct_change,")","\n")
+        }
+        kappa2 <- kappa2_new
+        phi <- phi_new
+        sigma2 <- sigma2_new
+        theta <- theta_new
+        step <- step+1
+      }
     }
-
-    Sig_inv <- Q_new + A/sigma2
-    m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2
-    mu <- INLA::inla.qsolve(Sig_inv,m,method = "solve")
-    Sigma_new <- INLA::inla.qinv(Sig_inv)
-
-    sigma2_new <-
-      as.numeric(crossprod(model_data$y) -
-                   2*Matrix::crossprod(model_data$y,model_data$X%*%Psi%*%mu) +
-                   Matrix::crossprod(model_data$X%*%Psi%*%mu) +
-                   sum(Matrix::colSums(A*Sigma_new))) / length(model_data$y)
-    sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
-    phi_pct_change <- 100*abs((phi_new - phi) / phi)
-    kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
-    max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
-    if(verbose) {
-      cat("Step",step, "kappa^2 (%change) =",kappa2_new,"(",kappa2_pct_change,")", "phi (%change) =", phi_new, "(", phi_pct_change,")", "sigma^2 (%change) =",sigma2_new,"(",sigma2_pct_change,")","\n")
-    }
-    step <- step+1
   }
   # > End EM algorithm ----
   cat(".... EM algorithm complete!")
 
+  Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
+                   MoreArgs = list(spde=spde), SIMPLIFY = F)
+  if(EM_method == "joint") {
+    Q <- Matrix::bdiag(rep(Qk_new,K))
+  } else {
+    Q <- Matrix::bdiag(Qk_new)
+  }
   Sig_inv <- Q + A/sigma2_new
   m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
   mu <- INLA::inla.qsolve(Sig_inv,m)
   Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
 
-  beta_estimates <- matrix(mu,nrow = n, ncol = K)
+  beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K)
   colnames(beta_estimates) <- beta_names
   beta_estimates <- list(beta_estimates)
   names(beta_estimates) <- session_names
@@ -283,7 +324,7 @@ BayesGLMEM <- function(data,
   }
   #extract stuff needed for group analysis
   tau2 <- 1 / (4*pi*kappa2_new*phi_new)
-  mu.theta <- c(c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))), sigma2_new) # This is a guess about the order and might be wrong
+  mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new))))) # This is a guess about the order and might be wrong
   # Q.theta <- Q # This is not right. This is supposed to be the covariance between
   # the hyperparameters (kappa,phi,sigma2) This might need to be examined. Perhaps
   # an estimate can be made using the iteration values for the parameters?
@@ -339,20 +380,29 @@ BayesGLMEM <- function(data,
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams num.threads_Param
+#' @param EM_method Either "joint" or "separate" for choosing whether covariates
+#'   should share hyperparameter values.
+#' @param use_SQUAREM (logical) Should the SQUAREM package be used to speed up
+#'   convergence?
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only,
 #'   'classical' for the classical GLM only, or 'both' to return both classical
 #'   and Bayesian estimates of task activation.
 #' @param pct_change_limit The numeric threshold for the percent
 #'   (NOT probability) change below which the EM algorithm will stop updates
 #'   (default = 1).
+#' @param num_cores (optional) allows users to specify the number of cores used
+#'   to work in parallel across the different tasks
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLMEM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_direct_TRUE
 #'
+#' @importFrom INLA inla.spde2.matern inla.qinv inla.qsolve inla.spde.make.A
+#' @importFrom excursions submesh.mesh
+#' @importFrom matrixStats colVars
+#' @importFrom SQUAREM squarem
 #' @importFrom utils head
-#' @importFrom INLA inla.spde.make.A
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -368,8 +418,10 @@ BayesGLMEM_slice <- function(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   EM_method = "joint",
+  use_SQUAREM = TRUE,
   GLM_method = 'both',
   pct_change_limit = 1,
+  num_cores = 1,
   session_names = NULL,
   outfile = NULL,
   verbose = FALSE) {
@@ -493,7 +545,9 @@ BayesGLMEM_slice <- function(
                                            scale_BOLD=scale_BOLD,
                                            scale_design = scale_design,
                                            EM_method = EM_method,
+                                           use_SQUAREM = use_SQUAREM,
                                            pct_change_limit = pct_change_limit,
+                                           num_cores = num_cores,
                                            outfile = outfile,
                                            verbose=verbose)
 
@@ -622,9 +676,13 @@ BayesGLMEM_slice <- function(
 #' @inheritParams scale_design_Param
 #' @param EM_method Either "joint" or "separate" for choosing whether covariates
 #'   should share hyperparameter values.
+#' @param use_SQUAREM (logical) Should the SQUAREM package be used to speed up
+#'   convergence?
 #' @param pct_change_limit The numeric threshold for the percent
 #'   (NOT probability) change below which the EM algorithm will stop updates
 #'   (default = 1).
+#' @param num_cores (optional) allows users to specify the number of cores used
+#'   to work in parallel across the different tasks
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM EM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
@@ -639,7 +697,10 @@ BayesGLMEM_slice <- function(
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
 #' @importFrom ciftiTools read_cifti resample_gifti as.xifti
-#' @importFrom matrixStats rowVars rowSums2
+#' @importFrom matrixStats rowVars rowSums2 colVars
+#' @importFrom INLA inla.spde2.matern inla.qinv inla.qsolve
+#' @importFrom excursions submesh.mesh
+#' @importFrom SQUAREM squarem
 #'
 #' @export
 BayesGLMEM_cifti <- function(cifti_fname,
@@ -650,7 +711,9 @@ BayesGLMEM_cifti <- function(cifti_fname,
                            nuisance=NULL, nuisance_include=c('drift','dHRF'),
                            scale_BOLD=TRUE, scale_design=TRUE,
                            EM_method = "joint",
+                           use_SQUAREM = TRUE,
                            pct_change_limit = 1,
+                           num_cores = 1,
                            GLM_method='both',
                            session_names=NULL,
                            resamp_res=10000,
@@ -820,7 +883,9 @@ BayesGLMEM_cifti <- function(cifti_fname,
                                               scale_BOLD=scale_BOLD,
                                               scale_design = scale_design,
                                               EM_method = EM_method,
+                                              use_SQUAREM = use_SQUAREM,
                                               pct_change_limit = pct_change_limit,
+                                              num_cores = num_cores,
                                               outfile = outfile,
                                               verbose=verbose)
 
@@ -869,7 +934,9 @@ BayesGLMEM_cifti <- function(cifti_fname,
                                                 scale_BOLD=scale_BOLD,
                                                 scale_design = scale_design,
                                                 EM_method = EM_method,
+                                                use_SQUAREM = use_SQUAREM,
                                                 pct_change_limit = pct_change_limit,
+                                                num_cores = num_cores,
                                                 outfile = outfile,
                                                 verbose=verbose)
   }

@@ -13,7 +13,10 @@ BayesGLMEM(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   EM_method = "joint",
+  use_SQUAREM = TRUE,
+  tol = 0.001,
   pct_change_limit = 1,
+  num_cores = 1,
   outfile = NULL,
   verbose = FALSE
 )
@@ -48,9 +51,19 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 \item{EM_method}{Either "joint" or "separate" for choosing whether covariates
 should share hyperparameter values.}
 
+\item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
+convergence?}
+
+\item{tol}{A small, positive scalar that determines when iterations should be
+terminated.  Default is 1e-3. This is used only if \code{use_SQUAREM} is
+\code{TRUE}.}
+
 \item{pct_change_limit}{The numeric threshold for the percent
 (NOT probability) change below which the EM algorithm will stop updates
-(default = 1).}
+(default = 1). This is used only if \code{use_SQUAREM} is \code{FALSE}.}
+
+\item{num_cores}{(optional) allows users to specify the number of cores used
+to work in parallel across the different tasks}
 
 \item{outfile}{(Optional) File name (without extension) of output file for
 BayesGLMEM result to use in Bayesian group modeling.}

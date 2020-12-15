@@ -306,16 +306,16 @@ tile.plot <- function(tile_df, col = NULL, ncols = NULL,
        xright = tile_df$row, ytop = tile_df$col, col = tile_cols,
        border = NA)
   par(mar=c(1,1,2,4))
-  plot(c(0,1),zlim, type = "n", xaxt = "n", yaxt = "n", xlab = "",
+  plot(c(0,1),c(zlim[1],zlim[2] + cb_prime), type = "n", xaxt = "n", yaxt = "n", xlab = "",
        ylab = "", bty = "n")
   rect(xleft = 0,
        ybottom = color_breaks,
        xright = 1,
-       ytop = color_breaks + cb_prime,
+       ytop = 1 + cb_prime,
        col = col, border = NA)
-  axis(side = 4,at = legend_ticks,
+  axis(side = 4,at = c(legend_ticks[1],legend_ticks[-1]*(1+cb_prime)),
        labels = rep("",6), srt = 45, tck = 0.5)
-  text(x = 1, adj = c(-1,0), pos = 4, y = legend_ticks,
+  text(x = 1, adj = c(-1,0), pos = 4, y = c(legend_ticks[1],legend_ticks[-1]*(1+cb_prime)),
        labels = legend_ticks, srt = 0, xpd = NA)
   par(mfrow = .pardefault$mfrow, mar = .pardefault$mar)
   # suppressWarnings(par(.pardefault), classes = "warning")

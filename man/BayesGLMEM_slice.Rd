@@ -15,8 +15,10 @@ BayesGLMEM_slice(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   EM_method = "joint",
+  use_SQUAREM = TRUE,
   GLM_method = "both",
   pct_change_limit = 1,
+  num_cores = 1,
   session_names = NULL,
   outfile = NULL,
   verbose = FALSE
@@ -62,6 +64,12 @@ centered.}
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
+\item{EM_method}{Either "joint" or "separate" for choosing whether covariates
+should share hyperparameter values.}
+
+\item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
+convergence?}
+
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only,
 'classical' for the classical GLM only, or 'both' to return both classical
 and Bayesian estimates of task activation.}
@@ -69,6 +77,9 @@ and Bayesian estimates of task activation.}
 \item{pct_change_limit}{The numeric threshold for the percent
 (NOT probability) change below which the EM algorithm will stop updates
 (default = 1).}
+
+\item{num_cores}{(optional) allows users to specify the number of cores used
+to work in parallel across the different tasks}
 
 \item{session_names}{(Optional) A vector of names corresponding to each
 session.}

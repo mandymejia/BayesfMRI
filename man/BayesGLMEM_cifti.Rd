@@ -18,7 +18,9 @@ BayesGLMEM_cifti(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   EM_method = "joint",
+  use_SQUAREM = TRUE,
   pct_change_limit = 1,
+  num_cores = 1,
   GLM_method = "both",
   session_names = NULL,
   resamp_res = 10000,
@@ -73,9 +75,15 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 \item{EM_method}{Either "joint" or "separate" for choosing whether covariates
 should share hyperparameter values.}
 
+\item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
+convergence?}
+
 \item{pct_change_limit}{The numeric threshold for the percent
 (NOT probability) change below which the EM algorithm will stop updates
 (default = 1).}
+
+\item{num_cores}{(optional) allows users to specify the number of cores used
+to work in parallel across the different tasks}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM EM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
 
