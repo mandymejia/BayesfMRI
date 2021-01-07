@@ -186,28 +186,30 @@ BayesGLM_slice <- function(
   if(do_classical) classicalGLM_out <- classicalGLM(session_data,
                                                      scale_BOLD=scale_BOLD,
                                                      scale_design = scale_design)
-  if(do_Bayesian) BayesGLM_out <- BayesGLM(session_data,
-                                       mesh = mesh,
-                                       scale_BOLD=scale_BOLD,
-                                       scale_design = scale_design,
-                                       num.threads=num.threads,
-                                       return_INLA_result=return_INLA_result,
-                                       outfile = outfile,
-                                       verbose=verbose,
-                                       avg_betas_over_sessions =
-                                         avg_betas_over_sessions,
-                                       trim_INLA = trim_INLA)
+  if(do_Bayesian) {
+    BayesGLM_out <- BayesGLM(session_data,
+                             mesh = mesh,
+                             scale_BOLD=scale_BOLD,
+                             scale_design = scale_design,
+                             num.threads=num.threads,
+                             return_INLA_result=return_INLA_result,
+                             outfile = outfile,
+                             verbose=verbose,
+                             avg_betas_over_sessions =
+                               avg_betas_over_sessions,
+                             trim_INLA = trim_INLA)
 
-  # Create a conversion matrix
-  in_binary_mask <- which(binary_mask == 1, arr.ind = T)
-  in_binary_mask <- in_binary_mask[,2:1]
-  convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
-  # Extract the point estimates
-  point_estimates <- sapply(session_names, function(sn){
-    as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
-  }, simplify = F)
-
-  avg_point_estimates <- BayesGLM_out$avg_beta_estimates
+    # Create a conversion matrix
+    in_binary_mask <- which(binary_mask == 1, arr.ind = T)
+    in_binary_mask <- in_binary_mask[,2:1]
+    convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
+    # Extract the point estimates
+    point_estimates <- sapply(session_names, function(sn){
+      as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
+    }, simplify = F)
+    if(avg_betas_over_sessions)
+      avg_point_estimates <- BayesGLM_out$avg_beta_estimates
+  }
 
   classical_slice <- Bayes_slice <- vector('list', n_sess)
   names(classical_slice) <- names(Bayes_slice) <- session_names
@@ -244,7 +246,11 @@ BayesGLM_slice <- function(
     beta_names <- BayesGLM_out$beta_names
   } else {
     beta_names <- NULL
+    BayesGLM_out <- NULL
   }
+
+  if(!do_classical)
+    classicalGLM_out <- NULL
 
   result <- list(session_names = session_names,
                  beta_names = beta_names,

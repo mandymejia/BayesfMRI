@@ -4,7 +4,7 @@
 \alias{GLMEM_objfn}
 \title{Objective function for the BayesGLM EM algorithm}
 \usage{
-GLMEM_objfn(theta, spde, model_data, Psi, K, A, num_cores = NULL)
+GLMEM_objfn(theta, spde, model_data, Psi, K, A, num.threads = NULL)
 }
 \arguments{
 \item{theta}{a vector containing kappa2, phi, and sigma2, in that order}
@@ -19,7 +19,7 @@ GLMEM_objfn(theta, spde, model_data, Psi, K, A, num_cores = NULL)
 
 \item{A}{The value for Matrix::crossprod(X\%*\%Psi) (saves time on computation)}
 
-\item{num_cores}{Needed for SQUAREM (it is an argument to the fixed-point functions)}
+\item{num.threads}{Needed for SQUAREM (it is an argument to the fixed-point functions)}
 }
 \value{
 A scalar value for the negative expected log-likelihood

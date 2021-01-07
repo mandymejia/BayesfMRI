@@ -16,7 +16,7 @@ BayesGLMEM(
   use_SQUAREM = TRUE,
   tol = 0.001,
   pct_change_limit = 1,
-  num_cores = 1,
+  num.threads = 1,
   outfile = NULL,
   verbose = FALSE
 )
@@ -62,7 +62,7 @@ terminated.  Default is 1e-3. This is used only if \code{use_SQUAREM} is
 (NOT probability) change below which the EM algorithm will stop updates
 (default = 1). This is used only if \code{use_SQUAREM} is \code{FALSE}.}
 
-\item{num_cores}{(optional) allows users to specify the number of cores used
+\item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}
 
 \item{outfile}{(Optional) File name (without extension) of output file for

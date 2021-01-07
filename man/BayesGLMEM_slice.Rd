@@ -18,7 +18,7 @@ BayesGLMEM_slice(
   use_SQUAREM = TRUE,
   GLM_method = "both",
   pct_change_limit = 1,
-  num_cores = 1,
+  num.threads = 1,
   session_names = NULL,
   outfile = NULL,
   verbose = FALSE
@@ -78,7 +78,7 @@ and Bayesian estimates of task activation.}
 (NOT probability) change below which the EM algorithm will stop updates
 (default = 1).}
 
-\item{num_cores}{(optional) allows users to specify the number of cores used
+\item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}
 
 \item{session_names}{(Optional) A vector of names corresponding to each

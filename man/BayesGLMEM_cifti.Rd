@@ -20,7 +20,7 @@ BayesGLMEM_cifti(
   EM_method = "joint",
   use_SQUAREM = TRUE,
   pct_change_limit = 1,
-  num_cores = 1,
+  num.threads = 1,
   GLM_method = "both",
   session_names = NULL,
   resamp_res = 10000,
@@ -82,7 +82,7 @@ convergence?}
 (NOT probability) change below which the EM algorithm will stop updates
 (default = 1).}
 
-\item{num_cores}{(optional) allows users to specify the number of cores used
+\item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM EM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}

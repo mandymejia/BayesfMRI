@@ -51,7 +51,7 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
 #' @param Psi a conversion matrix (N by V) (or N by n)
 #' @param K number of covariates
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
-#' @param num_cores (optional) allows users to specify the number of cores used
+#' @param num.threads (optional) allows users to specify the number of threads used
 #'   to work in parallel across the different tasks
 #'
 #' @importFrom Matrix bdiag colSums crossprod
@@ -60,13 +60,13 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
 #'
 #' @return a vector with the same length as \code{theta}, the EM updates
 #' @keywords internal
-GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num_cores = 1) {
+GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads = 1) {
   if (!requireNamespace("parallel", quietly = TRUE)) {
     stop("The separate update requires the `parallel` package. Please install it.", call. = FALSE)
   }
-  max_num_cores <- min(parallel::detectCores() - 1, 25)
-  num_cores <- min(max_num_cores, num_cores)
-  cl <- parallel::makeCluster(num_cores)
+  max_num.threads <- min(parallel::detectCores() - 1, 25)
+  num.threads <- min(max_num.threads, num.threads)
+  cl <- parallel::makeCluster(num.threads)
   kappa2_inds <- seq(K)
   phi_inds <- seq(K) + K
   sigma2_ind <- 2*K + 1
@@ -146,11 +146,11 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num_cores = 
 #' @param Psi a conversion matrix (N by V) (or N by n)
 #' @param K number of covariates
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
-#' @param num_cores Needed for SQUAREM (it is an argument to the fixed-point functions)
+#' @param num.threads Needed for SQUAREM (it is an argument to the fixed-point functions)
 #'
 #' @return A scalar value for the negative expected log-likelihood
 #' @keywords internal
-GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num_cores = NULL) {
+GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL) {
   if(length(theta) > 3) { # This condition means that parameters are being updated separately
     kappa2_inds <- seq(K)
     phi_inds <- seq(K) + K

@@ -4,7 +4,7 @@
 \alias{GLMEM_fixptseparate}
 \title{Fixed point function for the joint BayesGLMEM update algorithm}
 \usage{
-GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, num_cores = 1)
+GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, num.threads = 1)
 }
 \arguments{
 \item{theta}{a list containing kappa2, phi, and sigma2, in that order}
@@ -19,7 +19,7 @@ GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, num_cores = 1)
 
 \item{A}{The value for Matrix::crossprod(X\%*\%Psi) (saves time on computation)}
 
-\item{num_cores}{(optional) allows users to specify the number of cores used
+\item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}
 }
 \value{

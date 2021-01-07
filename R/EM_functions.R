@@ -25,7 +25,7 @@
 #' @param pct_change_limit The numeric threshold for the percent
 #'   (NOT probability) change below which the EM algorithm will stop updates
 #'   (default = 1). This is used only if \code{use_SQUAREM} is \code{FALSE}.
-#' @param num_cores (optional) allows users to specify the number of cores used
+#' @param num.threads (optional) allows users to specify the number of threads used
 #'   to work in parallel across the different tasks
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLMEM result to use in Bayesian group modeling.
@@ -50,7 +50,7 @@ BayesGLMEM <- function(data,
                        use_SQUAREM = TRUE,
                        tol = 1e-3,
                        pct_change_limit = 1,
-                       num_cores = 1,
+                       num.threads = 1,
                        outfile = NULL,
                        verbose = FALSE) {
 
@@ -258,7 +258,7 @@ BayesGLMEM <- function(data,
           Psi = Psi,
           K = K,
           A = A,
-          num_cores = num_cores
+          num.threads = num.threads
         )
       theta_new <- squareem_output$par
       kappa2_new <- theta_new[seq(K)]
@@ -277,7 +277,7 @@ BayesGLMEM <- function(data,
             Psi = Psi,
             K = K,
             A = A,
-            num_cores = num_cores
+            num.threads = num.threads
           )
         kappa2_new <- theta_new[seq(K)]
         phi_new <- theta_new[seq(K) + K]
@@ -390,7 +390,7 @@ BayesGLMEM <- function(data,
 #' @param pct_change_limit The numeric threshold for the percent
 #'   (NOT probability) change below which the EM algorithm will stop updates
 #'   (default = 1).
-#' @param num_cores (optional) allows users to specify the number of cores used
+#' @param num.threads (optional) allows users to specify the number of threads used
 #'   to work in parallel across the different tasks
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
@@ -421,7 +421,7 @@ BayesGLMEM_slice <- function(
   use_SQUAREM = TRUE,
   GLM_method = 'both',
   pct_change_limit = 1,
-  num_cores = 1,
+  num.threads = 1,
   session_names = NULL,
   outfile = NULL,
   verbose = FALSE) {
@@ -547,7 +547,7 @@ BayesGLMEM_slice <- function(
                                            EM_method = EM_method,
                                            use_SQUAREM = use_SQUAREM,
                                            pct_change_limit = pct_change_limit,
-                                           num_cores = num_cores,
+                                           num.threads = num.threads,
                                            outfile = outfile,
                                            verbose=verbose)
 
@@ -681,7 +681,7 @@ BayesGLMEM_slice <- function(
 #' @param pct_change_limit The numeric threshold for the percent
 #'   (NOT probability) change below which the EM algorithm will stop updates
 #'   (default = 1).
-#' @param num_cores (optional) allows users to specify the number of cores used
+#' @param num.threads (optional) allows users to specify the number of threads used
 #'   to work in parallel across the different tasks
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM EM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each
@@ -713,7 +713,7 @@ BayesGLMEM_cifti <- function(cifti_fname,
                            EM_method = "joint",
                            use_SQUAREM = TRUE,
                            pct_change_limit = 1,
-                           num_cores = 1,
+                           num.threads = 1,
                            GLM_method='both',
                            session_names=NULL,
                            resamp_res=10000,
@@ -885,7 +885,7 @@ BayesGLMEM_cifti <- function(cifti_fname,
                                               EM_method = EM_method,
                                               use_SQUAREM = use_SQUAREM,
                                               pct_change_limit = pct_change_limit,
-                                              num_cores = num_cores,
+                                              num.threads = num.threads,
                                               outfile = outfile,
                                               verbose=verbose)
 
@@ -936,7 +936,7 @@ BayesGLMEM_cifti <- function(cifti_fname,
                                                 EM_method = EM_method,
                                                 use_SQUAREM = use_SQUAREM,
                                                 pct_change_limit = pct_change_limit,
-                                                num_cores = num_cores,
+                                                num.threads = num.threads,
                                                 outfile = outfile,
                                                 verbose=verbose)
   }
