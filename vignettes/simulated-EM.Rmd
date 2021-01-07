@@ -83,6 +83,7 @@ system.time(
     scale_design = TRUE,
     GLM_method = 'both',
     EM_method = "separate",
+    use_SQUAREM = TRUE,
     pct_change_limit = 1,
     num_cores = 2,
     session_names = NULL,
