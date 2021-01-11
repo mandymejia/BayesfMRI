@@ -1,19 +1,19 @@
 #' Group-level Bayesian GLM
-#' 
-#' Performs group-level Bayesian GLM estimation and inference using the joint 
+#'
+#' Performs group-level Bayesian GLM estimation and inference using the joint
 #'  approach described in Mejia et al. (2019)
 #'
-#' Each contrast vector specifies a group-level summary of interest. Let M be 
-#'  the number of subjects and K be the number of tasks. For example, the 
-#'  contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average 
-#'  for the first task; `c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))` 
-#'  represents the difference between the first M1 subjects and the remaining M2 
-#'  subjects (M1+M2=M) for the first task; `rep( c(1/M,-1/M,rep(0, K-2)) ,M)` 
-#'  represents the difference between the first two tasks, averaged over all 
+#' Each contrast vector specifies a group-level summary of interest. Let M be
+#'  the number of subjects and K be the number of tasks. For example, the
+#'  contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average
+#'  for the first task; `c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))`
+#'  represents the difference between the first M1 subjects and the remaining M2
+#'  subjects (M1+M2=M) for the first task; `rep( c(1/M,-1/M,rep(0, K-2)) ,M)`
+#'  represents the difference between the first two tasks, averaged over all
 #'  subjects.
-#' 
+#'
 #' @inheritSection INLA_Description INLA Requirement
-#' 
+#'
 #' @param results Either (1) a list of length M of objects of class BayesGLM,
 #'  or (2) a character vector of length M of file names output from the BayesGLM function.
 #'  M is the number of subjects.
@@ -31,12 +31,12 @@
 #' @inheritParams verbose_Param_direct_TRUE
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
-#' 
+#'
 #' @importFrom INLA inla.spde2.matern inla.spde.make.A
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
-#' 
-#' @export 
+#'
+#' @export
 BayesGLM2 <- function(results,
                            contrasts = NULL,
                            quantiles = NULL,
@@ -88,14 +88,22 @@ BayesGLM2 <- function(results,
     fnames <- results
     results <- vector('list', length=M)
     results[[1]] <- readRDS(fnames[1])
+    if(class(results[[1]]) == "BayesGLM_cifti") {
+      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
+      results[[1]] <- results[[1]]$GLMs_Bayesian[[which_BayesGLM]]
+    }
     if(class(results[[1]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
   }
 
 
   #Check that subject-level models are single-session models
   num_sessions <- length(results[[1]]$session_names)
-  if(num_sessions>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
-
+  # if(num_sessions>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
+  # We actually can't really use the averages here because we don't have a
+  # corresponding design matrix and response to calculate the posteriors for beta.
+  # Instead, we can get this working for multi-session data. To begin, we will
+  # assume the same number of sessions for each subject, but this can be changed
+  # later.
 
   #### SET UP OR CHECK CONTRAST VECTOR(S)
 
@@ -110,7 +118,7 @@ BayesGLM2 <- function(results,
     contrasts <- vector('list', length=K)
     names(contrasts) <- paste0(beta_names,'_avg')
     for(k in 1:K){
-      contrast_onesubj_k <- c(rep(0, k-1), 1/M, rep(0, K-k)) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K
+      contrast_onesubj_k <- c(rep(0, k-1), 1/(num_sessions*M), rep(0, K-k)) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K, unless there are multiple sessions
       contrast_allsubj_k <- rep(contrast_onesubj_k, M)
       contrasts[[k]] <- contrast_allsubj_k
     }
@@ -158,7 +166,12 @@ BayesGLM2 <- function(results,
 
     if(use_files & (m > 1)){
       results[[m]] <- readRDS(fnames[m])
+      if(class(results[[m]]) == "BayesGLM_cifti") {
+        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
+        results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
+      }
       if(class(results[[m]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
+      if(length(results[[m]]$session_names) != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
     }
 
     #Check match of beta names
@@ -169,9 +182,11 @@ BayesGLM2 <- function(results,
     faces_m <- results[[m]]$mesh$faces
     if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
 
-    #Check that model is single session
+    #Check that model is single session or average
     num_sessions_m <- length(results[[m]]$session_names)
-    if(num_sessions_m>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
+    use_avg <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
+    if(num_sessions_m>1 & !use_avg)
+      stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
 
     #Collect posterior mean and precision of hyperparameters
     mu_theta_m <- results[[m]]$mu.theta
@@ -184,9 +199,17 @@ BayesGLM2 <- function(results,
     #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
     y_vec <- results[[m]]$y
     X_list <- results[[m]]$X
-    Xmat <- X_list[[1]]%*%Amat.tot
-    Xcros.all[[m]] <- crossprod(Xmat)
-    Xycros.all[[m]] <- crossprod(Xmat, y_vec)
+    if(length(X_list) > 1) {
+      n_sess <- length(X_list)
+      X_list <- Matrix::bdiag(X_list)
+      Amat.final <- Matrix::bdiag(rep(list(Amat.tot),n_sess))
+    } else {
+      X_list <- X_list[[1]]
+      Amat.final <- Amat.tot
+    }
+    Xmat <- X_list%*%Amat.final
+    Xcros.all[[m]] <- Matrix::crossprod(Xmat)
+    Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
 
     if(m > 1) results[[m]] <- c(0) #to save memory
   }
@@ -303,11 +326,11 @@ BayesGLM2 <- function(results,
 
 
 #' Beta posterior theta sampling
-#' 
+#'
 #' Internal function used in joint approach to group-analysis
-#' 
+#'
 #' @inheritSection INLA_Description INLA Requirement
-#' 
+#'
 #' @param theta A single sample of theta (hyperparameters) from q(theta|y)
 #' @param spde A SPDE object from inla.spde2.matern() function.
 #' @param Xcros A crossproduct of design matrix.
@@ -322,9 +345,9 @@ BayesGLM2 <- function(results,
 #' @importFrom excursions excursions.mc
 #' @importFrom Matrix Diagonal
 #' @importFrom INLA inla.spde2.precision inla.qsample inla.qsolve
-#' 
+#'
 #' @return A list containing...
-#' 
+#'
 #' @keywords internal
 beta.posterior.thetasamp <- function(theta,
                                      spde,
@@ -360,16 +383,19 @@ beta.posterior.thetasamp <- function(theta,
   #~5 seconds per subject with PARDISO
   # print('Looping over subjects or sessions')
   for(mm in 1:M){
-
+    if(nrow(Q) != nrow(Xcros[[mm]])) {
+      num_sessions <- nrow(Xcros[[mm]]) / nrow(Q)
+      Q_mm <- Matrix::bdiag(rep(list(Q),num_sessions))
+    }
     #compute posterior mean and precision of beta|theta
-    Q.m <- prec.error*Xcros[[mm]] + Q #Q_m in paper
+    Q.m <- prec.error*Xcros[[mm]] + Q_mm #Q_m in paper
     mu.m <- inla.qsolve(Q.m, prec.error*Xycros[[mm]]) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
 
     #draw samples from pi(beta_m|theta,y)
     beta.samp.m <- inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
 
     #concatenate samples over models
-    beta.samples <- rbind(beta.samples, beta.samp.m) #will be a (N*K*M) x nsamp_beta matrix
+    beta.samples <- rbind(beta.samples, beta.samp.m) #will be a (N*K*M*num_sessions) x nsamp_beta matrix
 
   }
 
@@ -390,10 +416,18 @@ beta.posterior.thetasamp <- function(theta,
   for(l in 1:num_contrasts){
 
     #Construct "A" matrix from paper (linear combinations)
-    ctr.mat <- kronecker(t(contrasts[[l]]), Diagonal(n.mesh, 1))
+    ctr.mat <- kronecker(t(contrasts[[l]]), Diagonal(n.mesh*num_sessions, 1))
 
     #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
-    samples_l <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
+    samples_l <- as.matrix(ctr.mat%*%beta.samples)  # N*num_sessions x nsamp_beta
+    # For multiple sessions, add the beta samples for the sessions together
+    if(num_sessions > 1) {
+      session_betas <- sapply(seq(num_sessions), function(sess) {
+        session_inds <- seq(N) + (sess - 1)*N
+        return(samples_l[session_inds,])
+      }, simplify = FALSE)
+      samples_l <- Reduce(`+`, session_betas)
+    }
     mu.contr[,l] <- rowMeans(samples_l) #compute mean over beta samples
     if(num_quantiles > 0){
       for(iq in 1:num_quantiles){
@@ -403,7 +437,7 @@ beta.posterior.thetasamp <- function(theta,
 
     # Estimate excursions set for current contrast
     if(do_excur){
-      excur_l <- excursions.mc(samples_l, u = gamma[l], type = excursion_type[l], alpha = alpha[l])
+      excur_l <- excursions::excursions.mc(samples_l, u = gamma[l], type = excursion_type[l], alpha = alpha[l])
       F.contr[,l] <- excur_l$F
     }
   }
@@ -414,18 +448,18 @@ beta.posterior.thetasamp <- function(theta,
 
 
 #' F logwt
-#' 
+#'
 #' Internal function used in joint approach to group-analysis for combining across models
 #'
 #' @inheritSection INLA_Description INLA Requirement
-#' 
+#'
 #' @param theta A vector of hyperparameter values at which to compute the posterior log density
 #' @param spde A SPDE object from inla.spde2.matern() function, determines prior precision matrix
 #' @param mu_theta Posterior mean from combined subject-level models.
 #' @param Q_theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
-#' 
+#'
 #' @keywords internal
 F.logwt <- function(theta, spde, mu_theta, Q_theta, M){
   #mu_theta - posterior mean from combined subject-level models
@@ -459,7 +493,7 @@ BayesGLM_group <- function(
   nsamp_beta = 100,
   no_cores = NULL,
   verbose = TRUE){
-  
+
   BayesGLM2(
     results=results,
     contrasts=contrasts,
