@@ -9,7 +9,6 @@ BayesGLM_cifti(
   surfL_fname = NULL,
   surfR_fname = NULL,
   brainstructures = c("left", "right"),
-  wb_path = NULL,
   design = NULL,
   onsets = NULL,
   TR = NULL,
@@ -39,10 +38,6 @@ BayesGLM_cifti(
 to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 Note that the subcortical models have not yet been implemented.}
-
-\item{wb_path}{(Optional) Path to Connectome Workbench folder or executable.
-If not provided, should be set with
-\code{ciftiTools.setOption("wb_path", "path/to/workbench")}.}
 
 \item{design, onsets, TR}{All or none must be provided.
 
@@ -112,8 +107,5 @@ Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 This function uses a system wrapper for the 'wb_command' executable. The
 user must first download and install the Connectome Workbench, available
 from https://www.humanconnectome.org/software/get-connectome-workbench .
-The \code{wb_path} argument is the full file path to the Connectome
-Workbench folder. (The full file path to the 'wb_cmd' executable also
-works.)
 }
 

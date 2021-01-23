@@ -266,9 +266,6 @@ BayesGLM_slice <- function(
 #'  This function uses a system wrapper for the 'wb_command' executable. The
 #'  user must first download and install the Connectome Workbench, available
 #'  from https://www.humanconnectome.org/software/get-connectome-workbench .
-#'  The \code{wb_path} argument is the full file path to the Connectome
-#'  Workbench folder. (The full file path to the 'wb_cmd' executable also
-#'  works.)
 #'
 # @section Label Levels:
 #  \code{xifti$meta$subcort$labels} is a factor with the following levels:
@@ -307,9 +304,6 @@ BayesGLM_slice <- function(
 #'  to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 #'  cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 #'  Note that the subcortical models have not yet been implemented.
-#' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
-#'  If not provided, should be set with
-#'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
 #' @param design,onsets,TR All or none must be provided.
 #'
 #'   \code{design} is a \eqn{T x K} task design matrix (or list of such
@@ -357,7 +351,6 @@ BayesGLM_slice <- function(
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
                      brainstructures=c('left','right'),
-                     wb_path=NULL,
                      design=NULL, onsets=NULL, TR=NULL,
                      nuisance=NULL, nuisance_include=c('drift','dHRF'),
                      scale_BOLD=TRUE, scale_design=TRUE,
@@ -436,7 +429,6 @@ BayesGLM_cifti <- function(cifti_fname,
   #                      sphere_orig_L = sphereL_fname,
   #                      sphere_orig_R = sphereR_fname,
   #                      target_res = resamp_res,
-  #                      wb_path = wb_path,
   #                      make_helper_files = make_helper_files,
   #                      delete_helper_files = delete_helper_files)
   #     }
@@ -456,7 +448,6 @@ BayesGLM_cifti <- function(cifti_fname,
   #                      gifti_target = fnames_gifti_target[gg],
   #                      sphere_orig = fnames_sphere_orig[gg],
   #                      sphere_target = fnames_sphere_target[gg],
-  #                      wb_path = wb_path,
   #                      overwrite = FALSE)
   #     }
   #
@@ -490,8 +481,7 @@ BayesGLM_cifti <- function(cifti_fname,
         cifti_fname[ss],
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
-        resamp_res=resamp_res,
-        wb_path=wb_path
+        resamp_res=resamp_res
       )
       if(do_left) surf_left <- cifti_ss$surf$cortex_left
       if(do_right) surf_right <- cifti_ss$surf$cortex_right
@@ -499,8 +489,7 @@ BayesGLM_cifti <- function(cifti_fname,
       cifti_ss <- read_cifti(
         cifti_fname[ss],
         brainstructures=brainstructures,
-        resamp_res=resamp_res,
-        wb_path=wb_path
+        resamp_res=resamp_res
       )
     }
 
