@@ -42,8 +42,8 @@ simulated_data <-
 ```
 
 ```{r plot coefficients}
-tile.plot(simulated_data$beta_coefficients$session_1[[1]], main = "True bbeta1", zlim = c(-1,1), col = rev(ciftiTools::ROY_BIG_BL()$color))
-tile.plot(simulated_data$beta_coefficients$session_1[[2]], main = "True bbeta2", zlim = c(-1,1), col = rev(ciftiTools::ROY_BIG_BL()$color))
+tile.plot(simulated_data$beta_coefficients$session_1[[1]], main = "True bbeta1", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+tile.plot(simulated_data$beta_coefficients$session_1[[2]], main = "True bbeta2", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
 ```
 
 
@@ -130,6 +130,11 @@ em_result_joint$GLMs_Bayesian$mu.theta
 em_result_separate$GLMs_Bayesian$mu.theta
 glm_result$GLMs_Bayesian$mu.theta
 ```
+
+```{r Try out id_activations}
+id_test <- id_activations(em_result_joint$GLMs_Bayesian,threshold = 0, alpha = 0.01, type = NULL)
+```
+
 
 
 

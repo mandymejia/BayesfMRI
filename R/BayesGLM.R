@@ -337,6 +337,11 @@ BayesGLM_slice <- function(
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
+#' @param prewhiten (logical) Should the cifti data be prewhitened?
+#' @param ar_order (numeric) If prewhitening is done, this is the order of the
+#'  autoregressive model used in the prewhitening.
+#' @param surface_sigma (numeric) The range operator for the smoothing of the
+#'   prewhitening (default corresponds to a FWHM of 5mm)
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
 #' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
@@ -368,6 +373,9 @@ BayesGLM_cifti <- function(cifti_fname,
                      nuisance=NULL, nuisance_include=c('drift','dHRF'),
                      scale_BOLD=TRUE, scale_design=TRUE,
                      GLM_method='both',
+                     prewhiten = TRUE,
+                     ar_order = 6,
+                     surface_sigma = 5 / (2*sqrt(2*log(2))),
                      session_names=NULL,
                      resamp_res=10000,
                      num.threads=4,
@@ -606,9 +614,23 @@ BayesGLM_cifti <- function(cifti_fname,
       outfile_left <- NULL
     }
 
-    if(do_classical) classicalGLM_left <- classicalGLM(session_data,
-                                                       scale_BOLD=scale_BOLD,
-                                                       scale_design = scale_design)
+    if(prewhiten) {
+      pw_data_left <- prewhiten_cifti(session_data,surface_sigma = surface_sigma,
+                                 hemisphere = 'left', wb_path = wb_path,
+                                 cifti_data = cifti_ss)
+      scale_BOLD <- F
+      scale_design <- F
+      session_data <- pw_data_left$data
+      if(do_classical) classicalGLM_left <- classicalGLM_pw(session_data,
+                                                         scale_BOLD=scale_BOLD,
+                                                         scale_design = scale_design)
+    } else {
+      if(do_classical) classicalGLM_left <- classicalGLM(session_data,
+                                                         scale_BOLD=scale_BOLD,
+                                                         scale_design = scale_design)
+    }
+
+
     if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
                                               vertices = verts_left,
                                               faces = faces_left,
@@ -656,9 +678,21 @@ BayesGLM_cifti <- function(cifti_fname,
       outfile_right <- NULL
     }
 
-    if(do_classical) classicalGLM_right <- classicalGLM(session_data,
-                                                        scale_BOLD=scale_BOLD,
-                                                        scale_design = scale_design)
+    if(prewhiten) {
+      pw_data_right <- prewhiten_cifti(session_data,surface_sigma = surface_sigma,
+                                 hemisphere = 'right', wb_path = wb_path,
+                                 cifti_data = cifti_ss)
+      scale_BOLD <- F
+      scale_design <- F
+      session_data <- pw_data_right$data
+      if(do_classical) classicalGLM_right <- classicalGLM_pw(session_data,
+                                                            scale_BOLD=scale_BOLD,
+                                                            scale_design = scale_design)
+    } else {
+      if(do_classical) classicalGLM_right <- classicalGLM(session_data,
+                                                         scale_BOLD=scale_BOLD,
+                                                         scale_design = scale_design)
+    }
     if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
                                                 vertices = verts_right,
                                                 faces = faces_right,
@@ -812,6 +846,12 @@ BayesGLM_cifti <- function(cifti_fname,
     beta_names <- NULL
   }
 
+  prewhitening_info <- list()
+  if(prewhiten) {
+    if(do_left) prewhitening_info$left <- pw_data_left[-1]
+    if(do_right) prewhitening_info$right <- pw_data_right[-1]
+  }
+
   result <- list(session_names = session_names,
                  beta_names = beta_names,
                  betas_Bayesian = BayesGLM_cifti,
@@ -822,6 +862,7 @@ BayesGLM_cifti <- function(cifti_fname,
                  GLMs_classical = list(cortexL = classicalGLM_left,
                                       cortexR = classicalGLM_right),
                                       #subcortical = classicalGLM_vol),
+                 prewhitening_info = prewhitening_info,
                  design = design)
 
   cat('\n DONE! \n')
@@ -895,12 +936,32 @@ BayesGLM <- function(
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
+  # V <- ncol(data[[1]]$BOLD) #number of data locations
+  # K <- ncol(data[[1]]$design) #number of tasks
   V <- ncol(data[[1]]$BOLD) #number of data locations
-  K <- ncol(data[[1]]$design) #number of tasks
+  is_missing <- is.na(data[[1]]$BOLD[1,])
+  V_nm <- V - sum(is_missing)
+  ntime <- nrow(data[[1]]$BOLD)
+  is_pw <- nrow(data[[1]]$design) == (ntime * sum(!is_missing))
+  if(!is_pw) {
+    K <- ncol(data[[1]]$design) #number of tasks
+  } else {
+    K <- ncol(data[[1]]$design) / sum(!is_missing)
+  }
+
+  # for(s in 1:n_sess){
+  #   if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+  #   if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
+  #   if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+  # }
   for(s in 1:n_sess){
-    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(! is.session_pw(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    if(!is_pw) {
+      if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    } else {
+      if(ncol(data[[s]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    }
   }
 
   if(is.null(outfile)){
@@ -974,7 +1035,11 @@ BayesGLM <- function(
     if(scale_design) {
       design_s <- scale_design_mat(data[[s]]$design)
     } else {
-      design_s <- scale(data[[s]]$design, scale = F)
+      if(!is_pw) {
+        design_s <- scale(data[[s]]$design, scale = F)
+      } else {
+        design_s <- data[[s]]$design # Don't scale prewhitened data or the matrix will not be sparse
+      }
     }
     design[[s]] <- design_s #after scaling but before nuisance regression
 
@@ -989,7 +1054,11 @@ BayesGLM <- function(
     }
 
     #set up data and design matrix
-    data_org <- organize_data(y_reg, X_reg)
+    if(!is_pw) {
+      data_org <- organize_data(y_reg, X_reg)
+    } else {
+      data_org <- organize_data_pw(y_reg, X_reg)
+    }
     y_vec <- data_org$y
     X_list <- list(data_org$X)
     names(X_list) <- session_names[s]
