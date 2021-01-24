@@ -11,7 +11,6 @@ prewhiten_cifti(
   ar_order = 6,
   surface_sigma = NULL,
   cifti_data,
-  wb_path = NULL,
   hemisphere = NULL
 )
 }
@@ -29,8 +28,6 @@ sigma = \code{FWHM / (2*sqrt(2*log(2))})}
 
 \item{cifti_data}{A \code{xifti} object used to map the AR coefficient
 estimates onto the surface mesh for smoothing.}
-
-\item{wb_path}{Relative path to the Human Connectome Project workbench}
 
 \item{hemisphere}{'left' or 'right'}
 }

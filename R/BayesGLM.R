@@ -313,9 +313,6 @@ BayesGLM_slice <- function(
 #'  to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 #'  cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 #'  Note that the subcortical models have not yet been implemented.
-#' @param wb_path (Optional) Path to Connectome Workbench folder or executable.
-#'  If not provided, should be set with
-#'  \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.
 #' @param design,onsets,TR All or none must be provided.
 #'
 #'   \code{design} is a \eqn{T x K} task design matrix (or list of such
@@ -368,7 +365,6 @@ BayesGLM_slice <- function(
 BayesGLM_cifti <- function(cifti_fname,
                      surfL_fname=NULL, surfR_fname=NULL,
                      brainstructures=c('left','right'),
-                     wb_path=NULL,
                      design=NULL, onsets=NULL, TR=NULL,
                      nuisance=NULL, nuisance_include=c('drift','dHRF'),
                      scale_BOLD=TRUE, scale_design=TRUE,
@@ -504,8 +500,8 @@ BayesGLM_cifti <- function(cifti_fname,
         cifti_fname[ss],
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
-        resamp_res=resamp_res,
-        wb_path=wb_path
+        resamp_res=resamp_res
+        # wb_path=wb_path
       )
       if(do_left) surf_left <- cifti_ss$surf$cortex_left
       if(do_right) surf_right <- cifti_ss$surf$cortex_right
@@ -513,8 +509,8 @@ BayesGLM_cifti <- function(cifti_fname,
       cifti_ss <- read_cifti(
         cifti_fname[ss],
         brainstructures=brainstructures,
-        resamp_res=resamp_res,
-        wb_path=wb_path
+        resamp_res=resamp_res
+        # wb_path=wb_path
       )
     }
 
@@ -616,7 +612,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
     if(prewhiten) {
       pw_data_left <- prewhiten_cifti(session_data,surface_sigma = surface_sigma,
-                                 hemisphere = 'left', wb_path = wb_path,
+                                 hemisphere = 'left',
                                  cifti_data = cifti_ss)
       scale_BOLD <- F
       scale_design <- F
@@ -680,7 +676,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
     if(prewhiten) {
       pw_data_right <- prewhiten_cifti(session_data,surface_sigma = surface_sigma,
-                                 hemisphere = 'right', wb_path = wb_path,
+                                 hemisphere = 'right',
                                  cifti_data = cifti_ss)
       scale_BOLD <- F
       scale_design <- F

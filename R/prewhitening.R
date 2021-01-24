@@ -55,7 +55,6 @@ getSqrtInv <- function(Inv){
 #'   sigma = \code{FWHM / (2*sqrt(2*log(2))})
 #' @param cifti_data A \code{xifti} object used to map the AR coefficient
 #'   estimates onto the surface mesh for smoothing.
-#' @param wb_path Relative path to the Human Connectome Project workbench
 #' @param hemisphere 'left' or 'right'
 #' @importFrom Matrix bandSparse sparseMatrix bdiag
 #' @importFrom ciftiTools smooth_cifti
@@ -65,7 +64,7 @@ getSqrtInv <- function(Inv){
 #'   coefficient estimates used in the prewhitening, the smoothed, average
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
-prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, surface_sigma = NULL, cifti_data, wb_path = NULL, hemisphere = NULL) {
+prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, surface_sigma = NULL, cifti_data, hemisphere = NULL) {
   require(Matrix)
   require(ciftiTools)
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
@@ -143,18 +142,18 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
 
   avg_AR <- apply(AR_coeffs,1:2, mean)
   avg_var <- apply(as.matrix(AR_resid_var),1,mean)
-  if(!is.null(surface_sigma) & !is.null(cifti_data) & !is.null(hemisphere) & !is.null(wb_path)) {
+  if(!is.null(surface_sigma) & !is.null(cifti_data) & !is.null(hemisphere)) {
     cat("Smoothing AR coefficients and residual variance...")
     rows.keep <- which(!is.na(avg_AR[,1]))
     avg_xifti <- cifti_data
     avg_xifti$data[[paste0("cortex_",hemisphere)]] <- avg_AR[rows.keep,]
     smooth_avg_xifti <- smooth_cifti(avg_xifti,surface_sigma = surface_sigma,
-                                     volume_sigma = surface_sigma,wb_path = wb_path)
+                                     volume_sigma = surface_sigma)
     avg_AR[rows.keep,] <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]]
     var_xifti <- cifti_data
     var_xifti$data[[paste0("cortex_",hemisphere)]] <- as.matrix(avg_var[rows.keep])
     smooth_var_xifti <- smooth_cifti(var_xifti,surface_sigma = surface_sigma,
-                                     volume_sigma = surface_sigma,wb_path = wb_path)
+                                     volume_sigma = surface_sigma)
     avg_var[rows.keep] <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]]
     cat("done!\n")
   }
