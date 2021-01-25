@@ -1027,7 +1027,7 @@ BayesGLM <- function(
     BOLD_s <- data[[s]]$BOLD
 
     #scale data to represent % signal change (or just center if scale=FALSE)
-    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
+    if(!is_pw) BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
     if(scale_design) {
       design_s <- scale_design_mat(data[[s]]$design)
     } else {

@@ -79,6 +79,9 @@ organize_data_pw <- function(y, X, transpose = TRUE){
 
   ntime <- nrow(y)
   nvox <- ncol(y)
+  is_missing <- is.na(y[1,])
+  K <- ncol(X) / sum(!is_missing)
+  V <- sum(!is_missing)
 
   #check orientation, send warning message and transpose if necessary
   if(ntime > nvox & transpose == TRUE){
@@ -89,16 +92,14 @@ organize_data_pw <- function(y, X, transpose = TRUE){
   }
 
   y <- as.vector(y) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
-  # ix <- 1:(ntime*nvox)
-  # iy <- rep(1:nvox, each = ntime)
-  #
-  # K <- ncol(X)
-  # for(k in 1:K){
-  #   X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,k], nvox))
-  #   if(k==1) bigX <- X_k else bigX <- cbind(bigX, X_k)
-  # }
-  # bigX <- Matrix::bdiag(X)
 
-  result <- list(y=y, X=X)
+  # bigX <- Matrix(0,ntime*V,V*K)
+  for(k in 1:K){
+    k_inds <- seq(k,V*K,by = K)
+    X_k <- X[,k_inds]
+    if(k==1) bigX <- X_k else bigX <- cbind(bigX, X_k)
+  }
+
+  result <- list(y=y, X=bigX)
   return(result)
 }

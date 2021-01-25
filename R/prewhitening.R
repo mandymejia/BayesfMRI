@@ -192,6 +192,8 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
   cat("done!\n")
 
   sqrtInv_all <- Matrix::bdiag(template_pw_list)
+  # Testing to see if the data organization is being done correctly.
+  # sqrtInv_all <- Matrix::Diagonal(nrow(sqrtInv_all))
 
 
   # prewhite_mat <- Reduce(rbind,template_pw_list)

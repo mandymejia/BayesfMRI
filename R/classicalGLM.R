@@ -127,14 +127,16 @@ classicalGLM_pw <- function(data, scale_BOLD=TRUE, scale_design = TRUE){
       stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     } else {
       if(sum(is_missing) > 0) {
-        GLM_result[[s]] <- matrix(NA, V, K)
+        GLM_result[[s]] <- matrix(NA, K, V)
         # cat("V=",V,"K=",K,"\n")
-        coef_output <- matrix(as.numeric(t(XTX_inv %*% t(X_reg) %*% y_reg)))
+        coef_output <- matrix(as.numeric(XTX_inv %*% t(X_reg) %*% y_reg), byrow = F)
         # cat("length(coef_output)=",length(coef_output),"\n")
         # print(table(is_missing))
-        GLM_result[[s]][!is_missing,] <- coef_output
+        # GLM_result[[s]][!is_missing,] <- coef_output
+        GLM_result[[s]][,!is_missing] <- coef_output
+        GLM_result[[s]] <- t(GLM_result[[s]])
       } else {
-        GLM_result[[s]][is] <- matrix(as.numeric(t(XTX_inv %*% t(X_reg) %*% y_reg)),V,K, byrow = T)
+        GLM_result[[s]] <- matrix(as.numeric(t(XTX_inv %*% t(X_reg) %*% y_reg)),V,K, byrow = T)
       }
     }
   }
