@@ -9,7 +9,8 @@ id_activations.posterior(
   field_name = NULL,
   threshold,
   alpha = 0.05,
-  area.limit = NULL
+  area.limit = NULL,
+  method = "EB"
 )
 }
 \arguments{
@@ -22,6 +23,13 @@ id_activations.posterior(
 \item{alpha}{Significance level (e.g. 0.05)}
 
 \item{area.limit}{Below this value, activations will be considered spurious.  If NULL, no limit.}
+
+\item{method}{Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
+Correction), depending on the method that should be used to find the
+excursions set. Note that if any contrasts (including averages across
+sessions) are used in the modeling, the method chosen must be \code{EB}.
+The difference in the methods is that the \code{EB} method assumes Gaussian
+posterior distributions for the parameters.}
 }
 \value{
 A nested list, where the first layer separates by session, and the
