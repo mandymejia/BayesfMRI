@@ -332,8 +332,9 @@ BayesGLM_slice <- function(
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
 #'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
-#' @param surface_sigma (numeric) The range operator for the smoothing of the
-#'   prewhitening (default corresponds to a FWHM of 5mm)
+#' @param ar_smooth FWHM parameter for smoothing. Remember that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+#'  to not do any smoothing. Default: \code{5}.
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
 #' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
@@ -365,7 +366,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      scale_BOLD=TRUE, scale_design=TRUE,
                      GLM_method='both',
                      ar_order = 6,
-                     surface_sigma = 5 / (2*sqrt(2*log(2))),
+                     ar_smooth = 5,
                      session_names=NULL,
                      resamp_res=10000,
                      num.threads=4,
@@ -605,7 +606,7 @@ BayesGLM_cifti <- function(cifti_fname,
     prewhiten <- ar_order > 0
 
     if(prewhiten) {
-      pw_data_left <- prewhiten_cifti(session_data,surface_sigma = surface_sigma,
+      pw_data_left <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
                                  hemisphere = 'left',
                                  cifti_data = cifti_ss)
       scale_BOLD <- F
@@ -669,7 +670,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if(prewhiten) {
-      pw_data_right <- prewhiten_cifti(session_data,surface_sigma = surface_sigma,
+      pw_data_right <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
                                  hemisphere = 'right',
                                  cifti_data = cifti_ss)
       scale_BOLD <- F

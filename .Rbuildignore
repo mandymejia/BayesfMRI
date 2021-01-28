@@ -10,3 +10,4 @@
 ^R/BayesGLM2_old\.R$
 ^vignettes/BayesfMRI_HCP\.Rmd$
 ^R/simulate_slice_data_1\.R$
+^R/EM_functions\.R$

@@ -9,7 +9,7 @@ prewhiten_cifti(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   ar_order = 6,
-  surface_sigma = NULL,
+  ar_smooth = 5,
   cifti_data,
   hemisphere = NULL
 )
@@ -23,8 +23,9 @@ prewhiten_cifti(
 
 \item{ar_order}{Order of the AR used to prewhiten the data at each location}
 
-\item{surface_sigma}{range parameter for smoothing. Remember that
-sigma = \code{FWHM / (2*sqrt(2*log(2))})}
+\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+to not do any smoothing. Default: \code{5}.}
 
 \item{cifti_data}{A \code{xifti} object used to map the AR coefficient
 estimates onto the surface mesh for smoothing.}

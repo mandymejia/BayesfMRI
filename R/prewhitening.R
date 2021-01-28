@@ -40,7 +40,7 @@ getSqrtInv <- function(Inv){
 
 # data <- session_data
 # ar_order <- 6
-# surface_FWHM <- 5
+# surface_FWHM <- ar_smooth <- 5
 # surface_sigma <- surface_FWHM / (2*sqrt(2*log(2)))
 # cifti_data <- cifti_ss
 # hemisphere <- hem
@@ -51,8 +51,9 @@ getSqrtInv <- function(Inv){
 #' @param scale_BOLD (logical) Should the BOLD response be scaled? (Default is TRUE)
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
-#' @param surface_sigma range parameter for smoothing. Remember that
-#'   sigma = \code{FWHM / (2*sqrt(2*log(2))})
+#' @param ar_smooth FWHM parameter for smoothing. Remember that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+#'  to not do any smoothing. Default: \code{5}.
 #' @param cifti_data A \code{xifti} object used to map the AR coefficient
 #'   estimates onto the surface mesh for smoothing.
 #' @param hemisphere 'left' or 'right'
@@ -64,7 +65,7 @@ getSqrtInv <- function(Inv){
 #'   coefficient estimates used in the prewhitening, the smoothed, average
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
-prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, surface_sigma = NULL, cifti_data, hemisphere = NULL) {
+prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, ar_smooth = 5, cifti_data, hemisphere = NULL) {
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
@@ -140,7 +141,10 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
 
   avg_AR <- apply(AR_coeffs,1:2, mean)
   avg_var <- apply(as.matrix(AR_resid_var),1,mean)
-  if(!is.null(surface_sigma) & !is.null(cifti_data) & !is.null(hemisphere)) {
+
+  if (is.null(ar_smooth)) { ar_smooth <- 0 }
+  if(!(ar_smooth != 0) & !is.null(cifti_data) & !is.null(hemisphere)) {
+    surface_sigma <- ar_smooth / (2*sqrt(2*log(2)))
     cat("Smoothing AR coefficients and residual variance...")
     rows.keep <- which(!is.na(avg_AR[,1]))
     avg_xifti <- cifti_data

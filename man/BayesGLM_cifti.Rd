@@ -18,7 +18,7 @@ BayesGLM_cifti(
   scale_design = TRUE,
   GLM_method = "both",
   ar_order = 6,
-  surface_sigma = 5/(2 * sqrt(2 * log(2))),
+  ar_smooth = 5,
   session_names = NULL,
   resamp_res = 10000,
   num.threads = 4,
@@ -75,8 +75,9 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 should be a number indicating the order of the autoregressive model to use
 for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 
-\item{surface_sigma}{(numeric) The range operator for the smoothing of the
-prewhitening (default corresponds to a FWHM of 5mm)}
+\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+to not do any smoothing. Default: \code{5}.}
 
 \item{session_names}{(Optional) A vector of names corresponding to each
 session.}
