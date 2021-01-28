@@ -17,7 +17,6 @@ BayesGLM_cifti(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   GLM_method = "both",
-  prewhiten = TRUE,
   ar_order = 6,
   surface_sigma = 5/(2 * sqrt(2 * log(2))),
   session_names = NULL,
@@ -72,10 +71,9 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
 
-\item{prewhiten}{(logical) Should the cifti data be prewhitened?}
-
-\item{ar_order}{(numeric) If prewhitening is done, this is the order of the
-autoregressive model used in the prewhitening.}
+\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
+should be a number indicating the order of the autoregressive model to use
+for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 
 \item{surface_sigma}{(numeric) The range operator for the smoothing of the
 prewhitening (default corresponds to a FWHM of 5mm)}
