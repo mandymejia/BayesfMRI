@@ -8,7 +8,7 @@
 #' @param binary_mask (optional) a binary brain slice image used to mask
 #'   the BOLD data and make a more efficient network mesh for the
 #'   neighborhood definitions
-#' @param design,onsets,TR All or none must be provided.
+#' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 #'
 #'   \code{design} is a \eqn{T x K} task design matrix (or list of such
 #'   matrices, for multiple-session modeling) with column names representing
@@ -304,7 +304,7 @@ BayesGLM_slice <- function(
 #'  to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 #'  cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 #'  Note that the subcortical models have not yet been implemented.
-#' @param design,onsets,TR All or none must be provided.
+#' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 #'
 #'   \code{design} is a \eqn{T x K} task design matrix (or list of such
 #'   matrices, for multiple-session modeling) with column names representing

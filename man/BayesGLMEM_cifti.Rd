@@ -44,7 +44,7 @@ Note that the subcortical models have not yet been implemented.}
 If not provided, should be set with
 \code{ciftiTools.setOption("wb_path", "path/to/workbench")}.}
 
-\item{design, onsets, TR}{All or none must be provided.
+\item{design, onsets, TR}{Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 
 \code{design} is a \eqn{T x K} task design matrix (or list of such
 matrices, for multiple-session modeling) with column names representing

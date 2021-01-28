@@ -29,7 +29,7 @@ BayesGLMEM_slice(
 the first two dimensions correspond to the size of the fMRI slice in space
 and the last dimension corresponds to time}
 
-\item{design, onsets, TR}{All or none must be provided.
+\item{design, onsets, TR}{Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 
 \code{design} is a \eqn{T x K} task design matrix (or list of such
 matrices, for multiple-session modeling) with column names representing
