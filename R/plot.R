@@ -118,8 +118,6 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   point_estimates <- BayesGLM_object$betas_Bayesian
   if(is.null(zlim)) zlim <- c(min(unlist(point_estimates), na.rm = T),
                               max(unlist(point_estimates), na.rm = T))
-  # For new version of `ciftiTools`, change the following line to:
-  # wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), half = "pos")
   wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), pos_half = FALSE)
   # coef_images <- sapply(point_estimates, function(pe) {
   #   out <- sapply(split(pe, col(pe)), function(beta) {
@@ -229,8 +227,9 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 #'
 #' @examples
 #' x <- matrix(rnorm(9),3,3)
-#' melt_mat(x)
+#' melt.mat(x)
 melt_mat <- function(x) {
+  if(!"matrix" %in% class(x)) stop("x must have the matrix class.")
   out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
   return(out)
 }
@@ -248,16 +247,11 @@ melt_mat <- function(x) {
 #' @param ncols The number of colors for a color palette, if \code{col} is not
 #'   provided.
 #' @param main Plot title (character)
-#' @param zlim Color limits. \code{NULL} (default) will use the minimum and
-#'  maximum of the data.
 #' @param na.color The color that should be used to represent \code{NA} values
 #'   in the tile plot
 #'
 #' @return A tile plot done in base R graphics
 #' @export
-#' 
-#' @importFrom grDevices heat.colors
-#' @importFrom graphics axis layout par rect text
 #'
 #' @examples
 #' x <- matrix(rnorm(50*50),50,50)
@@ -265,6 +259,7 @@ melt_mat <- function(x) {
 #' tile.plot(x_df)
 tile.plot <- function(tile_df, col = NULL, ncols = NULL,
                       main = "", zlim = NULL, na.color  = "grey80") {
+  if("matrix" %in% class(tile_df)) tile_df <- melt_mat(tile_df)
   .pardefault <- par()
   if(!is.null(col) & !is.null(ncols)) {
     warning("Defining ncols based on col.")
@@ -297,24 +292,32 @@ tile.plot <- function(tile_df, col = NULL, ncols = NULL,
   cols <- max(tile_df$col)
   cb_prime <- min(diff(color_breaks))
   par(mfrow = c(1,2), mar = c(1,1,2,1))
-  layout(mat = matrix(c(1,2),nrow = 1, ncol = 2),widths = c(1.7,0.3))
+  layout(mat = matrix(c(1,2),nrow = 1, ncol = 2),
+         widths = c(
+           1.7, # tile plot width
+           # max(c(1.7,dev.size()[1]*.85)), # tile plot width
+           0.3 # legend width
+           # min(c(0.3,dev.size()[1]*.15))
+           )
+         )
   plot(c(0,rows), c(0,cols), type = 'n', xlab = "", ylab = "",
        xaxt = "n", yaxt = "n", main = main)
   rect(xleft = tile_df$row - 1,ybottom = tile_df$col - 1,
        xright = tile_df$row, ytop = tile_df$col, col = tile_cols,
        border = NA)
   par(mar=c(1,1,2,4))
-  plot(c(0,1),zlim, type = "n", xaxt = "n", yaxt = "n", xlab = "",
+  plot(c(0,1),c(zlim[1],zlim[2] + cb_prime), type = "n", xaxt = "n", yaxt = "n", xlab = "",
        ylab = "", bty = "n")
   rect(xleft = 0,
        ybottom = color_breaks,
        xright = 1,
-       ytop = color_breaks + cb_prime,
+       ytop = 1 + cb_prime,
        col = col, border = NA)
-  axis(side = 4,at = legend_ticks,
+  axis(side = 4,at = c(legend_ticks[1],legend_ticks[-1]*(1+cb_prime)),
        labels = rep("",6), srt = 45, tck = 0.5)
-  text(x = 1, adj = c(-1,0), pos = 4, y = legend_ticks,
+  text(x = 1, adj = c(-1,0), pos = 4, y = c(legend_ticks[1],legend_ticks[-1]*(1+cb_prime)),
        labels = legend_ticks, srt = 0, xpd = NA)
-  suppressWarnings(par(.pardefault), classes = "warning")
+  par(mfrow = .pardefault$mfrow, mar = .pardefault$mar)
+  # suppressWarnings(par(.pardefault), classes = "warning")
 }
 

@@ -1,0 +1,142 @@
+---
+title: "The Bayesian GLM EM Method"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{simulated-EM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(BayesfMRI)
+```
+
+This vignette is designed to make you familiar with the process of using the `BayesfMRI` package to perform analysis using expectation maximization (EM) algorithms within the package. To begin, we will work with simulated data, working up to the use of cortical surface fMRI data.
+
+# Simulated Data 
+
+## Data Generation
+
+The function `simulate_slice_data()` generates true beta maps and simulated fMRI timeseries data using tools from the `neuRosim` package. The size, location and intensities of the centers of activation can be varied. The data format is a 2-dimensional slice of dimensions $45 \times 54$, and the brain mask is based on an FSL brain template. The response data are created by convolving an activation profile with each true beta map, plus errors, which are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. The resulting fMRI timeseries data are then masked and vectorized into a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series.  For this example, we will simulate a single session of data with 2 tasks.
+
+```{r Create data}
+set.seed(47401)
+simulated_data <-
+  simulate_slice_data(
+    num_sessions = 1,
+    num_tasks = 2,
+    active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
+    active_size = 2:4,
+    beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
+    vary_active = FALSE,
+    num_time = 200,
+    binary_template = NULL
+  )
+```
+
+```{r plot coefficients}
+tile.plot(simulated_data$beta_coefficients$session_1[[1]], main = "True bbeta1", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+tile.plot(simulated_data$beta_coefficients$session_1[[2]], main = "True bbeta2", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+```
+
+
+```{r run em joint}
+system.time(
+  em_result_joint <- BayesGLMEM_slice(
+    BOLD = simulated_data$BOLD,
+    design = simulated_data$design,
+    binary_mask = binary_template,
+    onsets=NULL,
+    TR=NULL,
+    nuisance=NULL,
+    nuisance_include=c('drift','dHRF'),
+    scale_BOLD = FALSE,
+    scale_design = TRUE,
+    GLM_method = 'both',
+    EM_method = "joint",
+    pct_change_limit = 1,
+    session_names = NULL,
+    outfile = NULL,
+    verbose = F
+  )
+)
+```
+
+```{r run em separate}
+system.time(
+  em_result_separate <- BayesGLMEM_slice(
+    BOLD = simulated_data$BOLD,
+    design = simulated_data$design,
+    binary_mask = binary_template,
+    onsets=NULL,
+    TR=NULL,
+    nuisance=NULL,
+    nuisance_include=c('drift','dHRF'),
+    scale_BOLD = FALSE,
+    scale_design = TRUE,
+    GLM_method = 'both',
+    EM_method = "separate",
+    use_SQUAREM = TRUE,
+    pct_change_limit = 1,
+    num_cores = 2,
+    session_names = NULL,
+    outfile = NULL,
+    verbose = F
+  )
+)
+```
+
+```{r Run the BayesGLM on the same data}
+library(INLA)
+inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
+system.time(
+  glm_result <- BayesGLM_slice(
+    BOLD = simulated_data$BOLD,
+    design = simulated_data$design,
+    binary_mask = binary_template,
+    onsets=NULL,
+    TR=NULL,
+    nuisance=NULL,
+    nuisance_include=c('drift','dHRF'),
+    scale_BOLD = FALSE,
+    scale_design = TRUE,
+    GLM_method = 'both',
+    session_names = NULL,
+    outfile = NULL,
+    verbose = F,
+    return_INLA_result = T,
+    trim_INLA = T
+  )
+)
+```
+
+
+```{r View results}
+tile.plot(em_result_joint$betas_Bayesian$single_session$bbeta1, main = "Bayesian EM bbeta1 (joint)", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+tile.plot(em_result_separate$betas_Bayesian$single_session$bbeta1, main = "Bayesian EM bbeta1 (separate)", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+tile.plot(glm_result$betas_Bayesian$single_session[[1]], main = "Bayesian GLM bbeta1", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+tile.plot(em_result$betas_classical$single_session[[1]], main = "Classical bbeta1", zlim = c(-1,1), col = ciftiTools::ROY_BIG_BL()$color)
+```
+
+```{r Plot the hyperparameters}
+em_result_joint$GLMs_Bayesian$mu.theta
+em_result_separate$GLMs_Bayesian$mu.theta
+glm_result$GLMs_Bayesian$mu.theta
+```
+
+```{r Try out id_activations}
+id_test <- id_activations(em_result_joint$GLMs_Bayesian,threshold = 0, alpha = 0.01, type = NULL)
+```
+
+
+
+
+
+

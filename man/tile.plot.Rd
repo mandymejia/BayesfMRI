@@ -25,9 +25,6 @@ provided.}
 
 \item{main}{Plot title (character)}
 
-\item{zlim}{Color limits. \code{NULL} (default) will use the minimum and
-maximum of the data.}
-
 \item{na.color}{The color that should be used to represent \code{NA} values
 in the tile plot}
 }

@@ -128,7 +128,8 @@ simulate_slice_data <-
   names(y_i) <- paste("session",seq(num_sessions), sep ="_")
   BOLD <- sapply(y_i,function(y_is) return(y_is$session$BOLD), simplify = F)
   design <- sapply(y_i, function(y_is) return(y_is$session$design), simplify = F)
+  betas <- sapply(y_i, function(y_is) return(y_is$betas), simplify = F)
   # data <- sapply(y_i, `[[`, i = "session", simplify = F)
   # betas <- sapply(y_i, `[[`, i = "betas", simplify = F)
-  return(list(BOLD = BOLD, design = design))
+  return(list(BOLD = BOLD, design = design, beta_coefficients = betas))
 }

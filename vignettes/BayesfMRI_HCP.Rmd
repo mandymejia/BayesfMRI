@@ -18,6 +18,13 @@ These data are preprocessed to remove the effects of movement, body processes, d
 The experiments used in this study focus on basic motor functions, including finger tapping (left and right), toe tapping (left and right), and tongue movement over the course of each subject's 3.5 minute session, during which 284 functional volumes were acquired (one every 0.72 seconds). For each task, the subject is given a prompt to perform the task via a visual cue. For each task, the binary stimulus function is defined as 1 while the visual cue is shown and 0 otherwise. 
 
 ```{r}
+<<<<<<< HEAD
+data_dir <- "~/Desktop/BayesGLM_Validation"
+subjects <- list.files(data_dir)
+tasks <- c('cue','lf','lh','rf','rh','t') # Task data frame columns
+names_tasks <- c('cue','left foot','left hand','right foot','right hand','tongue')
+colors_tasks <- c('black',brewer.pal(5, 'Set2'))
+=======
 library(ciftiTools)
 # ciftiTools::ciftiTools.setOption("wb_path", "/Applications/workbench/bin_macosx64/wb_command")
 # wb_cmd <- "/Applications/workbench/bin_macosx64/wb_command"
@@ -38,6 +45,7 @@ load(file.path(main_dir,"subjects.Rdata"))
 tasks <- c('cue','lf','lh','rf','rh','t') # Task data frame columns
 names_tasks <- c('cue','left foot','left hand','right foot','right hand','tongue')
 colors_tasks <- c('black',RColorBrewer::brewer.pal(5, 'Set2'))
+>>>>>>> 1.6
 cols_LH <- c(1,4:6) #cue, right foot, right hand, tongue
 cols_RH <- c(1:3,6) #cue, left foot, left hand, tongue
 cols_list <- list(cols_LH, cols_RH)
@@ -95,6 +103,18 @@ for(subject in subjects) {
       motion1 <- as.matrix(read.table(file.path(dir1_s,'Movement_Regressors.txt'), header=FALSE))
       motion2 <- as.matrix(read.table(file.path(dir2_s,'Movement_Regressors.txt'), header=FALSE))
 
+<<<<<<< HEAD
+      outfile_svh <- file.path('../results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
+  		result_svh <- BayesGLM_cifti(fname_cifti = c(fname1_ts, fname2_ts),
+           fname_gifti_left = fname_gifti_left,
+           fname_gifti_right = fname_gifti_right,
+           fname_gifti2_left = fname_gifti2_left,
+           fname_gifti2_right = fname_gifti2_right,
+           fname_sphere_left = fname_sphere_left,
+           fname_sphere_right = fname_sphere_right,
+           brainstructures = hem,
+           wb_cmd = wb_cmd,
+=======
       # outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
       outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
   		result_svh <- BayesGLM_cifti(cifti_fname = c(fname1_ts, fname2_ts),
@@ -104,17 +124,26 @@ for(subject in subjects) {
            # sphereR_fname = fname_sphere_right,
            brainstructures = hem,
            wb_path = wb_cmd,
+>>>>>>> 1.6
            onsets = list(onsets1, onsets2),
            TR = TR,
            nuisance = list(motion1, motion2),
            nuisance_include = c('drift','dHRF'),
            GLM_method = 'both',
            session_names = c('LR','RL'),
+<<<<<<< HEAD
+           resample = 5000,
+           num.threads = 16,
+           verbose = TRUE,
+           outdir = outdir,
+           outfile = outfile_svh,
+=======
            resamp_res = 5000,
            num.threads = parallel::detectCores() - 2,
            verbose = TRUE,
            outfile = outfile_svh,
            return_INLA_result = T,
+>>>>>>> 1.6
            avg_betas_over_sessions = T)
   		fname_svh <- file.path(outdir, paste0(outfile_svh,'.Rdata'))
   		save(result_svh, file=fname_svh)
