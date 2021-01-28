@@ -19,5 +19,5 @@ will only work with matrices.
 }
 \examples{
 x <- matrix(rnorm(9),3,3)
-melt.mat(x)
+melt_mat(x)
 }

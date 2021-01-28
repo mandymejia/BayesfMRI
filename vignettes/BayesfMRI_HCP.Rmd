@@ -144,7 +144,7 @@ for(subject in subjects) {
            outfile = outfile_svh,
            return_INLA_result = T,
 >>>>>>> 1.6
-           avg_betas_over_sessions = T)
+           avg_sessions = T)
   		fname_svh <- file.path(outdir, paste0(outfile_svh,'.Rdata'))
   		save(result_svh, file=fname_svh)
     }

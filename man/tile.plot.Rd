@@ -25,6 +25,8 @@ provided.}
 
 \item{main}{Plot title (character)}
 
+\item{zlim}{Color limits}
+
 \item{na.color}{The color that should be used to represent \code{NA} values
 in the tile plot}
 }

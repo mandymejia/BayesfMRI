@@ -17,7 +17,7 @@ BayesGLM(
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
-  avg_betas_over_sessions = FALSE,
+  avg_sessions = TRUE,
   trim_INLA = TRUE
 )
 }
@@ -63,8 +63,8 @@ posterior quantities of group means or contrasts.}
 
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 
-\item{avg_betas_over_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{FALSE}.}
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use the

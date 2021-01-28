@@ -165,7 +165,7 @@ BayesGLMEM <- function(data,
   }
 
   #construct betas and repls objects
-  replicates_list <- BayesfMRI:::organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
+  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
@@ -173,7 +173,7 @@ BayesGLMEM <- function(data,
   beta_names <- names(betas)
   repl_names <- names(repls)
   n_beta <- length(names(betas))
-  model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+  model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
   # > Model setup and initials ----
   if(!is.null(in_mask)) {
     Psi_k <- INLA::inla.spde.make.A(mesh = mesh, loc = in_mask)
@@ -956,12 +956,21 @@ BayesGLMEM_cifti <- function(cifti_fname,
     }
     if(do_Bayesian){
       betas_left <- betas_right <- NULL
+
+      # [TO DO]: Verify this? Damon added it but isn't sure if correct.
+      mask <- nrow(BayesGLM_left$beta_estimates[[ss]])
+
       if(do_left) {
         betas_left <- matrix(NA,length(mask),ncol(BayesGLM_left$beta_estimates[[ss]]))
         betas_left[mask,] <- BayesGLM_left$beta_estimates[[ss]]
       }
+
+      # [TO DO]: Verify this? Damon added it but isn't sure if correct.
+      mask <- nrow(BayesGLM_right$beta_estimates[[ss]])
+
       if(do_right) {
         betas_right <- matrix(NA,length(mask),ncol(BayesGLM_right$beta_estimates[[ss]]))
+        # [TO DO]: Damon asks if BayesGLM_left should be BayesGLM_right?
         betas_right[mask,] <- BayesGLM_left$beta_estimates[[ss]]
       }
 

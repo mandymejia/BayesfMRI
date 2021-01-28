@@ -42,8 +42,7 @@
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
-#' @param avg_betas_over_sessions (logical) Should estimates for betas be
-#'   averaged together over multiple sessions?
+#' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use the
 #'   \code{id_activations} function? Default value is \code{TRUE}.
@@ -70,7 +69,7 @@ BayesGLM_slice <- function(
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
-  avg_betas_over_sessions = FALSE,
+  avg_sessions = TRUE,
   trim_INLA = TRUE) {
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
@@ -191,12 +190,11 @@ BayesGLM_slice <- function(
                              mesh = mesh,
                              scale_BOLD=scale_BOLD,
                              scale_design = scale_design,
-                             num.threads=num.threads,
-                             return_INLA_result=return_INLA_result,
+                             num.threads = num.threads,
+                             return_INLA_result = return_INLA_result,
                              outfile = outfile,
-                             verbose=verbose,
-                             avg_betas_over_sessions =
-                               avg_betas_over_sessions,
+                             verbose = verbose,
+                             avg_sessions = avg_sessions,
                              trim_INLA = trim_INLA)
 
     # Create a conversion matrix
@@ -207,7 +205,7 @@ BayesGLM_slice <- function(
     point_estimates <- sapply(session_names, function(sn){
       as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
     }, simplify = F)
-    if(avg_betas_over_sessions)
+    if(avg_sessions)
       avg_point_estimates <- BayesGLM_out$avg_beta_estimates
   }
 
@@ -231,7 +229,7 @@ BayesGLM_slice <- function(
         image_coef[binary_mask == 0] <- NA
         return(image_coef)
       },simplify = F)
-      if(n_sess > 1 & avg_betas_over_sessions) {
+      if(n_sess > 1 & avg_sessions) {
         Bayes_slice$avg_over_sessions <- sapply(seq(num_tasks), function(tn) {
           image_coef <- binary_mask
           image_coef[image_coef == 1] <- avg_point_estimates[,tn]
@@ -347,7 +345,7 @@ BayesGLM_slice <- function(
 #'  cortex and right cortex results, respectively. Default: \code{NULL}
 #'  (do not save the results to any file).
 #' @inheritParams return_INLA_result_Param_FALSE
-#' @param avg_betas_over_sessions (logical) Should estimates for betas be averaged together over multiple sessions?
+#' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use the
 #'   \code{id_activations} function? Default value is \code{TRUE}.
@@ -375,7 +373,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      verbose=FALSE,
                      outfile=NULL,
                      return_INLA_result=FALSE,
-                     avg_betas_over_sessions = FALSE,
+                     avg_sessions = TRUE,
                      trim_INLA = TRUE){
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
@@ -623,13 +621,13 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
                                               vertices = verts_left,
                                               faces = faces_left,
-                                              scale_BOLD=scale_BOLD,
+                                              scale_BOLD = scale_BOLD,
                                               scale_design = scale_design,
-                                              num.threads=num.threads,
-                                              return_INLA_result=return_INLA_result,
+                                              num.threads = num.threads,
+                                              return_INLA_result = return_INLA_result,
                                               outfile = outfile_left,
-                                              verbose=verbose,
-                                              avg_betas_over_sessions = avg_betas_over_sessions,
+                                              verbose = verbose,
+                                              avg_sessions = avg_sessions,
                                               trim_INLA = trim_INLA)
 
   }
@@ -691,7 +689,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                                 return_INLA_result=return_INLA_result,
                                                 outfile = outfile_right,
                                                 verbose=verbose,
-                                                avg_betas_over_sessions = avg_betas_over_sessions,
+                                                avg_sessions = avg_sessions,
                                                 trim_INLA = trim_INLA)
   }
 
@@ -775,7 +773,7 @@ BayesGLM_cifti <- function(cifti_fname,
   }
 
   # Add average betas to the start of the list.
-  if(avg_betas_over_sessions) {
+  if(avg_sessions) {
     if(do_classical) {
       if(do_left & do_right) {
         classicalGLM_cifti <- c(
@@ -885,7 +883,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #'  \code{BayesGLM2}).
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
-#' @inheritParams avg_betas_over_sessions_Param
+#' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use the
 #'   \code{id_activations} function? Default value is \code{TRUE}.
@@ -901,7 +899,7 @@ BayesGLM <- function(
   data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL,
   scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE,
   outfile = NULL, verbose=FALSE, contrasts = NULL,
-  avg_betas_over_sessions = FALSE, trim_INLA = TRUE){
+  avg_sessions = TRUE, trim_INLA = TRUE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -1079,7 +1077,7 @@ BayesGLM <- function(
 
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
-  if(n_sess > 1 & avg_betas_over_sessions) {
+  if(n_sess > 1 & avg_sessions) {
     cat("Set linear combinations for averages across sessions\n")
     diag_coefs <- Diagonal(n = V, x = 1/n_sess)
     session_coefs <- Matrix::bdiag(rep(list(diag_coefs),length(beta_names))) # Just finished this line
@@ -1112,7 +1110,7 @@ BayesGLM <- function(
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
   theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
   # The mean of the mean beta estimates across sessions
-  if(n_sess > 1 & avg_betas_over_sessions) {
+  if(n_sess > 1 & avg_sessions) {
     pred_idx <- which(is.na(model_data$y))
     INLA_result$misc$configs$config[[1]]$pred_idx <- pred_idx
     avg_beta_means <- INLA_result$summary.linear.predictor$mean[pred_idx]

@@ -10,7 +10,7 @@
 #' @return a vector with the same length as \code{theta}, the EM updates
 #' @keywords internal
 GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
-  Q_k <- mapply(BayesfMRI:::spde_Q_phi, kappa2 = theta[1], phi = theta[2], MoreArgs = list(spde = spde), SIMPLIFY = F)
+  Q_k <- mapply(spde_Q_phi, kappa2 = theta[1], phi = theta[2], MoreArgs = list(spde = spde), SIMPLIFY = F)
   Q_new <- Matrix::bdiag(rep(Q_k,K))
   Sig_inv <- Q_new + A/theta[3]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[3]
@@ -25,7 +25,7 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
   # >> Update kappa2 ----
   optim_output_k <-
     optimize(
-      f = BayesfMRI:::neg_kappa_fn,
+      f = neg_kappa_fn,
       spde = spde,
       phi = theta[2],
       Sigma = Sigma_new,
@@ -35,7 +35,7 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
     )
   kappa2_new <- optim_output_k$minimum
   # >> Update phi ----
-  Q_tildek <- BayesfMRI:::Q_prime(kappa2_new, spde)
+  Q_tildek <- Q_prime(kappa2_new, spde)
   Q_tilde <- Matrix::bdiag(rep(list(Q_tildek),K))
   Tr_QEww <- (sum(Matrix::colSums(Q_tilde*Sigma_new)) +
                 Matrix::crossprod(mu,Q_tilde%*%mu))@x
@@ -161,7 +161,7 @@ GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL) 
     sigma2_ind <- 3
   }
   TN <- length(model_data$y)
-  Q_k <- mapply(BayesfMRI:::spde_Q_phi,
+  Q_k <- mapply(spde_Q_phi,
                 kappa2 = theta[kappa2_inds],
                 phi = theta[phi_inds],
                 MoreArgs = list(spde = spde),

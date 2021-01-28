@@ -4,9 +4,9 @@
 #' @param ntime number of time points in timeseries
 #'
 #' @return inverse covariance matrix for AR process (up to a constant scaling factor)
+#' @importFrom Matrix diag
 #' @export
 getInvCovAR <- function(ar, ntime){
-  require(Matrix)
   Inv0 <- diag(ntime)
   incr0 <- matrix(0, nrow=ntime, ncol=ntime)
   offs <- row(Inv0) - col(Inv0) #identifies each off-diagonal
@@ -26,9 +26,9 @@ getInvCovAR <- function(ar, ntime){
 #' @param Inv Symmetric matrix
 #'
 #' @return Matrix square root of \code{Inv}
+#' @importFrom Matrix diag
 #' @keywords internal
 getSqrtInv <- function(Inv){
-  require(Matrix)
   #
   # Cov = UD^2U', then Inv = UD^(-2)U', and Inv_sqrt = UD^(-1)U'
   ei <- eigen(Inv)
@@ -65,8 +65,6 @@ getSqrtInv <- function(Inv){
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
 prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, surface_sigma = NULL, cifti_data, hemisphere = NULL) {
-  require(Matrix)
-  require(ciftiTools)
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
@@ -185,7 +183,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
       for(k in 0:(ar_order+1)){
         diags[[k+1]] <- sqrtInv.v[off_diags==k]
       }
-      matband <- bandSparse(ntime, k=0:(ar_order+1), symm=TRUE, diag=diags)
+      matband <- bandSparse(ntime, k=0:(ar_order+1), symmetric=TRUE, diagonals=diags)
       template_pw_list[[v]] <- matband
     }
   }

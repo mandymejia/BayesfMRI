@@ -21,7 +21,7 @@ BayesGLM_slice(
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
-  avg_betas_over_sessions = FALSE,
+  avg_sessions = TRUE,
   trim_INLA = TRUE
 )
 }
@@ -87,8 +87,8 @@ BayesGLM result to use in Bayesian group modeling.}
 
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 
-\item{avg_betas_over_sessions}{(logical) Should estimates for betas be
-averaged together over multiple sessions?}
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use the

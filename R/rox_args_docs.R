@@ -7,12 +7,12 @@
 #' @name INLA_Description
 NULL
 
-#' avg_betas_over_sessions
+#' avg_sessions
 #' 
-#' @param avg_betas_over_sessions Average estimates for betas over multiple 
-#'  sessions? Default: \code{FALSE}.
+#' @param avg_sessions Average estimates for betas over multiple 
+#'  sessions? Default: \code{TRUE}.
 #' 
-#' @name avg_betas_over_sessions_Param
+#' @name avg_sessions_Param
 NULL
 
 #' contrats: INLA

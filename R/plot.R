@@ -227,7 +227,7 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 #'
 #' @examples
 #' x <- matrix(rnorm(9),3,3)
-#' melt.mat(x)
+#' melt_mat(x)
 melt_mat <- function(x) {
   if(!"matrix" %in% class(x)) stop("x must have the matrix class.")
   out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
@@ -249,9 +249,12 @@ melt_mat <- function(x) {
 #' @param main Plot title (character)
 #' @param na.color The color that should be used to represent \code{NA} values
 #'   in the tile plot
+#' @param zlim Color limits
 #'
 #' @return A tile plot done in base R graphics
 #' @export
+#' @importFrom grDevices heat.colors
+#' @importFrom graphics axis layout par rect text
 #'
 #' @examples
 #' x <- matrix(rnorm(50*50),50,50)
