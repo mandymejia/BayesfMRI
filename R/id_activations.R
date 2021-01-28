@@ -298,3 +298,74 @@ id_activations.2means <- function(
     return(final_nums)
   }
 }
+
+#' Significance using Benjamini-Hochsberg False Discovery Rate
+#'
+#' @param p A vector of p-values
+#' @param FDR The false discovery rate
+#'
+#' @return A 0-1 vector that classifies the p-value vector as "significant" or not.
+#' @export
+BH_FDR <- function(p, FDR = 0.05) {
+  p_rank <- rank(-p, na.last=T)
+  BH_cutoff <- FDR * p_rank / length(p_rank)
+  out <- ifelse(is.na(p), 1, p)
+  out <- ifelse(out < BH_cutoff, 1,0)
+  return(out)
+}
+
+#' Identification of areas of activation in a General Linear Model using classical methods
+#'
+#' @param model_obj A \code{BayesGLM_cifti} or \code{BayesGLM_slice} object
+#' @param alpha A significance level to be used in both the family-wise error
+#'   rate (FWER) or false discovery rate (FDR) multiple correction methods of
+#'   determining significance.
+#'
+#' @return A list of length equal to the number of hemispheres of model fit
+#'   data. In each list element, there will be two matrices corresponding to the
+#'   0-1 activation status for the model coefficients.
+#' @export
+id_activations.classical <- function(model_obj, alpha = 0.05) {
+  # Check to see if the Bayesian results are available (as they include the data values used to fit the model)
+  has_Bayes <- length(which(sapply(model_obj$GLMs_Bayesian, class) == "BayesGLM")) > 0
+  if(!has_Bayes) stop("This currently requires model objects with Bayesian results due to model object data subjects. This will be fixed in the future.")
+  # Note: This currently only works when there are Bayesian results because the data may have been prewhitened, and the prewhitened data are being saved as part of the GLMs_Bayesian object within the BayesGLM model output.
+  hems <- names(model_obj$GLMs_Bayesian[which(sapply(model_obj$GLMs_Bayesian, class) == "BayesGLM")])
+  L_or_R <- sub("cortex","",hems)
+  K <- length(model_obj$beta_names)
+  ntime <- unique(sapply(model_obj$design, nrow))
+  n_sess <- length(model_obj$design)
+  hems_name <- ifelse(L_or_R == "L", 'left','right')
+  active_out <- vector('list', length(hems))
+  for(h in 1:length(L_or_R)) {
+    y_vec <- model_obj$GLMs_Bayesian[[paste0("cortex",L_or_R[h])]]$y
+    X_mat <- model_obj$GLMs_Bayesian[[paste0("cortex",L_or_R[h])]]$X
+    if(length(X_mat) > 1) {
+      X_mat_final <- X_mat[[1]]
+      for(ss in 2:length(X_mat)) {
+        X_mat_final <- rbind(X_mat_final,X_mat[[ss]])
+      }
+      X_mat <- X_mat_final
+    } else {
+      X_mat <- X_mat[[1]]
+    }
+    XtX <- crossprod(X_mat)
+    XtX_inv <- solve(XtX)
+    beta_hat <- as.vector(XtX_inv %*% crossprod(X_mat,y_vec))
+    V <- length(beta_hat) / K
+    y_error <- y_vec - X_mat %*% beta_hat
+    sd_error <- sd(y_error)
+    se_beta <- diag(XtX_inv) * sd_error
+    DOF <- (n_sess*ntime) - K - 1
+    t_star <- beta_hat / se_beta
+    p_values <- sapply(t_star, pt, df = DOF, lower.tail = F)
+    FDR_act <- BH_FDR(p_values, FDR = alpha)
+    FWER_act <- as.numeric(p_values < (alpha / length(beta_hat)))
+    active_out[[h]] <- list(
+      FDR_act = matrix(FDR_act,V,K),
+      FWER_act = matrix(FWER_act,V,K)
+    )
+  }
+  names(active_out) <- hems
+  return(active_out)
+}
