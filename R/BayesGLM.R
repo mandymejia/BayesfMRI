@@ -272,9 +272,6 @@ BayesGLM_slice <- function(
 #'  This function uses a system wrapper for the 'wb_command' executable. The
 #'  user must first download and install the Connectome Workbench, available
 #'  from https://www.humanconnectome.org/software/get-connectome-workbench .
-#'  The \code{wb_path} argument is the full file path to the Connectome
-#'  Workbench folder. (The full file path to the 'wb_cmd' executable also
-#'  works.)
 #'
 # @section Label Levels:
 #  \code{xifti$meta$subcort$labels} is a factor with the following levels:
@@ -446,7 +443,6 @@ BayesGLM_cifti <- function(cifti_fname,
   #                      sphere_orig_L = sphereL_fname,
   #                      sphere_orig_R = sphereR_fname,
   #                      target_res = resamp_res,
-  #                      wb_path = wb_path,
   #                      make_helper_files = make_helper_files,
   #                      delete_helper_files = delete_helper_files)
   #     }
@@ -466,7 +462,6 @@ BayesGLM_cifti <- function(cifti_fname,
   #                      gifti_target = fnames_gifti_target[gg],
   #                      sphere_orig = fnames_sphere_orig[gg],
   #                      sphere_target = fnames_sphere_target[gg],
-  #                      wb_path = wb_path,
   #                      overwrite = FALSE)
   #     }
   #
@@ -501,7 +496,6 @@ BayesGLM_cifti <- function(cifti_fname,
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res
-        # wb_path=wb_path
       )
       if(do_left) surf_left <- cifti_ss$surf$cortex_left
       if(do_right) surf_right <- cifti_ss$surf$cortex_right
@@ -510,7 +504,6 @@ BayesGLM_cifti <- function(cifti_fname,
         cifti_fname[ss],
         brainstructures=brainstructures,
         resamp_res=resamp_res
-        # wb_path=wb_path
       )
     }
 
@@ -932,8 +925,6 @@ BayesGLM <- function(
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
-  # V <- ncol(data[[1]]$BOLD) #number of data locations
-  # K <- ncol(data[[1]]$design) #number of tasks
   V <- ncol(data[[1]]$BOLD) #number of data locations
   is_missing <- is.na(data[[1]]$BOLD[1,])
   V_nm <- V - sum(is_missing)
