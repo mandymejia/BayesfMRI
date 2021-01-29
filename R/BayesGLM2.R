@@ -505,4 +505,3 @@ BayesGLM_group <- function(
     nsamp_theta=nsamp_theta, nsamp_beta=nsamp_beta,
     no_cores=no_cores, verbose=verbose
   )
-}
