@@ -395,6 +395,10 @@ BayesGLM_cifti <- function(cifti_fname,
   do_sub <- FALSE
   #do_sub <- ('subcortical' %in% brainstructures)
 
+  # Check prewhitening arguments.
+  ar_order <- as.numeric(ar_order)
+  prewhiten <- ar_order > 0
+
   if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
@@ -602,10 +606,6 @@ BayesGLM_cifti <- function(cifti_fname,
     } else {
       outfile_left <- NULL
     }
-
-    # Check prewhitening arguments.
-    ar_order <- as.numeric(ar_order)
-    prewhiten <- ar_order > 0
 
     if(prewhiten) {
       pw_data_left <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
