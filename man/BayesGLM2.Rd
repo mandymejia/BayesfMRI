@@ -3,7 +3,7 @@
 \name{BayesGLM2}
 \alias{BayesGLM2}
 \alias{BayesGLM_group}
-\title{Performs group-level Bayesian GLM estimation and inference using the joint approach described in Mejia et al. (2019)}
+\title{Group-level Bayesian GLM}
 \usage{
 BayesGLM2(
   results,
