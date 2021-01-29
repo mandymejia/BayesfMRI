@@ -13,18 +13,21 @@
 #'
 #' @return Design matrix containing one HRF column for each task
 #' 
-#' @importFrom neuRosim canonicalHRF
 #' @importFrom stats convolve
 #' 
 #' @export
 make_HRFs <- function(onsets, TR, duration, downsample=100){
+
+  if (!requireNamespace("neuRosim", quietly = TRUE)) {
+    stop("Package \"neuRosim\" needed to run `make_HRFs`. Please install it.", call. = FALSE)
+  }
 
   K <- length(onsets) #number of tasks
   if(is.null(names(onsets))) task_names <- paste0('task', 1:K) else task_names <- names(onsets)
 
   nsec <- duration*TR; # Total time of experiment in seconds
   stimulus <- rep(0, nsec*downsample) # For stick function to be used in convolution
-  HRF <- canonicalHRF(seq(0, 30, by=1/downsample), verbose=FALSE)[-1] #canonical HRF to be used in convolution
+  HRF <- neuRosim::canonicalHRF(seq(0, 30, by=1/downsample), verbose=FALSE)[-1] #canonical HRF to be used in convolution
   inds <- seq(TR*downsample, nsec*downsample, by = TR*downsample) # Extract EVs in a function of TR
 
   design <- matrix(NA, nrow=duration, ncol=K)

@@ -13,7 +13,6 @@
 #' @return A ggplot graphical object.
 #'
 #' @importFrom ciftiTools ROY_BIG_BL
-#' @importFrom reshape2 melt
 #' @importFrom utils data
 #'
 #' @export
@@ -39,8 +38,8 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   }
 
   if(is.null(zlim)) {
-    zmin <- min(reshape2::melt(X)$value,na.rm = T)
-    zmax <- max(reshape2::melt(X)$value,na.rm = T)
+    zmin <- min(melt_mat2(X)$value,na.rm = T)
+    zmax <- max(melt_mat2(X)$value,na.rm = T)
     zlim <- c(zmin,zmax)
   }
   if(is.null(color_palette)){
@@ -62,7 +61,7 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
 
 
 
-  X_df <- reshape2::melt(X)
+  X_df <- melt_mat2(X)
   X_df$value <- ifelse(X_df$value < min(zlim, na.rm = T), min(zlim, na.rm = T), X_df$value)
   X_df$value <- ifelse(X_df$value > max(zlim, na.rm = T), max(zlim, na.rm = T), X_df$value)
 
@@ -131,8 +130,8 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   # }, simplify= F)
 
 
-  # ggplot(reshape2::melt(coef_images)) +
-  point_df <- reshape2::melt(point_estimates)
+  # ggplot(melt_mat2(coef_images)) +
+  point_df <- melt_mat2(point_estimates)
   if(!is.null(BayesGLM_object$GLMs_Bayesian)) {
     point_df$L2 <- BayesGLM_object$GLMs_Bayesian$beta_names[point_df$L2]
   }
@@ -225,13 +224,31 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 #'   in \code{x}.
 #' @export
 #'
-#' @examples
-#' x <- matrix(rnorm(9),3,3)
-#' melt_mat(x)
+# @examples
+# x <- matrix(rnorm(9),3,3)
+# melt_mat(x)
 melt_mat <- function(x) {
   if(!"matrix" %in% class(x)) stop("x must have the matrix class.")
   out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
   return(out)
+}
+
+#' Melt list of matrices
+#' 
+#' See \code{melt_mat}
+#' 
+#' @param X_list list of matrices
+#' @return A data.frame
+#' @keywords internal
+#' 
+melt_mat2 <- function(X_list){
+  X_list <- lapply(X_list, melt_mat)
+  for (ii in seq(length(X_list))) {
+    X_list[[ii]]$L1 = names(X_list)[ii]
+  }
+  out <- do.call(rbind, X_list)
+  rownames(out) <- NULL
+  out
 }
 
 #' Lightweight tile plot function
@@ -256,10 +273,10 @@ melt_mat <- function(x) {
 #' @importFrom grDevices heat.colors
 #' @importFrom graphics axis layout par rect text
 #'
-#' @examples
-#' x <- matrix(rnorm(50*50),50,50)
-#' x_df <- melt_mat(x)
-#' tile.plot(x_df)
+# @examples
+# x <- matrix(rnorm(50*50),50,50)
+# x_df <- melt_mat(x)
+# tile.plot(x_df)
 tile.plot <- function(tile_df, col = NULL, ncols = NULL,
                       main = "", zlim = NULL, na.color  = "grey80") {
   if("matrix" %in% class(tile_df)) tile_df <- melt_mat(tile_df)

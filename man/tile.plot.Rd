@@ -38,8 +38,3 @@ This function has no dependencies outside of base R, but provides a
 reasonable approximation to the functionality of
 \code{ggplot2::geom_raster}.
 }
-\examples{
-x <- matrix(rnorm(50*50),50,50)
-x_df <- melt_mat(x)
-tile.plot(x_df)
-}

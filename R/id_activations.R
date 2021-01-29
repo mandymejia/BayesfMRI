@@ -324,6 +324,9 @@ BH_FDR <- function(p, FDR = 0.05) {
 #' @return A list of length equal to the number of hemispheres of model fit
 #'   data. In each list element, there will be two matrices corresponding to the
 #'   0-1 activation status for the model coefficients.
+#' 
+#' @importFrom stats sd pt
+#' 
 #' @export
 id_activations.classical <- function(model_obj, alpha = 0.05) {
   # Check to see if the Bayesian results are available (as they include the data values used to fit the model)

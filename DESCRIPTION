@@ -22,28 +22,27 @@ Depends:
     R (>= 3.6.0)
 Encoding: UTF-8
 Imports: 
+    ciftiTools,
     excursions,
-    stats,
+    foreach,
     INLA (>= 0.0-1468840039),
     MASS,
     Matrix,
-    ciftiTools,
     matrixStats,
     neuRosim,
-    reshape2,
+    stats,
     sp,
-    SQUAREM,
     utils
 Suggests:
     abind,
-    rdist,
     dplyr,
     geometry,
-    grDevices,
     ggplot2,
+    grDevices,
+    knitr,
     parallel,
     purrr,
-    knitr,
+    rdist,
     rmarkdown
 LazyData: true
 Roxygen: list(markdown = TRUE)

@@ -46,6 +46,3 @@ matrices corrsponding to sessions.
 \description{
 Create simulated slice data for the BayesGLM_surface function
 }
-\examples{
-data <- simulate_slice_data()
-}

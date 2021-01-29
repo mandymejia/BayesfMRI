@@ -21,13 +21,12 @@
 #'    \code{design}, is a list of \code{num_time} by \code{num_tasks} predictor
 #'    matrices corrsponding to sessions.
 #'
-#' @importFrom neuRosim specifydesign specifyregion
-#' @import stats
+#' @importFrom stats toeplitz runif rgamma arima.sim
 #'
 #' @export
 #'
-#' @examples
-#' data <- simulate_slice_data()
+# @examples
+# data <- simulate_slice_data()
 simulate_slice_data <-
   function(num_sessions = 1,
            num_tasks = 2,
@@ -37,6 +36,11 @@ simulate_slice_data <-
            vary_active = T,
            num_time = 200,
            binary_template = NULL) {
+
+  if (!requireNamespace("neuRosim", quietly = TRUE)) {
+    stop("Package \"neuRosim\" needed to run `simulate_slice_data`. Please install it.", call. = FALSE)
+  }
+
   epoch_length <- floor(num_time / 5)
   onset_start <- seq(0,floor(epoch_length / 2), length.out = num_tasks)
   tasks <- sapply(seq(num_tasks), function(tt) {

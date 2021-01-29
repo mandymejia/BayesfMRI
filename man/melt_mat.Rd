@@ -17,7 +17,3 @@ in \code{x}.
 This is meant to be a lightweight replacement for \code{reshape2::melt} that
 will only work with matrices.
 }
-\examples{
-x <- matrix(rnorm(9),3,3)
-melt_mat(x)
-}

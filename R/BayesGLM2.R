@@ -459,6 +459,8 @@ beta.posterior.thetasamp <- function(theta,
 #' @param Q_theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
+#' 
+#' @importFrom stats dgamma
 #'
 #' @keywords internal
 F.logwt <- function(theta, spde, mu_theta, Q_theta, M){

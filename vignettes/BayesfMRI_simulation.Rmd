@@ -93,7 +93,7 @@ library(BayesfMRI)
 library(dplyr)
 library(ggplot2)
 library(purrr)
-library(reshape2)
+# library(reshape2) # replaced with BayesfMRI:::melt_mat2
 
 plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   if(class(X) == "matrix") X = list(single_activation_field = X)
@@ -107,8 +107,8 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
   requireNamespace("dplyr")
   requireNamespace("purrr")
   if(is.null(zlim)) {
-    zmin <- min(reshape2::melt(X)$value,na.rm = T)
-    zmax <- max(reshape2::melt(X)$value,na.rm = T)
+    zmin <- min(BayesfMRI:::melt_mat2(X)$value,na.rm = T)
+    zmax <- max(BayesfMRI:::melt_mat2(X)$value,na.rm = T)
     zlim <- c(zmin,zmax)
   }
   if(is.null(color_palette)){
@@ -119,7 +119,7 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
       pos_half = FALSE
     )
   }
-  if(min(reshape2::melt(X)$value, na.rm = T) >= 0) {
+  if(min(BayesfMRI:::melt_mat2(X)$value, na.rm = T) >= 0) {
     color_palette <- ciftiTools::ROY_BIG_BL(
       min = zlim[1],
       max = zlim[2],
@@ -127,7 +127,7 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
       pos_half = TRUE
     )
   }
-  out_grob <- reshape2::melt(X)
+  out_grob <- BayesfMRI:::melt_mat2(X)
   out_grob$value <- ifelse(out_grob$value < min(zlim, na.rm = T), min(zlim, na.rm = T), out_grob$value)
   out_grob$value <- ifelse(out_grob$value > max(zlim, na.rm = T), max(zlim, na.rm = T), out_grob$value)
   out_grob <- ggplot(out_grob) +
@@ -169,7 +169,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim
     names(out) <- BayesGLM_object$beta_names
     return(out)
   }, simplify= F)
-  out_grob <- reshape2::melt(coef_images) %>%
+  out_grob <- BayesfMRI:::melt_mat2(coef_images) %>%
     ggplot() +
     geom_raster(aes(x = Var1, y = Var2, fill = value)) +
     scale_fill_gradientn("",colors = rev(wb_palette$color),
