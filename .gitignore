@@ -7,3 +7,6 @@
 .Ruserdata
 R/summarize_sessions.R
 inst/doc
+R/EM_functions.R
+R/EM_utils.R
+vignettes/simulated-EM.Rmd
