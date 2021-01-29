@@ -1,12 +1,14 @@
 #' Compute surface areas of each vertex in a triangular mesh.
-#'
-#' @param mesh object of type mesh
+#' 
+#' @inheritSection INLA_Description INLA Requirement
+#' 
+#' @inheritParams mesh_Param_inla
 #'
 #' @return Vector of areas
-#' @export
+#' 
 #' @importFrom INLA inla.fmesher.smorg
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
-#'
+#' 
+#' @export
 compute_vertex_areas <- function(mesh)
 {
   if(missing(mesh))

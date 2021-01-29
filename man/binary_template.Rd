@@ -13,9 +13,6 @@ data(binary_template)
 \description{
 Data come from the Montreal Neurological Institute, as supplied with FSL
 }
-\examples{
-data(binary_template)
-}
 \references{
 M. Jenkinson, C.F. Beckmann, T.E. Behrens, M.W. Woolrich,
 S.M. Smith. FSL. NeuroImage, 62:782-90, 2012

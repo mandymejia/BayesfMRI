@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM2.R
 \name{F.logwt}
 \alias{F.logwt}
-\title{Internal function used in joint approach to group-analysis for combining across models}
+\title{F logwt}
 \usage{
 F.logwt(theta, spde, mu_theta, Q_theta, M)
 }
@@ -23,6 +23,10 @@ A list containing...
 \description{
 Internal function used in joint approach to group-analysis for combining across models
 }
-\note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
+
+\keyword{internal}

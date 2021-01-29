@@ -4,11 +4,12 @@
 #' and faces (triangles) with any vertices outside of the mask are removed.  Finally,
 #' vertex numbering in the masked faces matrix is corrected.
 #'
-#' @param vertices Vx3 matrix of vertices
-#' @param faces matrix of faces
-#' @param mask 0/1 vector of length V indicating which vertices are to be retained (1) and which are to be excluded (0)
+#' @inheritParams vertices_Param
+#' @inheritParams faces_Param
+#' @inheritParams mask_Param_vertices
 #'
 #' @return List containing masked vertices and faces matrices
+#' 
 #' @export
 mask_vertices_faces <- function(vertices, faces, mask){
 

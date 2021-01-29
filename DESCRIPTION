@@ -1,6 +1,6 @@
 Package: BayesfMRI
 Title: Bayesian Methods for Functional MRI
-Version: 0.1.5.0
+Version: 0.1.6.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -22,39 +22,27 @@ Depends:
     R (>= 3.6.0)
 Encoding: UTF-8
 Imports: 
-    abind,
-    gifti,
-    ciftiTools (>= 0.1.5.0),
-    dplyr,
+    ciftiTools,
     excursions,
-    graphics,
-    grDevices,
-    geometry,
-    ggplot2,
-    ica,
+    foreach,
     INLA (>= 0.0-1468840039),
-    numDeriv,
     MASS,
     Matrix,
     matrixStats,
-    methods,
     neuRosim,
-    pesel,
-    purrr,
-    RColorBrewer,
-    rdist,
-    reshape2,
-    rgl,
-    sp,
-    SQUAREM,
     stats,
-    stringr,
+    sp,
     utils
-Remotes:
-    mandymejia/ciftiTools
 Suggests:
-    parallel,
+    abind,
+    dplyr,
+    geometry,
+    ggplot2,
+    grDevices,
     knitr,
+    parallel,
+    purrr,
+    rdist,
     rmarkdown
 LazyData: true
 Roxygen: list(markdown = TRUE)

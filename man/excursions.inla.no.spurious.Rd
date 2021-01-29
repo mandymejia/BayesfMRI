@@ -2,7 +2,7 @@
 % Please edit documentation in R/excursions.R
 \name{excursions.inla.no.spurious}
 \alias{excursions.inla.no.spurious}
-\title{Calculation of excursion sets with the removal of small areas}
+\title{Excursion sets with INLA and removal}
 \usage{
 excursions.inla.no.spurious(
   result.inla,
@@ -18,7 +18,7 @@ excursions.inla.no.spurious(
   method,
   ind = NULL,
   max.size,
-  verbose = 0,
+  verbose = FALSE,
   max.threads = 0,
   seed = NULL,
   mesh,
@@ -64,16 +64,18 @@ should only be used if a stack object is provided, use the name argument otherwi
 
 \item{max.size}{Maximum number of nodes to include in the set of interest (optional).}
 
-\item{verbose}{Set to TRUE for verbose mode (optional).}
+\item{verbose}{Should occasional updates be printed? Default: \code{FALSE}.}
 
-\item{max.threads}{Decides the number of threads the program can use. Set to 0 for using the maximum number of threads allowed by the system (default).}
+\item{max.threads}{The maximum number of threads to use in the inla-program
+for model estimation. \code{0} (default) will use the maximum number of
+threads allowed by the system.}
 
-\item{seed}{Random seed (optional).}
+\item{seed}{Random seed (optional). Default: \code{NULL}.}
 
 \item{mesh}{The mesh on which the model is defined.}
 
 \item{area.limit}{Positive number. All connected excursion sets with an area smaller than this
-numbere are removed.}
+number are removed.}
 
 \item{use.continuous}{Logical parameter indicating whether the areas of the excursion sets
 should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
@@ -82,10 +84,13 @@ function uses the approximation that the area for each node is the integral of t
 \item{plot.progress}{Logical parameter that indicates whether the results should be plotted.}
 }
 \value{
-If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
-the same elements as the output of \code{continuous}.
+If \code{use.continuous = FALSE}, an item of class \code{excurobj}.
+Otherwise a list with the same elements as the output of \code{continuous}.
 }
 \description{
+Calculation of excursion sets with the removal of small areas
+}
+\details{
 Function similar to the excursions.inla function, but which also takes a mesh as input
 and computes modified excursion sets where all regions with areas smaller than area.limit are
 removed in the internal calculations.

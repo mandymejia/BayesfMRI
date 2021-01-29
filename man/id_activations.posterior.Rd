@@ -2,14 +2,15 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations.posterior}
 \alias{id_activations.posterior}
-\title{Identifies areas of activation given an activation threshold and significance level using joint posterior probabilities}
+\title{Identify activations using joint posterior probabilities}
 \usage{
 id_activations.posterior(
   model_obj,
   field_name = NULL,
   threshold,
   alpha = 0.05,
-  area.limit = NULL
+  area.limit = NULL,
+  method = "EB"
 )
 }
 \arguments{
@@ -22,15 +23,28 @@ id_activations.posterior(
 \item{alpha}{Significance level (e.g. 0.05)}
 
 \item{area.limit}{Below this value, activations will be considered spurious.  If NULL, no limit.}
+
+\item{method}{Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
+Correction), depending on the method that should be used to find the
+excursions set. Note that if any contrasts (including averages across
+sessions) are used in the modeling, the method chosen must be \code{EB}.
+The difference in the methods is that the \code{EB} method assumes Gaussian
+posterior distributions for the parameters.}
 }
 \value{
-A nested list, where the first layer separates by session, and the second layer is another list of two elements: \code{active}, which gives a matrix of zeros and ones of the same dimention as \verb{model_obj$beta_estimates$\{session_name\}}, and \code{excur_result}, an object of class excurobj (see \code{help(excursions.inla)} for more information).
+A nested list, where the first layer separates by session, and the
+second layer is another list of two elements: \code{active}, which gives a
+matrix of zeros and ones of the same dimention as
+\code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
+object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+more information).
 }
 \description{
+Identifies areas of activation given an activation threshold and significance
+level using joint posterior probabilities
+}
+\details{
 For a given latent field, identifies locations that exceed a certain activation
 threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
 posterior distribution of the latent field.
-}
-\details{
-Put additional details here.
 }

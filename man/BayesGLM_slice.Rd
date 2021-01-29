@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM_slice}
 \alias{BayesGLM_slice}
-\title{Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data}
+\title{BayesGLM for 2D slice}
 \usage{
 BayesGLM_slice(
   BOLD,
@@ -18,10 +18,11 @@ BayesGLM_slice(
   GLM_method = "both",
   session_names = NULL,
   return_INLA_result = TRUE,
-  write_dir = NULL,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL
+  contrasts = NULL,
+  avg_sessions = TRUE,
+  trim_INLA = TRUE
 )
 }
 \arguments{
@@ -29,23 +30,22 @@ BayesGLM_slice(
 the first two dimensions correspond to the size of the fMRI slice in space
 and the last dimension corresponds to time}
 
-\item{design}{A TxK task design matrix (or list of such matrices, for
-multiple-session modeling) with column names representing tasks. Each
-column represents the expected BOLD response due to each task, a
-convolution of the hemodynamic response function (HRF) and the task
-stimulus.  Must be provided if and only if onsets=NULL.  Note that the
-scale of the regressors will affect the scale and interpretation of the
-beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is
-recommended.}
+\item{design, onsets, TR}{Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 
-\item{onsets}{A matrix of onsets (first column) and durations (second column)
-for each task in SECONDS, organized as a list where each element of the
+\code{design} is a \eqn{T x K} task design matrix (or list of such
+matrices, for multiple-session modeling) with column names representing
+tasks. Each column represents the expected BOLD response due to each task,
+a convolution of the hemodynamic response function (HRF) and the task
+stimulus. Note that the scale of the regressors will affect the scale and
+interpretation of the beta coefficients, so imposing a proper scale (e.g.,
+set maximum to 1) is recommended.
+
+\code{onsets} is a matrix of onsets (first column) and durations (second column)
+for each task in seconds, organized as a list where each element of the
 list corresponds to one task. Names of list should be task names. (Or for
-multi-session modeling, a list of such lists.)  Must be provided if and
-only if design=NULL.}
+multi-session modeling, a list of such lists.)
 
-\item{TR}{The temporal resolution of the data in seconds.  Must be provided
-if onsets provided.}
+\code{TR} is the temporal resolution of the data in seconds.}
 
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such
 matrices, for multiple-session modeling).}
@@ -58,14 +58,15 @@ derivative of each column of design matrix).}
 the BOLD data and make a more efficient network mesh for the
 neighborhood definitions}
 
-\item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates
-represent percent signal change.  Else, center but do not scale.}
+\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
+change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
+centered.}
 
-\item{scale_design}{If TRUE (default), scale design matrix so maximum value
-is equal to 1.  Else, do not scale.}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{num.threads}{Maximum number of threads the inla-program will use for
-model estimation}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only,
 'classical' for the classical GLM only, or 'both' to return both classical
@@ -74,26 +75,27 @@ and Bayesian estimates of task activation.}
 \item{session_names}{(Optional) A vector of names corresponding to each
 session.}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA
-model object (can be large).  Default is FALSE.  Required for running
-\code{id_activations} on \code{BayesGLM} model object (but not for running
-\code{BayesGLM_joint} to get posterior quantities of group means or
-contrasts).}
-
-\item{write_dir}{(Optional) The path to a directory where results will be
-saved. Defaults to the current working directory.}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{TRUE}. Required for running \code{\link{id_activations}}
+after, but not for running BayesGLM_joint after to get
+posterior quantities of group means or contrasts.}
 
 \item{outfile}{(Optional) File name (without extension) of output file for
 BayesGLM result to use in Bayesian group modeling.}
 
-\item{verbose}{Logical indicating if INLA should run in a verbose mode
-(default FALSE).}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{A list of contrast vectors to be passed to
-\code{\link{inla}}.}
+\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
+
+\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+result be trimmed to only what is necessary to use the
+\code{id_activations} function? Default value is \code{TRUE}.}
 }
 \value{
-An object of class BayesGLM, a list containing ...
+An object of class \code{"BayesGLM"}, a list containing...
 }
 \description{
 Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data

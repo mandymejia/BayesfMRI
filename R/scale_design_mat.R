@@ -4,8 +4,9 @@
 #'     T is the number of time points, and k is the number of task covariates
 #'
 #' @return A scaled design matrix
+#' 
 #' @export
-#'
+#' 
 #' @examples
 #' library(neuRosim)
 #' # Task 1

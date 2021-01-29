@@ -7,11 +7,16 @@
 mask_vertices_faces(vertices, faces, mask)
 }
 \arguments{
-\item{vertices}{Vx3 matrix of vertices}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{matrix of faces}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 
-\item{mask}{0/1 vector of length V indicating which vertices are to be retained (1) and which are to be excluded (0)}
+\item{mask}{A length \eqn{V} logical vector indicating if each vertex is
+within the input mask.}
 }
 \value{
 List containing masked vertices and faces matrices

@@ -7,7 +7,8 @@
 compute_vertex_areas(mesh)
 }
 \arguments{
-\item{mesh}{object of type mesh}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data).}
 }
 \value{
 Vector of areas
@@ -15,6 +16,9 @@ Vector of areas
 \description{
 Compute surface areas of each vertex in a triangular mesh.
 }
-\note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{http://www.r-inla.org/download} for easy installation instructions.
 }
+

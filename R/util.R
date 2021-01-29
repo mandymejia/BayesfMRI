@@ -134,13 +134,21 @@
 
 
 
+#' Find nonzero elements in matrix
+#' 
 #' Find nonzero element in a matrix using 2-means clustering
 #'
-#' @param beta_est A vector or matrix of values from which values close to zero should be assigned a value of zero.
-#'
-#' @return A vector or matrix of the same dimension as beta_est in which values close to zero are assigned the value of zero. The closeness of a value to zero is found by performing two-means clustering on the absolute values of beta_est, and
-#' @export
 #' @importFrom stats kmeans
+#' 
+#' @param beta_est A vector or matrix of values from which values close to zero
+#'  should be assigned a value of zero.
+#'
+#' @return A vector or matrix of the same dimension as beta_est in which values
+#'  close to zero are assigned the value of zero. The closeness of a value to 
+#'  zero is found by performing two-means clustering on the absolute values of
+#'  beta_est, and ...
+#' 
+#' @export
 #'
 find_nonzero <- function(beta_est) {
   vector_beta <- c(beta_est)
@@ -155,12 +163,14 @@ find_nonzero <- function(beta_est) {
 
 #' Sequential 2-means variable selection
 #'
-#' @param x A vector consisting of all variables of interest for a single draw from a posterior distribution
-#' @param b A scale parameter used to determine at what distance cluster centers are considered to be the same.
+#' @param x A vector consisting of all variables of interest for a single draw 
+#'  from a posterior distribution
+#' @param b A scale parameter used to determine at what distance cluster centers
+#'  are considered to be the same.
 #'
 #' @return The number of nonzero values detected within x
+#' 
 #' @export
-#'
 s2m <- function(x,b){
   two_means <- kmeans(abs(x),2)
   zero_idx <- which(two_means$cluster == which.min(two_means$centers))
@@ -183,8 +193,10 @@ s2m <- function(x,b){
 #' @param sigma  A scale parameter used to determine at what distance cluster centers are considered to be the same.
 #'
 #' @return An array of dimension `head(dim(B),-1)` with a point estimate of B based on the sequential 2-means method
-#' @export
+#' 
 #' @importFrom stats quantile median
+#' 
+#' @export
 #'
 #' @md
 s2m_B <- function(B,sigma){
@@ -204,13 +216,14 @@ s2m_B <- function(B,sigma){
 #'
 #' @param faces a V x 3 matrix of integers. Each row defines a face by the index
 #'  of three vertices.
-#' @param mask a length-V logical vector. TRUE indicates vertices within the
-#'  input mask.
+#' @inheritParams mask_Param_vertices
 #' @param boundary_width a positive integer. Vertices no more than this number
 #'  of edges from any vertex in the input mask will be placed in the boundary mask.
+#' 
 #' @return The boundary mask, a length-V logical vector. TRUE indicates vertices
 #'  within the boundary mask.
 #'
+#' @keywords internal 
 boundary_mask <- function(faces, mask, boundary_width){
   s <- ncol(faces)
   v <- max(faces)
@@ -260,7 +273,6 @@ boundary_mask <- function(faces, mask, boundary_width){
 #' @return The matched user inputs.
 #'
 #' @keywords internal
-#'
 match_input <- function(
   user, expected,
   fail_action=c("stop", "warning", "message", "nothing"),

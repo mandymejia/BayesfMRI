@@ -17,6 +17,6 @@
 #'
 #'   M. Jenkinson, P.R. Bannister, J.M. Brady, and S.M. Smith. Improved optimisation for the robust and accurate linear registration and motion correction of brain images. NeuroImage, 17(2):825-841, 2002.
 #'
-#' @examples
-#' data(binary_template)
+# @examples
+# data(binary_template)
 "binary_template"

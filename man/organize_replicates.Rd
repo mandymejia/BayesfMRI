@@ -11,14 +11,15 @@ organize_replicates(n_sess, n_task, mesh)
 
 \item{n_task}{Number of regressors or tasks}
 
-\item{mesh}{Object of type inla.mesh (for surface data, see \code{help(make_mesh)}) or BayesfMRI.spde (for subcortical data, see \code{help(create_spde_vol3D)}).}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data)}
 }
 \value{
 replicates vector and betas for sessions
 }
 \description{
-Organize replicates
+beta and repl vectors are of length \eqn{nvox X n_sess X n_task}.
+The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
+The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 }
-\details{
-beta and repl vectors are of length nvox X n_sess X n_task
-}
+\keyword{internal}

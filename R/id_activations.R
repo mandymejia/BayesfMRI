@@ -1,6 +1,6 @@
-#' Identifies areas of activation
+#' Identify areas of activation
 #'
-#' @description For each latent field, identifies locations that are activated
+#' For each latent field, identifies locations that are activated
 #'
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
 #' @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
@@ -11,12 +11,15 @@
 #' @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
 #' @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
 #'
-#' @details Put additional details here.
-#'
-#' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, an object of class excurobj if method='posterior' (see `help(excursions.inla)` for more information) and is NULL if method='2means'.
+#' @return A nested list, where the first layer separates by session, and the
+#'  second layer is another list of two elements: \code{active}, which gives a
+#'  matrix of zeros and ones of the same dimention as
+#'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
+#'  object of class \code{"excurobj"} if \code{method='posterior'}
+#'  (see \code{\link{excursions.inla}} for more information) and is \code{NULL}
+#'  if \code{method='2means'}.
 #'
 #' @export
-#'
 id_activations <- function(model_obj, method=c('posterior', '2means'), field_name=NULL, threshold=NULL, alpha=NULL, area.limit=NULL, type=c('point','sequential'), n_sample = NULL){
 
   if(class(model_obj) != 'BayesGLM') stop('The model_obj argument must be of class BayesGLM, but it is not.')
@@ -47,33 +50,47 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
   return(out)
 }
 
-#' Identifies areas of activation given an activation threshold and significance level using joint posterior probabilities
+#' Identify activations using joint posterior probabilities
 #'
-#' @description For a given latent field, identifies locations that exceed a certain activation
-#' threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
-#' posterior distribution of the latent field.
+#' Identifies areas of activation given an activation threshold and significance
+#'  level using joint posterior probabilities
+#'
+#' For a given latent field, identifies locations that exceed a certain activation
+#'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
+#'  posterior distribution of the latent field.
 #'
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
 #' @param field_name Name of latent field or vector of names on which to identify activations
 #' @param threshold Activation threshold (e.g. 0.01 for 1 percent signal change)
 #' @param alpha Significance level (e.g. 0.05)
 #' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
+#' @param method Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
+#'   Correction), depending on the method that should be used to find the
+#'   excursions set. Note that if any contrasts (including averages across
+#'   sessions) are used in the modeling, the method chosen must be \code{EB}.
+#'   The difference in the methods is that the \code{EB} method assumes Gaussian
+#'    posterior distributions for the parameters.
 #'
-#' @details Put additional details here.
 #'
-#' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, an object of class excurobj (see `help(excursions.inla)` for more information).
+#' @return A nested list, where the first layer separates by session, and the
+#'  second layer is another list of two elements: \code{active}, which gives a
+#'  matrix of zeros and ones of the same dimention as
+#'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
+#'  object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+#'  more information).
 #'
 #' @importFrom excursions excursions.inla
 #'
 #' @export
-#'
-id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alpha=0.05, area.limit=NULL){
+id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alpha=0.05, area.limit=NULL, method = "EB"){
 
 
   session_names <- model_obj$session_names
 	n_sess <- length(session_names)
 	mesh <- model_obj$mesh
 	n_vox <- mesh$n
+	has_avg <- is.matrix(model_obj$avg_beta_estimates)
+	if(has_avg & method != "EB") stop("Your model object has estimates for averaged beta estimates. Only the EB method is supported for such data.")
 
 	if(is.null(field_name)) field_name <- model_obj$beta_names
 	if(!any(field_name %in% model_obj$beta_names)) stop("Please specify only field names that corresponds to one of the latent fields (i.e. 'bbeta1').")
@@ -93,9 +110,9 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 		for(f in field_name){
 
   		if(is.null(area.limit)){
-  			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds_v, u=threshold, type='>', method='QC', alpha=alpha, F.limit=0.2)
+  			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds_v, u=threshold, type='>', method=method, alpha=alpha, F.limit=0.2)
   		} else {
-  			res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds_v, u=threshold, type='>', method='QC', alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
+  			res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds_v, u=threshold, type='>', method=method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
   		}
 		  which_f <- which(field_name==f)
   		act_v[,which_f] <- res.exc$E[inds_v]
@@ -105,153 +122,253 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 		result[[v]] <- list(active=act_v, excursions_result=excur_v)
 	}
 
-	out <- result
-	return(out)
+	if(has_avg){
+	  avg_inds <- model_obj$INLA_result$misc$configs$config[[1]]$pred_idx
+	  mu_avg <- model_obj$INLA_result$misc$configs$config[[1]]$mean[avg_inds]
+	  Q_avg <- model_obj$INLA_result$misc$configs$config[[1]]$Q[avg_inds,avg_inds]
+	  avg_exc <- excursions(alpha = alpha,u = threshold,mu = mu_avg,Q = Q_avg,type = ">",method = "EB")
+	  act_v <- matrix(NA, nrow=n_vox, ncol=length(field_name))
+	  for(f in field_name){
+	    which_f <- which(field_name==f)
+	    f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+	    act_v[,which_f] <- avg_exc$E[f_inds]
+	  }
+	  result$avg <- list(
+	    active = act_v,
+	    excursions_result = avg_exc
+	  )
+	}
+
+	return(result)
 }
 
 
 
 #' Identify activations using 2-means clustering methods
 #'
-#' @param model_obj An object of class `BayesGLM`
-#' @param field_name Name of latent field or vector of names on which to identify activations
-#' @param type A string that should be either "point" or "sequential". The "point" type does a simple 2-means clustering to determine areas of activation. The "sequential" type uses the sequential 2-means variable selection method, as described in Li and Pati (2017). The "sequential" method takes significantly longer, but should do a better job of accounting for posterior variance.
-#' @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
+#' @param model_obj An object of class \code{BayesGLM}
+#' @param field_name Name of latent field or vector of names on which to identify
+#'  activations
+#' @param type A string that should be either "point" or "sequential". The
+#'  "point" type does a simple 2-means clustering to determine areas of activation.
+#'  The "sequential" type uses the sequential 2-means variable selection method,
+#'  as described in Li and Pati (2017). The "sequential" method takes significantly
+#'  longer, but should do a better job of accounting for posterior variance.
+#' @param n_sample The number of samples to generate if the sequential 2-means
+#'  type is chosen. By default, this takes a value of 1000.
 #'
-#' @return A nested list, where the first layer separates by session, and the second layer is another list of two elements: `active`, which gives a matrix of zeros and ones of the same dimention as `model_obj$beta_estimates${session_name}`, and `excur_result`, which is NULL for the 2means method.
-#' @export
+#' @return A nested list, where the first layer separates by session, and the
+#'  second layer is another list of two elements: \code{active}, which gives a
+#'  matrix of zeros and ones of the same dimention as
+#'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result},
+#'  which is \code{NULL} for the "2means" method.
+#'
 #' @importFrom stats kmeans dist
 #' @importFrom INLA inla.posterior.sample
 #'
+#' @export
 #' @md
-id_activations.2means <-
-  function(model_obj,
-           field_name = NULL,
-           type = "point",
-           n_sample = NULL) {
-    if (!type %in% c("point", "sequential"))
-      stop("The type needs to be either 'point' or 'sequential'.")
-    if (type == "point") {
-      out <- sapply(model_obj$beta_estimates, function(est_type) {
-        if (is.null(field_name))
-          field_name <- colnames(est_type)
-        if (!any(field_name %in% colnames(est_type)))
-          stop(
-            "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
-          )
-        est_type <-
-          est_type[, which(colnames(est_type) %in% field_name)]
-        out2 <-
-          sapply(split(est_type, col(est_type)), function(beta_est) {
-            vector_beta <- c(beta_est)
-            if (any(is.na(vector_beta)))
-              vector_beta <- vector_beta[!is.na(vector_beta)]
-            km_beta <- kmeans(abs(vector_beta), 2)
-            which_nonzero <- which.max(km_beta$centers[, 1])
-            keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
-            return(keep_nonzero)
-          }, simplify = TRUE)
-        colnames(out2) <- colnames(est_type)
-        return(list(active = out2,
-                    excur_result = NULL))
-      }, simplify = FALSE)
-      return(out)
-    }
-    if (type == "sequential") {
-      if (is.null(n_sample)){
-        n_sample <- 1000
-      }
-      n_remain <- n_sample
-      if (is.null(field_name))
-        field_name <- model_obj$beta_names
-      select_vars <- sapply(field_name, function(each_var)
-        0,
-        simplify = FALSE)
-      b_dists <- sapply(model_obj$beta_estimates, function(est_type) {
-        if (is.null(field_name))
-          field_name <- colnames(est_type)
-        if (!any(field_name %in% colnames(est_type)))
-          stop(
-            "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
-          )
-        est_type <-
-          est_type[, which(colnames(est_type) %in% field_name)]
-        out2 <-
-          sapply(split(est_type, col(est_type)), function(beta_est) {
-            vector_beta <- c(beta_est)
-            if (any(is.na(vector_beta)))
-              vector_beta <- vector_beta[!is.na(vector_beta)]
-            km_beta <- kmeans(abs(vector_beta), 2)
-            which_nonzero <- which.max(km_beta$centers[, 1])
-            nz_beta <- vector_beta[km_beta$cluster == which_nonzero]
-            # keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
-            # return(keep_nonzero)
-            return(dist(range(nz_beta)))
-          }, simplify = TRUE)
-        names(out2) <- colnames(est_type)
-        return(out2)
-      }, simplify = FALSE)
-      complete_sample <- sapply(model_obj$session_names, function(ses) {
-        out <- vector("list", length = length(field_name))
-        names(out) <- field_name
-        return(out)
-      }, simplify = FALSE)
-      # complete_sample <- vector("list", length(model_obj$beta_names))
-      # names(complete_sample) <- model_obj$beta_names
-      while (n_remain > 0) {
-        cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
-        next_sample_size <- min(n_remain, 100)
-        test_sample <- inla.posterior.sample(
-          n = next_sample_size,
-          result = model_obj$INLA_result,
-          selection = select_vars
-        )
-        next_sample <-
-          sapply(model_obj$session_names, function(each_ses) {
-            sapply(model_obj$beta_names, function(each_var) {
-              sapply(test_sample, function(each_sample) {
-                var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
-                var_sample <- each_sample$latent[var_name == each_var, ]
-                return(var_sample)
-              }, simplify = "array")
-            }, simplify = FALSE)
-          }, simplify = FALSE)
+id_activations.2means <- function(
+  model_obj, field_name = NULL,
+  type = "point", n_sample = NULL) {
 
-        complete_sample <- mapply(function(complete, next_s) {
-          mapply(function(cs, ns) {
-            cbind(cs, ns)
-          },
-          cs = complete,
-          ns = next_s,
-          SIMPLIFY = FALSE)
-        }, complete = complete_sample, next_s = next_sample, SIMPLIFY = FALSE)
-        n_remain <- n_remain - next_sample_size
-      }
-      # b_estimate <- sapply(complete_sample, function(betas) {
-      #   median(apply(betas, 1, sd))
-      # })
-      # b_estimate <- sapply(complete_sample, function(each_ses) {
-      #   sapply(each_ses, function(betas) {
-      #     # median(apply(betas, 1, sd))
-      #     min(apply(betas, 1, sd))
-      #   })
-      # }, simplify = FALSE)
-      b_estimate <- b_dists
-      # final_nums <- mapply(s2m_B,
-      #                      B = complete_sample,
-      #                      sigma = b_estimate,
-      #                      SIMPLIFY = TRUE)
-      final_nums <- mapply(function(each_ses_beta,each_ses_b) {
-        out_id <- mapply(s2m_B,B = each_ses_beta,
-                         sigma = each_ses_b, SIMPLIFY = TRUE)
-        out_id[out_id != 0] <- 1
-        return(list(active = out_id,
-                    excur_result = NULL))
-      }, each_ses_beta = complete_sample, each_ses_b = b_estimate, SIMPLIFY = FALSE)
-      # final_nums[final_nums != 0] <- 1
-      # final_out <- list(active = final_nums,
-      #                   excur_result = NULL)
-      # return(final_out)
-      return(final_nums)
-    }
+  if (!type %in% c("point", "sequential"))
+    stop("The type needs to be either 'point' or 'sequential'.")
+  if (type == "point") {
+    out <- sapply(model_obj$beta_estimates, function(est_type) {
+      if (is.null(field_name))
+        field_name <- colnames(est_type)
+      if (!any(field_name %in% colnames(est_type)))
+        stop(
+          "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
+        )
+      est_type <-
+        est_type[, which(colnames(est_type) %in% field_name)]
+      out2 <-
+        sapply(split(est_type, col(est_type)), function(beta_est) {
+          vector_beta <- c(beta_est)
+          if (any(is.na(vector_beta)))
+            vector_beta <- vector_beta[!is.na(vector_beta)]
+          km_beta <- kmeans(abs(vector_beta), 2)
+          which_nonzero <- which.max(km_beta$centers[, 1])
+          keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
+          return(keep_nonzero)
+        }, simplify = TRUE)
+      colnames(out2) <- colnames(est_type)
+      return(list(active = out2,
+                  excur_result = NULL))
+    }, simplify = FALSE)
+    return(out)
   }
+  if (type == "sequential") {
+    if (is.null(n_sample)){
+      n_sample <- 1000
+    }
+    n_remain <- n_sample
+    if (is.null(field_name))
+      field_name <- model_obj$beta_names
+    select_vars <- sapply(field_name, function(each_var)
+      0,
+      simplify = FALSE)
+    b_dists <- sapply(model_obj$beta_estimates, function(est_type) {
+      if (is.null(field_name))
+        field_name <- colnames(est_type)
+      if (!any(field_name %in% colnames(est_type)))
+        stop(
+          "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
+        )
+      est_type <-
+        est_type[, which(colnames(est_type) %in% field_name)]
+      out2 <-
+        sapply(split(est_type, col(est_type)), function(beta_est) {
+          vector_beta <- c(beta_est)
+          if (any(is.na(vector_beta)))
+            vector_beta <- vector_beta[!is.na(vector_beta)]
+          km_beta <- kmeans(abs(vector_beta), 2)
+          which_nonzero <- which.max(km_beta$centers[, 1])
+          nz_beta <- vector_beta[km_beta$cluster == which_nonzero]
+          # keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
+          # return(keep_nonzero)
+          return(dist(range(nz_beta)))
+        }, simplify = TRUE)
+      names(out2) <- colnames(est_type)
+      return(out2)
+    }, simplify = FALSE)
+    complete_sample <- sapply(model_obj$session_names, function(ses) {
+      out <- vector("list", length = length(field_name))
+      names(out) <- field_name
+      return(out)
+    }, simplify = FALSE)
+    # complete_sample <- vector("list", length(model_obj$beta_names))
+    # names(complete_sample) <- model_obj$beta_names
+    while (n_remain > 0) {
+      cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
+      next_sample_size <- min(n_remain, 100)
+      test_sample <- inla.posterior.sample(
+        n = next_sample_size,
+        result = model_obj$INLA_result,
+        selection = select_vars
+      )
+      next_sample <-
+        sapply(model_obj$session_names, function(each_ses) {
+          sapply(model_obj$beta_names, function(each_var) {
+            sapply(test_sample, function(each_sample) {
+              var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
+              var_sample <- each_sample$latent[var_name == each_var, ]
+              return(var_sample)
+            }, simplify = "array")
+          }, simplify = FALSE)
+        }, simplify = FALSE)
+
+      complete_sample <- mapply(function(complete, next_s) {
+        mapply(function(cs, ns) {
+          cbind(cs, ns)
+        },
+        cs = complete,
+        ns = next_s,
+        SIMPLIFY = FALSE)
+      }, complete = complete_sample, next_s = next_sample, SIMPLIFY = FALSE)
+      n_remain <- n_remain - next_sample_size
+    }
+    # b_estimate <- sapply(complete_sample, function(betas) {
+    #   median(apply(betas, 1, sd))
+    # })
+    # b_estimate <- sapply(complete_sample, function(each_ses) {
+    #   sapply(each_ses, function(betas) {
+    #     # median(apply(betas, 1, sd))
+    #     min(apply(betas, 1, sd))
+    #   })
+    # }, simplify = FALSE)
+    b_estimate <- b_dists
+    # final_nums <- mapply(s2m_B,
+    #                      B = complete_sample,
+    #                      sigma = b_estimate,
+    #                      SIMPLIFY = TRUE)
+    final_nums <- mapply(function(each_ses_beta,each_ses_b) {
+      out_id <- mapply(s2m_B,B = each_ses_beta,
+                        sigma = each_ses_b, SIMPLIFY = TRUE)
+      out_id[out_id != 0] <- 1
+      return(list(active = out_id,
+                  excur_result = NULL))
+    }, each_ses_beta = complete_sample, each_ses_b = b_estimate, SIMPLIFY = FALSE)
+    # final_nums[final_nums != 0] <- 1
+    # final_out <- list(active = final_nums,
+    #                   excur_result = NULL)
+    # return(final_out)
+    return(final_nums)
+  }
+}
+
+#' Significance using Benjamini-Hochsberg False Discovery Rate
+#'
+#' @param p A vector of p-values
+#' @param FDR The false discovery rate
+#'
+#' @return A 0-1 vector that classifies the p-value vector as "significant" or not.
+#' @export
+BH_FDR <- function(p, FDR = 0.05) {
+  p_rank <- rank(-p, na.last=T)
+  BH_cutoff <- FDR * p_rank / length(p_rank)
+  out <- ifelse(is.na(p), 1, p)
+  out <- ifelse(out < BH_cutoff, 1,0)
+  return(out)
+}
+
+#' Identification of areas of activation in a General Linear Model using classical methods
+#'
+#' @param model_obj A \code{BayesGLM_cifti} or \code{BayesGLM_slice} object
+#' @param alpha A significance level to be used in both the family-wise error
+#'   rate (FWER) or false discovery rate (FDR) multiple correction methods of
+#'   determining significance.
+#'
+#' @return A list of length equal to the number of hemispheres of model fit
+#'   data. In each list element, there will be two matrices corresponding to the
+#'   0-1 activation status for the model coefficients.
+#' 
+#' @importFrom stats sd pt
+#' 
+#' @export
+id_activations.classical <- function(model_obj, alpha = 0.05) {
+  # Check to see if the Bayesian results are available (as they include the data values used to fit the model)
+  has_Bayes <- length(which(sapply(model_obj$GLMs_Bayesian, class) == "BayesGLM")) > 0
+  if(!has_Bayes) stop("This currently requires model objects with Bayesian results due to model object data subjects. This will be fixed in the future.")
+  # Note: This currently only works when there are Bayesian results because the data may have been prewhitened, and the prewhitened data are being saved as part of the GLMs_Bayesian object within the BayesGLM model output.
+  hems <- names(model_obj$GLMs_Bayesian[which(sapply(model_obj$GLMs_Bayesian, class) == "BayesGLM")])
+  L_or_R <- sub("cortex","",hems)
+  K <- length(model_obj$beta_names)
+  ntime <- unique(sapply(model_obj$design, nrow))
+  n_sess <- length(model_obj$design)
+  hems_name <- ifelse(L_or_R == "L", 'left','right')
+  active_out <- vector('list', length(hems))
+  for(h in 1:length(L_or_R)) {
+    y_vec <- model_obj$GLMs_Bayesian[[paste0("cortex",L_or_R[h])]]$y
+    X_mat <- model_obj$GLMs_Bayesian[[paste0("cortex",L_or_R[h])]]$X
+    if(length(X_mat) > 1) {
+      X_mat_final <- X_mat[[1]]
+      for(ss in 2:length(X_mat)) {
+        X_mat_final <- rbind(X_mat_final,X_mat[[ss]])
+      }
+      X_mat <- X_mat_final
+    } else {
+      X_mat <- X_mat[[1]]
+    }
+    XtX <- crossprod(X_mat)
+    XtX_inv <- solve(XtX)
+    beta_hat <- as.vector(XtX_inv %*% crossprod(X_mat,y_vec))
+    V <- length(beta_hat) / K
+    y_error <- y_vec - X_mat %*% beta_hat
+    sd_error <- sd(y_error)
+    se_beta <- diag(XtX_inv) * sd_error
+    DOF <- (n_sess*ntime) - K - 1
+    t_star <- beta_hat / se_beta
+    p_values <- sapply(t_star, pt, df = DOF, lower.tail = F)
+    FDR_act <- BH_FDR(p_values, FDR = alpha)
+    FWER_act <- as.numeric(p_values < (alpha / length(beta_hat)))
+    active_out[[h]] <- list(
+      FDR_act = matrix(FDR_act,V,K),
+      FWER_act = matrix(FWER_act,V,K)
+    )
+  }
+  names(active_out) <- hems
+  return(active_out)
+}

@@ -2,16 +2,13 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM_cifti}
 \alias{BayesGLM_cifti}
-\title{Performs whole-brain spatial Bayesian GLM for fMRI task activation}
+\title{BayesGLM for CIFTI}
 \usage{
 BayesGLM_cifti(
   cifti_fname,
   surfL_fname = NULL,
   surfR_fname = NULL,
-  sphereL_fname = NULL,
-  sphereR_fname = NULL,
-  brainstructures = c("left", "right", "subcortical"),
-  wb_path = NULL,
+  brainstructures = c("left", "right"),
   design = NULL,
   onsets = NULL,
   TR = NULL,
@@ -20,13 +17,16 @@ BayesGLM_cifti(
   scale_BOLD = TRUE,
   scale_design = TRUE,
   GLM_method = "both",
+  ar_order = 6,
+  ar_smooth = 5,
   session_names = NULL,
   resamp_res = 10000,
   num.threads = 4,
   verbose = FALSE,
-  write_dir = NULL,
   outfile = NULL,
-  return_INLA_result = FALSE
+  return_INLA_result = FALSE,
+  avg_sessions = TRUE,
+  trim_INLA = TRUE
 )
 }
 \arguments{
@@ -36,78 +36,87 @@ BayesGLM_cifti(
 
 \item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
 
-\item{sphereL_fname}{File path of GIFTI-format left spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
-
-\item{sphereR_fname}{File path of GIFTI-format right spherical surface (*.surf.gii) to use for resampling cifti data and gifti surfaces to lower resolution. Must be provided if GLM_method is "Bayesian" or "both" and resample is not NULL.}
-
 \item{brainstructures}{Character vector indicating which brain structure(s)
-to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
-cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
-gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
+to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
+cortical surface). Default: \code{c("left","right")} (entire cortical surface).
+Note that the subcortical models have not yet been implemented.}
 
-\item{wb_path}{(Optional) Path to Connectome Workbench folder or executable.
-If not provided, should be set with
-\code{ciftiTools.setOption("wb_path", "path/to/workbench")}.}
+\item{design, onsets, TR}{Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 
-\item{design}{A TxK task design matrix (or list of such matrices, for multiple-session modeling) with column names representing tasks. Each column represents the expected BOLD response due to each task, a convolution of the hemodynamic response function (HRF) and the task stimulus.  Must be provided if and only if onsets=NULL.  Note that the scale of the regressors will affect the scale and interpretation of the beta coefficients, so imposing a proper scale (e.g., set maximum to 1) is recommended.}
+\code{design} is a \eqn{T x K} task design matrix (or list of such
+matrices, for multiple-session modeling) with column names representing
+tasks. Each column represents the expected BOLD response due to each task,
+a convolution of the hemodynamic response function (HRF) and the task
+stimulus. Note that the scale of the regressors will affect the scale and
+interpretation of the beta coefficients, so imposing a proper scale (e.g.,
+set maximum to 1) is recommended.
 
-\item{onsets}{A matrix of onsets (first column) and durations (second column) for each task in SECONDS, organized as a list where each element of the list corresponds to one task. Names of list should be task names. (Or for multi-session modeling, a list of such lists.)  Must be provided if and only if design=NULL.}
+\code{onsets} is a matrix of onsets (first column) and durations (second column)
+for each task in seconds, organized as a list where each element of the
+list corresponds to one task. Names of list should be task names. (Or for
+multi-session modeling, a list of such lists.)
 
-\item{TR}{The temporal resolution of the data in seconds.  Must be provided if onsets provided.}
+\code{TR} is the temporal resolution of the data in seconds.}
 
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
 
 \item{nuisance_include}{(Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).}
 
-\item{scale_BOLD}{If TRUE (default), scale timeseries data so estimates represent percent signal change.  Else, center but do not scale.}
+\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
+change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
+centered.}
 
-\item{scale_design}{If TRUE (default), scale design matrix so maximum value is equal to 1.  Else, do not scale.}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 
 \item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
 
-\item{session_names}{(Optional) A vector of names corresponding to each session.}
+\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
+should be a number indicating the order of the autoregressive model to use
+for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
+
+\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+to not do any smoothing. Default: \code{5}.}
+
+\item{session_names}{(Optional) A vector of names corresponding to each
+session.}
 
 \item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
 
-\item{num.threads}{Maximum number of threads the inla-program will use for model estimation}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
-\item{verbose}{Logical indicating if INLA should run in a verbose mode (default FALSE).}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{write_dir}{(Optional) Location where to write resampled data (if resample != NULL) and output files. If NULL, use the current working directory.}
+\item{outfile}{(Optional) File name (without extension) of output file for
+\code{"BayesGLM"} result to use in Bayesian group modeling.
+\code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
+cortex and right cortex results, respectively. Default: \code{NULL}
+(do not save the results to any file).}
 
-\item{outfile}{(Optional) File name (without extension) of output file for BayesGLM result to use in Bayesian group modeling.}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{FALSE}. Required for running \code{\link{id_activations}}
+after, but not for running BayesGLM_joint after to get
+posterior quantities of group means or contrasts.}
 
-\item{return_INLA_result}{If TRUE, object returned will include the INLA model object (can be large).  Default is FALSE.  Required for running \code{id_activations} on \code{BayesGLM} model object (but not for running \code{BayesGLM_joint} to get posterior quantities of group means or contrasts).}
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
+
+\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+result be trimmed to only what is necessary to use the
+\code{id_activations} function? Default value is \code{TRUE}.}
 }
 \value{
-An object of class BayesGLM, a list containing ...
+An object of class \code{"BayesGLM"}, a list containing...
 }
 \description{
-Performs whole-brain spatial Bayesian GLM for fMRI task activation
+Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 }
-\details{
-This function uses a system wrapper for the 'wb_command' executable. The user must first download and install the Connectome Workbench,
-available from https://www.humanconnectome.org/software/get-connectome-workbench. The 'wb_path' argument is the full file path to the 'wb_command' executable file.
+\section{Connectome Workbench Requirement}{
 
-The subcortical brain structure labels range from 3-21 and represent:
-3 Accumbens-L
-4 Accumbens-R
-5 Amygdala-L
-6 Amygdala-R
-7 Brain Stem
-8 Caudate-L
-9 Caudate-R
-10 Cerebellum-L
-11 Cerebellum-R
-12 Diencephalon-L
-13 Diencephalon-R
-14 Hippocampus-L
-15 Hippocampus-R
-16 Pallidum-L
-17 Pallidum-R
-18 Putamen-L
-19 Putamen-R
-20 Thalamus-L
-21 Thalamus-R
+This function uses a system wrapper for the 'wb_command' executable. The
+user must first download and install the Connectome Workbench, available
+from https://www.humanconnectome.org/software/get-connectome-workbench .
 }
+
