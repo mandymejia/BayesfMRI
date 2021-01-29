@@ -85,6 +85,7 @@ BayesGLM_slice <- function(
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(BOLD)
+  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
   } else {
@@ -405,6 +406,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(cifti_fname)
+  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
     if(!is.null(design)) design <- list(design)
@@ -922,6 +924,7 @@ BayesGLM <- function(
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
+  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
 
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')
