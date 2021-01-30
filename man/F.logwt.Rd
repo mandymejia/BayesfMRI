@@ -26,7 +26,7 @@ Internal function used in joint approach to group-analysis for combining across 
 \section{INLA Requirement}{
 
 This function requires the \code{INLA} package, which is not a CRAN package.
-See \url{http://www.r-inla.org/download} for easy installation instructions.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 
 \keyword{internal}

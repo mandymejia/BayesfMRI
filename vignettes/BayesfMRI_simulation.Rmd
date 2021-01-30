@@ -42,7 +42,7 @@ There are several prerequisites to using `BayesfMRI` for spatial Bayesian task f
 
 ## 1. Installing R-INLA 
 
-Model estimation is based on integrated nested Laplace approximations (INLA), which is implemented in the R-INLA package. The INLA package must be installed prior to installation of the BayesfMRI package. For Linux systems other than Ubuntu1604, alternative Linux builds should be installed, which are available at \url{http://www.r-inla.org/events/alternativelinuxbuilds}.
+Model estimation is based on integrated nested Laplace approximations (INLA), which is implemented in the R-INLA package. The INLA package must be installed prior to installation of the BayesfMRI package. For Linux systems other than Ubuntu1604, alternative Linux builds should be installed, which are available at \url{https://www.r-inla.org/events/alternativelinuxbuilds}.
 
 ```{r, eval=F}
 install.packages("INLA", repos=c(getOption("repos"), 
