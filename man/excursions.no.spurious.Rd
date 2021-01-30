@@ -54,12 +54,12 @@ excursions.no.spurious(
 
 \item{rho}{Marginal excursion probabilities (optional). For contour regions, provide \eqn{P(X>u)}.}
 
-\item{method}{Method for handeling the latent Gaussian structure:
+\item{method}{Method for handling the latent Gaussian structure:
 \itemize{
 \item{'EB' }{Empirical Bayes (default)}
 \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}}
 
-\item{ind}{Indices of the nodes that should be analysed (optional).}
+\item{ind}{Indices of the nodes that should be analyzed (optional).}
 
 \item{max.size}{Maximum number of nodes to include in the set of interest (optional).}
 
@@ -72,7 +72,7 @@ threads allowed by the system.}
 \item{seed}{Random seed (optional). Default: \code{NULL}.}
 
 \item{area.limit}{Positive number. All connected excursion sets with an area smaller than this
-numbere are removed.}
+number are removed.}
 
 \item{use.continuous}{Logical parameter indicating whether the areas of the excursion sets
 should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the

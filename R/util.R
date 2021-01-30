@@ -264,7 +264,7 @@ boundary_mask <- function(faces, mask, boundary_width){
 #'  \code{expected} using \code{match.arg()}.
 #' @param expected Character vector of expected/allowed values.
 #' @param fail_action If any value in \code{user} could not be
-#'  matched, or repeated matches occured, what should happen? Possible values
+#'  matched, or repeated matches occurred, what should happen? Possible values
 #'  are \code{"stop"} (default; raises an error), \code{"warning"}, and
 #'  \code{"nothing"}.
 #' @param user_value_label How to refer to the user input in a stop or warning

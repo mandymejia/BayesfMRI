@@ -15,7 +15,7 @@ NULL
 #' @name avg_sessions_Param
 NULL
 
-#' contrats: INLA
+#' contrasts: INLA
 #' 
 #' @param contrasts List of contrast vectors to be passed to \code{\link{inla}}.
 #' 

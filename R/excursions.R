@@ -42,7 +42,7 @@ find.connected <- function(ind,mesh){
 #' 
 #' Find smallest activation
 #' 
-#' Internal function that find the smalles excursion set. If res is is of class excurobj, the
+#' Internal function that finds the smallest excursion set. If res is is of class excurobj, the
 #'  continuous function is not used to calculate the area of the connected components. Instead the
 #'  function uses the approximation that the contribution from each element
 #'  \eqn{\phi_i} is \eqn{\int \phi_i(s)ds = C_ii}.
@@ -153,17 +153,17 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' @param F.limit The limit value for the computation of the F function. F is set to NA for all nodes where F<1-F.limit. Default is F.limit = \code{alpha}.
 #' @param vars Precomputed marginal variances (optional).
 #' @param rho Marginal excursion probabilities (optional). For contour regions, provide \eqn{P(X>u)}.
-#' @param method Method for handeling the latent Gaussian structure:
+#' @param method Method for handling the latent Gaussian structure:
 #'  \itemize{
 #'       \item{'EB' }{Empirical Bayes (default)}
 #'       \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}
-#' @param ind Indices of the nodes that should be analysed (optional).
+#' @param ind Indices of the nodes that should be analyzed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
 #' @inheritParams verbose_Param_direct_FALSE
 #' @inheritParams max.threads_Param
 #' @inheritParams seed_Param
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
-#' numbere are removed.
+#' number are removed.
 #' @param use.continuous Logical parameter indicating whether the areas of the excursion sets
 #' should be calculated using the \code{continuous} function in \code{excursions}. If FALSE, the
 #' function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.
@@ -506,11 +506,11 @@ excursions.no.spurious <- function(alpha,
 #' @param n.iter Number or iterations in the MC sampler that is used for approximating probabilities. The default value is 10000.
 #' @param F.limit The limit value for the computation of the F function. F is set to NA for all nodes where F<1-F.limit. Default is F.limit = \code{alpha}.
 #' @param u.link If u.link is TRUE, u is assumed to be in the scale of the data and is then transformed to the scale of the linear predictor (default FALSE).
-#' @param method Method for handeling the latent Gaussian structure:
+#' @param method Method for handling the latent Gaussian structure:
 #'  \itemize{
 #'       \item{'EB' }{Empirical Bayes (default)}
 #'       \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}
-#' @param ind Indices of the nodes that should be analysed (optional).
+#' @param ind Indices of the nodes that should be analyzed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
 #' @inheritParams verbose_Param_direct_FALSE
 #' @inheritParams max.threads_Param

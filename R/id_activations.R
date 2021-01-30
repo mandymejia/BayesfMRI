@@ -13,7 +13,7 @@
 #'
 #' @return A nested list, where the first layer separates by session, and the
 #'  second layer is another list of two elements: \code{active}, which gives a
-#'  matrix of zeros and ones of the same dimention as
+#'  matrix of zeros and ones of the same dimension as
 #'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
 #'  object of class \code{"excurobj"} if \code{method='posterior'}
 #'  (see \code{\link{excursions.inla}} for more information) and is \code{NULL}
@@ -74,7 +74,7 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
 #'
 #' @return A nested list, where the first layer separates by session, and the
 #'  second layer is another list of two elements: \code{active}, which gives a
-#'  matrix of zeros and ones of the same dimention as
+#'  matrix of zeros and ones of the same dimension as
 #'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
 #'  object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 #'  more information).
@@ -159,7 +159,7 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 #'
 #' @return A nested list, where the first layer separates by session, and the
 #'  second layer is another list of two elements: \code{active}, which gives a
-#'  matrix of zeros and ones of the same dimention as
+#'  matrix of zeros and ones of the same dimension as
 #'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result},
 #'  which is \code{NULL} for the "2means" method.
 #'

@@ -35,7 +35,7 @@ id_activations(
 \value{
 A nested list, where the first layer separates by session, and the
 second layer is another list of two elements: \code{active}, which gives a
-matrix of zeros and ones of the same dimention as
+matrix of zeros and ones of the same dimension as
 \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
 object of class \code{"excurobj"} if \code{method='posterior'}
 (see \code{\link{excursions.inla}} for more information) and is \code{NULL}

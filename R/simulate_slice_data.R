@@ -19,7 +19,7 @@
 #' @return A list in which the first element, \code{BOLD}, is a list of
 #'   T by N response matrices corresponding to sessions, and the second element,
 #'    \code{design}, is a list of \code{num_time} by \code{num_tasks} predictor
-#'    matrices corrsponding to sessions.
+#'    matrices corresponding to sessions.
 #'
 #' @importFrom stats toeplitz runif rgamma arima.sim
 #'

@@ -2,10 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{contrasts_Param_inla}
 \alias{contrasts_Param_inla}
-\title{contrats: INLA}
+\title{contrasts: INLA}
 \arguments{
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 }
 \description{
-contrats: INLA
+contrasts: INLA
 }

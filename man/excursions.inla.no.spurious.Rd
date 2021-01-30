@@ -55,12 +55,12 @@ should only be used if a stack object is provided, use the name argument otherwi
 
 \item{u.link}{If u.link is TRUE, u is assumed to be in the scale of the data and is then transformed to the scale of the linear predictor (default FALSE).}
 
-\item{method}{Method for handeling the latent Gaussian structure:
+\item{method}{Method for handling the latent Gaussian structure:
 \itemize{
 \item{'EB' }{Empirical Bayes (default)}
 \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}}
 
-\item{ind}{Indices of the nodes that should be analysed (optional).}
+\item{ind}{Indices of the nodes that should be analyzed (optional).}
 
 \item{max.size}{Maximum number of nodes to include in the set of interest (optional).}
 

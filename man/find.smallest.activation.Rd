@@ -21,7 +21,7 @@ find.smallest.activation(res, mesh, area.limit, factor, area.el)
 Find smallest activation
 }
 \details{
-Internal function that find the smalles excursion set. If res is is of class excurobj, the
+Internal function that finds the smallest excursion set. If res is is of class excurobj, the
 continuous function is not used to calculate the area of the connected components. Instead the
 function uses the approximation that the contribution from each element
 \eqn{\phi_i} is \eqn{\int \phi_i(s)ds = C_ii}.
