@@ -40,7 +40,7 @@ bibentry(
     journal     = "Journal of the American Statistical Association",
     pages       = "1--27",
     publisher   = "Taylor and Francis",
-    doi         = "https://doi.org/10.1080/01621459.2019.1611582",
+    doi         = "https://doi.org/10.1080/01621459.2019.1679638",
     header      = "For the template ICA model for estimation of subject-level resting-state networks, please cite:",
     textVersion  = "Mejia, Amanda F., Mary Beth Nebel, Yikai Wang, Brian S. Caffo, and Ying Guo. Template Independent Component Analysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors. Journal of the American Statistical Association (2019): 1-27."
 )
