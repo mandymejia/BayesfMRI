@@ -324,9 +324,9 @@ BH_FDR <- function(p, FDR = 0.05) {
 #' @return A list of length equal to the number of hemispheres of model fit
 #'   data. In each list element, there will be two matrices corresponding to the
 #'   0-1 activation status for the model coefficients.
-#' 
+#'
 #' @importFrom stats sd pt
-#' 
+#'
 #' @export
 id_activations.classical <- function(model_obj, alpha = 0.05) {
   # Check to see if the Bayesian results are available (as they include the data values used to fit the model)
@@ -356,9 +356,12 @@ id_activations.classical <- function(model_obj, alpha = 0.05) {
     XtX_inv <- solve(XtX)
     beta_hat <- as.vector(XtX_inv %*% crossprod(X_mat,y_vec))
     V <- length(beta_hat) / K
-    y_error <- y_vec - X_mat %*% beta_hat
-    sd_error <- sd(y_error)
-    se_beta <- diag(XtX_inv) * sd_error
+    # y_error <- y_vec - X_mat %*% beta_hat
+    y_error <- matrix(as.vector(y_vec - X_mat %*% beta_hat), n_sess*ntime, V)
+    # sd_error <- sd(y_error)
+    # se_beta <- sqrt(diag(XtX_inv)) * sd_error
+    sd_error <- sqrt(matrixStats::colVars(y_error) * (n_sess*ntime - 1) / (n_sess*ntime - K - 1))
+    se_beta <- sqrt(diag(XtX_inv)) * rep(sd_error,K)
     DOF <- (n_sess*ntime) - K - 1
     t_star <- beta_hat / se_beta
     p_values <- sapply(t_star, pt, df = DOF, lower.tail = F)

@@ -104,6 +104,12 @@ BayesGLM2 <- function(results,
   # Instead, we can get this working for multi-session data. To begin, we will
   # assume the same number of sessions for each subject, but this can be changed
   # later.
+  if(num_sessions > 1) {
+    message("Currently, multi-session analysis is only possible using the averages across sessions.")
+    use_avg <- "matrix" %in% class(results[[1]]$avg_beta_estimates)
+    if(!use_avg) stop("This function does not currently support group analysis on multiple sessions unless the analysis is done on subject-level averages across sessions.")
+    num_sessions <- 1
+  }
 
   #### SET UP OR CHECK CONTRAST VECTOR(S)
 
@@ -459,7 +465,7 @@ beta.posterior.thetasamp <- function(theta,
 #' @param Q_theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
-#' 
+#'
 #' @importFrom stats dgamma
 #'
 #' @keywords internal
