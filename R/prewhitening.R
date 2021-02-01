@@ -144,18 +144,19 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
 
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
   if(!(ar_smooth != 0) & !is.null(cifti_data) & !is.null(hemisphere)) {
-    surface_sigma <- ar_smooth / (2*sqrt(2*log(2)))
+    surf_FWHM <- vol_FWHM <- ar_smooth
+    # surface_sigma <- ar_smooth / (2*sqrt(2*log(2)))
     cat("Smoothing AR coefficients and residual variance...")
     rows.keep <- which(!is.na(avg_AR[,1]))
     avg_xifti <- cifti_data
     avg_xifti$data[[paste0("cortex_",hemisphere)]] <- avg_AR[rows.keep,]
-    smooth_avg_xifti <- smooth_cifti(avg_xifti,surface_sigma = surface_sigma,
-                                     volume_sigma = surface_sigma)
+    smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = surf_FWHM,
+                                     vol_FWHM = vol_FWHM)
     avg_AR[rows.keep,] <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]]
     var_xifti <- cifti_data
     var_xifti$data[[paste0("cortex_",hemisphere)]] <- as.matrix(avg_var[rows.keep])
-    smooth_var_xifti <- smooth_cifti(var_xifti,surface_sigma = surface_sigma,
-                                     volume_sigma = surface_sigma)
+    smooth_var_xifti <- smooth_cifti(var_xifti, surf_FWHM = surf_FWHM,
+                                     vol_FWHM = vol_FWHM)
     avg_var[rows.keep] <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]]
     cat("done!\n")
   }
