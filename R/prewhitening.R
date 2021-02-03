@@ -233,6 +233,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
         AR_var = avg_var,
         SIMPLIFY = FALSE
       )
+    parallel::stopCluster(cl)
   }
   cat("done!\n")
 

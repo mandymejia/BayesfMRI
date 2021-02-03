@@ -610,7 +610,8 @@ BayesGLM_cifti <- function(cifti_fname,
     if(prewhiten) {
       pw_data_left <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
                                  hemisphere = 'left',
-                                 cifti_data = cifti_ss)
+                                 cifti_data = cifti_ss,
+                                 num.threads = num.threads)
       scale_BOLD <- F
       scale_design <- F
       session_data <- pw_data_left$data
@@ -674,7 +675,8 @@ BayesGLM_cifti <- function(cifti_fname,
     if(prewhiten) {
       pw_data_right <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
                                  hemisphere = 'right',
-                                 cifti_data = cifti_ss)
+                                 cifti_data = cifti_ss,
+                                 num.threads = num.threads)
       scale_BOLD <- F
       scale_design <- F
       session_data <- pw_data_right$data
