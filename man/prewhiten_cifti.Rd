@@ -11,7 +11,8 @@ prewhiten_cifti(
   ar_order = 6,
   ar_smooth = 5,
   cifti_data,
-  hemisphere = NULL
+  hemisphere = NULL,
+  num.threads = NULL
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ to not do any smoothing. Default: \code{5}.}
 estimates onto the surface mesh for smoothing.}
 
 \item{hemisphere}{'left' or 'right'}
+
+\item{num.threads}{(scalar) The number of threads to use in parallelizing the
+prewhitening}
 }
 \value{
 The prewhitened data (in a list), the smoothed, averaged AR

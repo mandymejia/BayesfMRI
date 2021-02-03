@@ -38,12 +38,53 @@ getSqrtInv <- function(Inv){
   return(sqrtInv)
 }
 
-# data <- session_data
-# ar_order <- 6
-# surface_FWHM <- ar_smooth <- 5
-# surface_sigma <- surface_FWHM / (2*sqrt(2*log(2)))
-# cifti_data <- cifti_ss
-# hemisphere <- hem
+#' Prewhitening for a single time series
+#'
+#' @param AR_coeffs A vector of AR(p) coefficients for an order p autoregressive
+#'   prewhitening
+#' @param ntime (scalar) The length of the time series to be prewhitened
+#' @param AR_var (scalar) The variance of the time series to include a
+#'   normalization term to make the prewhitened series have variance equal to 1.
+#'   If none is provided, then the default is 1, resulting in no normalization.
+#'
+#' @return A sparse matrix with the class \code{dsCMatrix} with \code{ntime}
+#'   rows and columns that can be postmultiplied by the original time series
+#'   in order to perform prewhitening.
+#' @importFrom Matrix sparseMatrix bandSparse
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' x <- arima.sim(list(ar = c(.3,.2,.1)), n = 100)
+#' acf(x)
+#' ar_model <- ar.yw(x,order.max = 6, aic = F)
+#' pw_mat <- prewhiten.v(AR_coeffs = ar_model$ar,
+#'                       ntime = length(x),
+#'                       AR_var = ar_model$var.pred)
+#' y <- as.vector(pw_mat %*% as.matrix(x))
+#' acf(y)
+#' plot(x, type = 'l')
+#' lines(y, col = 'red')
+#' }
+prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
+  off_diags <- row(diag(ntime)) - col(diag(ntime))
+  ar_order <- length(AR_coeffs)
+  if(is.na(AR_coeffs[1])) {
+    return(Matrix::sparseMatrix(i=NULL, j=NULL, dims=c(ntime, ntime)))
+  } else {
+    Inv.v <- getInvCovAR(AR_coeffs, ntime) #inverse correlation (sort of)
+    Dinv.v <- diag(rep(1/sqrt(AR_var), ntime)) #inverse diagonal SD matrix
+    Inv.v <- Dinv.v %*% Inv.v %*% Dinv.v #inverse covariance
+    sqrtInv.v <- getSqrtInv(Inv.v) #find V^(1) and take sqrt
+    #after the (p+1)th off-diagonal, values of sqrtInv.v very close to zero
+    diags <- list(); length(diags) <- ar_order+2
+    for(k in 0:(ar_order+1)){
+      diags[[k+1]] <- sqrtInv.v[off_diags==k]
+    }
+    matband <- Matrix::bandSparse(ntime, k=0:(ar_order+1), symmetric=TRUE, diagonals=diags)
+    return(matband)
+  }
+}
 
 #' Prewhiten cifti session data
 #'
@@ -57,6 +98,8 @@ getSqrtInv <- function(Inv){
 #' @param cifti_data A \code{xifti} object used to map the AR coefficient
 #'   estimates onto the surface mesh for smoothing.
 #' @param hemisphere 'left' or 'right'
+#' @param num.threads (scalar) The number of threads to use in parallelizing the
+#'   prewhitening
 #' @importFrom Matrix bandSparse sparseMatrix bdiag
 #' @importFrom ciftiTools smooth_cifti
 #' @importFrom stats ar.yw
@@ -65,7 +108,7 @@ getSqrtInv <- function(Inv){
 #'   coefficient estimates used in the prewhitening, the smoothed, average
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
-prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, ar_smooth = 5, cifti_data, hemisphere = NULL) {
+prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, ar_smooth = 5, cifti_data, hemisphere = NULL, num.threads = NULL) {
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
@@ -145,7 +188,6 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
   if(!(ar_smooth != 0) & !is.null(cifti_data) & !is.null(hemisphere)) {
     surf_FWHM <- vol_FWHM <- ar_smooth
-    # surface_sigma <- ar_smooth / (2*sqrt(2*log(2)))
     cat("Smoothing AR coefficients and residual variance...")
     rows.keep <- which(!is.na(avg_AR[,1]))
     avg_xifti <- cifti_data
@@ -161,57 +203,49 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix
-  off_diags <- row(diag(ntime)) - col(diag(ntime))
-
-  # Initialize the block diagonal covariance matrix
-  template_pw <- Matrix::bandSparse(n = ntime,
-                                    k = 0:(ar_order + 1),
-                                    symmetric = TRUE)
-  template_pw_list <- rep(list(template_pw),V)
-  rows.rm <- numeric()
   cat("Prewhitening...\n")
-  for(v in 1:V) {
-    if(v %% 100 == 0) cat("Location",v,"of",V,"\n")
-    rows <- (1:ntime) + ntime*(v-1)
-    rows.rm <- c(rows.rm,rows[1:(ar_order + 1)], rows[(ntime - ar_order):ntime])
-    ar.v <- avg_AR[v,]
-    var.v <- avg_var[v]
-    if(is.na(ar.v[1])) {
-      template_pw_list[[v]] <- Matrix::sparseMatrix(i=NULL, j=NULL, dims=c(ntime, ntime))
-    } else {
-      Inv.v <- getInvCovAR(ar.v, ntime) #inverse correlation (sort of)
-      Dinv.v <- diag(rep(1/sqrt(var.v), ntime)) #inverse diagonal SD matrix
-      Inv.v <- Dinv.v %*% Inv.v %*% Dinv.v #inverse covariance
-      sqrtInv.v <- getSqrtInv(Inv.v) #find V^(1) and take sqrt
-      #after the (p+1)th off-diagonal, values of sqrtInv.v very close to zero
-      diags <- list(); length(diags) <- ar_order+2
-      for(k in 0:(ar_order+1)){
-        diags[[k+1]] <- sqrtInv.v[off_diags==k]
-      }
-      matband <- bandSparse(ntime, k=0:(ar_order+1), symmetric=TRUE, diagonals=diags)
-      template_pw_list[[v]] <- matband
+  if(is.null(num.threads)) {
+    # Initialize the block diagonal covariance matrix
+    template_pw <- Matrix::bandSparse(n = ntime,
+                                      k = 0:(ar_order + 1),
+                                      symmetric = TRUE)
+    template_pw_list <- rep(list(template_pw),V)
+    rows.rm <- numeric()
+    for(v in 1:V) {
+      if(v %% 100 == 0) cat("Location",v,"of",V,"\n")
+      template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
+                                           ntime = ntime,
+                                           AR_var = avg_var[v])
     }
+  } else {
+    if (!requireNamespace("parallel", quietly = TRUE)) {
+      stop("Prewhitening in parallel requires the `parallel` package. Please install it.", call. = FALSE)
+    }
+    max_threads <- max(parallel::detectCores() - 1, 25)
+    num_threads <- min(max_threads,num.threads)
+    cl <- parallel::makeCluster(num_threads)
+    template_pw_list <-
+      parallel::clusterMap(
+        cl,
+        prewhiten.v,
+        AR_coeffs = split(avg_AR, row(avg_AR)),
+        ntime = ntime,
+        AR_var = avg_var,
+        SIMPLIFY = FALSE
+      )
   }
   cat("done!\n")
 
   sqrtInv_all <- Matrix::bdiag(template_pw_list)
-  # Testing to see if the data organization is being done correctly.
-  # sqrtInv_all <- Matrix::Diagonal(nrow(sqrtInv_all))
-
-
-  # prewhite_mat <- Reduce(rbind,template_pw_list)
   pw_data <- sapply(data,function(data_s) {
     bold_out <- matrix(NA,ntime, length(is_missing))
     pw_BOLD <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
     bold_out[,!is_missing] <- pw_BOLD
-    # pw_bold <- matrix(pw_BOLD,ntime,V)
-    # all_design <- Reduce(rbind,rep(list(data_s$design),V))
     all_design <- bdiag(rep(list(data_s$design),V))
     pw_design <- sqrtInv_all %*% all_design
     return(list(BOLD = bold_out, design = pw_design))
   }, simplify = F)
 
-  # return(GLM_result)
   return(list(data = pw_data,
               AR_coeffs = avg_AR,
               AR_var = avg_var,
