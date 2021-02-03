@@ -186,7 +186,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
   avg_var <- apply(as.matrix(AR_resid_var),1,mean)
 
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
-  if(!(ar_smooth != 0) & !is.null(cifti_data) & !is.null(hemisphere)) {
+  if((ar_smooth != 0) & !is.null(cifti_data) & !is.null(hemisphere)) {
     surf_FWHM <- vol_FWHM <- ar_smooth
     cat("Smoothing AR coefficients and residual variance...")
     rows.keep <- which(!is.na(avg_AR[,1]))
