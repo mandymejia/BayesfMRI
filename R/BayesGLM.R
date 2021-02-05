@@ -394,6 +394,34 @@ BayesGLM_cifti <- function(cifti_fname,
   do_right <- ('right' %in% brainstructures)
   do_sub <- FALSE
   #do_sub <- ('subcortical' %in% brainstructures)
+  if(!is.null(onsets)){
+    if(class(onsets[[1]]) == 'list') {
+      if(is.null(names(onsets[[1]])))
+        beta_names <- paste0("beta",seq_len(length(onsets[[1]])))
+      if(!is.null(names(onsets[[1]])))
+        beta_names <- names(onsets[[1]])
+    }
+    if('data.frame' %in% class(onsets[[1]])) {
+      if(is.null(names(onsets)))
+        beta_names <- paste0("beta",seq_len(length(onsets)))
+      if(!is.null(names(onsets)))
+        beta_names <- names(onsets)
+    }
+  }
+  if(!is.null(design)) {
+    if(class(design) == "list") {
+      if(is.null(colnames(design[[1]])))
+        beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
+      if(!is.null(colnames(design[[1]])))
+        beta_names <- colnames(design[[1]])
+    }
+    if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
+      if(is.null(colnames(design)))
+        beta_names <- paste0("beta",seq_len(ncol(design)))
+      if(!is.null(colnames(design)))
+        beta_names <- colnames(design)
+    }
+  }
 
   # Check prewhitening arguments.
   ar_order <- as.numeric(ar_order)
@@ -755,7 +783,6 @@ BayesGLM_cifti <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      # beta_names <- classicalGLM_cifti[[1]]$beta_names # This object no longer exists
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = classicalGLM_left[[ss]],
         cortexR = classicalGLM_right[[ss]]
@@ -765,10 +792,9 @@ BayesGLM_cifti <- function(cifti_fname,
                                              )
       # Damon: once the new ciftiTools version is pushed, use the `col_names`
       #   argument to `as.xifti` instead.
-      # classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      # beta_names <- BayesGLM_cifti[[1]]$beta_names # This object no longer exists
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]
@@ -776,7 +802,7 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
                                          )
-      # BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
   }
 
@@ -810,7 +836,7 @@ BayesGLM_cifti <- function(cifti_fname,
         }
       }
 
-      # classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
+      classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
     }
 
     if (do_Bayesian) {
@@ -827,19 +853,19 @@ BayesGLM_cifti <- function(cifti_fname,
         )),
         BayesGLM_cifti
       )
-      # BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
   }
 
-  if (do_Bayesian) {
-    if (do_left) {
-      beta_names <- BayesGLM_left$beta_names
-    } else {
-      beta_names <- BayesGLM_right$beta_names
-    }
-  } else {
-    beta_names <- NULL
-  }
+  # if (do_Bayesian) {
+  #   if (do_left) {
+  #     beta_names <- BayesGLM_left$beta_names
+  #   } else {
+  #     beta_names <- BayesGLM_right$beta_names
+  #   }
+  # } else {
+  #   beta_names <- NULL
+  # }
 
   prewhitening_info <- list()
   if(prewhiten) {
