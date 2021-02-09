@@ -426,8 +426,9 @@ BayesGLM_cifti <- function(cifti_fname,
   }
 
   # Check prewhitening arguments.
+  if(is.null(ar_order)) ar_order <- 0
   ar_order <- as.numeric(ar_order)
-  prewhiten <- ar_order > 0
+  prewhiten <- (ar_order > 0)
 
   if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
@@ -549,7 +550,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
+  #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   ### LEFT HEMISPHERE
   if(do_left){
@@ -588,24 +589,22 @@ BayesGLM_cifti <- function(cifti_fname,
                                  hemisphere = 'left',
                                  cifti_data = cifti_ss,
                                  num.threads = num.threads)
-      scale_BOLD <- F
-      scale_design <- F
+      scale_BOLD <- FALSE # done in prewhitening
       session_data <- pw_data_left$data
-      if(do_classical) classicalGLM_left <- classicalGLM_pw(session_data,
-                                                         scale_BOLD=scale_BOLD,
-                                                         scale_design = scale_design)
-    } else {
-      if(do_classical) classicalGLM_left <- classicalGLM(session_data,
-                                                         scale_BOLD=scale_BOLD,
-                                                         scale_design = scale_design)
-    }
+      # if(do_classical) classicalGLM_left <- classicalGLM_pw(session_data,
+      #                                                     scale_BOLD = scale_BOLD, # done in prewhitening
+      #                                                    scale_design = FALSE) # done above
+    } #else {
 
+    if(do_classical) classicalGLM_left <- classicalGLM(session_data,
+                                                         scale_BOLD=scale_BOLD,
+                                                         scale_design = FALSE) # done above
 
     if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
                                               vertices = verts_left,
                                               faces = faces_left,
                                               scale_BOLD = scale_BOLD,
-                                              scale_design = scale_design,
+                                              scale_design = FALSE, # done above
                                               num.threads = num.threads,
                                               return_INLA_result = return_INLA_result,
                                               outfile = outfile_left,
@@ -653,22 +652,21 @@ BayesGLM_cifti <- function(cifti_fname,
                                  hemisphere = 'right',
                                  cifti_data = cifti_ss,
                                  num.threads = num.threads)
-      scale_BOLD <- F
-      scale_design <- F
+      scale_BOLD <- FALSE #done in prewhitening
       session_data <- pw_data_right$data
-      if(do_classical) classicalGLM_right <- classicalGLM_pw(session_data,
-                                                            scale_BOLD=scale_BOLD,
-                                                            scale_design = scale_design)
-    } else {
-      if(do_classical) classicalGLM_right <- classicalGLM(session_data,
+      # if(do_classical) classicalGLM_right <- classicalGLM_pw(session_data,
+      #                                                       scale_BOLD=scale_BOLD,
+      #                                                       scale_design = FALSE)
+    } #else {
+    if(do_classical) classicalGLM_right <- classicalGLM(session_data,
                                                          scale_BOLD=scale_BOLD,
-                                                         scale_design = scale_design)
-    }
+                                                         scale_design = FALSE) #done above
+
     if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
                                                 vertices = verts_right,
                                                 faces = faces_right,
                                                 scale_BOLD=scale_BOLD,
-                                                scale_design = scale_design,
+                                                scale_design = FALSE, #done above
                                                 num.threads=num.threads,
                                                 return_INLA_result=return_INLA_result,
                                                 outfile = outfile_right,
@@ -731,15 +729,16 @@ BayesGLM_cifti <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
+      if(do_left) datL <- t(classicalGLM_left[[ss]]$estimates) else datL <- NULL
+      if(do_right) datR <- t(classicalGLM_right[[ss]]$estimates) else datR <- NULL
       classicalGLM_cifti[[ss]] <- as.xifti(
-        cortexL = classicalGLM_left[[ss]],
-        cortexR = classicalGLM_right[[ss]]
+        cortexL = datL,
+        cortexR = datR
         #subcortVol = classicalGLM_vol$single_session,
         #mask = mask,
         #subcortLab = nifti_labels
                                              )
-      # Damon: once the new ciftiTools version is pushed, use the `col_names`
-      #   argument to `as.xifti` instead.
+
       classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
@@ -754,37 +753,11 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  # Add average betas to the start of the list.
   if(avg_sessions) {
     if(do_classical) {
-      if(do_left & do_right) {
-        classicalGLM_cifti <- c(
-          list(avg = as.xifti(
-            cortexL = Reduce(`+`,classicalGLM_left) / n_sess,
-            cortexR = Reduce(`+`,classicalGLM_right) / n_sess
-          )),
-          classicalGLM_cifti
-        )
-      } else {
-        if(do_left) {
-          classicalGLM_cifti <- c(
-            list(avg = as.xifti(
-              cortexL = Reduce(`+`,classicalGLM_left) / n_sess
-            )),
-            classicalGLM_cifti
-          )
-        }
-        if(do_right) {
-          classicalGLM_cifti <- c(
-            list(avg = as.xifti(
-              cortexR = Reduce(`+`,classicalGLM_right) / n_sess
-            )),
-            classicalGLM_cifti
-          )
-        }
-      }
-
-      classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
+      # Add average betas to the start of the list.
+      classicalGLM_cifti <- c(list(avg = Reduce(`+`, classicalGLM_cifti) / n_sess),
+                              classicalGLM_cifti)
     }
 
     if (do_Bayesian) {
@@ -805,15 +778,6 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  # if (do_Bayesian) {
-  #   if (do_left) {
-  #     beta_names <- BayesGLM_left$beta_names
-  #   } else {
-  #     beta_names <- BayesGLM_right$beta_names
-  #   }
-  # } else {
-  #   beta_names <- NULL
-  # }
 
   prewhitening_info <- list()
   if(prewhiten) {
@@ -917,6 +881,13 @@ BayesGLM <- function(
     K <- ncol(data[[1]]$design) #number of tasks
   } else {
     K <- ncol(data[[1]]$design) / sum(!is_missing)
+  }
+
+  #Check that data locations same across sessions
+  if(n_sess > 1){
+    is_missing_all <- sapply(data, function(x) is.na(x$BOLD[1,]))
+    tmp <- is_missing_all - is_missing
+    if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
   }
 
   # for(s in 1:n_sess){
