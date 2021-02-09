@@ -4,7 +4,7 @@
 #'
 #' @param model_obj Result of BayesGLM_cifti model call (of class BayesGLM_cifti)
 # @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
-#' @param field_names Name of latent field, or vector of names, on which to identify activations
+#' @param field_names Name of latent field, or vector of names, on which to identify activations for Bayesian method.
 #' @param session_name (character) The name of the session that should be
 #' examined. If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
@@ -28,6 +28,7 @@
 #'
 # @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
+#' @importFrom ciftiTools transform_xifti
 #' @export
 #'
 #'
@@ -59,6 +60,9 @@ id_activations_cifti <- function(model_obj,
   do_left <- !is.null(GLM_list$cortexL)
   do_right <- !is.null(GLM_list$cortexR)
 
+  if(any(!(field_names %in% model_obj$beta_names))) stop(paste0('All elements of field_names must appear in model_obj$beta_names: ', paste(model_obj$beta_names, collapse=',')))
+  field_inds <- which(model_obj$beta_names %in% field_names)
+
   if(method=='Bayesian'){
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
@@ -82,7 +86,7 @@ id_activations_cifti <- function(model_obj,
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
       system.time(act_m <- id_activations.classical(model_obj=model_m,
-                                                    field_names=field_names,
+                                                    field_inds=field_inds,
                                                     session_name=session_name,
                                                     threshold=threshold,
                                                     alpha=alpha,
@@ -107,7 +111,6 @@ id_activations_cifti <- function(model_obj,
 
   result <- list(activations = activations,
                  activations_xifti = activations_xifti)
-                 #act_classical_xifti = act_classical_xifti)
 
   return(result)
 }
@@ -148,7 +151,7 @@ id_activations_cifti <- function(model_obj,
   #
   # return(list(activations = activations_result,
   #             active_xifti = active_xifti))
-}
+
 
 
 
@@ -288,7 +291,7 @@ id_activations.posterior <- function(model_obj,
 #' Identification of areas of activation in a General Linear Model using classical methods
 #'
 #' @param model_obj A \code{BayesGLM} object
-#' @param field_names Name of latent field or vector of names on which to identify activations
+#' @param field_inds Indices of tasks for which to identify activations
 #' @param session_name (character) The name of the session that should be
 #'   examined. If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha A significance level to be used in both the family-wise error
@@ -302,36 +305,34 @@ id_activations.posterior <- function(model_obj,
 #' @return A matrix corresponding to the
 #'   0-1 activation status for the model coefficients.
 #'
-#' @importFrom stats sd pt
+#' @importFrom stats sd pt p.adjust
 #' @importFrom matrixStats colVars
 #'
 #' @export
 #'
 id_activations.classical <- function(model_obj,
-                                     field_names = NULL,
+                                     field_inds = NULL,
                                      session_name = NULL,
                                      alpha = 0.05,
                                      threshold = 0,
                                      correction = c("FWER","FDR","none")) {
 
-  # Note: This only works on Bayesian results because the data may have been prewhitened, and the prewhitened data are being saved as part of the BayesGLM model output.
-  # TO DO: Make compatible with classical GLM.  We could compute the standard errors when the classical GLM is fit.
-  if(class(model_obj) != "BayesGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
+  if(class(model_obj) != "classicalGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
 
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
   #check session_name argument
 
   #if only one session, analyze that one
-  all_sessions <- model_obj$session_names
+  all_sessions <- names(model_obj)
   n_sess <- length(all_sessions)
   if(n_sess == 1){ session_name <- all_sessions }
 
-  #if averages not available and session_name=NULL, pick first session and return a warning
-  has_avg <- is.matrix(model_obj$avg_beta_estimates)
+  # #if averages not available and session_name=NULL, pick first session and return a warning
+  has_avg <- ('avg' %in% names(model_obj))
   if(is.null(session_name) & !has_avg){
-    session_name <- all_sessions[1]
-    warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+     session_name <- all_sessions[1]
+     warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
 
   #check session_name not NULL, check that a valid session name
@@ -340,43 +341,61 @@ id_activations.classical <- function(model_obj,
     sess_ind <- which(all_sessions == session_name)
   }
 
-  #check field_names argument
-  if(is.null(field_names)) field_names <- model_obj$beta_names
-  if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+  # #check field_names argument
+  # if(is.null(field_names)) field_names <- model_obj$beta_names
+  # if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
 
-  K <- length(model_obj$beta_names)
+  beta_est <- model_obj[[sess_ind]]$estimates
+  se_beta <- model_obj[[sess_ind]]$SE_estimates
+  DOF <- model_obj[[sess_ind]]$DOF
 
-  mesh <- model_obj$mesh
-  n_vox <- mesh$n
+  nvox <- ncol(beta_est)
+  K <- nrow(beta_est)
+  if(any(!(field_inds %in% 1:K))) stop(paste0('field_inds must be between 1 and the number of tasks, ',K))
+  beta_est <- beta_est[field_inds,]
+  se_beta <- se_beta[field_inds,]
+  K <- length(field_inds)
+#
+#   #grab columns of "big" design matrix associated with each field
+#   fields_yes <- which(model_obj$beta_names %in% field_names)
+#   field_inds <- c(sapply(fields_yes,
+#                          function(fy){
+#                            seq(n_vox) + n_vox*(fy - 1)
+#                          }))
 
-  # HERE
+  t_star <- (beta_est - threshold) / se_beta
+  #perform multiple comparisons correction
+  p_values <- active <- matrix(NA, K, nvox)
+  for(k in 1:K){
+    p_values_k <- sapply(t_star[k,], pt, df = DOF, lower.tail = F)
+    if(correction == "FWER") p_vals_adj_k <- p.adjust(p_values_k, method='bonferroni')
+    if(correction == "FDR") p_vals_adj_k <- p.adjust(p_values_k, method='BH')
+    if(correction == "none") p_vals_adj_k <- p_values_k
 
-  #grab columns of "big" design matrix associated with each field
-  fields_yes <- which(model_obj$beta_names %in% field_names)
-  field_inds <- c(sapply(fields_yes,
-                         function(fy){
-                           seq(n_vox) + n_vox*(fy - 1)
-                         }))
-
-  t_star <- (beta_hat - threshold) / se_beta
-  p_values <- sapply(t_star, pt, df = DOF, lower.tail = F)
-  if(correction == "FWER") active_out <- as.numeric(p_values < (alpha / length(beta_hat)))
-  if(correction == "FDR") active_out <- BH_FDR(p_values, FDR = alpha)
-  active_out <- matrix(active_out, n_vox, K)
-  return(active_out)
+    p_values[k,] <- p_values_k
+    p_values_adj[k,] <- p_vals_adj_k
+    active[k,] <- (p_vals_adj_k < alpha)
+  }
+  result <- list(p_values = p_values,
+                 p_values_adj = p_values_adj,
+                 active = active,
+                 correction = correction,
+                 alpha = alpha,
+                 threshold = threshold)
+  return(result)
 }
 
-#' Significance using Benjamini-Hochsberg False Discovery Rate
-#'
-#' @param p A vector of p-values
-#' @param FDR The false discovery rate
-#'
-#' @return A 0-1 vector that classifies the p-value vector as "significant" or not.
-#' @export
-BH_FDR <- function(p, FDR = 0.05) {
-  p_rank <- rank(-p, na.last=T)
-  BH_cutoff <- FDR * p_rank / length(p_rank)
-  out <- ifelse(is.na(p), 1, p)
-  out <- ifelse(out < BH_cutoff, 1,0)
-  return(out)
-}
+# Significance using Benjamini-Hochsberg False Discovery Rate
+#
+# @param p A vector of p-values
+# @param FDR The false discovery rate
+#
+# @return A 0-1 vector that classifies the p-value vector as "significant" or not.
+# @export
+# BH_FDR <- function(p, FDR = 0.05) {
+#   p_rank <- rank(-p, na.last=T)
+#   BH_cutoff <- FDR * p_rank / length(p_rank)
+#   out <- ifelse(is.na(p), 1, p)
+#   out <- ifelse(out < BH_cutoff, 1,0)
+#   return(out)
+# }

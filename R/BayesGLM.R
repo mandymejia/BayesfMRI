@@ -44,8 +44,7 @@
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use the
-#'   \code{id_activations} function? Default value is \code{TRUE}.
+#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @importFrom utils head
 #'
@@ -349,8 +348,7 @@ BayesGLM_slice <- function(
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use the
-#'   \code{id_activations} function? Default value is \code{TRUE}.
+#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -831,8 +829,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use the
-#'   \code{id_activations} function? Default value is \code{TRUE}.
+#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @return A list containing...
 #'
@@ -896,7 +893,7 @@ BayesGLM <- function(
   #   if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   # }
   for(s in 1:n_sess){
-    if(! is.session_pw(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(!is_pw) {
       if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')

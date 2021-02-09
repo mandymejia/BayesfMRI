@@ -52,7 +52,7 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 for model estimation. Default: \code{4}.}
 
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
-Default: \code{TRUE}. Required for running \code{\link{id_activations}}
+Default: \code{TRUE}. Required for running \code{id_activations}
 after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 
@@ -67,8 +67,7 @@ posterior quantities of group means or contrasts.}
 sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
-result be trimmed to only what is necessary to use the
-\code{id_activations} function? Default value is \code{TRUE}.}
+result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
 }
 \value{
 A list containing...

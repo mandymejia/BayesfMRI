@@ -134,6 +134,7 @@ classicalGLM <- function(data, scale_BOLD=TRUE, scale_design = TRUE, avg_session
                             SE_estimates = SE_beta_hat_s,
                             DOF = DOF)
   }
+  class(GLM_result) <- 'classicalGLM'
   return(GLM_result)
 }
 
