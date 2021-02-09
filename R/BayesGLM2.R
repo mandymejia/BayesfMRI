@@ -177,8 +177,13 @@ BayesGLM2 <- function(results,
         results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
       }
       if(class(results[[m]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
-      if(length(results[[m]]$session_names) != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
+      use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
+      num_sessions_m <- length(results[[m]]$session_names)
+      if(use_avg & use_avg_m) num_sessions_m <- 1
+      if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
     }
+    if(m == 1) num_sessions_m <- num_sessions
+    use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
 
     #Check match of beta names
     beta_names_m <- results[[m]]$beta_names
@@ -189,9 +194,7 @@ BayesGLM2 <- function(results,
     if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
 
     #Check that model is single session or average
-    num_sessions_m <- length(results[[m]]$session_names)
-    use_avg <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
-    if(num_sessions_m>1 & !use_avg)
+    if(num_sessions_m>1 & !use_avg_m)
       stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
 
     #Collect posterior mean and precision of hyperparameters

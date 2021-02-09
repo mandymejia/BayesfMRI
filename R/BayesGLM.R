@@ -377,6 +377,8 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE){
 
+  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
+
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
@@ -394,6 +396,34 @@ BayesGLM_cifti <- function(cifti_fname,
   do_right <- ('right' %in% brainstructures)
   do_sub <- FALSE
   #do_sub <- ('subcortical' %in% brainstructures)
+  if(!is.null(onsets)){
+    if(class(onsets[[1]]) == 'list') {
+      if(is.null(names(onsets[[1]])))
+        beta_names <- paste0("beta",seq_len(length(onsets[[1]])))
+      if(!is.null(names(onsets[[1]])))
+        beta_names <- names(onsets[[1]])
+    }
+    if('data.frame' %in% class(onsets[[1]])) {
+      if(is.null(names(onsets)))
+        beta_names <- paste0("beta",seq_len(length(onsets)))
+      if(!is.null(names(onsets)))
+        beta_names <- names(onsets)
+    }
+  }
+  if(!is.null(design)) {
+    if(class(design) == "list") {
+      if(is.null(colnames(design[[1]])))
+        beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
+      if(!is.null(colnames(design[[1]])))
+        beta_names <- colnames(design[[1]])
+    }
+    if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
+      if(is.null(colnames(design)))
+        beta_names <- paste0("beta",seq_len(ncol(design)))
+      if(!is.null(colnames(design)))
+        beta_names <- colnames(design)
+    }
+  }
 
   # Check prewhitening arguments.
   ar_order <- as.numeric(ar_order)
@@ -423,60 +453,6 @@ BayesGLM_cifti <- function(cifti_fname,
     if(!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
   }
   if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
-
-  # ### First, perform resampling
-  # if(do_Bayesian){
-  #   if(!is.null(resamp_res)){
-  #     if(!is.numeric(resamp_res)) stop('resamp_res must be numeric')
-  #     if(round(resamp_res) != resamp_res) stop('resamp_res must be an integer')
-  #     if(resamp_res > 30000 | resamp_res < 1000) stop('resamp_res must be a number between 1,000 and 30,000')
-  #     if(is.null(sphereL_fname) | is.null(sphereR_fname)) stop('Must provide sphereL_fname and sphereR_fname to resamp_res.')
-  #
-  #     #cifti file resampling
-  #     cat('\n RESAMPLING CIFTI TIMESERIES FILES TO ', resamp_res, ' RESOLUTION \n')
-  #     cifti_fname2 <- rep(NA, n_sess)
-  #     cifti_dir <- dirname(cifti_fname[1])
-  #     for(ss in 1:n_sess){
-  #       cifti_extn <- get_cifti_extn(cifti_fname[ss])
-  #       cifti_fname2[ss] <- paste0(gsub(cifti_extn, '', cifti_fname[ss]), resamp_res, '.', cifti_extn)
-  #       cifti_fname2[ss] <- basename(cifti_fname2[ss])
-  #       delete_helper_files <- FALSE
-  #       if(ss==1){ make_helper_files <- TRUE } else { make_helper_files <- FALSE }
-  #       resample_cifti(cifti_orig = cifti_fname[ss],
-  #                      cifti_target = cifti_fname2[ss],
-  #                      sphere_orig_L = sphereL_fname,
-  #                      sphere_orig_R = sphereR_fname,
-  #                      target_res = resamp_res,
-  #                      make_helper_files = make_helper_files,
-  #                      delete_helper_files = delete_helper_files)
-  #     }
-  #     cifti_fname <- cifti_fname2
-  #
-  #     #gifti file resampling
-  #     cat('\n RESAMPLING GIFTI SURFACE FILES TO ', resamp_res, ' RESOLUTION \n')
-  #     fnames_gifti <- c(surfL_fname, surfR_fname, surf2L_fname, surf2R_fname)
-  #     fnames_sphere_orig <- c(sphereL_fname, sphereR_fname, sphereL_fname, sphereR_fname)
-  #     fnames_sphere_target <- file.path(cifti_dir, 'helper_files_resampling', c('Sphere.target.L.surf.gii',  'Sphere.target.R.surf.gii', 'Sphere.target.L.surf.gii', 'Sphere.target.R.surf.gii'))
-  #     notnull <- c(TRUE, TRUE, !is.null(surf2L_fname), !is.null(surf2R_fname))
-  #     fnames_sphere_orig <- fnames_sphere_orig[notnull]
-  #     fnames_sphere_target <- fnames_sphere_target[notnull]
-  #     fnames_gifti_target <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), fnames_gifti)
-  #     for(gg in 1:length(fnames_gifti)){
-  #       resample_gifti(gifti_orig = fnames_gifti[gg],
-  #                      gifti_target = fnames_gifti_target[gg],
-  #                      sphere_orig = fnames_sphere_orig[gg],
-  #                      sphere_target = fnames_sphere_target[gg],
-  #                      overwrite = FALSE)
-  #     }
-  #
-  #     #redefine gifti file names to resampled files
-  #     surfL_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surfL_fname)
-  #     surfR_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surfR_fname)
-  #     if(!is.null(surf2L_fname)) surf2L_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surf2L_fname)
-  #     if(!is.null(surf2R_fname)) surf2R_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surf2R_fname)
-  #   }
-  # }
-
 
   cat('\n SETTING UP DATA \n')
 
@@ -530,7 +506,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
   }
-  # #check that labels are the same across all sessions
+  # #check that labels are the same across all sessions (subcortical)
   # if(do_sub) {
   #   if(n_sess > 1) {
   #     tmp <- sapply(nifti_labels, function(x) {all.equal(x,nifti_labels[[1]])})
@@ -610,7 +586,8 @@ BayesGLM_cifti <- function(cifti_fname,
     if(prewhiten) {
       pw_data_left <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
                                  hemisphere = 'left',
-                                 cifti_data = cifti_ss)
+                                 cifti_data = cifti_ss,
+                                 num.threads = num.threads)
       scale_BOLD <- F
       scale_design <- F
       session_data <- pw_data_left$data
@@ -674,7 +651,8 @@ BayesGLM_cifti <- function(cifti_fname,
     if(prewhiten) {
       pw_data_right <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
                                  hemisphere = 'right',
-                                 cifti_data = cifti_ss)
+                                 cifti_data = cifti_ss,
+                                 num.threads = num.threads)
       scale_BOLD <- F
       scale_design <- F
       session_data <- pw_data_right$data
@@ -753,7 +731,6 @@ BayesGLM_cifti <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      # beta_names <- classicalGLM_cifti[[1]]$beta_names # This object no longer exists
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = classicalGLM_left[[ss]],
         cortexR = classicalGLM_right[[ss]]
@@ -763,10 +740,9 @@ BayesGLM_cifti <- function(cifti_fname,
                                              )
       # Damon: once the new ciftiTools version is pushed, use the `col_names`
       #   argument to `as.xifti` instead.
-      # classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      # beta_names <- BayesGLM_cifti[[1]]$beta_names # This object no longer exists
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]
@@ -774,7 +750,7 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
                                          )
-      # BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
   }
 
@@ -808,7 +784,7 @@ BayesGLM_cifti <- function(cifti_fname,
         }
       }
 
-      # classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
+      classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
     }
 
     if (do_Bayesian) {
@@ -825,19 +801,19 @@ BayesGLM_cifti <- function(cifti_fname,
         )),
         BayesGLM_cifti
       )
-      # BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
   }
 
-  if (do_Bayesian) {
-    if (do_left) {
-      beta_names <- BayesGLM_left$beta_names
-    } else {
-      beta_names <- BayesGLM_right$beta_names
-    }
-  } else {
-    beta_names <- NULL
-  }
+  # if (do_Bayesian) {
+  #   if (do_left) {
+  #     beta_names <- BayesGLM_left$beta_names
+  #   } else {
+  #     beta_names <- BayesGLM_right$beta_names
+  #   }
+  # } else {
+  #   beta_names <- NULL
+  # }
 
   prewhitening_info <- list()
   if(prewhiten) {
