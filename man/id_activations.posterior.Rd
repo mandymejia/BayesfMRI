@@ -16,9 +16,9 @@ id_activations.posterior(
 \arguments{
 \item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
 
-\item{field_name}{Name of latent field or vector of names on which to identify activations}
+\item{field_name}{Name of latent field or vector of names on which to identify activations.  By default, use all tasks.}
 
-\item{threshold}{Activation threshold (e.g. 0.01 for 1 percent signal change)}
+\item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)}
 
 \item{alpha}{Significance level (e.g. 0.05)}
 

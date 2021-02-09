@@ -1,54 +1,159 @@
-#' Identify areas of activation
+#' Identify Task Activations
 #'
-#' For each latent field, identifies locations that are activated
+#' Identify areas of activation for each task
 #'
-#' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
-#' @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
-#' @param field_name Name of latent field, or vector of names, on which to identify activations
-#' @param threshold For method='posterior' only: activation threshold (e.g. 0.01 for 1 percent signal change)
-#' @param alpha For method='posterior' only: Significance level (e.g. 0.05)
-#' @param area.limit For method='posterior' only: Below this value, activations will be considered spurious.  If NULL (default), no limit.
-#' @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
-#' @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
+#' @param model_obj Result of BayesGLM_cifti model call (of class BayesGLM_cifti)
+# @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
+#' @param field_names Name of latent field, or vector of names, on which to identify activations
+#' @param session_name (character) The name of the session that should be
+#' examined. If \code{NULL} (default), the average across all sessions is used.
+#' @param alpha Significance level (e.g. 0.05)
+#' @param method Either 'Bayesian' or 'classical'
+#' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)
+#' @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
+#'   Correction), depending on the method that should be used to find the
+#'   excursions set. Note that if any contrasts (including averages across
+#'   sessions) are used in the modeling, the method chosen must be \code{EB}.
+#'   The difference in the methods is that the \code{EB} method assumes Gaussian
+#'    posterior distributions for the parameters.
+#' @param area.limit For method = 'Bayesian' only: Below this value, clusters of activations will be considered spurious.  If NULL (default), no limit.
+#' @param correction For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)
+#' @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
+#' depending on the method that should be used to find the excursions set. Note that to ID
+#' activations for averages across sessions, the method chosen must be \code{EB}. The difference
+#' in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
+#' @param verbose (Logical) If TRUE, print progress updates.
+# @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
+# @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
 #'
-#' @return A nested list, where the first layer separates by session, and the
-#'  second layer is another list of two elements: \code{active}, which gives a
-#'  matrix of zeros and ones of the same dimension as
-#'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
-#'  object of class \code{"excurobj"} if \code{method='posterior'}
-#'  (see \code{\link{excursions.inla}} for more information) and is \code{NULL}
-#'  if \code{method='2means'}.
+# @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
 #' @export
-id_activations <- function(model_obj, method=c('posterior', '2means'), field_name=NULL, threshold=NULL, alpha=NULL, area.limit=NULL, type=c('point','sequential'), n_sample = NULL){
+#'
+#'
+id_activations_cifti <- function(model_obj,
+                                 field_names=NULL,
+                                 session_name=NULL,
+                                 alpha=0.05,
+                                 method=c('Bayesian','classical'),
+                                 threshold=NULL,
+                                 area.limit=NULL,
+                                 correction = c("FWER","FDR"),
+                                 excur_method = c("EB","QC"),
+                                 verbose = TRUE){
 
-  if(class(model_obj) != 'BayesGLM') stop('The model_obj argument must be of class BayesGLM, but it is not.')
+  if(class(model_obj) != 'BayesGLM_cifti') stop('The model_obj argument must be of class BayesGLM_cifti (output of BayesGLM_cifti function), but it is not.')
 
-  if(length(method)>1) method <- method[1]
-  if(length(type)>1) type <- type[1]
+  method <- match.arg(method, c('Bayesian','classical'))
+  if(!(method %in% c('Bayesian','classical'))) stop("The method argument should only be 'Bayesian' or 'classical'.")
 
-  if(method=='posterior'){
-
-    message('Identifying activations using joint posterior probabilities')
-    if(is.null(threshold)) stop('For identifying activations based on posterior probability method, must specify threshold.')
-    if(is.null(alpha)) stop('For identifying activations based on posterior probability method, must specify alpha.')
-    if(!is.null(type)) stop('For identifying activations based on posterior probability method, do not specify type.')
-    out <- id_activations.posterior(model_obj=model_obj, field_name=field_name, threshold=threshold, alpha=alpha, area.limit=area.limit)
-
-  } else if(method=='2means'){
-
-    message('Identifying activations using 2-means clustering')
-    if(is.null(type)) stop('For identifying activations based on 2means, you must specify type.')
-    if(!is.null(threshold)) stop('For identifying activations based on 2means, do not specify threshold.')
-    if(!is.null(alpha)) stop('For identifying activations based on posterior probability method, do not specify alpha.')
-    out <- id_activations.2means(model_obj=model_obj, field_name=field_name, type=type, n_sample=n_sample)
-
-  } else {
-    stop('Must specify method = "posterior" or "2means"')
+  if(is.null(threshold)){
+    if(method=='classical') threshold <- 0
+    if(method=='Bayesian') stop("Must specify an activation threshold when method='Bayesian'.")
   }
 
-  return(out)
+  GLM_list <- model_obj$GLMs_Bayesian
+  num_models <- length(GLM_list)
+  activations <- vector('list', length=num_models)
+  names(activations) <- names(GLM_list)
+  do_left <- !is.null(GLM_list$cortexL)
+  do_right <- !is.null(GLM_list$cortexR)
+
+  if(method=='Bayesian'){
+    for(mm in 1:num_models){
+      if(is.null(GLM_list[[mm]])) next
+      model_m <- GLM_list[[mm]]
+      if(verbose) cat(paste0('\n Identifying Bayesian GLM activations in ',names(GLM_list)[mm]))
+      system.time(act_m <- id_activations.posterior(model_obj=model_m,
+                                                    field_names=field_names,
+                                                    session_name=session_name,
+                                                    threshold=threshold,
+                                                    alpha=alpha,
+                                                    area.limit=area.limit,
+                                                    excur_method=excur_method))
+
+      activations[[mm]] <- act_m
+    }
+  }
+
+  if(method=='classical'){
+    if(verbose) cat('\n Identifying classical GLM activations')
+    for(mm in 1:num_models){
+      if(is.null(GLM_list[[mm]])) next
+      model_m <- GLM_list[[mm]]
+      system.time(act_m <- id_activations.classical(model_obj=model_m,
+                                                    field_names=field_names,
+                                                    session_name=session_name,
+                                                    threshold=threshold,
+                                                    alpha=alpha,
+                                                    correction=correction))
+
+      activations[[mm]] <- act_m
+    }
+  }
+
+  #map results to xifti objects
+  activations_xifti <- transform_xifti(model_obj$betas_Bayesian[[1]], FUN = function(x){ x*NA })
+  if(do_left) {
+    datL <- activations$cortexL$active
+    datL[datL==0] <- NA
+    activations_xifti$data$cortex_left <- datL
+  }
+  if(do_right) {
+    datR <- activations$cortexR$active
+    datR[datR==0] <- NA
+    activations_xifti$data$cortex_right <- datR
+  }
+
+  result <- list(activations = activations,
+                 activations_xifti = activations_xifti)
+                 #act_classical_xifti = act_classical_xifti)
+
+  return(result)
 }
+
+
+
+
+
+
+
+  # model_result <- result$model_result
+  # active_xifti <- clear_data(result$subjICmean_xifti)
+  # nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
+  # nright <- nrow(result$subjICmean_xifti$data$cortex_right)
+  #
+  # if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
+  # if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
+  # if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
+  #   warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
+  #   spatial_model <- FALSE
+  # }
+  #
+  # #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
+  # if(class(model_result)=='stICA' & spatial_model==FALSE){
+  #   model_result <- model_result$result_tICA
+  # }
+  #
+  # #run activations function
+  # activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
+  #
+  # #construct xifti object for activation maps
+  # act_viz <- activations_result$active*1
+  # act_viz[act_viz==0] <- NA
+  # active_xifti$data$cortex_left <- act_viz[1:nleft,]
+  # active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
+  #
+  # #include convert_to_dlabel function
+  #
+  # return(list(activations = activations_result,
+  #             active_xifti = active_xifti))
+}
+
+
+
+
+
 
 #' Identify activations using joint posterior probabilities
 #'
@@ -60,81 +165,119 @@ id_activations <- function(model_obj, method=c('posterior', '2means'), field_nam
 #'  posterior distribution of the latent field.
 #'
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
-#' @param field_name Name of latent field or vector of names on which to identify activations
-#' @param threshold Activation threshold (e.g. 0.01 for 1 percent signal change)
+#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, use all tasks.
+#' @param session_name (character) The name of the session that should be
+#'   examined. If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
+#' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
 #' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
-#' @param method Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
-#'   Correction), depending on the method that should be used to find the
-#'   excursions set. Note that if any contrasts (including averages across
-#'   sessions) are used in the modeling, the method chosen must be \code{EB}.
-#'   The difference in the methods is that the \code{EB} method assumes Gaussian
-#'    posterior distributions for the parameters.
+#' @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
+#' depending on the method that should be used to find the excursions set. Note that to ID
+#' activations for averages across sessions, the method chosen must be \code{EB}. The difference
+#' in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
 #'
 #'
-#' @return A nested list, where the first layer separates by session, and the
-#'  second layer is another list of two elements: \code{active}, which gives a
-#'  matrix of zeros and ones of the same dimension as
-#'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result}, an
-#'  object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+#' @return A list with two elements: \code{active}, which gives a matrix of zeros
+#' and ones of the same dimension as \code{model_obj$beta_estimates${session_name}},
+#' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 #'  more information).
 #'
 #' @importFrom excursions excursions.inla
 #'
 #' @export
-id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alpha=0.05, area.limit=NULL, method = "EB"){
+id_activations.posterior <- function(model_obj,
+                                     field_names=NULL,
+                                     session_name=NULL,
+                                     alpha=0.05,
+                                     threshold,
+                                     area.limit=NULL,
+                                     excur_method = c("EB","QC")){
 
+  if(class(model_obj) != "BayesGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
 
-  session_names <- model_obj$session_names
-	n_sess <- length(session_names)
-	mesh <- model_obj$mesh
-	n_vox <- mesh$n
-	has_avg <- is.matrix(model_obj$avg_beta_estimates)
-	if(has_avg & method != "EB") stop("Your model object has estimates for averaged beta estimates. Only the EB method is supported for such data.")
+  excur_method <- match.arg(excur_method, c("EB","QC"))
 
-	if(is.null(field_name)) field_name <- model_obj$beta_names
-	if(!any(field_name %in% model_obj$beta_names)) stop("Please specify only field names that corresponds to one of the latent fields (i.e. 'bbeta1').")
+  #check session_name argument
 
+  #if only one session, analyze that one
+  all_sessions <- model_obj$session_names
+  n_sess <- length(all_sessions)
+  if(n_sess == 1){ session_name <- all_sessions }
+
+  #if averages not available and session_name=NULL, pick first session and return a warning
+  has_avg <- is.matrix(model_obj$avg_beta_estimates)
+  if(is.null(session_name) & !has_avg){
+    session_name <- all_sessions[1]
+    warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+  }
+
+  #if session_name is still NULL, use average and check excur_method argument
+  if(is.null(session_name)){
+    if(has_avg & excur_method != "EB") {
+      excur_method <- 'EB'
+      warning("To id activations for averaged beta estimates, only the excur_method='EB' is supported. Setting excur_method to 'EB'.")
+    }
+  }
+
+  #check session_name not NULL, check that a valid session name
+  if(!is.null(session_name)){
+    if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+    sess_ind <- which(all_sessions == session_name)
+  }
+
+  #check field_names argument
+  if(is.null(field_names)) field_names <- model_obj$beta_names
+  if(!any(field_names %in% model_obj$beta_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+
+  #check alpha argument
 	if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
 
-	result <- vector('list', n_sess)
-	names(result) <- session_names
-	for(v in 1:n_sess){
-		sess_name <- session_names[v]
-		inds_v <- (1:n_vox) + (v-1)*n_vox #indices of beta vector corresponding to session v
+  mesh <- model_obj$mesh
+  n_vox <- mesh$n
+
+	#for a specific session
+	if(!is.null(session_name)){
+
+	  inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
 
 		#loop over latent fields
-		excur_v <- vector('list', length=length(field_name))
-		act_v <- matrix(NA, nrow=n_vox, ncol=length(field_name))
-		colnames(act_v) <- field_name
-		for(f in field_name){
+		excur <- vector('list', length=length(field_names))
+		act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+		colnames(act) <- field_names
+		for(f in field_names){
 
   		if(is.null(area.limit)){
-  			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds_v, u=threshold, type='>', method=method, alpha=alpha, F.limit=0.2)
+  			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha)
   		} else {
-  			res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds_v, u=threshold, type='>', method=method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
+  			res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
   		}
-		  which_f <- which(field_name==f)
-  		act_v[,which_f] <- res.exc$E[inds_v]
-  		#act_v[is.na(act_v),which_f] <- 0
-      excur_v[[which_f]] <- res.exc
+		  which_f <- which(field_names==f)
+  		act[,which_f] <- res.exc$E[inds]
+      excur[[which_f]] <- res.exc
 		}
-		result[[v]] <- list(active=act_v, excursions_result=excur_v)
+		result <- list(active=act, excursions_result=excur)
 	}
 
-	if(has_avg){
+	#for the average over sessions
+	if(is.null(session_name)){
+
 	  avg_inds <- model_obj$INLA_result$misc$configs$config[[1]]$pred_idx
 	  mu_avg <- model_obj$INLA_result$misc$configs$config[[1]]$mean[avg_inds]
 	  Q_avg <- model_obj$INLA_result$misc$configs$config[[1]]$Q[avg_inds,avg_inds]
-	  avg_exc <- excursions(alpha = alpha,u = threshold,mu = mu_avg,Q = Q_avg,type = ">",method = "EB")
-	  act_v <- matrix(NA, nrow=n_vox, ncol=length(field_name))
-	  for(f in field_name){
-	    which_f <- which(field_name==f)
+	  avg_exc <- excursions(alpha = alpha,
+	                        u = threshold,
+	                        mu = mu_avg,
+	                        Q = Q_avg,
+	                        type = ">",
+	                        method = "EB")
+	  act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+	  for(f in field_names){
+	    which_f <- which(field_names==f)
 	    f_inds <- (1:n_vox) + (which_f - 1)*n_vox
-	    act_v[,which_f] <- avg_exc$E[f_inds]
+	    act[,which_f] <- avg_exc$E[f_inds]
 	  }
-	  result$avg <- list(
-	    active = act_v,
+	  result <- list(
+	    active = act,
 	    excursions_result = avg_exc
 	  )
 	}
@@ -142,161 +285,85 @@ id_activations.posterior <- function(model_obj, field_name=NULL, threshold, alph
 	return(result)
 }
 
-
-
-#' Identify activations using 2-means clustering methods
+#' Identification of areas of activation in a General Linear Model using classical methods
 #'
-#' @param model_obj An object of class \code{BayesGLM}
-#' @param field_name Name of latent field or vector of names on which to identify
-#'  activations
-#' @param type A string that should be either "point" or "sequential". The
-#'  "point" type does a simple 2-means clustering to determine areas of activation.
-#'  The "sequential" type uses the sequential 2-means variable selection method,
-#'  as described in Li and Pati (2017). The "sequential" method takes significantly
-#'  longer, but should do a better job of accounting for posterior variance.
-#' @param n_sample The number of samples to generate if the sequential 2-means
-#'  type is chosen. By default, this takes a value of 1000.
+#' @param model_obj A \code{BayesGLM} object
+#' @param field_names Name of latent field or vector of names on which to identify activations
+#' @param session_name (character) The name of the session that should be
+#'   examined. If \code{NULL} (default), the average across all sessions is used.
+#' @param alpha A significance level to be used in both the family-wise error
+#'   rate (FWER) or false discovery rate (FDR) multiple correction methods of
+#'   determining significance.
+#' @param threshold Activation threshold (e.g. 0.01 for 1 percent signal change)
+#' @param correction (character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
+#'   family-wise error rate with Bonferroni correction, and 'FDR' refers to the
+#'   false discovery rate using Benjamini-Hochberg.
 #'
-#' @return A nested list, where the first layer separates by session, and the
-#'  second layer is another list of two elements: \code{active}, which gives a
-#'  matrix of zeros and ones of the same dimension as
-#'  \code{model_obj$beta_estimates${session_name}}, and \code{excur_result},
-#'  which is \code{NULL} for the "2means" method.
+#' @return A matrix corresponding to the
+#'   0-1 activation status for the model coefficients.
 #'
-#' @importFrom stats kmeans dist
-#' @importFrom INLA inla.posterior.sample
+#' @importFrom stats sd pt
+#' @importFrom matrixStats colVars
 #'
 #' @export
-#' @md
-id_activations.2means <- function(
-  model_obj, field_name = NULL,
-  type = "point", n_sample = NULL) {
+#'
+id_activations.classical <- function(model_obj,
+                                     field_names = NULL,
+                                     session_name = NULL,
+                                     alpha = 0.05,
+                                     threshold = 0,
+                                     correction = c("FWER","FDR","none")) {
 
-  if (!type %in% c("point", "sequential"))
-    stop("The type needs to be either 'point' or 'sequential'.")
-  if (type == "point") {
-    out <- sapply(model_obj$beta_estimates, function(est_type) {
-      if (is.null(field_name))
-        field_name <- colnames(est_type)
-      if (!any(field_name %in% colnames(est_type)))
-        stop(
-          "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
-        )
-      est_type <-
-        est_type[, which(colnames(est_type) %in% field_name)]
-      out2 <-
-        sapply(split(est_type, col(est_type)), function(beta_est) {
-          vector_beta <- c(beta_est)
-          if (any(is.na(vector_beta)))
-            vector_beta <- vector_beta[!is.na(vector_beta)]
-          km_beta <- kmeans(abs(vector_beta), 2)
-          which_nonzero <- which.max(km_beta$centers[, 1])
-          keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
-          return(keep_nonzero)
-        }, simplify = TRUE)
-      colnames(out2) <- colnames(est_type)
-      return(list(active = out2,
-                  excur_result = NULL))
-    }, simplify = FALSE)
-    return(out)
-  }
-  if (type == "sequential") {
-    if (is.null(n_sample)){
-      n_sample <- 1000
-    }
-    n_remain <- n_sample
-    if (is.null(field_name))
-      field_name <- model_obj$beta_names
-    select_vars <- sapply(field_name, function(each_var)
-      0,
-      simplify = FALSE)
-    b_dists <- sapply(model_obj$beta_estimates, function(est_type) {
-      if (is.null(field_name))
-        field_name <- colnames(est_type)
-      if (!any(field_name %in% colnames(est_type)))
-        stop(
-          "Please specify a field name that corresponds to one of the output latent field estimate names (i.e. bbeta1)."
-        )
-      est_type <-
-        est_type[, which(colnames(est_type) %in% field_name)]
-      out2 <-
-        sapply(split(est_type, col(est_type)), function(beta_est) {
-          vector_beta <- c(beta_est)
-          if (any(is.na(vector_beta)))
-            vector_beta <- vector_beta[!is.na(vector_beta)]
-          km_beta <- kmeans(abs(vector_beta), 2)
-          which_nonzero <- which.max(km_beta$centers[, 1])
-          nz_beta <- vector_beta[km_beta$cluster == which_nonzero]
-          # keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
-          # return(keep_nonzero)
-          return(dist(range(nz_beta)))
-        }, simplify = TRUE)
-      names(out2) <- colnames(est_type)
-      return(out2)
-    }, simplify = FALSE)
-    complete_sample <- sapply(model_obj$session_names, function(ses) {
-      out <- vector("list", length = length(field_name))
-      names(out) <- field_name
-      return(out)
-    }, simplify = FALSE)
-    # complete_sample <- vector("list", length(model_obj$beta_names))
-    # names(complete_sample) <- model_obj$beta_names
-    while (n_remain > 0) {
-      cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
-      next_sample_size <- min(n_remain, 100)
-      test_sample <- inla.posterior.sample(
-        n = next_sample_size,
-        result = model_obj$INLA_result,
-        selection = select_vars
-      )
-      next_sample <-
-        sapply(model_obj$session_names, function(each_ses) {
-          sapply(model_obj$beta_names, function(each_var) {
-            sapply(test_sample, function(each_sample) {
-              var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
-              var_sample <- each_sample$latent[var_name == each_var, ]
-              return(var_sample)
-            }, simplify = "array")
-          }, simplify = FALSE)
-        }, simplify = FALSE)
+  # Note: This only works on Bayesian results because the data may have been prewhitened, and the prewhitened data are being saved as part of the BayesGLM model output.
+  # TO DO: Make compatible with classical GLM.  We could compute the standard errors when the classical GLM is fit.
+  if(class(model_obj) != "BayesGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
 
-      complete_sample <- mapply(function(complete, next_s) {
-        mapply(function(cs, ns) {
-          cbind(cs, ns)
-        },
-        cs = complete,
-        ns = next_s,
-        SIMPLIFY = FALSE)
-      }, complete = complete_sample, next_s = next_sample, SIMPLIFY = FALSE)
-      n_remain <- n_remain - next_sample_size
-    }
-    # b_estimate <- sapply(complete_sample, function(betas) {
-    #   median(apply(betas, 1, sd))
-    # })
-    # b_estimate <- sapply(complete_sample, function(each_ses) {
-    #   sapply(each_ses, function(betas) {
-    #     # median(apply(betas, 1, sd))
-    #     min(apply(betas, 1, sd))
-    #   })
-    # }, simplify = FALSE)
-    b_estimate <- b_dists
-    # final_nums <- mapply(s2m_B,
-    #                      B = complete_sample,
-    #                      sigma = b_estimate,
-    #                      SIMPLIFY = TRUE)
-    final_nums <- mapply(function(each_ses_beta,each_ses_b) {
-      out_id <- mapply(s2m_B,B = each_ses_beta,
-                        sigma = each_ses_b, SIMPLIFY = TRUE)
-      out_id[out_id != 0] <- 1
-      return(list(active = out_id,
-                  excur_result = NULL))
-    }, each_ses_beta = complete_sample, each_ses_b = b_estimate, SIMPLIFY = FALSE)
-    # final_nums[final_nums != 0] <- 1
-    # final_out <- list(active = final_nums,
-    #                   excur_result = NULL)
-    # return(final_out)
-    return(final_nums)
+  correction <- match.arg(correction, c("FWER","FDR","none"))
+
+  #check session_name argument
+
+  #if only one session, analyze that one
+  all_sessions <- model_obj$session_names
+  n_sess <- length(all_sessions)
+  if(n_sess == 1){ session_name <- all_sessions }
+
+  #if averages not available and session_name=NULL, pick first session and return a warning
+  has_avg <- is.matrix(model_obj$avg_beta_estimates)
+  if(is.null(session_name) & !has_avg){
+    session_name <- all_sessions[1]
+    warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
+
+  #check session_name not NULL, check that a valid session name
+  if(!is.null(session_name)){
+    if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+    sess_ind <- which(all_sessions == session_name)
+  }
+
+  #check field_names argument
+  if(is.null(field_names)) field_names <- model_obj$beta_names
+  if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+
+  K <- length(model_obj$beta_names)
+
+  mesh <- model_obj$mesh
+  n_vox <- mesh$n
+
+  # HERE
+
+  #grab columns of "big" design matrix associated with each field
+  fields_yes <- which(model_obj$beta_names %in% field_names)
+  field_inds <- c(sapply(fields_yes,
+                         function(fy){
+                           seq(n_vox) + n_vox*(fy - 1)
+                         }))
+
+  t_star <- (beta_hat - threshold) / se_beta
+  p_values <- sapply(t_star, pt, df = DOF, lower.tail = F)
+  if(correction == "FWER") active_out <- as.numeric(p_values < (alpha / length(beta_hat)))
+  if(correction == "FDR") active_out <- BH_FDR(p_values, FDR = alpha)
+  active_out <- matrix(active_out, n_vox, K)
+  return(active_out)
 }
 
 #' Significance using Benjamini-Hochsberg False Discovery Rate
@@ -312,66 +379,4 @@ BH_FDR <- function(p, FDR = 0.05) {
   out <- ifelse(is.na(p), 1, p)
   out <- ifelse(out < BH_cutoff, 1,0)
   return(out)
-}
-
-#' Identification of areas of activation in a General Linear Model using classical methods
-#'
-#' @param model_obj A \code{BayesGLM_cifti} or \code{BayesGLM_slice} object
-#' @param alpha A significance level to be used in both the family-wise error
-#'   rate (FWER) or false discovery rate (FDR) multiple correction methods of
-#'   determining significance.
-#'
-#' @return A list of length equal to the number of hemispheres of model fit
-#'   data. In each list element, there will be two matrices corresponding to the
-#'   0-1 activation status for the model coefficients.
-#'
-#' @importFrom stats sd pt
-#'
-#' @export
-id_activations.classical <- function(model_obj, alpha = 0.05) {
-  # Check to see if the Bayesian results are available (as they include the data values used to fit the model)
-  has_Bayes <- length(which(sapply(model_obj$GLMs_Bayesian, class) == "BayesGLM")) > 0
-  if(!has_Bayes) stop("This currently requires model objects with Bayesian results due to model object data subjects. This will be fixed in the future.")
-  # Note: This currently only works when there are Bayesian results because the data may have been prewhitened, and the prewhitened data are being saved as part of the GLMs_Bayesian object within the BayesGLM model output.
-  hems <- names(model_obj$GLMs_Bayesian[which(sapply(model_obj$GLMs_Bayesian, class) == "BayesGLM")])
-  L_or_R <- sub("cortex","",hems)
-  K <- length(model_obj$beta_names)
-  ntime <- unique(sapply(model_obj$design, nrow))
-  n_sess <- length(model_obj$design)
-  hems_name <- ifelse(L_or_R == "L", 'left','right')
-  active_out <- vector('list', length(hems))
-  for(h in 1:length(L_or_R)) {
-    y_vec <- model_obj$GLMs_Bayesian[[paste0("cortex",L_or_R[h])]]$y
-    X_mat <- model_obj$GLMs_Bayesian[[paste0("cortex",L_or_R[h])]]$X
-    if(length(X_mat) > 1) {
-      X_mat_final <- X_mat[[1]]
-      for(ss in 2:length(X_mat)) {
-        X_mat_final <- rbind(X_mat_final,X_mat[[ss]])
-      }
-      X_mat <- X_mat_final
-    } else {
-      X_mat <- X_mat[[1]]
-    }
-    XtX <- crossprod(X_mat)
-    XtX_inv <- solve(XtX)
-    beta_hat <- as.vector(XtX_inv %*% crossprod(X_mat,y_vec))
-    V <- length(beta_hat) / K
-    # y_error <- y_vec - X_mat %*% beta_hat
-    y_error <- matrix(as.vector(y_vec - X_mat %*% beta_hat), n_sess*ntime, V)
-    # sd_error <- sd(y_error)
-    # se_beta <- sqrt(diag(XtX_inv)) * sd_error
-    sd_error <- sqrt(matrixStats::colVars(y_error) * (n_sess*ntime - 1) / (n_sess*ntime - K - 1))
-    se_beta <- sqrt(diag(XtX_inv)) * rep(sd_error,K)
-    DOF <- (n_sess*ntime) - K - 1
-    t_star <- beta_hat / se_beta
-    p_values <- sapply(t_star, pt, df = DOF, lower.tail = F)
-    FDR_act <- BH_FDR(p_values, FDR = alpha)
-    FWER_act <- as.numeric(p_values < (alpha / length(beta_hat)))
-    active_out[[h]] <- list(
-      FDR_act = matrix(FDR_act,V,K),
-      FWER_act = matrix(FWER_act,V,K)
-    )
-  }
-  names(active_out) <- hems
-  return(active_out)
 }

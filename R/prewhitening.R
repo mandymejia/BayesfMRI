@@ -203,7 +203,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix
-  cat("Prewhitening...\n")
+  cat("Prewhitening... ")
   if(is.null(num.threads)) {
     # Initialize the block diagonal covariance matrix
     template_pw <- Matrix::bandSparse(n = ntime,
@@ -212,7 +212,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     template_pw_list <- rep(list(template_pw),V)
     rows.rm <- numeric()
     for(v in 1:V) {
-      if(v %% 100 == 0) cat("Location",v,"of",V,"\n")
+      if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
       template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
                                            ntime = ntime,
                                            AR_var = avg_var[v])
