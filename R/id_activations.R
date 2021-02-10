@@ -104,13 +104,13 @@ id_activations_cifti <- function(model_obj,
     datL <- 1*activations$cortexL$active
     if(method=='classical') datL <- datL[!is.na(datL[,1]),] #remove medial wall locations
     #datL[datL==0] <- NA
-    activations_xifti$data$cortex_left <- datL
+    activations_xifti$data$cortex_left <- matrix(datL, ncol=length(field_names))
   }
   if(do_right) {
     datR <- 1*activations$cortexR$active
     if(method=='classical') datR <- datR[!is.na(datR[,1]),] #remove medial wall locations
     #datR[datR==0] <- NA
-    activations_xifti$data$cortex_right <- datR
+    activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
   }
 
   activations_xifti <- convert_to_dlabel(activations_xifti, colors='red')

@@ -109,7 +109,14 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #'   coefficient estimates used in the prewhitening, the smoothed, average
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
-prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, ar_smooth = 5, cifti_data, hemisphere = NULL, num.threads = NULL) {
+prewhiten_cifti <- function(data,
+                            scale_BOLD = TRUE,
+                            scale_design = TRUE,
+                            ar_order = 6,
+                            ar_smooth = 5,
+                            cifti_data,
+                            hemisphere = NULL,
+                            num.threads = NULL) {
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)

@@ -321,7 +321,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if(prewhiten) {
-      pw_data_left <- prewhiten_cifti(session_data,
+      pw_data_left <- prewhiten_cifti(data = session_data,
                                       scale_BOLD = scale_BOLD,
                                       scale_design = FALSE,
                                       ar_order = ar_order,
