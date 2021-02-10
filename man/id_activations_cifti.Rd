@@ -12,7 +12,7 @@ id_activations_cifti(
   method = c("Bayesian", "classical"),
   threshold = NULL,
   area.limit = NULL,
-  correction = c("FWER", "FDR"),
+  correction = c("FWER", "FDR", "none"),
   excur_method = c("EB", "QC"),
   verbose = TRUE
 )
@@ -20,7 +20,7 @@ id_activations_cifti(
 \arguments{
 \item{model_obj}{Result of BayesGLM_cifti model call (of class BayesGLM_cifti)}
 
-\item{field_names}{Name of latent field, or vector of names, on which to identify activations for Bayesian method.}
+\item{field_names}{Name of latent field, or vector of names, on which to identify activations. By default, analyze all tasks.}
 
 \item{session_name}{(character) The name of the session that should be
 examined. If \code{NULL} (default), the average across all sessions is used.}

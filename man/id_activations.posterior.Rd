@@ -17,10 +17,10 @@ id_activations.posterior(
 \arguments{
 \item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
 
-\item{field_names}{Name of latent field or vector of names on which to identify activations.  By default, use all tasks.}
+\item{field_names}{Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.}
 
-\item{session_name}{(character) The name of the session that should be
-examined. If \code{NULL} (default), the average across all sessions is used.}
+\item{session_name}{(character) The name of the session that should be examined.
+If \code{NULL} (default), the average across all sessions is used.}
 
 \item{alpha}{Significance level (e.g. 0.05)}
 

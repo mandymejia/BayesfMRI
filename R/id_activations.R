@@ -4,7 +4,7 @@
 #'
 #' @param model_obj Result of BayesGLM_cifti model call (of class BayesGLM_cifti)
 # @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
-#' @param field_names Name of latent field, or vector of names, on which to identify activations for Bayesian method.
+#' @param field_names Name of latent field, or vector of names, on which to identify activations. By default, analyze all tasks.
 #' @param session_name (character) The name of the session that should be
 #' examined. If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
@@ -39,7 +39,7 @@ id_activations_cifti <- function(model_obj,
                                  method=c('Bayesian','classical'),
                                  threshold=NULL,
                                  area.limit=NULL,
-                                 correction = c("FWER","FDR"),
+                                 correction = c("FWER","FDR","none"),
                                  excur_method = c("EB","QC"),
                                  verbose = TRUE){
 
@@ -53,13 +53,15 @@ id_activations_cifti <- function(model_obj,
     if(method=='Bayesian') stop("Must specify an activation threshold when method='Bayesian'.")
   }
 
-  GLM_list <- model_obj$GLMs_Bayesian
+  if(method=='Bayesian') GLM_list <- model_obj$GLMs_Bayesian
+  if(method=='classical') GLM_list <- model_obj$GLMs_classical
   num_models <- length(GLM_list)
   activations <- vector('list', length=num_models)
   names(activations) <- names(GLM_list)
   do_left <- !is.null(GLM_list$cortexL)
   do_right <- !is.null(GLM_list$cortexR)
 
+  if(is.null(field_names)) field_names <- model_obj$beta_names
   if(any(!(field_names %in% model_obj$beta_names))) stop(paste0('All elements of field_names must appear in model_obj$beta_names: ', paste(model_obj$beta_names, collapse=',')))
   field_inds <- which(model_obj$beta_names %in% field_names)
 
@@ -68,13 +70,13 @@ id_activations_cifti <- function(model_obj,
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
       if(verbose) cat(paste0('\n Identifying Bayesian GLM activations in ',names(GLM_list)[mm]))
-      system.time(act_m <- id_activations.posterior(model_obj=model_m,
+      act_m <- id_activations.posterior(model_obj=model_m,
                                                     field_names=field_names,
                                                     session_name=session_name,
                                                     threshold=threshold,
                                                     alpha=alpha,
                                                     area.limit=area.limit,
-                                                    excur_method=excur_method))
+                                                    excur_method=excur_method)
 
       activations[[mm]] <- act_m
     }
@@ -85,19 +87,19 @@ id_activations_cifti <- function(model_obj,
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
-      system.time(act_m <- id_activations.classical(model_obj=model_m,
+      act_m <- id_activations.classical(model_obj=model_m,
                                                     field_inds=field_inds,
                                                     session_name=session_name,
                                                     threshold=threshold,
                                                     alpha=alpha,
-                                                    correction=correction))
+                                                    correction=correction)
 
       activations[[mm]] <- act_m
     }
   }
 
   #map results to xifti objects
-  activations_xifti <- transform_xifti(model_obj$betas_Bayesian[[1]], FUN = function(x){ x*NA })
+  activations_xifti <- 0*model_obj$betas_Bayesian[[1]]
   if(do_left) {
     datL <- activations$cortexL$active
     datL[datL==0] <- NA
@@ -156,7 +158,7 @@ id_activations_cifti <- function(model_obj,
 
 
 
-
+## HERE: Update this function to use field_inds instead of field_names
 
 #' Identify activations using joint posterior probabilities
 #'
@@ -168,9 +170,9 @@ id_activations_cifti <- function(model_obj,
 #'  posterior distribution of the latent field.
 #'
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
-#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, use all tasks.
-#' @param session_name (character) The name of the session that should be
-#'   examined. If \code{NULL} (default), the average across all sessions is used.
+#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
+#' @param session_name (character) The name of the session that should be examined.
+#' If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
 #' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
 #' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
@@ -309,7 +311,6 @@ id_activations.posterior <- function(model_obj,
 #' @importFrom matrixStats colVars
 #'
 #' @export
-#'
 id_activations.classical <- function(model_obj,
                                      field_inds = NULL,
                                      session_name = NULL,
@@ -320,6 +321,8 @@ id_activations.classical <- function(model_obj,
   if(class(model_obj) != "classicalGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
 
   correction <- match.arg(correction, c("FWER","FDR","none"))
+
+  if(is.null(threshold)) threshold <- 0
 
   #check session_name argument
 
@@ -352,8 +355,8 @@ id_activations.classical <- function(model_obj,
   nvox <- ncol(beta_est)
   K <- nrow(beta_est)
   if(any(!(field_inds %in% 1:K))) stop(paste0('field_inds must be between 1 and the number of tasks, ',K))
-  beta_est <- beta_est[field_inds,]
-  se_beta <- se_beta[field_inds,]
+  beta_est <- matrix(beta_est[field_inds,], ncol=nvox)
+  se_beta <- matrix(se_beta[field_inds,], ncol=nvox)
   K <- length(field_inds)
 #
 #   #grab columns of "big" design matrix associated with each field
@@ -363,9 +366,9 @@ id_activations.classical <- function(model_obj,
 #                            seq(n_vox) + n_vox*(fy - 1)
 #                          }))
 
-  t_star <- (beta_est - threshold) / se_beta
+  t_star <- matrix((beta_est - threshold) / se_beta, ncol=nvox)
   #perform multiple comparisons correction
-  p_values <- active <- matrix(NA, K, nvox)
+  p_values <- p_values_adj <- active <- matrix(NA, K, nvox)
   for(k in 1:K){
     p_values_k <- sapply(t_star[k,], pt, df = DOF, lower.tail = F)
     if(correction == "FWER") p_vals_adj_k <- p.adjust(p_values_k, method='bonferroni')
@@ -376,9 +379,9 @@ id_activations.classical <- function(model_obj,
     p_values_adj[k,] <- p_vals_adj_k
     active[k,] <- (p_vals_adj_k < alpha)
   }
-  result <- list(p_values = p_values,
-                 p_values_adj = p_values_adj,
-                 active = active,
+  result <- list(p_values = t(p_values),
+                 p_values_adj = t(p_values_adj),
+                 active = t(active),
                  correction = correction,
                  alpha = alpha,
                  threshold = threshold)

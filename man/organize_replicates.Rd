@@ -4,12 +4,12 @@
 \alias{organize_replicates}
 \title{Organize replicates}
 \usage{
-organize_replicates(n_sess, n_task, mesh)
+organize_replicates(n_sess, beta_names, mesh)
 }
 \arguments{
 \item{n_sess}{The number of sessions sharing hyperparameters (can be different tasks)}
 
-\item{n_task}{Number of regressors or tasks}
+\item{beta_names}{Vector of names for each task}
 
 \item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
 surface data)}

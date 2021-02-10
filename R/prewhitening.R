@@ -100,9 +100,10 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @param hemisphere 'left' or 'right'
 #' @param num.threads (scalar) The number of threads to use in parallelizing the
 #'   prewhitening
-#' @importFrom Matrix bandSparse sparseMatrix bdiag
+#' @importFrom Matrix bandSparse bdiag
 #' @importFrom ciftiTools smooth_cifti
 #' @importFrom stats ar.yw
+#' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average
@@ -242,7 +243,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     bold_out <- matrix(NA,ntime, length(is_missing))
     pw_BOLD <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
     bold_out[,!is_missing] <- pw_BOLD
-    all_design <- bdiag(rep(list(data_s$design),V))
+    all_design <- Matrix::bdiag(rep(list(data_s$design),V))
     pw_design <- sqrtInv_all %*% all_design
     return(list(BOLD = bold_out, design = pw_design))
   }, simplify = F)

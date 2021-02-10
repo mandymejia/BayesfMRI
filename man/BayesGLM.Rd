@@ -6,6 +6,7 @@
 \usage{
 BayesGLM(
   data,
+  beta_names = NULL,
   vertices = NULL,
   faces = NULL,
   mesh = NULL,
@@ -26,6 +27,8 @@ BayesGLM(
 BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
 for more details.
 List element names represent session names.}
+
+\item{beta_names}{(Optional) Names of tasks represented in design matrix}
 
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
 coordinates at which a given vertex in the mesh is located. \eqn{V} is the
