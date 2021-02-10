@@ -212,7 +212,7 @@ prewhiten_cifti <- function(data,
   }
   # Create the sparse pre-whitening matrix
   cat("Prewhitening... ")
-  if(is.null(num.threads)) {
+  if(is.null(num.threads) | num.threads < 2) {
     # Initialize the block diagonal covariance matrix
     template_pw <- Matrix::bandSparse(n = ntime,
                                       k = 0:(ar_order + 1),
@@ -229,7 +229,7 @@ prewhiten_cifti <- function(data,
     if (!requireNamespace("parallel", quietly = TRUE)) {
       stop("Prewhitening in parallel requires the `parallel` package. Please install it.", call. = FALSE)
     }
-    max_threads <- max(parallel::detectCores() - 1, 25)
+    max_threads <- max(parallel::detectCores(), 25)
     num_threads <- min(max_threads,num.threads)
     cl <- parallel::makeCluster(num_threads)
     template_pw_list <-

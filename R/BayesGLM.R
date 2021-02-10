@@ -91,6 +91,7 @@
 #' @importFrom ciftiTools read_cifti resample_gifti as.xifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom INLA inla.pardiso.check inla.setOption
+#' @importFrom parallel detectCores
 #'
 #' @export
 BayesGLM_cifti <- function(cifti_fname,
@@ -117,6 +118,11 @@ BayesGLM_cifti <- function(cifti_fname,
   do_classical <- (GLM_method %in% c('both','classical'))
 
   check_BayesGLM(require_PARDISO=do_Bayesian)
+
+  avail_cores <- parallel::detectCores()
+  if(avail_cores < 2) {
+    num.threads <- 1
+  }
 
   # Check that arguments are compatible
   brainstructures <- ciftiTools:::match_input(
