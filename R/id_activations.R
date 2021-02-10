@@ -28,7 +28,7 @@
 #'
 # @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
-#' @importFrom ciftiTools transform_xifti
+#' @importFrom ciftiTools convert_to_dlabel
 #' @export
 #'
 #'
@@ -69,7 +69,7 @@ id_activations_cifti <- function(model_obj,
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
-      if(verbose) cat(paste0('\n Identifying Bayesian GLM activations in ',names(GLM_list)[mm]))
+      if(verbose) cat(paste0('Identifying Bayesian GLM activations in ',names(GLM_list)[mm],'\n'))
       act_m <- id_activations.posterior(model_obj=model_m,
                                                     field_names=field_names,
                                                     session_name=session_name,
@@ -83,7 +83,7 @@ id_activations_cifti <- function(model_obj,
   }
 
   if(method=='classical'){
-    if(verbose) cat('\n Identifying classical GLM activations')
+    #if(verbose) cat('Identifying classical GLM activations')
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
@@ -101,15 +101,19 @@ id_activations_cifti <- function(model_obj,
   #map results to xifti objects
   activations_xifti <- 0*model_obj$betas_Bayesian[[1]]
   if(do_left) {
-    datL <- activations$cortexL$active
-    datL[datL==0] <- NA
+    datL <- 1*activations$cortexL$active
+    if(method=='classical') datL <- datL[!is.na(datL[,1]),] #remove medial wall locations
+    #datL[datL==0] <- NA
     activations_xifti$data$cortex_left <- datL
   }
   if(do_right) {
-    datR <- activations$cortexR$active
-    datR[datR==0] <- NA
+    datR <- 1*activations$cortexR$active
+    if(method=='classical') datR <- datR[!is.na(datR[,1]),] #remove medial wall locations
+    #datR[datR==0] <- NA
     activations_xifti$data$cortex_right <- datR
   }
+
+  activations_xifti <- convert_to_dlabel(activations_xifti, colors='red')
 
   result <- list(activations = activations,
                  activations_xifti = activations_xifti)

@@ -146,7 +146,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     BOLD_s <- data[[s]]$BOLD
     BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
     if(scale_design) {
-      design_s <- scale_design_mat(data[[s]]$design)
+      design_s <- scale_design_mat(data[[s]]$design) #center design matrix and scale
     } else {
       design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
     }

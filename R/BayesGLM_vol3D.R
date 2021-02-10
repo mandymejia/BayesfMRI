@@ -151,7 +151,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
 
     #construct betas and repls objects
-    replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh = spde_grp)
+    replicates_list <- organize_replicates(n_sess=n_sess, beta_names = beta_names, mesh = spde_grp)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
