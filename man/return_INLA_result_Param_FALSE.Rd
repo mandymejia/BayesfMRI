@@ -5,7 +5,7 @@
 \title{return_INLA_result: FALSE}
 \arguments{
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
-Default: \code{FALSE}. Required for running \code{\link{id_activations}}
+Default: \code{FALSE}. Required for running \code{id_activations}
 after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 }

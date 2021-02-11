@@ -13,7 +13,6 @@ check_BayesGLM(require_PARDISO = TRUE)
 \code{NULL}, invisibly
 }
 \description{
-Check arguments and packages for \code{\link{BayesGLM}},
-\code{\link{BayesGLM_slice}}, and \code{\link{BayesGLM_cifti}}.
+Check arguments and packages for \code{\link{BayesGLM}} and \code{\link{BayesGLM_cifti}}.
 }
 \keyword{internal}

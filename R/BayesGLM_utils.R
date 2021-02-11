@@ -1,12 +1,11 @@
 #' Check arguments and packages for BayesGLM-related functions
-#' 
-#' Check arguments and packages for \code{\link{BayesGLM}}, 
-#'  \code{\link{BayesGLM_slice}}, and \code{\link{BayesGLM_cifti}}.
-#' 
+#'
+#' Check arguments and packages for \code{\link{BayesGLM}} and \code{\link{BayesGLM_cifti}}.
+#'
 #' @param require_PARDISO Is PARDISO required? Default: \code{TRUE}.
 #' @return \code{NULL}, invisibly
-#' 
-#' @keywords internal 
+#'
+#' @keywords internal
 check_BayesGLM <- function(require_PARDISO=TRUE){
 
   # Check packages -------------------------------------------------------------
@@ -37,7 +36,7 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' Estimate INLA model
 #'
 #' @inheritSection INLA_Description INLA Requirement
-#' 
+#'
 #' @param formula Formula to put into inla
 #' @param data Dataset
 #' @param A Large, sparse observation matrix
@@ -50,9 +49,9 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
 #'
 #' @return Results from INLA
-#' 
+#'
 #' @importFrom INLA inla
-#' 
+#'
 #' @export
 estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
 
@@ -74,7 +73,7 @@ estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, 
 #' @return A formula representing the Bayesian GLM to be passed to `inla()`
 #'
 #' @importFrom stats as.formula
-#' 
+#'
 #' @keywords internal
 make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 
@@ -104,7 +103,7 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 }
 
 #' Make data list for \code{estimate_model}
-#' 
+#'
 #' Make data list to be passed to \code{estimate_model}
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
@@ -115,7 +114,7 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 #' @return List
 #'
 #' @importFrom Matrix bdiag
-#' 
+#'
 #' @keywords internal
 make_data_list <- function(y, X, betas, repls){
 
@@ -153,7 +152,7 @@ make_data_list <- function(y, X, betas, repls){
 #'
 #' @return Estimates from inla model
 #'
-#' @keywords internal 
+#' @keywords internal
 extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 
   if(class(object) != "inla"){
@@ -184,14 +183,13 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
   for(v in 1:n_sess){
     inds_v <- (1:n_loc) + (v-1)*n_loc #indices of beta vector corresponding to session v
     betas_v <- matrix(NA, nrow=n_loc, ncol=nbeta)
-    colnames(betas_v) <- beta_names
-
     for(i in 1:nbeta){
       est_iv <- res.beta[[i]][[stat_ind]][inds_v]
       betas_v[,i] <- est_iv
     }
     betas[[v]] <- matrix(NA, nrow=V, ncol=nbeta)
     betas[[v]][mask==1,] <- betas_v
+    colnames(betas[[v]]) <- beta_names
   }
   return(betas)
 }
@@ -200,30 +198,25 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 #' Extracts posterior density estimates for hyperparameters
 #'
 #' @inheritSection INLA_Description INLA Requirement
-#' 
-#' @param object An object of class \code{"inla"}, a result of a call to 
-#'  \code{inla()}
-#' @param spde The model used for the latent fields in the \code{inla()} call, 
-#'  an object of class \code{"inla.spde"}
-#' @param beta_names (Optional) Descriptive names of model regressors (tasks).
 #'
-#' @return Long-form data frame containing posterior densities for the 
+#' @param object An object of class \code{"inla"}, a result of a call to
+#'  \code{inla()}
+#' @param spde The model used for the latent fields in the \code{inla()} call,
+#'  an object of class \code{"inla.spde"}
+#' @param beta_names Descriptive names of model regressors (tasks).
+#'
+#' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
 #' @importFrom INLA inla.spde2.result
 #'
-#' @keywords internal 
-get_posterior_densities <- function(object, spde, beta_names=NULL){
+#' @keywords internal
+get_posterior_densities <- function(object, spde, beta_names){
 
-  beta_names_model <- names(object$summary.random)
-  numbeta <- length(beta_names_model)
-  if(numbeta != length(beta_names)) {
-    warning('Length of beta_names invalid.  Setting to NULL.')
-    beta_names <- NULL
-  }
+  numbeta <- length(beta_names)
 
   for(b in 1:numbeta){
-    name_b = beta_names_model[b]
+    name_b = beta_names[b]
     result.spde.b = inla.spde2.result(object, name_b, spde)
     # Kappa and Tau
     log_kappa.b = as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
@@ -233,9 +226,8 @@ get_posterior_densities <- function(object, spde, beta_names=NULL){
     log_tau.b$param <- 'log_tau'
     df.b <- rbind(log_kappa.b, log_tau.b)
     df.b$beta <- name_b
-    if(!is.null(beta_names)) df.b$name <- beta_names[b] else df.b$name <- NA
     if(b == 1) df <- df.b else df <- rbind(df, df.b)
   }
-  df <- df[,c('beta','name','param','value','density')]
+  df <- df[,c('beta','param','value','density')]
   return(df)
 }

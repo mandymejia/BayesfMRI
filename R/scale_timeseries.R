@@ -17,7 +17,7 @@ scale_timeseries <- function(BOLD, scale=TRUE, transpose = TRUE){
 	ntime <- ncol(BOLD)
 
 	#check orientation, send warning message and transpose if necessary
-	if(ntime > nvox & transpose){
+	if((ntime > nvox) & transpose){
 		warning('More columns than rows. Transposing matrix so rows are data locations and columns are time points')
 		BOLD <- t(BOLD)
 		nvox <- nrow(BOLD)

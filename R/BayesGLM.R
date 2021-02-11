@@ -1,268 +1,3 @@
-#'  BayesGLM for 2D slice
-#'
-#'  Spatial Bayesian GLM for fMRI task activation on 2d slice volumetric data
-#'
-#' @param BOLD A list of sessions, each with a three-dimensional array in which
-#'   the first two dimensions correspond to the size of the fMRI slice in space
-#'   and the last dimension corresponds to time
-#' @param binary_mask (optional) a binary brain slice image used to mask
-#'   the BOLD data and make a more efficient network mesh for the
-#'   neighborhood definitions
-#' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
-#'
-#'   \code{design} is a \eqn{T x K} task design matrix (or list of such
-#'   matrices, for multiple-session modeling) with column names representing
-#'   tasks. Each column represents the expected BOLD response due to each task,
-#'   a convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus. Note that the scale of the regressors will affect the scale and
-#'   interpretation of the beta coefficients, so imposing a proper scale (e.g.,
-#'   set maximum to 1) is recommended.
-#'
-#'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
-#'   for each task in seconds, organized as a list where each element of the
-#'   list corresponds to one task. Names of list should be task names. (Or for
-#'   multi-session modeling, a list of such lists.)
-#'
-#'   \code{TR} is the temporal resolution of the data in seconds.
-#' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
-#'   matrices, for multiple-session modeling).
-#' @param nuisance_include (Optional) Additional nuisance covariates to include.
-#'   Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-#'   derivative of each column of design matrix).
-#' @inheritParams scale_BOLD_Param
-#' @inheritParams scale_design_Param
-#' @inheritParams num.threads_Param
-#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only,
-#'   'classical' for the classical GLM only, or 'both' to return both classical
-#'   and Bayesian estimates of task activation.
-#' @param session_names (Optional) A vector of names corresponding to each
-#'   session.
-#' @inheritParams return_INLA_result_Param_TRUE
-#' @param outfile (Optional) File name (without extension) of output file for
-#'   BayesGLM result to use in Bayesian group modeling.
-#' @inheritParams verbose_Param_inla
-#' @inheritParams contrasts_Param_inla
-#' @inheritParams avg_sessions_Param
-#' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use the
-#'   \code{id_activations} function? Default value is \code{TRUE}.
-#'
-#' @importFrom utils head
-#'
-#' @return An object of class \code{"BayesGLM"}, a list containing...
-#'
-#' @export
-BayesGLM_slice <- function(
-  BOLD,
-  design = NULL,
-  onsets=NULL,
-  TR=NULL,
-  nuisance=NULL,
-  nuisance_include=c('drift','dHRF'),
-  binary_mask = NULL,
-  scale_BOLD = TRUE,
-  scale_design = TRUE,
-  num.threads = 4,
-  GLM_method = 'both',
-  session_names = NULL,
-  return_INLA_result = TRUE,
-  outfile = NULL,
-  verbose = FALSE,
-  contrasts = NULL,
-  avg_sessions = TRUE,
-  trim_INLA = TRUE) {
-
-  do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
-  do_classical <- (GLM_method %in% c('both','classical'))
-
-  check_BayesGLM(require_PARDISO=do_Bayesian)
-
-  image_dims <- head(dim(BOLD[[1]]),-1)
-  if (is.null(binary_mask))
-    binary_mask <- matrix(1, nrow = image_dims[1], ncol = image_dims[2])
-
-  mesh <- make_slice_mesh(binary_mask)
-
-  # Name sessions and check compatibility of multi-session arguments
-  n_sess <- length(BOLD)
-  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
-  if(n_sess==1){
-    if(is.null(session_names)) session_names <- 'single_session'
-  } else {
-    if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
-  }
-  if(length(session_names) != n_sess)
-    stop('If session_names is provided, it must be of the same length as BOLD')
-
-  cat('\n SETTING UP DATA \n')
-
-  if(is.null(design)) {
-    make_design <- TRUE
-    design <- vector('list', length=n_sess)
-  } else {
-    make_design <- FALSE
-  }
-
-  for(ss in 1:n_sess){
-    if(make_design){
-      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
-      }
-  }
-
-  ### Check that design matrix names consistent across sessions
-  if(n_sess > 1){
-    tmp <- sapply(design, colnames)
-    tmp <- apply(tmp, 1, function(x) length(unique(x)))
-    if(max(tmp) > 1)
-      stop('task names must match across sessions for multi-session modeling')
-  }
-
-  cat('\n RUNNING MODEL \n')
-
-  classicalGLM <- NULL
-  BayesGLM <- NULL
-
-  ### FORMAT DESIGN MATRIX
-  for(ss in 1:n_sess){
-    if(scale_design){
-      design[[ss]] <- scale_design_mat(design[[ss]])
-    } else {
-      design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix
-        # to eliminate baseline
-    }
-  }
-
-  ### ADD ADDITIONAL NUISANCE REGRESSORS
-  if(!is.null(nuisance)) {
-    for (ss in 1:n_sess) {
-      ntime <- nrow(design[[ss]])
-      if ('drift' %in% nuisance_include) {
-        drift <- (1:ntime) / ntime
-        nuisance[[ss]] <-
-          cbind(nuisance[[ss]], drift, drift ^ 2)
-      }
-      if ('dHRF' %in% nuisance_include) {
-        dHRF <- gradient(design[[ss]])
-        nuisance[[ss]] <-
-          cbind(nuisance[[ss]], dHRF)
-      }
-    }
-  } else {
-    nuisance <- list()
-    for (ss in 1:n_sess) {
-      ntime <- nrow(design[[ss]])
-      if ('drift' %in% nuisance_include) {
-        drift <- (1:ntime) / ntime
-        nuisance[[ss]] <- cbind(drift, drift ^ 2)
-      }
-      if ('dHRF' %in% nuisance_include) {
-        dHRF <- gradient(design[[ss]])
-        nuisance[[ss]] <- dHRF
-      }
-    }
-  }
-
-  scale_design <- F # This is done to prevent double-scaling in BayesGLM
-
-  #set up session list
-  # mat_BOLD <- sapply(BOLD, function(y_t) {
-  #   # Remove any NA voxels and output the response as a matrix
-  #   y <- apply(y_t,3, identity)
-  #   y_exclude <- apply(y,1, function(yv) any(is.na(yv)))
-  #   y <- y[!y_exclude,]
-  #   y <- t(y)
-  # }, simplify = F)
-  session_data <- vector('list', n_sess)
-  names(session_data) <- session_names
-  for(ss in 1:n_sess){
-    sess <- list(BOLD = BOLD[[ss]], design=design[[ss]])
-    if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
-    session_data[[ss]] <- sess
-  }
-
-  ### FIT GLM(s)
-
-  if(do_classical) classicalGLM_out <- classicalGLM(session_data,
-                                                     scale_BOLD=scale_BOLD,
-                                                     scale_design = scale_design)
-  if(do_Bayesian) {
-    BayesGLM_out <- BayesGLM(session_data,
-                             mesh = mesh,
-                             scale_BOLD=scale_BOLD,
-                             scale_design = scale_design,
-                             num.threads = num.threads,
-                             return_INLA_result = return_INLA_result,
-                             outfile = outfile,
-                             verbose = verbose,
-                             avg_sessions = avg_sessions,
-                             trim_INLA = trim_INLA)
-
-    # Create a conversion matrix
-    in_binary_mask <- which(binary_mask == 1, arr.ind = T)
-    in_binary_mask <- in_binary_mask[,2:1]
-    convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
-    # Extract the point estimates
-    point_estimates <- sapply(session_names, function(sn){
-      as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
-    }, simplify = F)
-    if(avg_sessions)
-      avg_point_estimates <- BayesGLM_out$avg_beta_estimates
-  }
-
-  classical_slice <- Bayes_slice <- vector('list', n_sess)
-  names(classical_slice) <- names(Bayes_slice) <- session_names
-  for(ss in 1:n_sess){
-    num_tasks <- ncol(design[[ss]])
-    if(do_classical){
-      classical_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
-        image_coef <- binary_mask
-        image_coef[image_coef == 1] <- classicalGLM_out[[ss]][,tn]
-        image_coef[binary_mask == 0] <- NA
-        return(image_coef)
-      },simplify = F)
-    }
-    if(do_Bayesian){
-      mat_coefs <- point_estimates[[ss]]
-      Bayes_slice[[ss]] <- sapply(seq(num_tasks), function(tn) {
-        image_coef <- binary_mask
-        image_coef[image_coef == 1] <- mat_coefs[,tn]
-        image_coef[binary_mask == 0] <- NA
-        return(image_coef)
-      },simplify = F)
-      if(n_sess > 1 & avg_sessions) {
-        Bayes_slice$avg_over_sessions <- sapply(seq(num_tasks), function(tn) {
-          image_coef <- binary_mask
-          image_coef[image_coef == 1] <- avg_point_estimates[,tn]
-          image_coef[binary_mask == 0] <- NA
-          return(image_coef)
-        },simplify = F)
-      }
-    }
-  }
-
-  if (do_Bayesian) {
-    beta_names <- BayesGLM_out$beta_names
-  } else {
-    beta_names <- NULL
-    BayesGLM_out <- NULL
-  }
-
-  if(!do_classical)
-    classicalGLM_out <- NULL
-
-  result <- list(session_names = session_names,
-                 beta_names = beta_names,
-                 betas_Bayesian = Bayes_slice,
-                 betas_classical = classical_slice,
-                 GLMs_Bayesian = BayesGLM_out,
-                 GLMs_classical = classicalGLM_out,
-                 design = design,
-                 mask = binary_mask)
-  class(result) <- "BayesGLM_slice"
-  return(result)
-  }
-
 #' BayesGLM for CIFTI
 #'
 #' Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
@@ -349,14 +84,14 @@ BayesGLM_slice <- function(
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use the
-#'   \code{id_activations} function? Default value is \code{TRUE}.
+#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
 #' @importFrom ciftiTools read_cifti resample_gifti as.xifti
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom INLA inla.pardiso.check inla.setOption
+#' @importFrom parallel detectCores
 #'
 #' @export
 BayesGLM_cifti <- function(cifti_fname,
@@ -377,10 +112,17 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE){
 
+  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
+
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
   check_BayesGLM(require_PARDISO=do_Bayesian)
+
+  avail_cores <- parallel::detectCores()
+  if(avail_cores < 2) {
+    num.threads <- 1
+  }
 
   # Check that arguments are compatible
   brainstructures <- ciftiTools:::match_input(
@@ -394,10 +136,41 @@ BayesGLM_cifti <- function(cifti_fname,
   do_right <- ('right' %in% brainstructures)
   do_sub <- FALSE
   #do_sub <- ('subcortical' %in% brainstructures)
+  if(!is.null(onsets)){
+    #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
+    if(class(onsets[[1]]) == 'list') {
+      if(is.null(names(onsets[[1]])))
+        beta_names <- paste0("beta",seq_len(length(onsets[[1]])))
+      if(!is.null(names(onsets[[1]])))
+        beta_names <- names(onsets[[1]])
+    }
+    #for single session data, onsets is a list (representing tasks) of data frames or matrices
+    if(('data.frame' %in% class(onsets[[1]])) | ('matrix' %in% class(onsets[[1]]))) {
+      if(is.null(names(onsets)))
+        beta_names <- paste0("beta",seq_len(length(onsets)))
+      if(!is.null(names(onsets)))
+        beta_names <- names(onsets)
+    }
+  }
+  if(!is.null(design)) {
+    if(class(design) == "list") {
+      if(is.null(colnames(design[[1]])))
+        beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
+      if(!is.null(colnames(design[[1]])))
+        beta_names <- colnames(design[[1]])
+    }
+    if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
+      if(is.null(colnames(design)))
+        beta_names <- paste0("beta",seq_len(ncol(design)))
+      if(!is.null(colnames(design)))
+        beta_names <- colnames(design)
+    }
+  }
 
   # Check prewhitening arguments.
+  if(is.null(ar_order)) ar_order <- 0
   ar_order <- as.numeric(ar_order)
-  prewhiten <- ar_order > 0
+  prewhiten <- (ar_order > 0)
 
   if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
@@ -423,60 +196,6 @@ BayesGLM_cifti <- function(cifti_fname,
     if(!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
   }
   if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
-
-  # ### First, perform resampling
-  # if(do_Bayesian){
-  #   if(!is.null(resamp_res)){
-  #     if(!is.numeric(resamp_res)) stop('resamp_res must be numeric')
-  #     if(round(resamp_res) != resamp_res) stop('resamp_res must be an integer')
-  #     if(resamp_res > 30000 | resamp_res < 1000) stop('resamp_res must be a number between 1,000 and 30,000')
-  #     if(is.null(sphereL_fname) | is.null(sphereR_fname)) stop('Must provide sphereL_fname and sphereR_fname to resamp_res.')
-  #
-  #     #cifti file resampling
-  #     cat('\n RESAMPLING CIFTI TIMESERIES FILES TO ', resamp_res, ' RESOLUTION \n')
-  #     cifti_fname2 <- rep(NA, n_sess)
-  #     cifti_dir <- dirname(cifti_fname[1])
-  #     for(ss in 1:n_sess){
-  #       cifti_extn <- get_cifti_extn(cifti_fname[ss])
-  #       cifti_fname2[ss] <- paste0(gsub(cifti_extn, '', cifti_fname[ss]), resamp_res, '.', cifti_extn)
-  #       cifti_fname2[ss] <- basename(cifti_fname2[ss])
-  #       delete_helper_files <- FALSE
-  #       if(ss==1){ make_helper_files <- TRUE } else { make_helper_files <- FALSE }
-  #       resample_cifti(cifti_orig = cifti_fname[ss],
-  #                      cifti_target = cifti_fname2[ss],
-  #                      sphere_orig_L = sphereL_fname,
-  #                      sphere_orig_R = sphereR_fname,
-  #                      target_res = resamp_res,
-  #                      make_helper_files = make_helper_files,
-  #                      delete_helper_files = delete_helper_files)
-  #     }
-  #     cifti_fname <- cifti_fname2
-  #
-  #     #gifti file resampling
-  #     cat('\n RESAMPLING GIFTI SURFACE FILES TO ', resamp_res, ' RESOLUTION \n')
-  #     fnames_gifti <- c(surfL_fname, surfR_fname, surf2L_fname, surf2R_fname)
-  #     fnames_sphere_orig <- c(sphereL_fname, sphereR_fname, sphereL_fname, sphereR_fname)
-  #     fnames_sphere_target <- file.path(cifti_dir, 'helper_files_resampling', c('Sphere.target.L.surf.gii',  'Sphere.target.R.surf.gii', 'Sphere.target.L.surf.gii', 'Sphere.target.R.surf.gii'))
-  #     notnull <- c(TRUE, TRUE, !is.null(surf2L_fname), !is.null(surf2R_fname))
-  #     fnames_sphere_orig <- fnames_sphere_orig[notnull]
-  #     fnames_sphere_target <- fnames_sphere_target[notnull]
-  #     fnames_gifti_target <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), fnames_gifti)
-  #     for(gg in 1:length(fnames_gifti)){
-  #       resample_gifti(gifti_orig = fnames_gifti[gg],
-  #                      gifti_target = fnames_gifti_target[gg],
-  #                      sphere_orig = fnames_sphere_orig[gg],
-  #                      sphere_target = fnames_sphere_target[gg],
-  #                      overwrite = FALSE)
-  #     }
-  #
-  #     #redefine gifti file names to resampled files
-  #     surfL_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surfL_fname)
-  #     surfR_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surfR_fname)
-  #     if(!is.null(surf2L_fname)) surf2L_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surf2L_fname)
-  #     if(!is.null(surf2R_fname)) surf2R_fname <- gsub('surf.gii', paste0(resamp_res,'.surf.gii'), surf2R_fname)
-  #   }
-  # }
-
 
   cat('\n SETTING UP DATA \n')
 
@@ -530,7 +249,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
   }
-  # #check that labels are the same across all sessions
+  # #check that labels are the same across all sessions (subcortical)
   # if(do_sub) {
   #   if(n_sess > 1) {
   #     tmp <- sapply(nifti_labels, function(x) {all.equal(x,nifti_labels[[1]])})
@@ -542,8 +261,13 @@ BayesGLM_cifti <- function(cifti_fname,
   ### Check that design matrix names consistent across sessions
   if(n_sess > 1){
     tmp <- sapply(design, colnames)
-    tmp <- apply(tmp, 1, function(x) length(unique(x)))
-    if(max(tmp) > 1) stop('task names must match across sessions for multi-session modeling')
+    if(length(beta_names) == 1) {
+      num_names <- length(unique(tmp))
+      if(num_names > 1) stop('task names must match across sessions for multi-session modeling')
+    } else {
+      num_names <- apply(tmp, 1, function(x) length(unique(x))) #number of unique names per row
+      if(max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
+    }
   }
 
   cat('\n RUNNING MODELS \n')
@@ -573,7 +297,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
+  #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   ### LEFT HEMISPHERE
   if(do_left){
@@ -608,28 +332,31 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if(prewhiten) {
-      pw_data_left <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
-                                 hemisphere = 'left',
-                                 cifti_data = cifti_ss,
-                                 num.threads = num.threads)
-      scale_BOLD <- F
-      scale_design <- F
+      pw_data_left <- prewhiten_cifti(data = session_data,
+                                      scale_BOLD = scale_BOLD,
+                                      scale_design = FALSE,
+                                      ar_order = ar_order,
+                                      ar_smooth =  ar_smooth,
+                                      hemisphere = 'left',
+                                      cifti_data = cifti_ss,
+                                      num.threads = num.threads)
+      scale_BOLD <- FALSE # done in prewhitening
       session_data <- pw_data_left$data
-      if(do_classical) classicalGLM_left <- classicalGLM_pw(session_data,
-                                                         scale_BOLD=scale_BOLD,
-                                                         scale_design = scale_design)
-    } else {
-      if(do_classical) classicalGLM_left <- classicalGLM(session_data,
-                                                         scale_BOLD=scale_BOLD,
-                                                         scale_design = scale_design)
-    }
+      # if(do_classical) classicalGLM_left <- classicalGLM_pw(session_data,
+      #                                                     scale_BOLD = scale_BOLD, # done in prewhitening
+      #                                                    scale_design = FALSE) # done above
+    } #else {
 
+    if(do_classical) classicalGLM_left <- classicalGLM(session_data,
+                                                         scale_BOLD=scale_BOLD,
+                                                         scale_design = FALSE) # done above
 
-    if(do_Bayesian) BayesGLM_left <- BayesGLM(session_data,
+    if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
+                                              beta_names = beta_names,
                                               vertices = verts_left,
                                               faces = faces_left,
                                               scale_BOLD = scale_BOLD,
-                                              scale_design = scale_design,
+                                              scale_design = FALSE, # done above
                                               num.threads = num.threads,
                                               return_INLA_result = return_INLA_result,
                                               outfile = outfile_left,
@@ -673,26 +400,30 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if(prewhiten) {
-      pw_data_right <- prewhiten_cifti(session_data, ar_smooth =  ar_smooth,
-                                 hemisphere = 'right',
-                                 cifti_data = cifti_ss,
-                                 num.threads = num.threads)
-      scale_BOLD <- F
-      scale_design <- F
+      pw_data_right <- prewhiten_cifti(session_data,
+                                       scale_BOLD = scale_BOLD,
+                                       scale_design = FALSE,
+                                       ar_smooth =  ar_smooth,
+                                       ar_order = ar_order,
+                                        hemisphere = 'right',
+                                        cifti_data = cifti_ss,
+                                        num.threads = num.threads)
+      scale_BOLD <- FALSE #done in prewhitening
       session_data <- pw_data_right$data
-      if(do_classical) classicalGLM_right <- classicalGLM_pw(session_data,
-                                                            scale_BOLD=scale_BOLD,
-                                                            scale_design = scale_design)
-    } else {
-      if(do_classical) classicalGLM_right <- classicalGLM(session_data,
+      # if(do_classical) classicalGLM_right <- classicalGLM_pw(session_data,
+      #                                                       scale_BOLD=scale_BOLD,
+      #                                                       scale_design = FALSE)
+    } #else {
+    if(do_classical) classicalGLM_right <- classicalGLM(session_data,
                                                          scale_BOLD=scale_BOLD,
-                                                         scale_design = scale_design)
-    }
+                                                         scale_design = FALSE) #done above
+
     if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
-                                                vertices = verts_right,
+                                               beta_names = beta_names,
+                                               vertices = verts_right,
                                                 faces = faces_right,
                                                 scale_BOLD=scale_BOLD,
-                                                scale_design = scale_design,
+                                                scale_design = FALSE, #done above
                                                 num.threads=num.threads,
                                                 return_INLA_result=return_INLA_result,
                                                 outfile = outfile_right,
@@ -755,20 +486,19 @@ BayesGLM_cifti <- function(cifti_fname,
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   for(ss in 1:n_sess){
     if(do_classical){
-      # beta_names <- classicalGLM_cifti[[1]]$beta_names # This object no longer exists
+      if(do_left) datL <- t(classicalGLM_left[[ss]]$estimates) else datL <- NULL
+      if(do_right) datR <- t(classicalGLM_right[[ss]]$estimates) else datR <- NULL
       classicalGLM_cifti[[ss]] <- as.xifti(
-        cortexL = classicalGLM_left[[ss]],
-        cortexR = classicalGLM_right[[ss]]
+        cortexL = datL,
+        cortexR = datR
         #subcortVol = classicalGLM_vol$single_session,
         #mask = mask,
         #subcortLab = nifti_labels
                                              )
-      # Damon: once the new ciftiTools version is pushed, use the `col_names`
-      #   argument to `as.xifti` instead.
-      # classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+
+      classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      # beta_names <- BayesGLM_cifti[[1]]$beta_names # This object no longer exists
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = BayesGLM_left$beta_estimates[[ss]],
         cortexR = BayesGLM_right$beta_estimates[[ss]]
@@ -776,41 +506,15 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
                                          )
-      # BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
   }
 
-  # Add average betas to the start of the list.
   if(avg_sessions) {
     if(do_classical) {
-      if(do_left & do_right) {
-        classicalGLM_cifti <- c(
-          list(avg = as.xifti(
-            cortexL = Reduce(`+`,classicalGLM_left) / n_sess,
-            cortexR = Reduce(`+`,classicalGLM_right) / n_sess
-          )),
-          classicalGLM_cifti
-        )
-      } else {
-        if(do_left) {
-          classicalGLM_cifti <- c(
-            list(avg = as.xifti(
-              cortexL = Reduce(`+`,classicalGLM_left) / n_sess
-            )),
-            classicalGLM_cifti
-          )
-        }
-        if(do_right) {
-          classicalGLM_cifti <- c(
-            list(avg = as.xifti(
-              cortexR = Reduce(`+`,classicalGLM_right) / n_sess
-            )),
-            classicalGLM_cifti
-          )
-        }
-      }
-
-      # classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names # The beta_names object needs to be redefined
+      # Add average betas to the start of the list.
+      classicalGLM_cifti <- c(list(avg = Reduce(`+`, classicalGLM_cifti) / n_sess),
+                              classicalGLM_cifti)
     }
 
     if (do_Bayesian) {
@@ -827,19 +531,10 @@ BayesGLM_cifti <- function(cifti_fname,
         )),
         BayesGLM_cifti
       )
-      # BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
   }
 
-  if (do_Bayesian) {
-    if (do_left) {
-      beta_names <- BayesGLM_left$beta_names
-    } else {
-      beta_names <- BayesGLM_right$beta_names
-    }
-  } else {
-    beta_names <- NULL
-  }
 
   prewhitening_info <- list()
   if(prewhiten) {
@@ -878,6 +573,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
 #'  for more details.
 #' List element names represent session names.
+#' @param beta_names (Optional) Names of tasks represented in design matrix
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @inheritParams mesh_Param_inla
@@ -893,8 +589,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use the
-#'   \code{id_activations} function? Default value is \code{TRUE}.
+#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @return A list containing...
 #'
@@ -904,7 +599,9 @@ BayesGLM_cifti <- function(cifti_fname,
 #'
 #' @export
 BayesGLM <- function(
-  data, vertices = NULL, faces = NULL, mesh = NULL, mask = NULL,
+  data,
+  beta_names = NULL,
+  vertices = NULL, faces = NULL, mesh = NULL, mask = NULL,
   scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE,
   outfile = NULL, verbose=FALSE, contrasts = NULL,
   avg_sessions = TRUE, trim_INLA = TRUE){
@@ -945,13 +642,35 @@ BayesGLM <- function(
     K <- ncol(data[[1]]$design) / sum(!is_missing)
   }
 
+  if(!is.null(beta_names)){
+    if(length(beta_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of beta_names is ', length(beta_names), '.  Please fix beta_names.'))
+  }
+
+  if(is.null(beta_names)){
+    if(!is_pw){
+      beta_names_maybe <- colnames(data[[1]]$design) #if no prewhitening, can grab beta names from design (if not provided)
+      if(!is.null(beta_names_maybe)) beta_names <- beta_names_maybe
+      if(is.null(beta_names_maybe)) beta_names <- paste0('beta',1:K)
+    } else {
+     beta_names <- paste0('beta',1:K)
+    }
+  }
+
+
+  #Check that data locations same across sessions
+  if(n_sess > 1){
+    is_missing_all <- sapply(data, function(x) is.na(x$BOLD[1,]))
+    tmp <- is_missing_all - is_missing
+    if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
+  }
+
   # for(s in 1:n_sess){
   #   if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
   #   if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
   #   if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   # }
   for(s in 1:n_sess){
-    if(! is.session_pw(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(!is_pw) {
       if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
@@ -1064,7 +783,7 @@ BayesGLM <- function(
   }
 
   #construct betas and repls objects
-  replicates_list <- organize_replicates(n_sess=n_sess, n_task=K, mesh=mesh)
+  replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
@@ -1072,11 +791,9 @@ BayesGLM <- function(
   #formula <- make_formula(beta_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
   #formula <- as.formula(formula)
 
-  beta_names <- names(betas)
   repl_names <- names(repls)
-  n_beta <- length(names(betas))
   hyper_initial <- c(-2,2)
-  hyper_initial <- rep(list(hyper_initial), n_beta)
+  hyper_initial <- rep(list(hyper_initial), K)
   hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
   formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')

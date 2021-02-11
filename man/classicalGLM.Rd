@@ -4,7 +4,7 @@
 \alias{classicalGLM}
 \title{Fit classical massive univariate GLM to task fMRI data}
 \usage{
-classicalGLM(data, scale_BOLD = TRUE, scale_design = TRUE)
+classicalGLM(data, scale_BOLD = TRUE, scale_design = TRUE, avg_sessions = TRUE)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
@@ -17,9 +17,12 @@ centered.}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
+
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
 }
 \value{
-A list of classical GLM task activation estimates, where each element represents a session.
+A list of lists containing classical GLM task activation estimates, standard error estimates, and degrees of freedom. Each list element represents a session.
 }
 \description{
 Fit classical massive univariate GLM to task fMRI data

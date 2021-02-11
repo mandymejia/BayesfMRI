@@ -1,6 +1,6 @@
 Package: BayesfMRI
 Title: Bayesian Methods for Functional MRI
-Version: 0.1.6
+Version: 0.1.7
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",

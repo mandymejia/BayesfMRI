@@ -100,15 +100,23 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @param hemisphere 'left' or 'right'
 #' @param num.threads (scalar) The number of threads to use in parallelizing the
 #'   prewhitening
-#' @importFrom Matrix bandSparse sparseMatrix bdiag
+#' @importFrom Matrix bandSparse bdiag
 #' @importFrom ciftiTools smooth_cifti
 #' @importFrom stats ar.yw
+#' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
-prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_order = 6, ar_smooth = 5, cifti_data, hemisphere = NULL, num.threads = NULL) {
+prewhiten_cifti <- function(data,
+                            scale_BOLD = TRUE,
+                            scale_design = TRUE,
+                            ar_order = 6,
+                            ar_smooth = 5,
+                            cifti_data,
+                            hemisphere = NULL,
+                            num.threads = NULL) {
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
@@ -145,7 +153,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     BOLD_s <- data[[s]]$BOLD
     BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
     if(scale_design) {
-      design_s <- scale_design_mat(data[[s]]$design)
+      design_s <- scale_design_mat(data[[s]]$design) #center design matrix and scale
     } else {
       design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
     }
@@ -203,8 +211,8 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix
-  cat("Prewhitening...\n")
-  if(is.null(num.threads)) {
+  cat("Prewhitening... ")
+  if(is.null(num.threads) | num.threads < 2) {
     # Initialize the block diagonal covariance matrix
     template_pw <- Matrix::bandSparse(n = ntime,
                                       k = 0:(ar_order + 1),
@@ -212,7 +220,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     template_pw_list <- rep(list(template_pw),V)
     rows.rm <- numeric()
     for(v in 1:V) {
-      if(v %% 100 == 0) cat("Location",v,"of",V,"\n")
+      if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
       template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
                                            ntime = ntime,
                                            AR_var = avg_var[v])
@@ -221,7 +229,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     if (!requireNamespace("parallel", quietly = TRUE)) {
       stop("Prewhitening in parallel requires the `parallel` package. Please install it.", call. = FALSE)
     }
-    max_threads <- max(parallel::detectCores() - 1, 25)
+    max_threads <- max(parallel::detectCores(), 25)
     num_threads <- min(max_threads,num.threads)
     cl <- parallel::makeCluster(num_threads)
     template_pw_list <-
@@ -242,7 +250,7 @@ prewhiten_cifti <- function(data, scale_BOLD = TRUE, scale_design = TRUE, ar_ord
     bold_out <- matrix(NA,ntime, length(is_missing))
     pw_BOLD <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
     bold_out[,!is_missing] <- pw_BOLD
-    all_design <- bdiag(rep(list(data_s$design),V))
+    all_design <- Matrix::bdiag(rep(list(data_s$design),V))
     pw_design <- sqrtInv_all %*% all_design
     return(list(BOLD = bold_out, design = pw_design))
   }, simplify = F)
