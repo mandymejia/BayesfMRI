@@ -342,14 +342,21 @@ id_activations.classical <- function(model_obj,
      warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
 
+  # If averages are available and no session name is defined, use the averages
+  if(is.null(session_name) & has_avg){
+    session_name <- 'avg'
+    message("No session name defined. Using the average of sessions.")
+    sess_ind <- which(all_sessions == session_name)
+  }
+
   #check session_name not NULL, check that a valid session name
   if(!is.null(session_name)){
     if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
     sess_ind <- which(all_sessions == session_name)
   }
 
-  # #check field_names argument
-  # if(is.null(field_names)) field_names <- model_obj$beta_names
+  # #check field_inds argument
+  if(is.null(field_inds)) field_inds <- seq(nrow(model_obj[[sess_ind]]$estimates))
   # if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
 
   beta_est <- model_obj[[sess_ind]]$estimates
