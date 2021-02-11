@@ -356,7 +356,11 @@ id_activations.classical <- function(model_obj,
   }
 
   # #check field_inds argument
-  if(is.null(field_inds)) field_inds <- seq(nrow(model_obj[[sess_ind]]$estimates))
+  if(is.null(field_inds)){
+    num_fields <- nrow(model_obj[[sess_ind]]$estimates)
+    field_inds <- seq(num_fields)
+    if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', length(num_fields), ' tasks.'))
+  }
   # if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
 
   beta_est <- model_obj[[sess_ind]]$estimates
