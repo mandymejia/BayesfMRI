@@ -32,7 +32,7 @@ classicalGLM <- function(data, scale_BOLD=TRUE, scale_design = TRUE, avg_session
     if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
   }
 
-  is_pw <- !is.matrix(data$single_session$design) #if prewhitening has been done, design is a large sparse matrix (class dgCMatrix)
+  is_pw <- !is.matrix(data[[1]]$design) #if prewhitening has been done, design is a large sparse matrix (class dgCMatrix)
   if(is_pw){
     if(scale_BOLD | scale_design) warning('If data is prewhitened, scale_BOLD and scale_design should be FALSE. Setting both to FALSE.')
     scale_BOLD <- FALSE
