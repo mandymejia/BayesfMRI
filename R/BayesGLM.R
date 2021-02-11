@@ -261,8 +261,13 @@ BayesGLM_cifti <- function(cifti_fname,
   ### Check that design matrix names consistent across sessions
   if(n_sess > 1){
     tmp <- sapply(design, colnames)
-    tmp <- apply(tmp, 1, function(x) length(unique(x)))
-    if(max(tmp) > 1) stop('task names must match across sessions for multi-session modeling')
+    if(length(beta_names) == 1) {
+      num_names <- length(unique(tmp))
+      if(num_names > 1) stop('task names must match across sessions for multi-session modeling')
+    } else {
+      num_names <- apply(tmp, 1, function(x) length(unique(x))) #number of unique names per row
+      if(max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
+    }
   }
 
   cat('\n RUNNING MODELS \n')
