@@ -4,12 +4,21 @@
 \alias{classicalGLM}
 \title{Fit classical massive univariate GLM to task fMRI data}
 \usage{
-classicalGLM(data, scale_BOLD = TRUE, scale_design = TRUE, avg_sessions = TRUE)
+classicalGLM(
+  data,
+  mask = NULL,
+  scale_BOLD = TRUE,
+  scale_design = TRUE,
+  avg_sessions = TRUE
+)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements
 BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 List element names represent session names.}
+
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
+vertex is to be included.}
 
 \item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
 change? Default: \code{TRUE}. If \code{FALSE}, the data will just be

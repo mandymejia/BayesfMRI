@@ -89,6 +89,8 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' Prewhiten cifti session data
 #'
 #' @param data List of sessions (see \code{is.session} and \code{is.session_pw})
+#' @param mask (Optional) A length \eqn{V} logical vector indicating if each
+#'  vertex is to be included.
 #' @param scale_BOLD (logical) Should the BOLD response be scaled? (Default is TRUE)
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
@@ -110,6 +112,7 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 #' @export
 prewhiten_cifti <- function(data,
+                            mask = NULL,
                             scale_BOLD = TRUE,
                             scale_design = TRUE,
                             ar_order = 6,
@@ -125,16 +128,52 @@ prewhiten_cifti <- function(data,
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
-  is_missing <- is.na(data[[1]]$BOLD[1,])
-  if(length(is_missing) > 0) {
-    cat("Some response locations are missing. Prewhitening will be done for",
-        sum(!is_missing),"of", length(is_missing),"data locations.\n")
-    for(s in 1:n_sess) {
-      data[[s]]$BOLD <- data[[s]]$BOLD[,!is_missing]
-    }
+  ######################
+
+  #ID any zero-variance voxels and remove from analysis
+  zero_var <- sapply(data, function(x){
+    x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
+    x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
+    vars <- matrixStats::colVars(x$BOLD)
+    return(vars < 1e-6)
+  })
+  zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
+
+  #remove zero var locations from mask
+  if(sum(zero_var) > 0){
+    if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
+    if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+    if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
+    mask_orig <- mask
+    if(!is.null(mask)) mask[zero_var==TRUE] <- 0
+    if(is.null(mask)) mask <- !zero_var
+  } else {
+    mask_orig <- NULL
+  }
+
+  #apply mask to data
+  if(is.null(mask)) mask_use <- rep(TRUE, V) else mask_use <- as.logical(mask)
+  V_all <- sum(mask_use)
+  for(s in 1:n_sess){
+    data[[s]]$BOLD <- data[[s]]$BOLD[,mask_use]
   }
 
   V <- ncol(data[[1]]$BOLD) #number of data locations
+
+  ######################
+
+
+  # is_missing <- is.na(data[[1]]$BOLD[1,])
+  # if(length(is_missing) > 0) {
+  #   cat("Some response locations are missing. Prewhitening will be done for",
+  #       sum(!is_missing),"of", length(is_missing),"data locations.\n")
+  #   for(s in 1:n_sess) {
+  #     data[[s]]$BOLD <- data[[s]]$BOLD[,!is_missing]
+  #   }
+  # }
+  #
+  # V <- ncol(data[[1]]$BOLD) #number of data locations
+
   K <- ncol(data[[1]]$design) #number of tasks
   ntime <- nrow(data[[1]]$BOLD) # Number of time steps
   for(s in 1:n_sess){
@@ -142,7 +181,6 @@ prewhiten_cifti <- function(data,
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
-
 
   GLM_result <- vector('list', length=n_sess)
   names(GLM_result) <- session_names
@@ -247,9 +285,9 @@ prewhiten_cifti <- function(data,
 
   sqrtInv_all <- Matrix::bdiag(template_pw_list)
   pw_data <- sapply(data,function(data_s) {
-    bold_out <- matrix(NA,ntime, length(is_missing))
+    bold_out <- matrix(NA,ntime, V_all)
     pw_BOLD <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
-    bold_out[,!is_missing] <- pw_BOLD
+    bold_out[,mask_use] <- pw_BOLD
     all_design <- Matrix::bdiag(rep(list(data_s$design),V))
     pw_design <- sqrtInv_all %*% all_design
     return(list(BOLD = bold_out, design = pw_design))
@@ -258,5 +296,7 @@ prewhiten_cifti <- function(data,
   return(list(data = pw_data,
               AR_coeffs = avg_AR,
               AR_var = avg_var,
-              ar_order = ar_order))
+              ar_order = ar_order,
+              mask = mask,
+              mask_orig = mask_orig))
 }

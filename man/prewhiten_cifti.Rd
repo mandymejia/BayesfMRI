@@ -6,6 +6,7 @@
 \usage{
 prewhiten_cifti(
   data,
+  mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
   ar_order = 6,
@@ -17,6 +18,9 @@ prewhiten_cifti(
 }
 \arguments{
 \item{data}{List of sessions (see \code{is.session} and \code{is.session_pw})}
+
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
+vertex is to be included.}
 
 \item{scale_BOLD}{(logical) Should the BOLD response be scaled? (Default is TRUE)}
 
