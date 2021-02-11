@@ -601,10 +601,19 @@ BayesGLM_cifti <- function(cifti_fname,
 BayesGLM <- function(
   data,
   beta_names = NULL,
-  vertices = NULL, faces = NULL, mesh = NULL, mask = NULL,
-  scale_BOLD=TRUE, scale_design = TRUE, num.threads=4, return_INLA_result=TRUE,
-  outfile = NULL, verbose=FALSE, contrasts = NULL,
-  avg_sessions = TRUE, trim_INLA = TRUE){
+  vertices = NULL,
+  faces = NULL,
+  mesh = NULL,
+  mask = NULL,
+  scale_BOLD=TRUE,
+  scale_design = TRUE,
+  num.threads=4,
+  return_INLA_result=TRUE,
+  outfile = NULL,
+  verbose=FALSE,
+  contrasts = NULL,
+  avg_sessions = TRUE,
+  trim_INLA = TRUE){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -700,6 +709,9 @@ BayesGLM <- function(
 
   #remove zero var locations from mask
   if(sum(zero_var) > 0){
+    if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
+    if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+    if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
     mask_orig <- mask
     if(!is.null(mask)) mask[zero_var==TRUE] <- 0
     if(is.null(mask)) mask <- !zero_var
