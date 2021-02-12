@@ -88,11 +88,11 @@ id_activations_cifti <- function(model_obj,
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
       act_m <- id_activations.classical(model_obj=model_m,
-                                                    field_inds=field_inds,
-                                                    session_name=session_name,
-                                                    threshold=threshold,
-                                                    alpha=alpha,
-                                                    correction=correction)
+                                        field_inds=field_inds,
+                                        session_name=session_name,
+                                        threshold=threshold,
+                                        alpha=alpha,
+                                        correction=correction)
 
       activations[[mm]] <- act_m
     }

@@ -12,7 +12,7 @@ prewhiten_cifti(
   ar_order = 6,
   ar_smooth = 5,
   cifti_data,
-  hemisphere = NULL,
+  hemisphere,
   num.threads = NULL
 )
 }
