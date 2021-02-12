@@ -88,11 +88,11 @@ id_activations_cifti <- function(model_obj,
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
       act_m <- id_activations.classical(model_obj=model_m,
-                                                    field_inds=field_inds,
-                                                    session_name=session_name,
-                                                    threshold=threshold,
-                                                    alpha=alpha,
-                                                    correction=correction)
+                                        field_inds=field_inds,
+                                        session_name=session_name,
+                                        threshold=threshold,
+                                        alpha=alpha,
+                                        correction=correction)
 
       activations[[mm]] <- act_m
     }
@@ -342,50 +342,55 @@ id_activations.classical <- function(model_obj,
      warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
 
+  # If averages are available and no session name is defined, use the averages
+  if(is.null(session_name) & has_avg){
+    session_name <- 'avg'
+    message("No session name defined. Using the average of sessions.")
+    sess_ind <- which(all_sessions == session_name)
+  }
+
   #check session_name not NULL, check that a valid session name
   if(!is.null(session_name)){
     if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
     sess_ind <- which(all_sessions == session_name)
   }
 
-  # #check field_names argument
-  # if(is.null(field_names)) field_names <- model_obj$beta_names
-  # if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+  # #check field_inds argument
+  if(is.null(field_inds)){
+    num_fields <- ncol(model_obj[[sess_ind]]$estimates)
+    field_inds <- seq(num_fields)
+    if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', length(num_fields), ' tasks.'))
+  }
 
   beta_est <- model_obj[[sess_ind]]$estimates
   se_beta <- model_obj[[sess_ind]]$SE_estimates
   DOF <- model_obj[[sess_ind]]$DOF
 
-  nvox <- ncol(beta_est)
-  K <- nrow(beta_est)
+  nvox <- nrow(beta_est)
+  K <- ncol(beta_est)
   if(any(!(field_inds %in% 1:K))) stop(paste0('field_inds must be between 1 and the number of tasks, ',K))
-  beta_est <- matrix(beta_est[field_inds,], ncol=nvox)
-  se_beta <- matrix(se_beta[field_inds,], ncol=nvox)
+  beta_est <- matrix(beta_est[,field_inds], nrow=nvox) #need matrix() in case beta_est[,field_inds] is a vector
+  se_beta <- matrix(se_beta[,field_inds], nrow=nvox) #need matrix() in case beta_est[,field_inds] is a vector
   K <- length(field_inds)
-#
-#   #grab columns of "big" design matrix associated with each field
-#   fields_yes <- which(model_obj$beta_names %in% field_names)
-#   field_inds <- c(sapply(fields_yes,
-#                          function(fy){
-#                            seq(n_vox) + n_vox*(fy - 1)
-#                          }))
 
-  t_star <- matrix((beta_est - threshold) / se_beta, ncol=nvox)
+  #Compute t-statistics and p-values
+  t_star <- (beta_est - threshold) / se_beta
+  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nvox)
   #perform multiple comparisons correction
-  p_values <- p_values_adj <- active <- matrix(NA, K, nvox)
+  p_values <- p_values_adj <- active <- matrix(NA, nvox, K)
   for(k in 1:K){
-    p_values_k <- sapply(t_star[k,], pt, df = DOF, lower.tail = F)
+    p_values_k <- sapply(t_star[,k], pt, df = DOF, lower.tail = F)
     if(correction == "FWER") p_vals_adj_k <- p.adjust(p_values_k, method='bonferroni')
     if(correction == "FDR") p_vals_adj_k <- p.adjust(p_values_k, method='BH')
     if(correction == "none") p_vals_adj_k <- p_values_k
 
-    p_values[k,] <- p_values_k
-    p_values_adj[k,] <- p_vals_adj_k
-    active[k,] <- (p_vals_adj_k < alpha)
+    p_values[,k] <- p_values_k
+    p_values_adj[,k] <- p_vals_adj_k
+    active[,k] <- (p_vals_adj_k < alpha)
   }
-  result <- list(p_values = t(p_values),
-                 p_values_adj = t(p_values_adj),
-                 active = t(active),
+  result <- list(p_values = p_values,
+                 p_values_adj = p_values_adj,
+                 active = active,
                  correction = correction,
                  alpha = alpha,
                  threshold = threshold)
