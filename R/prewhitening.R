@@ -118,7 +118,7 @@ prewhiten_cifti <- function(data,
                             ar_order = 6,
                             ar_smooth = 5,
                             cifti_data,
-                            hemisphere = NULL,
+                            hemisphere,
                             num.threads = NULL) {
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
@@ -127,6 +127,9 @@ prewhiten_cifti <- function(data,
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
+
+  if(missing(hemisphere)) stop('Please provide valid hemisphere argument.')
+  if(!(hemisphere %in% c('left','right'))) stop('Please provide valid hemisphere argument.')
 
   ######################
 
@@ -142,8 +145,8 @@ prewhiten_cifti <- function(data,
   #remove zero var locations from mask
   if(sum(zero_var) > 0){
     if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
-    if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
-    if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
+    #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+    #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
     mask_orig <- mask
     if(!is.null(mask)) mask[zero_var==TRUE] <- 0
     if(is.null(mask)) mask <- !zero_var
@@ -152,26 +155,12 @@ prewhiten_cifti <- function(data,
   }
 
   #apply mask to data
-  if(is.null(mask)) mask_use <- rep(TRUE, V) else mask_use <- as.logical(mask)
+  if(is.null(mask)) mask_use <- rep(TRUE, ncol(data[[1]]$BOLD)) else mask_use <- as.logical(mask)
   V_all <- length(mask_use)
   V <- sum(mask_use)
   for(s in 1:n_sess){
     data[[s]]$BOLD <- data[[s]]$BOLD[,mask_use]
   }
-
-  ######################
-
-
-  # is_missing <- is.na(data[[1]]$BOLD[1,])
-  # if(length(is_missing) > 0) {
-  #   cat("Some response locations are missing. Prewhitening will be done for",
-  #       sum(!is_missing),"of", length(is_missing),"data locations.\n")
-  #   for(s in 1:n_sess) {
-  #     data[[s]]$BOLD <- data[[s]]$BOLD[,!is_missing]
-  #   }
-  # }
-  #
-  # V <- ncol(data[[1]]$BOLD) #number of data locations
 
   K <- ncol(data[[1]]$design) #number of tasks
   ntime <- nrow(data[[1]]$BOLD) # Number of time steps
@@ -231,20 +220,23 @@ prewhiten_cifti <- function(data,
   avg_var <- apply(as.matrix(AR_resid_var),1,mean)
 
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
-  if((ar_smooth != 0) & !is.null(cifti_data) & !is.null(hemisphere)) {
-    surf_FWHM <- vol_FWHM <- ar_smooth
+  if((ar_smooth != 0) & !is.null(cifti_data)) {
     cat("Smoothing AR coefficients and residual variance...")
-    rows.keep <- which(!is.na(avg_AR[,1]))
+    #set up template xifti object with only one hemisphere
     avg_xifti <- cifti_data
-    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- avg_AR[rows.keep,]
-    smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = surf_FWHM,
-                                     vol_FWHM = vol_FWHM)
-    avg_AR[rows.keep,] <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]]
-    var_xifti <- cifti_data
-    var_xifti$data[[paste0("cortex_",hemisphere)]] <- as.matrix(avg_var[rows.keep])
-    smooth_var_xifti <- smooth_cifti(var_xifti, surf_FWHM = surf_FWHM,
-                                     vol_FWHM = vol_FWHM)
-    avg_var[rows.keep] <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]]
+    if(hemisphere=='left') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$left
+    if(hemisphere=='right') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$right
+    mask_tmp <- as.logical(mask_use[mwall_mask==TRUE])
+    #smooth AR coefficients
+    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=ar_order)
+    avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,] <- avg_AR
+    smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
+    avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,]
+    #smooth variance
+    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=1)
+    avg_xifti$data[[paste0("cortex_",hemisphere)]][as.logical(mask_tmp),] <- avg_var
+    smooth_var_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
+    avg_var <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,,drop=FALSE]
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix

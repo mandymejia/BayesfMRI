@@ -33,22 +33,11 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   }
   #check dimensions
   V <- ncol(data[[1]]$BOLD)
-  if(!is_pw){
-    K <- ncol(data[[1]]$design) #number of tasks
-    for(s in 1:n_sess){
-      if(!is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-      if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-      if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-    }
+  for(s in 1:n_sess){
+    if(!is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
   }
-  if(is_pw){
-    K <- ncol(data[[1]]$design) / V #number of tasks
-    for(s in 1:n_sess){
-      if(!is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-      if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-      if(ncol(data[[s]]$design) != K*V) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-    }
-  }
+
   #ID any zero-variance voxels and remove from analysis
   zero_var <- sapply(data, function(x){
     x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
@@ -61,8 +50,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   #remove zero var locations from mask
   if(sum(zero_var) > 0){
     if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
-    if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
-    if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
+    #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+    #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
     mask_orig <- mask
     if(!is.null(mask)) mask[zero_var==TRUE] <- 0
     if(is.null(mask)) mask <- !zero_var
@@ -71,24 +60,30 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   }
 
   #apply mask to data
-  if(is.null(mask)) mask_use <- rep(TRUE, V) else mask_use <- as.logical(mask)
+  if(is.null(mask)){
+    mask_use <- rep(TRUE, V)
+  } else {
+    mask_use <- as.logical(mask)
+  }
   V_all <- length(mask_use)
   V <- sum(mask_use)
   for(s in 1:n_sess){
     data[[s]]$BOLD <- data[[s]]$BOLD[,mask_use]
   }
 
-
-  # is_missing <- is.na(data[[1]]$BOLD[1,])
-  # V_nm <- sum(!is_missing)
-
-  # #Check that data locations same across sessions
-  # if(n_sess > 1){
-  #   is_missing_all <- sapply(data, function(x) is.na(x$BOLD[1,]))
-  #   tmp <- is_missing_all - is_missing
-  #   if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
-  # }
-
+  #check dimensions
+  if(!is_pw){
+    K <- ncol(data[[1]]$design) #number of tasks
+    for(s in 1:n_sess){
+      if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    }
+  }
+  if(is_pw){
+    K <- ncol(data[[1]]$design) / V #number of tasks
+    for(s in 1:n_sess){
+      if(ncol(data[[s]]$design) != K*V) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    }
+  }
 
   if(avg_sessions) {
     num_GLM <- n_sess + 1
@@ -165,8 +160,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
     if(!is_pw) SE_beta_s <- matrix(sqrt(diag(XTX_inv)), nrow=K, ncol=V) * matrix(sd_error, nrow=K, ncol=V, byrow = TRUE)
     SE_beta_hat_s[,mask_use==TRUE] <- SE_beta_s
 
-    GLM_result[[s]] <- list(estimates = beta_hat_s,
-                            SE_estimates = SE_beta_hat_s,
+    GLM_result[[s]] <- list(estimates = t(beta_hat_s),
+                            SE_estimates = t(SE_beta_hat_s),
                             DOF = DOF,
                             mask = mask,
                             mask_orig = mask_orig)
