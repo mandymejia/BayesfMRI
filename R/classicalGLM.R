@@ -71,11 +71,7 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   }
 
   #apply mask to data
-  if(is.null(mask)){
-    mask_use <- rep(TRUE, V)
-  } else {
-    mask_use <- as.logical(mask)
-  }
+  if(is.null(mask)) mask_use <- rep(TRUE, V) else mask_use <- as.logical(mask)
   V_all <- length(mask_use)
   V <- sum(mask_use)
   for(s in 1:n_sess){
