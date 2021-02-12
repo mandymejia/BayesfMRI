@@ -152,13 +152,16 @@ prewhiten_cifti <- function(data,
   }
 
   #apply mask to data
-  if(is.null(mask)) mask_use <- rep(TRUE, V) else mask_use <- as.logical(mask)
-  V_all <- sum(mask_use)
+  if(is.null(mask)){
+    mask_use <- rep(TRUE, V)
+  } else {
+    mask_use <- as.logical(mask)
+  }
+  V_all <- length(mask_use)
+  V <- sum(mask_use)
   for(s in 1:n_sess){
     data[[s]]$BOLD <- data[[s]]$BOLD[,mask_use]
   }
-
-  V <- ncol(data[[1]]$BOLD) #number of data locations
 
   ######################
 
