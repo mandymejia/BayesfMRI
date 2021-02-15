@@ -359,7 +359,7 @@ id_activations.classical <- function(model_obj,
   if(is.null(field_inds)){
     num_fields <- ncol(model_obj[[sess_ind]]$estimates)
     field_inds <- seq(num_fields)
-    if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', length(num_fields), ' tasks.'))
+    if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', num_fields, ' tasks.'))
   }
 
   beta_est <- model_obj[[sess_ind]]$estimates
