@@ -285,11 +285,19 @@ id_activations.posterior <- function(model_obj,
 	    f_inds <- (1:n_vox) + (which_f - 1)*n_vox
 	    act[,which_f] <- avg_exc$E[f_inds]
 	  }
+
 	  result <- list(
 	    active = act,
 	    excursions_result = avg_exc
 	  )
 	}
+
+  #compute size of activations
+  areas_all <- diag(inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
+  areas_act <- apply(act, 2, function(x) sum(areas_all[x==1]))
+
+  result$areas_all <- areas_all
+  result$areas_act <- areas_act
 
 	return(result)
 }
@@ -307,6 +315,8 @@ id_activations.posterior <- function(model_obj,
 #' @param correction (character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
 #'   family-wise error rate with Bonferroni correction, and 'FDR' refers to the
 #'   false discovery rate using Benjamini-Hochberg.
+#' @param mesh (Optional) An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+#'  surface data). Only necessary for computing surface areas of identified activations.
 #'
 #' @return A matrix corresponding to the
 #'   0-1 activation status for the model coefficients.
@@ -320,7 +330,8 @@ id_activations.classical <- function(model_obj,
                                      session_name = NULL,
                                      alpha = 0.05,
                                      threshold = 0,
-                                     correction = c("FWER","FDR","none")) {
+                                     correction = c("FWER","FDR","none"),
+                                     mesh = NULL) {
 
   if(class(model_obj) != "classicalGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
 
@@ -388,12 +399,26 @@ id_activations.classical <- function(model_obj,
     p_values_adj[,k] <- p_vals_adj_k
     active[,k] <- (p_vals_adj_k < alpha)
   }
+
+  #compute size of activations
+  if(!is.null(mesh)){
+    mask <- model_obj[[1]]$mask
+    if(sum(mask) != nrow(mesh$loc)) stop('Supplied mesh is not consistent with mask in model_obj.')
+    areas_all <- diag(inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
+    areas_act <- apply(active[mask==1,], 2, function(x) sum(areas_all[x==1]))
+  } else {
+    areas_all <- areas_act <- NULL
+  }
+
+
   result <- list(p_values = p_values,
                  p_values_adj = p_values_adj,
                  active = active,
                  correction = correction,
                  alpha = alpha,
-                 threshold = threshold)
+                 threshold = threshold,
+                 areas_all = areas_all,
+                 areas_act = areas_act)
   return(result)
 }
 
