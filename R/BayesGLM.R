@@ -88,7 +88,8 @@
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
-#' @importFrom ciftiTools read_cifti resample_gifti as.xifti
+# @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
+#' @import ciftiTools
 #' @importFrom matrixStats rowVars rowSums2
 #' @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom parallel detectCores
@@ -136,7 +137,6 @@ BayesGLM_cifti <- function(cifti_fname,
   do_right <- ('right' %in% brainstructures)
   do_sub <- FALSE
   #do_sub <- ('subcortical' %in% brainstructures)
-  # This is where beta_names are defined
   if(!is.null(onsets)){
     #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
     if(class(onsets[[1]]) == 'list') {
@@ -167,7 +167,6 @@ BayesGLM_cifti <- function(cifti_fname,
         beta_names <- colnames(design)
     }
   }
-  if(any(grepl(" ", beta_names))) stop("The task names I detected in the design matrix or the onsets contain spaces, please remove spaces and try again.")
 
   # Check prewhitening arguments.
   if(is.null(ar_order)) ar_order <- 0
@@ -333,28 +332,34 @@ BayesGLM_cifti <- function(cifti_fname,
       outfile_left <- NULL
     }
 
+    ### TO DO: CONSTRUCT MASK HERE, PASS INTO PREWHITEN_CIFTI, CLASSICALGLM AND BAYESGLM
+    ### IN THOSE FUNCTIONS, ALL THE DATA PROVIDED IN DATA$BOLD MUST BE VALID LOCATIONS. OTHERWISE ERROR.
+    ### THIS WILL PREVENT HAVING TO DEAL WITH MASKING REPEATEDLY
+    ### CONSIDER MAKING MASKING A FUNCTION, SINCE NEEDS TO HAPPEN IN LEFT AND RIGHT HEMISPHERES
+
+    scale_BOLD_left <- scale_BOLD
     if(prewhiten) {
       pw_data_left <- prewhiten_cifti(data = session_data,
-                                      scale_BOLD = scale_BOLD,
+                                      scale_BOLD = scale_BOLD_left,
                                       scale_design = FALSE,
                                       ar_order = ar_order,
                                       ar_smooth =  ar_smooth,
                                       hemisphere = 'left',
-                                      cifti_data = cifti_ss,
+                                      cifti_data = ciftiTools:::remove_xifti(cifti_ss, "cortex_right"),
                                       num.threads = num.threads)
-      scale_BOLD <- FALSE # done in prewhitening
+      scale_BOLD_left <- FALSE # done in prewhitening
       session_data <- pw_data_left$data
-    } #else {
+    }
 
-    if(do_classical) classicalGLM_left <- classicalGLM(session_data,
-                                                         scale_BOLD=scale_BOLD,
+    if(do_classical) classicalGLM_left <- classicalGLM(data=session_data,
+                                                         scale_BOLD=scale_BOLD_left,
                                                          scale_design = FALSE) # done above
 
     if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts_left,
                                               faces = faces_left,
-                                              scale_BOLD = scale_BOLD,
+                                              scale_BOLD = scale_BOLD_left,
                                               scale_design = FALSE, # done above
                                               num.threads = num.threads,
                                               return_INLA_result = return_INLA_result,
@@ -398,30 +403,28 @@ BayesGLM_cifti <- function(cifti_fname,
       outfile_right <- NULL
     }
 
+    scale_BOLD_right <- scale_BOLD
     if(prewhiten) {
       pw_data_right <- prewhiten_cifti(session_data,
-                                       scale_BOLD = scale_BOLD,
+                                       scale_BOLD = scale_BOLD_right,
                                        scale_design = FALSE,
                                        ar_smooth =  ar_smooth,
                                        ar_order = ar_order,
                                         hemisphere = 'right',
-                                        cifti_data = cifti_ss,
+                                        cifti_data = ciftiTools:::remove_xifti(cifti_ss, "cortex_left"),
                                         num.threads = num.threads)
-      scale_BOLD <- FALSE #done in prewhitening
+      scale_BOLD_right <- FALSE #done in prewhitening
       session_data <- pw_data_right$data
-      # if(do_classical) classicalGLM_right <- classicalGLM_pw(session_data,
-      #                                                       scale_BOLD=scale_BOLD,
-      #                                                       scale_design = FALSE)
-    } #else {
-    if(do_classical) classicalGLM_right <- classicalGLM(session_data,
-                                                         scale_BOLD=scale_BOLD,
+    }
+    if(do_classical) classicalGLM_right <- classicalGLM(data = session_data,
+                                                         scale_BOLD=scale_BOLD_right,
                                                          scale_design = FALSE) #done above
 
     if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
                                                beta_names = beta_names,
                                                vertices = verts_right,
                                                 faces = faces_right,
-                                                scale_BOLD=scale_BOLD,
+                                                scale_BOLD=scale_BOLD_right,
                                                 scale_design = FALSE, #done above
                                                 num.threads=num.threads,
                                                 return_INLA_result=return_INLA_result,
@@ -484,8 +487,8 @@ BayesGLM_cifti <- function(cifti_fname,
   classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   datL <- datR <- cortexL_mwall <- cortexR_mwall <- NULL
-  if(do_left)cortexL_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$left)
-  if(do_right)cortexR_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$right)
+  if(do_left) cortexL_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$left)
+  if(do_right) cortexR_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$right)
   for(ss in 1:n_sess){
     if(do_classical){
       if(do_left) datL <- classicalGLM_left[[ss]]$estimates[cortexL_mwall==1,]

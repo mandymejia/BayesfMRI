@@ -50,8 +50,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   #remove zero var locations from mask
   if(sum(zero_var) > 0){
     if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
-    if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
-    if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
+    #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+    #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
     mask_orig <- mask
     if(!is.null(mask)) mask[zero_var==TRUE] <- 0
     if(is.null(mask)) mask <- !zero_var
@@ -84,17 +84,6 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
       if(ncol(data[[s]]$design) != K*V) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     }
   }
-
-  # is_missing <- is.na(data[[1]]$BOLD[1,])
-  # V_nm <- sum(!is_missing)
-
-  # #Check that data locations same across sessions
-  # if(n_sess > 1){
-  #   is_missing_all <- sapply(data, function(x) is.na(x$BOLD[1,]))
-  #   tmp <- is_missing_all - is_missing
-  #   if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
-  # }
-
 
   if(avg_sessions) {
     num_GLM <- n_sess + 1
@@ -130,7 +119,7 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
         X_reg <- design_s
       }
       if(avg_sessions){
-        y_reg_all <- rbind(y_reg_all, y_reg)
+        y_reg_all <- cbind(y_reg_all, y_reg)
         X_reg_all <- rbind(X_reg_all, X_reg)
       }
     }

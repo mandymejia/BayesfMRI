@@ -88,11 +88,11 @@ id_activations_cifti <- function(model_obj,
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
       act_m <- id_activations.classical(model_obj=model_m,
-                                                    field_inds=field_inds,
-                                                    session_name=session_name,
-                                                    threshold=threshold,
-                                                    alpha=alpha,
-                                                    correction=correction)
+                                        field_inds=field_inds,
+                                        session_name=session_name,
+                                        threshold=threshold,
+                                        alpha=alpha,
+                                        correction=correction)
 
       activations[[mm]] <- act_m
     }
@@ -359,7 +359,7 @@ id_activations.classical <- function(model_obj,
   if(is.null(field_inds)){
     num_fields <- ncol(model_obj[[sess_ind]]$estimates)
     field_inds <- seq(num_fields)
-    if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', length(num_fields), ' tasks.'))
+    if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', num_fields, ' tasks.'))
   }
 
   beta_est <- model_obj[[sess_ind]]$estimates
