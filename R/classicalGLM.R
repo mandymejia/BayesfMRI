@@ -119,7 +119,7 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
         X_reg <- design_s
       }
       if(avg_sessions){
-        y_reg_all <- rbind(y_reg_all, y_reg)
+        y_reg_all <- cbind(y_reg_all, y_reg)
         X_reg_all <- rbind(X_reg_all, X_reg)
       }
     }

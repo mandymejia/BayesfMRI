@@ -10,7 +10,8 @@ id_activations.classical(
   session_name = NULL,
   alpha = 0.05,
   threshold = 0,
-  correction = c("FWER", "FDR", "none")
+  correction = c("FWER", "FDR", "none"),
+  mesh = NULL
 )
 }
 \arguments{
@@ -30,6 +31,9 @@ determining significance.}
 \item{correction}{(character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
 family-wise error rate with Bonferroni correction, and 'FDR' refers to the
 false discovery rate using Benjamini-Hochberg.}
+
+\item{mesh}{(Optional) An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data). Only necessary for computing surface areas of identified activations.}
 }
 \value{
 A matrix corresponding to the

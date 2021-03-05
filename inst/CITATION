@@ -13,36 +13,16 @@ bibentry(
                           family = "Lindgren"),
                    person(given = "Martin A.",
                           family = "Lindquist")),
-    year        = "2019",
+    year        = "2020",
     journal     = "Journal of the American Statistical Association",
-    pages       = "1--20",
+    pages       = "501-520",
+    volume	= "115",
+    number	= "530",
     publisher   = "Taylor and Francis",
     doi         = "https://doi.org/10.1080/01621459.2019.1611582",
     header      = "For the spatial Bayesian GLM for task fMRI on the cortical surface, please cite:",
-    textVersion  = "Mejia, Amanda F., Yu Yue, David Bolin, Finn Lindgren, and Martin A. Lindquist. A Bayesian general linear modeling approach to cortical surface fMRI data analysis. Journal of the American Statistical Association (2019): 1-20."
+    textVersion  = "Mejia, A. F., Yue, Y., Bolin, D., Lindgren, F., & Lindquist, M. A. (2020). A Bayesian general linear modeling approach to cortical surface fMRI data analysis. Journal of the American Statistical Association, 115(530), 501-520."
 )
 
-
-bibentry(
-    bibtype = "Article",
-    title =    "Template Independent Component Analysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors",
-    author = c(person(given = "Amanda F.",
-                          family = "Mejia"),
-                   person(given = "Mary Beth",
-                          family = "Nebel"),
-                   person(given = "Yikai",
-                          family = "Wang"),
-                   person(given = "Brian S.",
-                          family = "Caffo"),
-                   person(given = "Ying",
-                          family = "Guo")),
-    year        = "2019",
-    journal     = "Journal of the American Statistical Association",
-    pages       = "1--27",
-    publisher   = "Taylor and Francis",
-    doi         = "https://doi.org/10.1080/01621459.2019.1679638",
-    header      = "For the template ICA model for estimation of subject-level resting-state networks, please cite:",
-    textVersion  = "Mejia, Amanda F., Mary Beth Nebel, Yikai Wang, Brian S. Caffo, and Ying Guo. Template Independent Component Analysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors. Journal of the American Statistical Association (2019): 1-27."
-)
 
 
