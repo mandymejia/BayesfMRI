@@ -16,3 +16,4 @@
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
+^LICENSE\.md$

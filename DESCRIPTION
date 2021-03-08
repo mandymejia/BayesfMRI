@@ -17,7 +17,7 @@ Authors@R: c(
            role = "ctb",
            comment = c(ORCID = "0000-0002-9705-3605")))
 Description: The main function is BayesGLM, which performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
-License: GPL-3
+License: GPL (>= 3)
 Depends: 
     R (>= 3.6.0)
 Encoding: UTF-8
