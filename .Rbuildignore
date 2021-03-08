@@ -1,7 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^vignettes$
-^scratch$
+^tests
 ^R/summarize_sessions\.R$
 ^R/BayesGLM_vol3D\.R$
 ^R/vol2mesh\.R$
@@ -16,3 +16,4 @@
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
+^LICENSE\.md$

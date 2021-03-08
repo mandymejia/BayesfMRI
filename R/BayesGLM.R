@@ -345,7 +345,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                       ar_order = ar_order,
                                       ar_smooth =  ar_smooth,
                                       hemisphere = 'left',
-                                      cifti_data = ciftiTools:::remove_xifti(cifti_ss, "cortex_right"),
+                                      cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_right"),
                                       num.threads = num.threads)
       scale_BOLD_left <- FALSE # done in prewhitening
       session_data <- pw_data_left$data
@@ -411,7 +411,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                        ar_smooth =  ar_smooth,
                                        ar_order = ar_order,
                                         hemisphere = 'right',
-                                        cifti_data = ciftiTools:::remove_xifti(cifti_ss, "cortex_left"),
+                                        cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_left"),
                                         num.threads = num.threads)
       scale_BOLD_right <- FALSE #done in prewhitening
       session_data <- pw_data_right$data
