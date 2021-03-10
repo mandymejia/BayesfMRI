@@ -2,17 +2,17 @@
 % Please edit documentation in R/trim_INLA_result.R
 \name{trim_INLA_result}
 \alias{trim_INLA_result}
-\title{}
+\title{Trim an INLA object to only include what is necessary for the id_activations function}
 \usage{
 trim_INLA_result(INLA_result)
 }
 \arguments{
-\item{INLA_result}{}
+\item{INLA_result}{an object of class 'inla' that will be trimmed}
 }
 \value{
-
+a trimmed object of class 'inla'
 }
 \description{
-
+Trim an INLA object to only include what is necessary for the id_activations function
 }
 \keyword{internal}

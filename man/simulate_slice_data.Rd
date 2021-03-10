@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulate_slice_data.R
 \name{simulate_slice_data}
 \alias{simulate_slice_data}
-\title{}
+\title{Simulate slice data}
 \usage{
 simulate_slice_data(
   num_sessions = 1,
@@ -16,25 +16,33 @@ simulate_slice_data(
 )
 }
 \arguments{
-\item{num_sessions}{}
+\item{num_sessions}{a number}
 
-\item{num_tasks}{}
+\item{num_tasks}{a number}
 
-\item{active_centers}{}
+\item{active_centers}{a matrix, with the number of rows corresponding to the
+number of activation regions. There should be two columns, corresponding
+to the x- and y-coordinates for the centers.}
 
-\item{active_size}{}
+\item{active_size}{a vector of length \code{nrow(active_centers)}}
 
-\item{beta_weights}{}
+\item{beta_weights}{a matrix, with the number of rows equal to
+\code{num_tasks} and the number of columns equal to the number of rows in
+\code{active_centers}}
 
-\item{vary_active}{}
+\item{vary_active}{logical, if there are multiple sessions, should the
+activation centers vary between sessions?}
 
-\item{num_time}{}
+\item{num_time}{length of the time series that is generated}
 
-\item{binary_template}{}
+\item{binary_template}{(optional) a binary brain slice image}
 }
 \value{
-
+A list in which the first element, \code{BOLD}, is a list of
+T by N response matrices corresponding to sessions, and the second element,
+\code{design}, is a list of \code{num_time} by \code{num_tasks} predictor
+matrices corresponding to sessions.
 }
 \description{
-
+Create simulated slice data for the BayesGLM_surface function
 }

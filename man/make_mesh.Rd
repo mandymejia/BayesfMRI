@@ -2,22 +2,28 @@
 % Please edit documentation in R/make_mesh.R
 \name{make_mesh}
 \alias{make_mesh}
-\title{}
+\title{Make Mesh}
 \usage{
 make_mesh(vertices, faces)
 }
 \arguments{
-\item{vertices}{}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 }
 \value{
-
+Triangular mesh from matrices and vertices
 }
 \description{
-
+Make triangular mesh from faces and vertices.
 }
-\section{}{
-NA
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 

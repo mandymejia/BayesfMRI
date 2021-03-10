@@ -2,10 +2,12 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{max.threads_Param}
 \alias{max.threads_Param}
-\title{}
+\title{max.threads}
 \arguments{
-\item{max.threads}{}
+\item{max.threads}{The maximum number of threads to use in the inla-program
+for model estimation. \code{0} (default) will use the maximum number of
+threads allowed by the system.}
 }
 \description{
-
+max.threads
 }

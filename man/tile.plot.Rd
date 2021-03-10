@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{tile.plot}
 \alias{tile.plot}
-\title{}
+\title{Lightweight tile plot function}
 \usage{
 tile.plot(
   tile_df,
@@ -14,21 +14,27 @@ tile.plot(
 )
 }
 \arguments{
-\item{tile_df}{}
+\item{tile_df}{A data frame with three columns: \code{row}, \code{col}, and
+\code{value} describing locations within a matrix. See
+\code{\link{melt_mat}} for an example.}
 
-\item{col}{}
+\item{col}{A color palette}
 
-\item{ncols}{}
+\item{ncols}{The number of colors for a color palette, if \code{col} is not
+provided.}
 
-\item{main}{}
+\item{main}{Plot title (character)}
 
-\item{zlim}{}
+\item{zlim}{Color limits}
 
-\item{na.color}{}
+\item{na.color}{The color that should be used to represent \code{NA} values
+in the tile plot}
 }
 \value{
-
+A tile plot done in base R graphics
 }
 \description{
-
+This function has no dependencies outside of base R, but provides a
+reasonable approximation to the functionality of
+\code{ggplot2::geom_raster}.
 }

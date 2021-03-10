@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{}
+\title{BayesGLM}
 \usage{
 BayesGLM(
   data,
@@ -23,43 +23,64 @@ BayesGLM(
 )
 }
 \arguments{
-\item{data}{}
+\item{data}{A list of sessions, where each session is a list with elements
+BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
+for more details.
+List element names represent session names.}
 
-\item{beta_names}{}
+\item{beta_names}{(Optional) Names of tasks represented in design matrix}
 
-\item{vertices}{}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 
-\item{mesh}{}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data).}
 
-\item{mask}{}
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
+vertex is to be included.}
 
-\item{scale_BOLD}{}
+\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
+change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
+centered.}
 
-\item{scale_design}{}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{num.threads}{}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 
-\item{return_INLA_result}{}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{TRUE}. Required for running \code{id_activations}
+after, but not for running BayesGLM_joint after to get
+posterior quantities of group means or contrasts.}
 
-\item{outfile}{}
+\item{outfile}{File name where results will be written (for use by
+\code{BayesGLM2}).}
 
-\item{verbose}{}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{}
+\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 
-\item{avg_sessions}{}
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
 
-\item{trim_INLA}{\verb{}\verb{}}
+\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
 }
 \value{
-
+A list containing...
 }
 \description{
-
+Applies spatial Bayesian GLM to task fMRI data
 }
-\section{}{
-NA
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 

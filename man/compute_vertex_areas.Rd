@@ -2,20 +2,23 @@
 % Please edit documentation in R/compute_vertex_areas.R
 \name{compute_vertex_areas}
 \alias{compute_vertex_areas}
-\title{}
+\title{Compute surface areas of each vertex in a triangular mesh.}
 \usage{
 compute_vertex_areas(mesh)
 }
 \arguments{
-\item{mesh}{}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data).}
 }
 \value{
-
+Vector of areas
 }
 \description{
-
+Compute surface areas of each vertex in a triangular mesh.
 }
-\section{}{
-NA
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 

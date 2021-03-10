@@ -2,25 +2,30 @@
 % Please edit documentation in R/BayesGLM_utils.R
 \name{get_posterior_densities}
 \alias{get_posterior_densities}
-\title{}
+\title{Extracts posterior density estimates for hyperparameters}
 \usage{
 get_posterior_densities(object, spde, beta_names)
 }
 \arguments{
-\item{object}{}
+\item{object}{An object of class \code{"inla"}, a result of a call to
+\code{inla()}}
 
-\item{spde}{}
+\item{spde}{The model used for the latent fields in the \code{inla()} call,
+an object of class \code{"inla.spde"}}
 
-\item{beta_names}{}
+\item{beta_names}{Descriptive names of model regressors (tasks).}
 }
 \value{
-
+Long-form data frame containing posterior densities for the
+hyperparameters associated with each latent field
 }
 \description{
-
+Extracts posterior density estimates for hyperparameters
 }
-\section{}{
-NA
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 
 \keyword{internal}

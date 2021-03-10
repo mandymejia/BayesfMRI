@@ -2,18 +2,20 @@
 % Please edit documentation in R/util.R
 \name{s2m}
 \alias{s2m}
-\title{}
+\title{Sequential 2-means variable selection}
 \usage{
 s2m(x, b)
 }
 \arguments{
-\item{x}{}
+\item{x}{A vector consisting of all variables of interest for a single draw
+from a posterior distribution}
 
-\item{b}{}
+\item{b}{A scale parameter used to determine at what distance cluster centers
+are considered to be the same.}
 }
 \value{
-
+The number of nonzero values detected within x
 }
 \description{
-
+Sequential 2-means variable selection
 }

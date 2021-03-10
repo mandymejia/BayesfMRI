@@ -2,18 +2,19 @@
 % Please edit documentation in R/scale_design_mat.R
 \name{scale_design_mat}
 \alias{scale_design_mat}
-\title{}
+\title{Scale the design matrix}
 \usage{
 scale_design_mat(design_mat)
 }
 \arguments{
-\item{design_mat}{}
+\item{design_mat}{The original (unscaled) design matrix that is T x K, where
+T is the number of time points, and k is the number of task covariates}
 }
 \value{
-
+A scaled design matrix
 }
 \description{
-
+Scale the design matrix
 }
 \examples{
 library(neuRosim)

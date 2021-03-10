@@ -2,23 +2,33 @@
 % Please edit documentation in R/organize_data.R
 \name{organize_data}
 \alias{organize_data}
-\title{}
+\title{Organize data for Bayesian GLM}
 \usage{
 organize_data(y, X, transpose = TRUE)
 }
 \arguments{
-\item{y}{}
+\item{y}{the TxV data matrix containing the fMRI timeseries}
 
-\item{X}{}
+\item{X}{the TxK design matrix with K task-related columns}
 
-\item{transpose}{}
+\item{transpose}{Check orientation of data, which, if \code{TRUE}, will transpose
+the data when the number of time points is greater than the number of voxels.
+Note: this is not always true for subcortical regions.}
 }
 \value{
-
+A list containing fields \code{y} and \code{A} (see Details)
 }
 \description{
-
+Transforms the usual TxV BOLD data matrix Y into vector form, and
+the usual TxK design matrix X into big sparse matrix form for use in
+Bayesian GLM.
 }
 \details{
+The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD data)
+and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 
+The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD data)
+and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 }
