@@ -102,10 +102,6 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @param hemisphere 'left' or 'right'
 #' @param num.threads (scalar) The number of threads to use in parallelizing the
 #'   prewhitening
-#' @importFrom Matrix bandSparse bdiag
-#' @importFrom ciftiTools smooth_cifti
-#' @importFrom stats ar.yw
-#' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average
@@ -119,7 +115,53 @@ prewhiten_cifti <- function(data,
                             ar_smooth = 5,
                             cifti_data,
                             hemisphere,
-                            num.threads = NULL) {
+                            num.threads = NULL){
+
+  if(missing(hemisphere)) stop('Please provide valid hemisphere argument.')
+  if(!(hemisphere %in% c('left','right'))) stop('Please provide valid hemisphere argument.')
+
+  prewhiten_result <- prewhiten_prep(data = data,
+                                     mask = mask,
+                                     scale_BOLD = scale_BOLD,
+                                     scale_design = scale_design,
+                                     ar_order = ar_order)
+  mask <- prewhiten_result$mask
+  mask_orig <- prewhiten_result$mask_orig
+
+  prewhiten_result <- prewhiten_smooth(prewhiten_result,
+                               ar_smooth = ar_smooth,
+                               cifti_data = cifti_data,
+                               hemisphere = hemisphere)
+
+  prewhiten_result <- prewhiten_do(prewhiten_result,
+                                   num.threads = num.threads)
+
+  prewhiten_result$mask <- mask
+  prewhiten_result$mask_orig <- mask_orig
+
+  return(prewhiten_result)
+
+}
+
+#' Estimate residual autocorrelation for prewhitening
+#'
+#' @param data List of sessions (see \code{is.session} and \code{is.session_pw})
+#' @param mask (Optional) A length \eqn{V} logical vector indicating if each
+#'  vertex is to be included.
+#' @param scale_BOLD (logical) Should the BOLD response be scaled? (Default is TRUE)
+#' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
+#' @param ar_order Order of the AR used to prewhiten the data at each location
+#' @importFrom stats ar.yw
+#'
+#' @return The prewhitened data (in a list), the smoothed, averaged AR
+#'   coefficient estimates used in the prewhitening, the smoothed, average
+#'   residual variance after prewhitening, and the value given for \code{ar_order}.
+prewhiten_prep <- function(data,
+                            mask = NULL,
+                            scale_BOLD = TRUE,
+                            scale_design = TRUE,
+                            ar_order = 6) {
+
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
@@ -127,11 +169,6 @@ prewhiten_cifti <- function(data,
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
-
-  if(missing(hemisphere)) stop('Please provide valid hemisphere argument.')
-  if(!(hemisphere %in% c('left','right'))) stop('Please provide valid hemisphere argument.')
-
-  ######################
 
   #ID any zero-variance voxels and remove from analysis
   zero_var <- sapply(data, function(x){
@@ -219,6 +256,31 @@ prewhiten_cifti <- function(data,
   avg_AR <- apply(AR_coeffs,1:2, mean)
   avg_var <- apply(as.matrix(AR_resid_var),1,mean)
 
+  return(list(avg_AR=avg_AR, avg_var=avg_var, data=data, ntime=ntime, ar_order=ar_order,
+              V=V, V_all=V_all, mask=mask, mask_use=mask_use, mask_orig=mask_orig))
+}
+
+
+#' Smooth AR coefficients and residual variance maps
+#'
+#' @param prewhiten_result Result of call to prewhiten_prep
+#' @param ar_smooth FWHM parameter for smoothing. Remember that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+#'  to not do any smoothing. Default: \code{5}.
+#' @param cifti_data A \code{xifti} object used to map the AR coefficient
+#'   estimates onto the surface mesh for smoothing.
+#' @param hemisphere 'left' or 'right'
+#' @importFrom ciftiTools smooth_cifti
+#'
+prewhiten_smooth <- function(prewhiten_result,
+                             ar_smooth = NULL,
+                             cifti_data,
+                             hemisphere){
+
+  #bring list elements into environment
+  avg_AR <- avg_var <- data <- ntime <- ar_order <- V <- V_all <- mask_use <- NULL
+  list2env(prewhiten_result, envir = environment())
+
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
   if((ar_smooth != 0) & !is.null(cifti_data)) {
     cat("Smoothing AR coefficients and residual variance...")
@@ -239,6 +301,29 @@ prewhiten_cifti <- function(data,
     avg_var <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,,drop=FALSE]
     cat("done!\n")
   }
+
+  return(list(avg_AR=avg_AR, avg_var=avg_var, data=data, ntime=ntime, ar_order=ar_order,
+              V=V, V_all=V_all, mask_use=mask_use))
+}
+
+#' Apply prewhitening to BOLD and design
+#'
+#' @param prewhiten_result Result of call to prewhiten_smooth
+#' @param num.threads (scalar) The number of threads to use in parallelizing the
+#'   prewhitening
+#' @importFrom Matrix bandSparse bdiag
+#' @importFrom parallel detectCores makeCluster clusterMap stopCluster
+#'
+#' @return The prewhitened data (in a list), the smoothed, averaged AR
+#'   coefficient estimates used in the prewhitening, the smoothed, average
+#'   residual variance after prewhitening, and the value given for \code{ar_order}.
+prewhiten_do <- function(prewhiten_result,
+                         num.threads = NULL){
+
+  #bring list elements into environment
+  avg_AR <- avg_var <- data <- ntime <- ar_order <- V <- V_all <- mask_use <- NULL
+  list2env(prewhiten_result, envir = environment())
+
   # Create the sparse pre-whitening matrix
   cat("Prewhitening... ")
   if(is.null(num.threads) | num.threads < 2) {
@@ -274,7 +359,10 @@ prewhiten_cifti <- function(data,
   }
   cat("done!\n")
 
+  #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
   sqrtInv_all <- Matrix::bdiag(template_pw_list)
+
+  #apply prewhitening matrix to BOLD and design for each session
   pw_data <- sapply(data,function(data_s) {
     bold_out <- matrix(NA,ntime, V_all)
     pw_BOLD <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
@@ -287,7 +375,5 @@ prewhiten_cifti <- function(data,
   return(list(data = pw_data,
               AR_coeffs = avg_AR,
               AR_var = avg_var,
-              ar_order = ar_order,
-              mask = mask,
-              mask_orig = mask_orig))
+              ar_order = ar_order))
 }
