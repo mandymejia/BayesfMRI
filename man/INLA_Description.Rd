@@ -2,13 +2,11 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{INLA_Description}
 \alias{INLA_Description}
-\title{INLA}
+\title{}
 \description{
-INLA
-}
-\section{INLA Requirement}{
 
-This function requires the \code{INLA} package, which is not a CRAN package.
-See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+\section{}{
+NA
 }
 

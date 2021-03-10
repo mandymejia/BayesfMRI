@@ -2,12 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{scale_BOLD_Param}
 \alias{scale_BOLD_Param}
-\title{scale_BOLD}
+\title{}
 \arguments{
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\item{scale_BOLD}{}
 }
 \description{
-scale_BOLD
+
 }

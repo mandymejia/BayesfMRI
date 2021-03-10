@@ -2,7 +2,7 @@
 % Please edit documentation in R/prewhitening.R
 \name{prewhiten_cifti}
 \alias{prewhiten_cifti}
-\title{Prewhiten cifti session data}
+\title{}
 \usage{
 prewhiten_cifti(
   data,
@@ -17,34 +17,27 @@ prewhiten_cifti(
 )
 }
 \arguments{
-\item{data}{List of sessions (see \code{is.session} and \code{is.session_pw})}
+\item{data}{}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mask}{}
 
-\item{scale_BOLD}{(logical) Should the BOLD response be scaled? (Default is TRUE)}
+\item{scale_BOLD}{}
 
-\item{scale_design}{(logical) Should the design matrix be scaled? (Default is TRUE)}
+\item{scale_design}{}
 
-\item{ar_order}{Order of the AR used to prewhiten the data at each location}
+\item{ar_order}{}
 
-\item{ar_smooth}{FWHM parameter for smoothing. Remember that
-\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.}
+\item{ar_smooth}{}
 
-\item{cifti_data}{A \code{xifti} object used to map the AR coefficient
-estimates onto the surface mesh for smoothing.}
+\item{cifti_data}{}
 
-\item{hemisphere}{'left' or 'right'}
+\item{hemisphere}{}
 
-\item{num.threads}{(scalar) The number of threads to use in parallelizing the
-prewhitening}
+\item{num.threads}{}
 }
 \value{
-The prewhitened data (in a list), the smoothed, averaged AR
-coefficient estimates used in the prewhitening, the smoothed, average
-residual variance after prewhitening, and the value given for \code{ar_order}.
+
 }
 \description{
-Prewhiten cifti session data
+
 }

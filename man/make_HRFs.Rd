@@ -2,26 +2,22 @@
 % Please edit documentation in R/make_HRFs.R
 \name{make_HRFs}
 \alias{make_HRFs}
-\title{Make HRFs}
+\title{}
 \usage{
 make_HRFs(onsets, TR, duration, downsample = 100)
 }
 \arguments{
-\item{onsets}{A matrix of onsets (first column) and durations (second column)
-for each task in SECONDS (set duration to zero for event related design),
-organized as a list where each element of the list corresponds to one task.
-Names of list indicate task names.}
+\item{onsets}{}
 
-\item{TR}{Temporal resolution of fMRI data, in SECONDS.}
+\item{TR}{}
 
-\item{duration}{Length of fMRI timeseries, in SCANS.}
+\item{duration}{}
 
-\item{downsample}{Downsample factor for convolving stimulus boxcar or stick
-function with canonical HRF}
+\item{downsample}{}
 }
 \value{
-Design matrix containing one HRF column for each task
+
 }
 \description{
-Create HRF design matrix columns from onsets and durations
+
 }

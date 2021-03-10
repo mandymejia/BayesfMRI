@@ -7,42 +7,51 @@ check_wb <- function() {
 test_that("Miscellaneous functions are working", {
   check_wb()
 
-  #main_dir <- "/Users/analysis/Desktop/ASINag/BayesfMRILab"
-  main_dir <- '~/Google Drive/My Drive/R25TrainingCourse/Year2021/NeuroStatsBootCampLabs/W1D04-Stats-2/Lab-03/'
+  # Change this to the HCP main folder
+  dir_data_test <- '/N/dcwan/projects/hcp'
+  dir_archive_retest <- file.path(dir_data_test, "retest")
+  # Change this to a folder to write the retest data in
+  dir_data_retest <- '/N/u/ddpham/Carbonate/Desktop/Data/HCP_Retest'
+  subject <- "151526"
+  gambling_dir <- file.path(subject, "MNINonLinear/Results/tfMRI_GAMBLING_LR")
+  data_zip <- file.path(dir_archive_retest, paste0(subject, "_3T_tfMRI_GAMBLING_preproc.zip"))
 
-  Subject <- "151526"
-  data_dir <- file.path(main_dir,Subject)
-  data_dir_retest <- file.path(main_dir,paste0(Subject,"_retest"))
+  fnames <- list(
+    cifti = "tfMRI_GAMBLING_LR_Atlas.dtseries.nii",
+    e_loss = "EVs/loss_event.txt",
+    e_win = "EVs/win_event.txt",
+    e_neut = "EVs/neut_event.txt",
+    rps = "Movement_Regressors.txt"
+  )
+  fnames <- lapply(fnames, function(x){file.path(gambling_dir, x)})
+  # Load retest data
+  for (fname in fnames) {
+    if (!file.exists(file.path(dir_data_retest, fname))) {
+      cmd <- paste("unzip", data_zip, fname, "-d", dir_data_retest)
+      system(cmd)
+      stopifnot(file.exists(file.path(dir_data_retest, fname)))
+    }
+  }
+  fnames <- lapply(
+    fnames,
+    function(x){
+      list(test=file.path(dir_data_test, x), retest=file.path(dir_data_retest, x))
+    }
+  )
 
-  #surfL_fname <-file.path(data_dir,"151526.L.midthickness.32k_fs_LR.surf.gii")
-  #surfR_fname <-file.path(data_dir,"151526.R.midthickness.32k_fs_LR.surf.gii")
-  surfL_fname <- file.path(main_dir,'../Q1-Q6_R440.L.inflated.32k_fs_LR.surf.gii')
-  surfR_fname <- file.path(main_dir,'../Q1-Q6_R440.R.inflated.32k_fs_LR.surf.gii')
+  # cii <- lapply(fnames$cifti, function(x){read_xift(x)})
+  events <- lapply(fnames[c("e_loss", "e_win", "e_neut")], function(x){lapply(x, function(y){read.table(y, header=FALSE)})})
+  RPs <- lapply(fnames$rps, function(x){as.matrix(read.table(x, header=FALSE))})
 
-  cifti_fname <-file.path(data_dir,"tfMRI_GAMBLING_LR_Atlas.dtseries.nii")
-  cifti_fname2 <-file.path(data_dir_retest,"tfMRI_GAMBLING_LR_Atlas.dtseries.nii")
+  surfL_fname <- ciftiTools::demo_files()$surf["left"]
+  surfR_fname <- ciftiTools::demo_files()$surf["right"]
 
-  nuisance <- as.matrix(read.table(file.path(data_dir,"Movement_Regressors.txt"),header = FALSE))
-  nuisance2 <- as.matrix(read.table(file.path(data_dir_retest,"Movement_Regressors.txt"),header = FALSE))
-
-  events_loss <- read.table(file.path(data_dir,"loss_event.txt"),header = FALSE)
-  events_win <- read.table(file.path(data_dir,"win_event.txt"),header = FALSE)
-  events_neut <- read.table(file.path(data_dir,"neut_event.txt"),header = FALSE)
-  events_loss2 <- read.table(file.path(data_dir_retest,"loss_event.txt"),header = FALSE)
-  events_win2 <- read.table(file.path(data_dir_retest,"win_event.txt"),header = FALSE)
-  events_neut2 <- read.table(file.path(data_dir_retest,"neut_event.txt"),header = FALSE)
-
-  #for modeling all events as a single task
-  events_all <- rbind(events_loss,events_win,events_neut)[,1:2]
-  theOrder <- order(events_all[,1])
-  events_all <- list(task=events_all[theOrder,])
-  events_all2 <- rbind(events_loss,events_win,events_neut)[,1:2]
-  theOrder2 <- order(events_all2[,1])
-  events_all2 <- list(task=events_all2[theOrder2,])
-
-  #for modeling loss, win and neutral events separately
-  events_separate <- list(loss=events_loss[,1:2], win=events_win[,1:2], neut=events_neut[,1:2])
-  events_separate2 <- list(loss=events_loss2[,1:2], win=events_win2[,1:2], neut=events_neut2[,1:2])
+  events <- list(
+    test = lapply(events, function(x){x$test[,seq(2)]}),
+    retest = lapply(events, function(x){x$retest[,seq(2)]})
+  )
+  events_all <- lapply(events, function(x){do.call(rbind, x)})
+  events_all <- lapply(events_all, function(x){x[order(x[,1]),]})
 
   TR <- .72
 
@@ -72,32 +81,18 @@ test_that("Miscellaneous functions are working", {
   #   - single task
   #   - three tasks
 
-  #for class
   system.time(results_pw_three <- BayesGLM_cifti(
-    cifti_fname = cifti_fname,
+    cifti_fname = fnames$cifti$test,
     surfL_fname = surfL_fname,
     surfR_fname = surfR_fname,
-    #brainstructures = 'left',
     brainstructures = c("left", "right"),
-    design = NULL,
-    #onsets = events_all,
-    onsets = events_separate,  #uncomment to analyze win/loss/neutral separately
+    onsets = events$test,
     TR = TR,
-    nuisance = nuisance,
-    nuisance_include = c("drift", "dHRF"),
-    scale_BOLD = TRUE,
-    scale_design = TRUE,
-    GLM_method = "both",
-    #ar_order = 6,
-    ar_order = 6,
-    ar_smooth = 5,
+    nuisance = RPs$test,
     resamp_res = 5000,
-    num.threads = 4,
     verbose = TRUE,
-    outfile = NULL,
     return_INLA_result = TRUE,
-    avg_sessions = FALSE,
-    trim_INLA = TRUE
+    avg_sessions = FALSE
   ))
   save(results_pw_three, file=file.path(main_dir, 'bayesianModel3.RData'))
 

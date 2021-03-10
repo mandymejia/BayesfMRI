@@ -2,27 +2,22 @@
 % Please edit documentation in R/prewhitening.R
 \name{prewhiten.v}
 \alias{prewhiten.v}
-\title{Prewhitening for a single time series}
+\title{}
 \usage{
 prewhiten.v(AR_coeffs, ntime, AR_var = 1)
 }
 \arguments{
-\item{AR_coeffs}{A vector of AR(p) coefficients for an order p autoregressive
-prewhitening}
+\item{AR_coeffs}{}
 
-\item{ntime}{(scalar) The length of the time series to be prewhitened}
+\item{ntime}{}
 
-\item{AR_var}{(scalar) The variance of the time series to include a
-normalization term to make the prewhitened series have variance equal to 1.
-If none is provided, then the default is 1, resulting in no normalization.}
+\item{AR_var}{}
 }
 \value{
-A sparse matrix with the class \code{dsCMatrix} with \code{ntime}
-rows and columns that can be postmultiplied by the original time series
-in order to perform prewhitening.
+
 }
 \description{
-Prewhitening for a single time series
+
 }
 \examples{
 \dontrun{

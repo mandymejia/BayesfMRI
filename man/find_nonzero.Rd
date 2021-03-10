@@ -2,20 +2,16 @@
 % Please edit documentation in R/util.R
 \name{find_nonzero}
 \alias{find_nonzero}
-\title{Find nonzero elements in matrix}
+\title{}
 \usage{
 find_nonzero(beta_est)
 }
 \arguments{
-\item{beta_est}{A vector or matrix of values from which values close to zero
-should be assigned a value of zero.}
+\item{beta_est}{}
 }
 \value{
-A vector or matrix of the same dimension as beta_est in which values
-close to zero are assigned the value of zero. The closeness of a value to
-zero is found by performing two-means clustering on the absolute values of
-beta_est, and ...
+
 }
 \description{
-Find nonzero element in a matrix using 2-means clustering
+
 }

@@ -2,12 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{vertices_Param}
 \alias{vertices_Param}
-\title{vertices}
+\title{}
 \arguments{
-\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
-coordinates at which a given vertex in the mesh is located. \eqn{V} is the
-number of vertices in the mesh}
+\item{vertices}{}
 }
 \description{
-vertices
+
 }

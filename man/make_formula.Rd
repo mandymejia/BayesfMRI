@@ -2,21 +2,21 @@
 % Please edit documentation in R/BayesGLM_utils.R
 \name{make_formula}
 \alias{make_formula}
-\title{Make Formula}
+\title{}
 \usage{
 make_formula(beta_names, repl_names, hyper_initial = NULL)
 }
 \arguments{
-\item{beta_names}{char vector of the names of each bbeta object in the environment}
+\item{beta_names}{}
 
-\item{repl_names}{char vector of the names of each replicate object in the environment}
+\item{repl_names}{}
 
-\item{hyper_initial}{Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix}
+\item{hyper_initial}{}
 }
 \value{
-A formula representing the Bayesian GLM to be passed to \code{inla()}
+\verb{}
 }
 \description{
-Make Formula
+
 }
 \keyword{internal}

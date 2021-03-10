@@ -2,10 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{seed_Param}
 \alias{seed_Param}
-\title{seed}
+\title{}
 \arguments{
-\item{seed}{Random seed (optional). Default: \code{NULL}.}
+\item{seed}{}
 }
 \description{
-seed
+
 }

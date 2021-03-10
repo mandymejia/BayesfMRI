@@ -2,18 +2,18 @@
 % Please edit documentation in R/prewhitening.R
 \name{getInvCovAR}
 \alias{getInvCovAR}
-\title{Compute inverse covariance matrix for AR process (up to a constant scaling factor)}
+\title{}
 \usage{
 getInvCovAR(ar, ntime)
 }
 \arguments{
-\item{ar}{vector of p AR parameters}
+\item{ar}{}
 
-\item{ntime}{number of time points in timeseries}
+\item{ntime}{}
 }
 \value{
-inverse covariance matrix for AR process (up to a constant scaling factor)
+
 }
 \description{
-Compute inverse covariance matrix for AR process (up to a constant scaling factor)
+
 }

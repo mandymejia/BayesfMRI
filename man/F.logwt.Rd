@@ -2,31 +2,29 @@
 % Please edit documentation in R/BayesGLM2.R
 \name{F.logwt}
 \alias{F.logwt}
-\title{F logwt}
+\title{}
 \usage{
 F.logwt(theta, spde, mu_theta, Q_theta, M)
 }
 \arguments{
-\item{theta}{A vector of hyperparameter values at which to compute the posterior log density}
+\item{theta}{}
 
-\item{spde}{A SPDE object from inla.spde2.matern() function, determines prior precision matrix}
+\item{spde}{}
 
-\item{mu_theta}{Posterior mean from combined subject-level models.}
+\item{mu_theta}{}
 
-\item{Q_theta}{Posterior precision matrix from combined subject-level models.}
+\item{Q_theta}{}
 
-\item{M}{Number of subjects}
+\item{M}{}
 }
 \value{
-A list containing...
+
 }
 \description{
-Internal function used in joint approach to group-analysis for combining across models
-}
-\section{INLA Requirement}{
 
-This function requires the \code{INLA} package, which is not a CRAN package.
-See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+\section{}{
+NA
 }
 
 \keyword{internal}

@@ -2,24 +2,21 @@
 % Please edit documentation in R/organize_replicates.R
 \name{organize_replicates}
 \alias{organize_replicates}
-\title{Organize replicates}
+\title{}
 \usage{
 organize_replicates(n_sess, beta_names, mesh)
 }
 \arguments{
-\item{n_sess}{The number of sessions sharing hyperparameters (can be different tasks)}
+\item{n_sess}{}
 
-\item{beta_names}{Vector of names for each task}
+\item{beta_names}{}
 
-\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data)}
+\item{mesh}{}
 }
 \value{
-replicates vector and betas for sessions
+
 }
 \description{
-beta and repl vectors are of length \eqn{nvox X n_sess X n_task}.
-The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
-The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
+
 }
 \keyword{internal}

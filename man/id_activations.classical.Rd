@@ -2,7 +2,7 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations.classical}
 \alias{id_activations.classical}
-\title{Identification of areas of activation in a General Linear Model using classical methods}
+\title{}
 \usage{
 id_activations.classical(
   model_obj,
@@ -15,30 +15,23 @@ id_activations.classical(
 )
 }
 \arguments{
-\item{model_obj}{A \code{BayesGLM} object}
+\item{model_obj}{}
 
-\item{field_inds}{Indices of tasks for which to identify activations}
+\item{field_inds}{}
 
-\item{session_name}{(character) The name of the session that should be
-examined. If \code{NULL} (default), the average across all sessions is used.}
+\item{session_name}{}
 
-\item{alpha}{A significance level to be used in both the family-wise error
-rate (FWER) or false discovery rate (FDR) multiple correction methods of
-determining significance.}
+\item{alpha}{}
 
-\item{threshold}{Activation threshold (e.g. 0.01 for 1 percent signal change)}
+\item{threshold}{}
 
-\item{correction}{(character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
-family-wise error rate with Bonferroni correction, and 'FDR' refers to the
-false discovery rate using Benjamini-Hochberg.}
+\item{correction}{}
 
-\item{mesh}{(Optional) An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data). Only necessary for computing surface areas of identified activations.}
+\item{mesh}{}
 }
 \value{
-A matrix corresponding to the
-0-1 activation status for the model coefficients.
+
 }
 \description{
-Identification of areas of activation in a General Linear Model using classical methods
+
 }

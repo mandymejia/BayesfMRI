@@ -2,7 +2,7 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations_cifti}
 \alias{id_activations_cifti}
-\title{Identify Task Activations}
+\title{}
 \usage{
 id_activations_cifti(
   model_obj,
@@ -18,30 +18,26 @@ id_activations_cifti(
 )
 }
 \arguments{
-\item{model_obj}{Result of BayesGLM_cifti model call (of class BayesGLM_cifti)}
+\item{model_obj}{}
 
-\item{field_names}{Name of latent field, or vector of names, on which to identify activations. By default, analyze all tasks.}
+\item{field_names}{}
 
-\item{session_name}{(character) The name of the session that should be
-examined. If \code{NULL} (default), the average across all sessions is used.}
+\item{session_name}{}
 
-\item{alpha}{Significance level (e.g. 0.05)}
+\item{alpha}{}
 
-\item{method}{Either 'Bayesian' or 'classical'}
+\item{method}{}
 
-\item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)}
+\item{threshold}{}
 
-\item{area.limit}{For method = 'Bayesian' only: Below this value, clusters of activations will be considered spurious.  If NULL (default), no limit.}
+\item{area.limit}{}
 
-\item{correction}{For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)}
+\item{correction}{}
 
-\item{excur_method}{Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
-depending on the method that should be used to find the excursions set. Note that to ID
-activations for averages across sessions, the method chosen must be \code{EB}. The difference
-in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.}
+\item{excur_method}{}
 
-\item{verbose}{(Logical) If TRUE, print progress updates.}
+\item{verbose}{}
 }
 \description{
-Identify areas of activation for each task
+
 }

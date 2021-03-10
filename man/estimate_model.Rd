@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM_utils.R
 \name{estimate_model}
 \alias{estimate_model}
-\title{Estimate INLA model}
+\title{}
 \usage{
 estimate_model(
   formula,
@@ -18,36 +18,33 @@ estimate_model(
 )
 }
 \arguments{
-\item{formula}{Formula to put into inla}
+\item{formula}{}
 
-\item{data}{Dataset}
+\item{data}{}
 
-\item{A}{Large, sparse observation matrix}
+\item{A}{}
 
-\item{spde}{The spatial model, an object of class inla.spde}
+\item{spde}{}
 
-\item{prec_initial}{Initial precision}
+\item{prec_initial}{}
 
-\item{num.threads}{The maximum number of threads to use in the inla-program
-for model estimation. Default: \code{4}.}
+\item{num.threads}{}
 
-\item{int.strategy}{INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy}
+\item{int.strategy}{}
 
-\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
+\item{verbose}{}
 
-\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+\item{contrasts}{}
 
-\item{lincomb}{A linear combinations object created with \code{inla.make.lincomb}}
+\item{lincomb}{}
 }
 \value{
-Results from INLA
+
 }
 \description{
-Estimate INLA model
-}
-\section{INLA Requirement}{
 
-This function requires the \code{INLA} package, which is not a CRAN package.
-See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+\section{}{
+NA
 }
 

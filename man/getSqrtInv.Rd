@@ -2,17 +2,17 @@
 % Please edit documentation in R/prewhitening.R
 \name{getSqrtInv}
 \alias{getSqrtInv}
-\title{Compute square root of a symmetric matrix (such as inverse covariance mat) using SVD}
+\title{}
 \usage{
 getSqrtInv(Inv)
 }
 \arguments{
-\item{Inv}{Symmetric matrix}
+\item{Inv}{}
 }
 \value{
-Matrix square root of \code{Inv}
+
 }
 \description{
-Compute square root of a symmetric matrix (such as inverse covariance mat) using SVD
+
 }
 \keyword{internal}
