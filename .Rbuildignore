@@ -1,7 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^vignettes$
-^tests
+^tests$
 ^R/summarize_sessions\.R$
 ^R/BayesGLM_vol3D\.R$
 ^R/vol2mesh\.R$
