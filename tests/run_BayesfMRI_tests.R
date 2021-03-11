@@ -1,8 +1,10 @@
 # Build --> Install and Restart
 library(testthat)
 library(INLA)
-inla.setOption(pardiso.license = '~/pardiso.lic')
+# PARDISO license
+inla.setOption(pardiso.license = '../INLA/pardiso.lic')
 inla.pardiso.check()
 library(ciftiTools)
-ciftiTools.setOption('wb_path', '~/workbench/')
+# Connectome Workbench
+ciftiTools.setOption('wb_path', '../workbench/')
 source("tests/testthat/test-cifti.R")
