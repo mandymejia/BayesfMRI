@@ -815,8 +815,8 @@ BayesGLM <- function(
     #regress nuisance parameters from BOLD data and design matrix
     if('nuisance' %in% names(data[[s]])){
       nuisance_s <- data[[s]]$nuisance
-      y_reg <- nuisance_regress(BOLD_s, nuisance_s)
-      X_reg <- nuisance_regress(design_s, nuisance_s)
+      y_reg <- nuisance_regression(BOLD_s, nuisance_s)
+      X_reg <- nuisance_regression(design_s, nuisance_s)
     } else {
       y_reg <- BOLD_s
       X_reg <- design_s

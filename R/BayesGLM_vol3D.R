@@ -132,8 +132,8 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
       if('nuisance' %in% names(data[[s]])){
         design_s <- data[[s]]$design
         nuisance_s <- data[[s]]$nuisance
-        y_reg <- nuisance_regress(BOLD_s, nuisance_s)
-        X_reg <- nuisance_regress(design_s, nuisance_s)
+        y_reg <- nuisance_regression(BOLD_s, nuisance_s)
+        X_reg <- nuisance_regression(design_s, nuisance_s)
       } else {
         y_reg <- BOLD_s
         X_reg <- data[[s]]$design

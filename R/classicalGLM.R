@@ -112,8 +112,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
       if(is_pw & do_nuisance) stop('Prewhitened data should not include nuisance. Contact developer.')
       if(do_nuisance){
         nuisance_s <- data[[s]]$nuisance
-        y_reg <- nuisance_regress(BOLD_s, nuisance_s)
-        X_reg <- nuisance_regress(design_s, nuisance_s)
+        y_reg <- nuisance_regression(BOLD_s, nuisance_s)
+        X_reg <- nuisance_regression(design_s, nuisance_s)
       } else {
         y_reg <- BOLD_s
         X_reg <- design_s
