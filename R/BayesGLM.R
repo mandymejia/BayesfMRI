@@ -61,7 +61,10 @@
 #'
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
-#' @param nuisance_include (Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).
+#' @param nuisance_include (Optional) Additional nuisance covariates to include. 
+#'  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal 
+#'  derivative of each column of design matrix). Set to \code{NULL} to not do any
+#'  nuisance regressors, or just one of these to use only one.
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.

@@ -60,7 +60,10 @@ multi-session modeling, a list of such lists.)
 
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
 
-\item{nuisance_include}{(Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).}
+\item{nuisance_include}{(Optional) Additional nuisance covariates to include.
+Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
+derivative of each column of design matrix). Set to \code{NULL} to not do any
+nuisance regressors, or just one of these to use only one.}
 
 \item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
 change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
