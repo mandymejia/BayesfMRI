@@ -113,6 +113,9 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE){
 
+  # allows for list input
+  cifti_fname <- as.character(cifti_fname)
+
   GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))

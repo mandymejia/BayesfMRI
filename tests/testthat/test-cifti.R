@@ -15,8 +15,8 @@ test_that("Miscellaneous functions are working", {
   subject <- "151526"
   gambling_dir <- file.path(subject, "MNINonLinear/Results/tfMRI_GAMBLING_LR")
   data_zip <- file.path(dir_archive_retest, paste0(subject, "_3T_tfMRI_GAMBLING_preproc.zip"))
-  #
-  write_dir <- ".."
+  # Change this to a folder to write the BayesGLM_cifti outfile
+  dir_write <- "../DeleteLater"
 
   fnames <- list(
     cifti = "tfMRI_GAMBLING_LR_Atlas.dtseries.nii",
@@ -53,153 +53,65 @@ test_that("Miscellaneous functions are working", {
     retest = lapply(events, function(x){x$retest[,seq(2)]})
   )
   events_all <- lapply(events, function(x){do.call(rbind, x)})
-  events_all <- lapply(events_all, function(x){x[order(x[,1]),]})
+  events_all <- lapply(events_all, function(x){list(gamble=x[order(x[,1]),])})
 
   TR <- .72
 
-  #Test cases:
+  sess_avg <- c("1_TRUE", "2_TRUE", "2_FALSE")
+  ntask <- c(1,3)
+  prewhiten <- c(TRUE, FALSE)
+  params <- expand.grid(sess_avg=sess_avg, ntask=ntask, prewhiten=prewhiten, stringsAsFactors=FALSE)
+  params$sess <- as.numeric(gsub("_.*", "", sess_avg))
+  params$avg <- as.logical(gsub(".*_", "", sess_avg))
 
-  #Single session
-  # - No prewhitening
-  #   - single task -- DONE
-  #   - three tasks -- DONE
-  # - With prewhitening
-  #   - single task - DONE
-  #   - three tasks
+  for (ii in seq(nrow(params))) {
+    cat(
+      params$sess[ii],
+      ifelse(
+        params$sess[ii]>1,
+        ifelse(params$avg[ii], "sessions (w/ averaging),", "sessions (not avg),"),
+        "session,"
+      ),
+      ifelse(params$ntask[ii]==1, "1 task,", "3 tasks,"), "and",
+      ifelse(params$prewhiten[ii], "with prewhitening", "without prewhitening"), "\n\n"
+    )
 
-  #Two sessions, no averaging
-  # - No prewhitening
-  #   - single task
-  #   - three tasks
-  # - With prewhitening
-  #   - single task
-  #   - three tasks
+    if (params$ntask[ii] == 3) {
+      onsets_ii <- events
+    } else {
+      onsets_ii <- events_all
+    }
 
-  #Two sessions, with averaging
-  # - No prewhitening
-  #   - single task
-  #   - three tasks
-  # - With prewhitening
-  #   - single task
-  #   - three tasks
+    cii_ii <- fnames$cifti
+    nuisance_ii <- RPs
+    if (params$sess[ii] == 1) {
+      onsets_ii <- onsets_ii$test
+      cii_ii <- cii_ii$test
+      nuisance_ii <- nuisance_ii$test
+    } else {
+      cii_ii <- as.character(cii_ii)
+    }
 
-  # Default parameters
-  system.time(bglm <- BayesGLM_cifti(
-    cifti_fname = fnames$cifti$test,
-    surfL_fname = surfL_fname,
-    surfR_fname = surfR_fname,
-    brainstructures = c("left", "right"),
-    onsets = events$test,
-    TR = TR,
-    nuisance = RPs$test,
-    resamp_res = 5000,
-    verbose = TRUE,
-    return_INLA_result = TRUE,
-    avg_sessions = FALSE
-  ))
-  saveRDS(bglm, file=file.path(write_dir, 'BayesGLM_test1.RDS'))
+    exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
+      cifti_fname = cii_ii,
+      surfL_fname = surfL_fname,
+      surfR_fname = surfR_fname,
+      brainstructures = "left",
+      onsets = onsets_ii,
+      TR = TR,
+      nuisance = nuisance_ii,
+      ar_order = ifelse(params$prewhiten[ii], 6, 0),
+      ar_smooth = 5,
+      resamp_res = 2000,
+      verbose = FALSE,
+      return_INLA_result = TRUE,
+      outfile = file.path(dir_write, "bfmri_out"),
+      avg_sessions = params$avg[ii]
+    ))
 
-  # Different parameters
-  system.time(bglm <- BayesGLM_cifti(
-    cifti_fname = fnames$cifti$test,
-    surfR_fname = surfR_fname,
-    brainstructures = "right",
-    onsets = events$test,
-    TR = TR,
-    nuisance = RPs$test,
-    GLM_method = "classical",
-    ar_order = 5,
-    ar_smooth = 4,
-    resamp_res = 6000,
-    num.threads=2,
-    verbose = TRUE,
-    return_INLA_result = TRUE,
-    avg_sessions = TRUE
-  ))
-  saveRDS(bglm, file=file.path(write_dir, 'BayesGLM_test2.RDS'))
+    act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='Bayesian', alpha=0.05)
+    act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='classical', correction='FWER', alpha=0.05)
 
-  # ...
-  system.time(bglm <- BayesGLM_cifti(
-    cifti_fname = as.character(fnames$cifti),
-    surfL_fname = surfL_fname,
-    brainstructures = "left",
-    onsets = events, # events_all: Error in onsets[[k]][, 1] : incorrect number of dimensions
-    TR = TR,
-    nuisance = RPs,
-    resamp_res = 5000,
-    verbose = TRUE,
-    return_INLA_result = TRUE,
-    avg_sessions = FALSE
-  ))
-  saveRDS(bglm, file=file.path(write_dir, 'BayesGLM_test3.RDS'))
-
-  # Combining to one task would be faster
-
-  #thresold = 0 means looking for activations > 0
-  #threshold represents percent signal change. Could set threshold=0.5 or 1 as a biologically meaningful level.
-  # system.time(act3_Bayes <- id_activations_cifti(
-  #   results_pw_three, threshold=0, method='Bayesian', alpha=0.05)
-  # )
-  # system.time(act3_classical1 <- id_activations_cifti(
-  #   results_pw_three, threshold=0, method='classical', correction='FWER', alpha=0.05)
-  # )
-  # system.time(act3_classical2 <- id_activations_cifti(
-  #   results_pw_three, threshold=0, method='classical', correction='FDR', alpha=0.05)
-  # )
-  #save(act3_Bayes, act3_classical1, act3_classical2, file=file.path(main_dir, 'act_bayesianModel3.RData'))
-#
-#   #visualize Bayesian estimates
-#   view_xifti_surface(results_pw_three$betas_Bayesian$single_session,
-#                     surfL = surfL_fname, zlim=c(-1.2, 1.2), title='Bayesian', idx=1)
-#
-#   #visualize Bayesian estimates and save to PNG
-#   view_xifti_surface(results_pw_three$betas_Bayesian$single_session,
-#                     surfL = surfL_fname, zlim=c(-1.2, 1.2), title='Bayesian', idx=1,
-#                     fname = 'Bayesian_est')
-#
-#   #visualize classical estimates
-#   view_xifti_surface(results_pw_three$betas_classical$single_session, surfL = surfL_fname, zlim=c(-1.2, 1.2), title='classical', idx=1)
-#
-#
-#   view_xifti_surface(act_classical$activations_xifti, surfL = surfL_fname, title='classical (FWER)', idx=1)
-#   view_xifti_surface(act_classical1$activations_xifti, surfL = surfL_fname, title='classical (FDR)', idx=1)
-#   view_xifti_surface(act_Bayes$activations_xifti, surfL = surfL_fname, title='Bayesian', idx=1)
-#
-#   #threshold estimates and visualize
-#   estBayes_thr <- (results_pw_one$betas_Bayesian$single_session)*(act_Bayes$activations_xifti)
-#   estBayes_thr <- transform_xifti(estBayes_thr, function(x) {x[x==0] <- NA; return(x)})
-#   view_xifti_surface(estBayes_thr, surfL = surfL_fname, title='Bayesian estimates thresholded', idx=1, zlim=c(0,1.2))
-#
-#
-#   #### RETEST
-#
-#   system.time(results_pw_one_retest <- BayesGLM_cifti(
-#     cifti_fname = cifti_fname2,
-#     surfL_fname = surfL_fname,
-#     surfR_fname = surfR_fname,
-#     brainstructures = 'left',
-#     #brainstructures = c("left", "right"),
-#     design = NULL,
-#     onsets = events_all2,
-#     #onsets = events_separate2,  #uncomment to analyze win/loss/neutral separately
-#     TR = TR,
-#     nuisance = nuisance2,
-#     nuisance_include = c("drift", "dHRF"),
-#     scale_BOLD = TRUE,
-#     scale_design = TRUE,
-#     GLM_method = "both",
-#     ar_order = 6,
-#     ar_smooth = 5,
-#     resamp_res = 5000,
-#     num.threads = 4,
-#     verbose = TRUE,
-#     outfile = NULL,
-#     return_INLA_result = TRUE,
-#     avg_sessions = FALSE,
-#     trim_INLA = TRUE
-#   ))
-
-  #save(results_pw_one_retest, file=file.path(main_dir, 'bayesianModel_retest.RData'))
-  #load(file=file.path(main_dir, 'bayesianModel_retest.RData'))
-
+    print(exec_time)
+  }
 })
