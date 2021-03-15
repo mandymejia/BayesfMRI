@@ -231,33 +231,28 @@ prewhiten_prep <- function(data,
       y_reg <- BOLD_s
       X_reg <- data[[s]]$design
     }
-    XTX_inv <- try(solve(crossprod(X_reg)))
-    if("try-error" %in% class(XTX_inv)) {
-      stop("There is some numerical instability in your design matrix
-                    (due to very large or very small values). Scaling the design
-                    matrix is suggested.")
-    } else {
-      # GLM_result[[s]] <- t(XTX_inv %*% t(X_reg) %*% y_reg)
-      betas <- t(XTX_inv %*% t(X_reg) %*% y_reg)
-      resids <- y_reg - tcrossprod(X_reg,betas)
-      for(v in 1:V) {
-        if(is.na(resids[1,v])) next
-        ar_v <- ar.yw(resids[,v],aic = FALSE,order.max = ar_order)
-        # aic_order <- ar.yw(resids[,v])$order # This should be the order
-        # of the time series if the AIC is used to select the best order
-        AR_coeffs[v,,s] <- ar_v$ar # The AR parameter estimates
-        AR_resid_var[v,s] <- ar_v$var.pred # Resulting variance
-      }
+    resids <- nuisance_regression(y_reg, X_reg)
+    for(v in 1:V) {
+      if (is.na(resids[1,v])) next
+      ar_v <- ar.yw(resids[,v],aic = FALSE,order.max = ar_order)
+      # aic_order <- ar.yw(resids[,v])$order # This should be the order
+      # of the time series if the AIC is used to select the best order
+      AR_coeffs[v,,s] <- ar_v$ar # The AR parameter estimates
+      AR_resid_var[v,s] <- ar_v$var.pred # Resulting variance
     }
     data[[s]]$BOLD <- y_reg
     data[[s]]$design <- X_reg
   }
 
-  avg_AR <- apply(AR_coeffs,1:2, mean)
-  avg_var <- apply(as.matrix(AR_resid_var),1,mean)
+  avg_AR <- apply(AR_coeffs, 1:2, mean)
+  avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
 
-  return(list(avg_AR=avg_AR, avg_var=avg_var, data=data, ntime=ntime, ar_order=ar_order,
-              V=V, V_all=V_all, mask=mask, mask_use=mask_use, mask_orig=mask_orig))
+  list(
+    avg_AR=avg_AR, avg_var=avg_var, 
+    data=data, ntime=ntime, ar_order=ar_order,
+    V=V, V_all=V_all, 
+    mask=mask, mask_use=mask_use, mask_orig=mask_orig
+  )
 }
 
 
