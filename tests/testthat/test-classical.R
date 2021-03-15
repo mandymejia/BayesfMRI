@@ -116,7 +116,7 @@ test_that("Classical modeling working", {
       GLM_method = "classical",
       ar_order = ifelse(params$prewhiten[ii], 6, 0),
       ar_smooth = params$smooth[ii],
-      resamp_res = 2000,
+      resamp_res = 1000,
       verbose = FALSE,
       return_INLA_result = TRUE,
       outfile = file.path(dir_write, "bfmri_out"),
