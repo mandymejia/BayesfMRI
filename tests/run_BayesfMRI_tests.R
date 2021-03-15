@@ -1,15 +1,28 @@
 # Build --> Install and Restart
+
+# [Edit these]
+## path to your PARDISO license
+my_pardiso <- "../INLA/pardiso.lic"
+## path to your Connectome Workbench
+my_wb <- "../workbench"
+## path to test data
+dir_data <- "../BayesfMRI_testData"
+## path to results from tests
+dir_results <- file.path(dir_data, "results")
+
 library(testthat)
 library(INLA)
 # [Edit this] path to your PARDISO license
-inla.setOption(pardiso.license = '../INLA/pardiso.lic')
-inla.pardiso.check()
+if (interactive) {
+  inla.setOption(pardiso.license = my_pardiso)
+  inla.pardiso.check()
+}
 library(ciftiTools)
-# [Edit this] path to your Connectome Workbench
-ciftiTools.setOption('wb_path', '../workbench/')
-# [Edit this] path to test data
-dir_data <- "../BayesfMRI_testData"
-# [Edit this] path to results from tests
-dir_results <- file.path(dir_data, "results")
-source("tests/testthat/test-classical.R")
-source("tests/testthat/test-Bayes.R")
+if (interactive) {
+  ciftiTools.setOption('wb_path', my_wb)
+}
+
+tests_dir <- "testthat"
+if (!endsWith(getwd(), "tests")) { tests_dir <- file.path("tests", tests_dir) }
+source(file.path(tests_dir, "test-classical.R"))
+source(file.path(tests_dir, "test-Bayes.R"))
