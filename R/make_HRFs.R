@@ -1,3 +1,22 @@
+#' Canonical HRF
+#' 
+#' The canonical hemodynamic response function for a given time vector. The code
+#'  is adapted from \code{neuRosim::canonicalHRF}.
+#' 
+#' @param x The time vector (seconds)
+#' 
+#' @return The canonical HRF
+#' 
+#' @keywords internal
+canonical_HRF <- function(x) {
+  a1 <- 6; a2 <- 12
+  b1 <- b2 <- 0.9
+  c <- 0.35
+  q1 <- a1 * b1
+  q2 <- a2 * b2
+  (x/q1)^a1 * exp(-(x - q1)/b1) - c*(x/q2)^a2 * exp(-(x - q2)/b2)
+}
+
 #' Make HRFs
 #' 
 #' Create HRF design matrix columns from onsets and durations
@@ -18,16 +37,12 @@
 #' @export
 make_HRFs <- function(onsets, TR, duration, downsample=100){
 
-  if (!requireNamespace("neuRosim", quietly = TRUE)) {
-    stop("Package \"neuRosim\" needed to run `make_HRFs`. Please install it.", call. = FALSE)
-  }
-
   K <- length(onsets) #number of tasks
   if(is.null(names(onsets))) task_names <- paste0('task', 1:K) else task_names <- names(onsets)
 
   nsec <- duration*TR; # Total time of experiment in seconds
   stimulus <- rep(0, nsec*downsample) # For stick function to be used in convolution
-  HRF <- neuRosim::canonicalHRF(seq(0, 30, by=1/downsample), verbose=FALSE)[-1] #canonical HRF to be used in convolution
+  HRF <- canonical_HRF(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
   inds <- seq(TR*downsample, nsec*downsample, by = TR*downsample) # Extract EVs in a function of TR
 
   design <- matrix(NA, nrow=duration, ncol=K)

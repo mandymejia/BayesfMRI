@@ -4,7 +4,7 @@ check_wb <- function() {
   }
 }
 
-test_that("Miscellaneous functions are working", {
+test_that("Classical modeling working", {
   check_wb()
 
   # Folder for the data to use for testing BayesfMRI

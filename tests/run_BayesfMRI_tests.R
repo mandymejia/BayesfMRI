@@ -13,16 +13,15 @@ dir_results <- file.path(dir_data, "results")
 library(testthat)
 library(INLA)
 # [Edit this] path to your PARDISO license
-if (interactive) {
+if (interactive()) {
   inla.setOption(pardiso.license = my_pardiso)
   inla.pardiso.check()
 }
 library(ciftiTools)
-if (interactive) {
-  ciftiTools.setOption('wb_path', my_wb)
-}
+if (interactive()) { ciftiTools.setOption('wb_path', my_wb) }
 
 tests_dir <- "testthat"
 if (!endsWith(getwd(), "tests")) { tests_dir <- file.path("tests", tests_dir) }
 source(file.path(tests_dir, "test-classical.R"))
 source(file.path(tests_dir, "test-Bayes.R"))
+source(file.path(tests_dir, "test-misc.R"))
