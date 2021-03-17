@@ -36,7 +36,7 @@ BayesGLM_group(
 or (2) a character vector of length M of file names output from the BayesGLM function.
 M is the number of subjects.}
 
-\item{contrasts}{(Optional) A list of vectors, each length M*K, specifying the contrast(s)
+\item{contrasts}{(Optional) A list of vectors, each length \code{M * K * num_sessions}, specifying the contrast(s)
 of interest across subjects, where M is the number of subjects and K is the number of tasks.
 See Details for more information. Default is to compute the average for each task across subjects.}
 
@@ -62,15 +62,15 @@ A list containing the estimates, PPMs and areas of activation for each contrast.
 }
 \description{
 Performs group-level Bayesian GLM estimation and inference using the joint
-approach described in Mejia et al. (2019)
+approach described in Mejia et al. (2020)
 }
 \details{
 Each contrast vector specifies a group-level summary of interest. Let M be
 the number of subjects and K be the number of tasks. For example, the
-contrast vector \code{rep(c(1/M, rep(0, M-1)), K)} represents the group average
-for the first task; \code{c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))}
+contrast vector \code{rep(rep(c(1/(M*num_sessions),rep(0, K-1)),num_sessions),M)} represents the group average
+for the first task for M subjects; \code{c(rep(rep(c(1/(M1*num_sessions),rep(0, K-1)),num_sessions),M1),rep(rep(c(-1/(M2*num_sessions),rep(0, K-1)),num_sessions),M2))}
 represents the difference between the first M1 subjects and the remaining M2
-subjects (M1+M2=M) for the first task; \code{rep( c(1/M,-1/M,rep(0, K-2)) ,M)}
+subjects (M1+M2=M) for the first task; \code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, K-2)), num_sessions),M)}
 represents the difference between the first two tasks, averaged over all
 subjects.
 }
