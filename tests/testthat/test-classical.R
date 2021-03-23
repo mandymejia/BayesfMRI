@@ -21,19 +21,19 @@ test_that("Classical modeling working", {
   fnames <- lapply(fnames,
     function(x){
       list(
-        test=file.path(dir_data, "test", x), 
+        test=file.path(dir_data, "test", x),
         retest=file.path(dir_data, "retest", x)
       )
     }
   )
 
   # Read files.
-  events <- lapply(fnames[c("e_loss", "e_win", "e_neut")], 
+  events <- lapply(fnames[c("e_loss", "e_win", "e_neut")],
     function(x){
       lapply(x, function(y){ read.table(y, header=FALSE) })
     }
   )
-  RPs <- lapply(fnames$rps, 
+  RPs <- lapply(fnames$rps,
     function(x){
       as.matrix(read.table(x, header=FALSE))
     }
@@ -60,11 +60,19 @@ test_that("Classical modeling working", {
   params$bs <- "left"
   params$smooth <- 5
   # Add non-combinatorial test: both hemispheres
-  params <- rbind(params, c("1_TRUE", 1, TRUE, 1, TRUE, "both", 5))
-  # Add non-combinatorial test: no AR smoothing
-  params <- rbind(params, c("1_TRUE", 1, TRUE, 1, TRUE, "both", 0))
-  # Add non-combinatorial test: no nuisance regressors
-  params <- rbind(params, c("1_TRUE", 1, TRUE, 1, TRUE, "both", 5))
+  params <- rbind(
+    params,
+    data.frame(
+      sess_avg="1_TRUE",
+      ntask=1,
+      prewhiten=TRUE,
+      sess=1,
+      avg=TRUE,
+      bs=c("both", "right"),
+      smooth=c(5, 0)
+    )
+  )
+  # [TO DO] Add non-combinatorial test: no nuisance regressors
 
   # Test each combination.
   for (ii in seq(nrow(params))) {
