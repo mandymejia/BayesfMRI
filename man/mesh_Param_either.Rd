@@ -2,10 +2,11 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{mesh_Param_either}
 \alias{mesh_Param_either}
-\title{}
+\title{mesh: either}
 \arguments{
-\item{mesh}{}
+\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+surface data)}
 }
 \description{
-
+mesh: either
 }

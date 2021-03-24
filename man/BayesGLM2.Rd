@@ -3,7 +3,7 @@
 \name{BayesGLM2}
 \alias{BayesGLM2}
 \alias{BayesGLM_group}
-\title{}
+\title{Group-level Bayesian GLM}
 \usage{
 BayesGLM2(
   results,
@@ -32,39 +32,51 @@ BayesGLM_group(
 )
 }
 \arguments{
-\item{results}{}
+\item{results}{Either (1) a list of length M of objects of class BayesGLM,
+or (2) a character vector of length M of file names output from the BayesGLM function.
+M is the number of subjects.}
 
-\item{contrasts}{\verb{}}
+\item{contrasts}{(Optional) A list of vectors, each length \code{M * K * num_sessions}, specifying the contrast(s)
+of interest across subjects, where M is the number of subjects and K is the number of tasks.
+See Details for more information. Default is to compute the average for each task across subjects.}
 
-\item{quantiles}{}
+\item{quantiles}{(Optional) Vector of posterior quantiles to return in addition to the posterior mean}
 
-\item{excursion_type}{}
+\item{excursion_type}{(For inference only) The type of excursion function for the contrast (">", "<", "!="),
+or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.}
 
-\item{gamma}{}
+\item{gamma}{(For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).}
 
-\item{alpha}{}
+\item{alpha}{(For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).}
 
-\item{nsamp_theta}{}
+\item{nsamp_theta}{Number of theta values to sample from posterior. Default is 50.}
 
-\item{nsamp_beta}{}
+\item{nsamp_beta}{Number of beta vectors to sample conditional on each theta value sampled. Default is 100.}
 
-\item{no_cores}{}
+\item{no_cores}{The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.}
 
-\item{verbose}{}
+\item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
 }
 \value{
-
+A list containing the estimates, PPMs and areas of activation for each contrast.
 }
 \description{
-
+Performs group-level Bayesian GLM estimation and inference using the joint
+approach described in Mejia et al. (2020)
 }
 \details{
-\verb{}
-\verb{}
-
-\verb{}
+Each contrast vector specifies a group-level summary of interest. Let M be
+the number of subjects and K be the number of tasks. For example, the
+contrast vector \code{rep(rep(c(1/(M*num_sessions),rep(0, K-1)),num_sessions),M)} represents the group average
+for the first task for M subjects; \code{c(rep(rep(c(1/(M1*num_sessions),rep(0, K-1)),num_sessions),M1),rep(rep(c(-1/(M2*num_sessions),rep(0, K-1)),num_sessions),M2))}
+represents the difference between the first M1 subjects and the remaining M2
+subjects (M1+M2=M) for the first task; \code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, K-2)), num_sessions),M)}
+represents the difference between the first two tasks, averaged over all
+subjects.
 }
-\section{}{
-NA
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 

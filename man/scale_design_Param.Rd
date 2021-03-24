@@ -2,10 +2,11 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{scale_design_Param}
 \alias{scale_design_Param}
-\title{}
+\title{scale_design}
 \arguments{
-\item{scale_design}{}
+\item{scale_design}{Scale the design matrix by dividing each column by its
+maximum and then subtracting the mean? Default: \code{TRUE}.}
 }
 \description{
-
+scale_design
 }

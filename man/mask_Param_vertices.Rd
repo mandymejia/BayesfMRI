@@ -2,10 +2,11 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{mask_Param_vertices}
 \alias{mask_Param_vertices}
-\title{}
+\title{mask: vertices}
 \arguments{
-\item{mask}{}
+\item{mask}{A length \eqn{V} logical vector indicating if each vertex is
+within the input mask.}
 }
 \description{
-
+mask: vertices
 }

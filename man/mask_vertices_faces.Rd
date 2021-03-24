@@ -2,20 +2,27 @@
 % Please edit documentation in R/mask_vertices_faces.R
 \name{mask_vertices_faces}
 \alias{mask_vertices_faces}
-\title{}
+\title{Apply Mask to Vertices and Faces}
 \usage{
 mask_vertices_faces(vertices, faces, mask)
 }
 \arguments{
-\item{vertices}{}
+\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+coordinates at which a given vertex in the mesh is located. \eqn{V} is the
+number of vertices in the mesh}
 
-\item{faces}{}
+\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+indices for a given triangular face in the mesh. \eqn{F} is the number of
+faces in the mesh.}
 
-\item{mask}{}
+\item{mask}{A length \eqn{V} logical vector indicating if each vertex is
+within the input mask.}
 }
 \value{
-
+List containing masked vertices and faces matrices
 }
 \description{
-
+Apply a binary mask to a set of vertices and faces.  Vertices not in the mask are removed,
+and faces (triangles) with any vertices outside of the mask are removed.  Finally,
+vertex numbering in the masked faces matrix is corrected.
 }

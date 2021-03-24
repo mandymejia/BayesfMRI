@@ -2,18 +2,21 @@
 % Please edit documentation in R/prewhitening.R
 \name{prewhiten_do}
 \alias{prewhiten_do}
-\title{}
+\title{Apply prewhitening to BOLD and design}
 \usage{
 prewhiten_do(prewhiten_result, num.threads = NULL)
 }
 \arguments{
-\item{prewhiten_result}{}
+\item{prewhiten_result}{Result of call to prewhiten_smooth}
 
-\item{num.threads}{}
+\item{num.threads}{(scalar) The number of threads to use in parallelizing the
+prewhitening}
 }
 \value{
-
+The prewhitened data (in a list), the smoothed, averaged AR
+coefficient estimates used in the prewhitening, the smoothed, average
+residual variance after prewhitening, and the value given for \code{ar_order}.
 }
 \description{
-
+Apply prewhitening to BOLD and design
 }

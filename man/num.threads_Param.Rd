@@ -2,10 +2,11 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{num.threads_Param}
 \alias{num.threads_Param}
-\title{}
+\title{num.threads}
 \arguments{
-\item{num.threads}{}
+\item{num.threads}{The maximum number of threads to use in the inla-program
+for model estimation. Default: \code{4}.}
 }
 \description{
-
+num.threads
 }
