@@ -2,10 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{verbose_Param_direct_TRUE}
 \alias{verbose_Param_direct_TRUE}
-\title{verbose: direct only, TRUE}
+\title{}
 \arguments{
-\item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
+\item{verbose}{}
 }
 \description{
-verbose: direct only, TRUE
+
 }

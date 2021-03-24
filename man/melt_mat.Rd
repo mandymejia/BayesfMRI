@@ -2,18 +2,16 @@
 % Please edit documentation in R/plot.R
 \name{melt_mat}
 \alias{melt_mat}
-\title{Melt a matrix into a data frame with identifiers for row and column}
+\title{}
 \usage{
 melt_mat(x)
 }
 \arguments{
-\item{x}{A matrix}
+\item{x}{}
 }
 \value{
-A data frame with the number of rows equal to the number of elements
-in \code{x}.
+
 }
 \description{
-This is meant to be a lightweight replacement for \code{reshape2::melt} that
-will only work with matrices.
+
 }

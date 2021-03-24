@@ -2,10 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{verbose_Param_inla}
 \alias{verbose_Param_inla}
-\title{verbose: INLA only}
+\title{}
 \arguments{
-\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
+\item{verbose}{}
 }
 \description{
-verbose: INLA only
+
 }

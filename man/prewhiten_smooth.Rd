@@ -2,22 +2,19 @@
 % Please edit documentation in R/prewhitening.R
 \name{prewhiten_smooth}
 \alias{prewhiten_smooth}
-\title{Smooth AR coefficients and residual variance maps}
+\title{}
 \usage{
 prewhiten_smooth(prewhiten_result, ar_smooth = NULL, cifti_data, hemisphere)
 }
 \arguments{
-\item{prewhiten_result}{Result of call to prewhiten_prep}
+\item{prewhiten_result}{}
 
-\item{ar_smooth}{FWHM parameter for smoothing. Remember that
-\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.}
+\item{ar_smooth}{}
 
-\item{cifti_data}{A \code{xifti} object used to map the AR coefficient
-estimates onto the surface mesh for smoothing.}
+\item{cifti_data}{}
 
-\item{hemisphere}{'left' or 'right'}
+\item{hemisphere}{}
 }
 \description{
-Smooth AR coefficients and residual variance maps
+
 }

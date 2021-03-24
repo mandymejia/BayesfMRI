@@ -2,18 +2,17 @@
 % Please edit documentation in R/make_HRFs.R
 \name{canonical_HRF}
 \alias{canonical_HRF}
-\title{Canonical HRF}
+\title{}
 \usage{
 canonical_HRF(x)
 }
 \arguments{
-\item{x}{The time vector (seconds)}
+\item{x}{}
 }
 \value{
-The canonical HRF
+
 }
 \description{
-The canonical hemodynamic response function for a given time vector. The code
-is adapted from \code{neuRosim::canonicalHRF}.
+
 }
 \keyword{internal}

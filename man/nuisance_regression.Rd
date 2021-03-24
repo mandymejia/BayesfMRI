@@ -2,19 +2,18 @@
 % Please edit documentation in R/nuisance_regression.R
 \name{nuisance_regression}
 \alias{nuisance_regression}
-\title{Nuisance regression}
+\title{}
 \usage{
 nuisance_regression(Y, design)
 }
 \arguments{
-\item{Y}{The TxV or VxT data.}
+\item{Y}{}
 
-\item{design}{The TxQ matrix of nuisance regressors.}
+\item{design}{}
 }
 \value{
-The data after nuisance regression.
+
 }
 \description{
-Performs nuisance regression. The data and design matrix must both be
-centered, or an intercept must be included in the design matrix!
+
 }

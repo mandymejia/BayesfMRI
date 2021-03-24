@@ -2,10 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{verbose_Param_direct_FALSE}
 \alias{verbose_Param_direct_FALSE}
-\title{verbose: direct only, FALSE}
+\title{}
 \arguments{
-\item{verbose}{Should occasional updates be printed? Default: \code{FALSE}.}
+\item{verbose}{}
 }
 \description{
-verbose: direct only, FALSE
+
 }

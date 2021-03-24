@@ -2,7 +2,7 @@
 % Please edit documentation in R/classicalGLM.R
 \name{classicalGLM}
 \alias{classicalGLM}
-\title{Fit classical massive univariate GLM to task fMRI data}
+\title{}
 \usage{
 classicalGLM(
   data,
@@ -13,26 +13,19 @@ classicalGLM(
 )
 }
 \arguments{
-\item{data}{A list of sessions, where each session is a list with elements
-BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
-List element names represent session names.}
+\item{data}{}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mask}{}
 
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\item{scale_BOLD}{}
 
-\item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}.}
+\item{scale_design}{}
 
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+\item{avg_sessions}{}
 }
 \value{
-A list of lists containing classical GLM task activation estimates, standard error estimates, and degrees of freedom. Each list element represents a session.
+
 }
 \description{
-Fit classical massive univariate GLM to task fMRI data
+
 }

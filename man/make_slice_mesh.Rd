@@ -2,18 +2,16 @@
 % Please edit documentation in R/make_slice_mesh.R
 \name{make_slice_mesh}
 \alias{make_slice_mesh}
-\title{Make a 2D Mesh}
+\title{}
 \usage{
 make_slice_mesh(mask)
 }
 \arguments{
-\item{mask}{A binary (0/1) matrix that should be used to make a mesh for
-two-dimensional data}
+\item{mask}{}
 }
 \value{
-A \code{inla.mesh} object that can be used to run the
-\code{BayesGLM_surface} function with two-dimensional data
+
 }
 \description{
-Make a 2D Mesh
+
 }

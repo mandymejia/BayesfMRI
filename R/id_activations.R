@@ -99,7 +99,7 @@ id_activations_cifti <- function(model_obj,
   }
 
   #map results to xifti objects
-  activations_xifti <- 0*model_obj$betas_Bayesian[[1]]
+  activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
   if(do_left) {
     datL <- 1*activations$cortexL$active
     if(method=='classical') datL <- datL[!is.na(datL[,1]),] #remove medial wall locations

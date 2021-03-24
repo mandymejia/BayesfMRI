@@ -2,17 +2,17 @@
 % Please edit documentation in R/BayesGLM_utils.R
 \name{check_BayesGLM}
 \alias{check_BayesGLM}
-\title{Check arguments and packages for BayesGLM-related functions}
+\title{}
 \usage{
 check_BayesGLM(require_PARDISO = TRUE)
 }
 \arguments{
-\item{require_PARDISO}{Is PARDISO required? Default: \code{TRUE}.}
+\item{require_PARDISO}{}
 }
 \value{
-\code{NULL}, invisibly
+
 }
 \description{
-Check arguments and packages for \code{\link{BayesGLM}} and \code{\link{BayesGLM_cifti}}.
+
 }
 \keyword{internal}

@@ -2,15 +2,15 @@
 % Please edit documentation in R/plot.R
 \name{plot.BayesGLM}
 \alias{plot.BayesGLM}
-\title{S3 method: use \code{plot_BayesGLM_slice} to plot a \code{"BayesGLM"} object}
+\title{}
 \usage{
 \method{plot}{BayesGLM}(x, ...)
 }
 \arguments{
-\item{x}{An object of class "BayesGLM"}
+\item{x}{}
 
-\item{...}{Additional arguments to \code{\link{plot_BayesGLM_slice}}}
+\item{...}{}
 }
 \description{
-S3 method: use \code{plot_BayesGLM_slice} to plot a \code{"BayesGLM"} object
+
 }

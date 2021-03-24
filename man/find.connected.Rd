@@ -2,19 +2,19 @@
 % Please edit documentation in R/excursions.R
 \name{find.connected}
 \alias{find.connected}
-\title{Find connected indices on mesh}
+\title{}
 \usage{
 find.connected(ind, mesh)
 }
 \arguments{
-\item{ind}{indices}
+\item{ind}{}
 
-\item{mesh}{The inla.mesh}
+\item{mesh}{}
 }
 \value{
-list of connected components in \code{ind}
+
 }
 \description{
-Find connected indices on mesh
+
 }
 \keyword{internal}

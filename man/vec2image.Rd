@@ -2,20 +2,18 @@
 % Please edit documentation in R/vec_to_image.R
 \name{vec2image}
 \alias{vec2image}
-\title{Transform vector data to an image}
+\title{}
 \usage{
 vec2image(vec_data, template_image)
 }
 \arguments{
-\item{vec_data}{A V by p matrix, where V is the number of voxels within a
-mask and p is the number of vectors to transform into matrix images}
+\item{vec_data}{}
 
-\item{template_image}{A binary matrix in which V entries are 1 and the rest
-of the entries are zero}
+\item{template_image}{}
 }
 \value{
-A list of masked values from \code{vec_data}
+
 }
 \description{
-This fills in parts of a template with values from \code{vec_data}.
+
 }

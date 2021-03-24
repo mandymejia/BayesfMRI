@@ -2,11 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{mesh_Param_inla}
 \alias{mesh_Param_inla}
-\title{mesh: INLA only}
+\title{}
 \arguments{
-\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data).}
+\item{mesh}{}
 }
 \description{
-mesh: INLA only
+
 }

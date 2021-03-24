@@ -2,12 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{faces_Param}
 \alias{faces_Param}
-\title{faces}
+\title{}
 \arguments{
-\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
-indices for a given triangular face in the mesh. \eqn{F} is the number of
-faces in the mesh.}
+\item{faces}{}
 }
 \description{
-faces
+
 }

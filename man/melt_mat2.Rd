@@ -2,17 +2,17 @@
 % Please edit documentation in R/plot.R
 \name{melt_mat2}
 \alias{melt_mat2}
-\title{Melt list of matrices}
+\title{}
 \usage{
 melt_mat2(X_list)
 }
 \arguments{
-\item{X_list}{list of matrices}
+\item{X_list}{}
 }
 \value{
-A data.frame
+
 }
 \description{
-See \code{melt_mat}
+
 }
 \keyword{internal}

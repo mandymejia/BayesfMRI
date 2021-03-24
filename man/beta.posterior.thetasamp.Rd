@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM2.R
 \name{beta.posterior.thetasamp}
 \alias{beta.posterior.thetasamp}
-\title{Beta posterior theta sampling}
+\title{}
 \usage{
 beta.posterior.thetasamp(
   theta,
@@ -18,36 +18,34 @@ beta.posterior.thetasamp(
 )
 }
 \arguments{
-\item{theta}{A single sample of theta (hyperparameters) from q(theta|y)}
+\item{theta}{}
 
-\item{spde}{A SPDE object from inla.spde2.matern() function.}
+\item{spde}{}
 
-\item{Xcros}{A crossproduct of design matrix.}
+\item{Xcros}{}
 
-\item{Xycros}{A crossproduct of design matrix and BOLD y.}
+\item{Xycros}{}
 
-\item{contrasts}{A list of vectors of length M*K specifying the contrasts of interest.}
+\item{contrasts}{}
 
-\item{quantiles}{Vector of posterior quantiles to return in addition to the posterior mean}
+\item{quantiles}{}
 
-\item{excursion_type}{Vector of excursion function type (">", "<", "!=") for each contrast}
+\item{excursion_type}{}
 
-\item{gamma}{Vector of activation thresholds for each contrast}
+\item{gamma}{}
 
-\item{alpha}{Significance level for activation for the excursion sets}
+\item{alpha}{}
 
-\item{nsamp_beta}{The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))}
+\item{nsamp_beta}{}
 }
 \value{
-A list containing...
+
 }
 \description{
-Internal function used in joint approach to group-analysis
-}
-\section{INLA Requirement}{
 
-This function requires the \code{INLA} package, which is not a CRAN package.
-See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+\section{}{
+NA
 }
 
 \keyword{internal}

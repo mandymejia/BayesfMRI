@@ -9,6 +9,7 @@ test_that("Classical modeling working", {
 
   # Folder for the data to use for testing BayesfMRI
   if (!exists("dir_data")) { dir_data <- "../BayesfMRI_testData" }
+  if (!exists("dir_results")) { dir_results <- file.path(dir_data, "results") }
 
   # Get file names.
   fnames <- list(
@@ -127,13 +128,19 @@ test_that("Classical modeling working", {
       resamp_res = 1000,
       verbose = FALSE,
       return_INLA_result = TRUE,
-      outfile = file.path(dir_write, "bfmri_out"),
+      outfile = file.path(dir_results, "bfmri_out"),
       avg_sessions = params$avg[ii]
     ))
 
     # Identify the activations.
-    act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='Bayesian', alpha=0.05)
-    act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='classical', correction='FWER', alpha=0.05)
+    act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='classical', alpha=0.05)
+    # plot(act_ii$activations_xifti)
+    if (ii == 1) {
+      # Test the other arguments too.
+      act_ii <- id_activations_cifti(
+        bfmri_ii, threshold=.1, method='classical', alpha=0.1, correction='FWER', excur_method='QC'
+      )
+    }
 
     # Save/plot?
 

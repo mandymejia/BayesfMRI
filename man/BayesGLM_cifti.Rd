@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM_cifti}
 \alias{BayesGLM_cifti}
-\title{BayesGLM for CIFTI}
+\title{}
 \usage{
 BayesGLM_cifti(
   cifti_fname,
@@ -30,95 +30,53 @@ BayesGLM_cifti(
 )
 }
 \arguments{
-\item{cifti_fname}{File path (or vector thereof, for multiple-session modeling) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}
+\item{cifti_fname}{}
 
-\item{surfL_fname}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and GLM_method is "Bayesian" or "both".}
+\item{surfL_fname}{}
 
-\item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and GLM_method is "Bayesian" or "both".}
+\item{surfR_fname}{}
 
-\item{brainstructures}{Character vector indicating which brain structure(s)
-to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
-cortical surface). Default: \code{c("left","right")} (entire cortical surface).
-Note that the subcortical models have not yet been implemented.}
+\item{brainstructures}{}
 
-\item{design, onsets, TR}{Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
+\item{design, onsets, TR}{}
 
-\code{design} is a \eqn{T x K} task design matrix (or list of such
-matrices, for multiple-session modeling) with column names representing
-tasks. Each column represents the expected BOLD response due to each task,
-a convolution of the hemodynamic response function (HRF) and the task
-stimulus. Note that the scale of the regressors will affect the scale and
-interpretation of the beta coefficients, so imposing a proper scale (e.g.,
-set maximum to 1) is recommended.
+\item{nuisance}{}
 
-\code{onsets} is a matrix of onsets (first column) and durations (second column)
-for each task in seconds, organized as a list where each element of the
-list corresponds to one task. Names of list should be task names. (Or for
-multi-session modeling, a list of such lists.)
+\item{nuisance_include}{}
 
-\code{TR} is the temporal resolution of the data in seconds.}
+\item{scale_BOLD}{}
 
-\item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
+\item{scale_design}{}
 
-\item{nuisance_include}{(Optional) Additional nuisance covariates to include.
-Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-derivative of each column of design matrix). Set to \code{NULL} to not do any
-nuisance regressors, or just one of these to use only one.}
+\item{GLM_method}{}
 
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\item{ar_order}{}
 
-\item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}.}
+\item{ar_smooth}{}
 
-\item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
+\item{session_names}{}
 
-\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
-should be a number indicating the order of the autoregressive model to use
-for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
+\item{resamp_res}{}
 
-\item{ar_smooth}{FWHM parameter for smoothing. Remember that
-\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.}
+\item{num.threads}{}
 
-\item{session_names}{(Optional) A vector of names corresponding to each
-session.}
+\item{verbose}{}
 
-\item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
+\item{outfile}{}
 
-\item{num.threads}{The maximum number of threads to use in the inla-program
-for model estimation. Default: \code{4}.}
+\item{return_INLA_result}{}
 
-\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
+\item{avg_sessions}{}
 
-\item{outfile}{(Optional) File name (without extension) of output file for
-\code{"BayesGLM"} result to use in Bayesian group modeling.
-\code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
-cortex and right cortex results, respectively. Default: \code{NULL}
-(do not save the results to any file).}
-
-\item{return_INLA_result}{Return the INLA model object? (It can be large.)
-Default: \code{FALSE}. Required for running \code{id_activations}
-after, but not for running BayesGLM_joint after to get
-posterior quantities of group means or contrasts.}
-
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
-
-\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
-result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+\item{trim_INLA}{\verb{}\verb{}}
 }
 \value{
-An object of class \code{"BayesGLM"}, a list containing...
+
 }
 \description{
-Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
-}
-\section{Connectome Workbench Requirement}{
 
-This function uses a system wrapper for the 'wb_command' executable. The
-user must first download and install the Connectome Workbench, available
-from https://www.humanconnectome.org/software/get-connectome-workbench .
+}
+\section{}{
+NA
 }
 

@@ -2,11 +2,10 @@
 % Please edit documentation in R/rox_args_docs.R
 \name{avg_sessions_Param}
 \alias{avg_sessions_Param}
-\title{avg_sessions}
+\title{}
 \arguments{
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+\item{avg_sessions}{}
 }
 \description{
-avg_sessions
+
 }

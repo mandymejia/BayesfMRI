@@ -2,26 +2,21 @@
 % Please edit documentation in R/util.R
 \name{boundary_mask}
 \alias{boundary_mask}
-\title{Boundary Mask}
+\title{}
 \usage{
 boundary_mask(faces, mask, boundary_width)
 }
 \arguments{
-\item{faces}{a V x 3 matrix of integers. Each row defines a face by the index
-of three vertices.}
+\item{faces}{}
 
-\item{mask}{A length \eqn{V} logical vector indicating if each vertex is
-within the input mask.}
+\item{mask}{}
 
-\item{boundary_width}{a positive integer. Vertices no more than this number
-of edges from any vertex in the input mask will be placed in the boundary mask.}
+\item{boundary_width}{}
 }
 \value{
-The boundary mask, a length-V logical vector. TRUE indicates vertices
-within the boundary mask.
+
 }
 \description{
-Identify the vertices within \code{boundary_width} edges of the input mask. The
-faces must be triangular.
+\verb{}
 }
 \keyword{internal}

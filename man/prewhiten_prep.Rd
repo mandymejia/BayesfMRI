@@ -2,7 +2,7 @@
 % Please edit documentation in R/prewhitening.R
 \name{prewhiten_prep}
 \alias{prewhiten_prep}
-\title{Estimate residual autocorrelation for prewhitening}
+\title{}
 \usage{
 prewhiten_prep(
   data,
@@ -13,22 +13,19 @@ prewhiten_prep(
 )
 }
 \arguments{
-\item{data}{List of sessions (see \code{is.session} and \code{is.session_pw})}
+\item{data}{}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mask}{}
 
-\item{scale_BOLD}{(logical) Should the BOLD response be scaled? (Default is TRUE)}
+\item{scale_BOLD}{}
 
-\item{scale_design}{(logical) Should the design matrix be scaled? (Default is TRUE)}
+\item{scale_design}{}
 
-\item{ar_order}{Order of the AR used to prewhiten the data at each location}
+\item{ar_order}{}
 }
 \value{
-The prewhitened data (in a list), the smoothed, averaged AR
-coefficient estimates used in the prewhitening, the smoothed, average
-residual variance after prewhitening, and the value given for \code{ar_order}.
+
 }
 \description{
-Estimate residual autocorrelation for prewhitening
+
 }
