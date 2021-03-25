@@ -411,6 +411,10 @@ id_activations.classical <- function(model_obj,
     areas_all <- areas_act <- NULL
   }
 
+  na_pvalues <- which(is.na(p_values[,1]))
+  p_values <- p_values[-na_pvalues,, drop = F]
+  p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
+  active <- active[-na_pvalues,, drop = F]
 
   result <- list(p_values = p_values,
                  p_values_adj = p_values_adj,
@@ -423,17 +427,4 @@ id_activations.classical <- function(model_obj,
   return(result)
 }
 
-# Significance using Benjamini-Hochsberg False Discovery Rate
-#
-# @param p A vector of p-values
-# @param FDR The false discovery rate
-#
-# @return A 0-1 vector that classifies the p-value vector as "significant" or not.
-# @export
-# BH_FDR <- function(p, FDR = 0.05) {
-#   p_rank <- rank(-p, na.last=T)
-#   BH_cutoff <- FDR * p_rank / length(p_rank)
-#   out <- ifelse(is.na(p), 1, p)
-#   out <- ifelse(out < BH_cutoff, 1,0)
-#   return(out)
-# }
+
