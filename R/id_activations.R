@@ -99,7 +99,7 @@ id_activations_cifti <- function(model_obj,
   }
 
   #map results to xifti objects
-  activations_xifti <- 0*model_obj$betas_Bayesian[[1]]
+  activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
   if(length(field_names) != length(model_obj$beta_names)) activations_xifti$meta$cifti$names <- field_names
   if(do_left) {
     datL <- 1*activations$cortexL$active
