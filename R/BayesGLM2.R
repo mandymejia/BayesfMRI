@@ -1,14 +1,14 @@
 #' Group-level Bayesian GLM
 #'
 #' Performs group-level Bayesian GLM estimation and inference using the joint
-#'  approach described in Mejia et al. (2019)
+#'  approach described in Mejia et al. (2020)
 #'
 #' Each contrast vector specifies a group-level summary of interest. Let M be
 #'  the number of subjects and K be the number of tasks. For example, the
-#'  contrast vector `rep(c(1/M, rep(0, M-1)), K)` represents the group average
-#'  for the first task; `c( rep(c(1/M1, rep(0, M1-1)), K), rep(c(-1/M2, rep(0, M2-1)), K))`
+#'  contrast vector `rep(rep(c(1/(M*num_sessions),rep(0, K-1)),num_sessions),M)` represents the group average
+#'  for the first task for M subjects; `c(rep(rep(c(1/(M1*num_sessions),rep(0, K-1)),num_sessions),M1),rep(rep(c(-1/(M2*num_sessions),rep(0, K-1)),num_sessions),M2))`
 #'  represents the difference between the first M1 subjects and the remaining M2
-#'  subjects (M1+M2=M) for the first task; `rep( c(1/M,-1/M,rep(0, K-2)) ,M)`
+#'  subjects (M1+M2=M) for the first task; `rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, K-2)), num_sessions),M)`
 #'  represents the difference between the first two tasks, averaged over all
 #'  subjects.
 #'
@@ -17,7 +17,7 @@
 #' @param results Either (1) a list of length M of objects of class BayesGLM,
 #'  or (2) a character vector of length M of file names output from the BayesGLM function.
 #'  M is the number of subjects.
-#' @param contrasts (Optional) A list of vectors, each length M*K, specifying the contrast(s)
+#' @param contrasts (Optional) A list of vectors, each length `M * K * num_sessions`, specifying the contrast(s)
 #'  of interest across subjects, where M is the number of subjects and K is the number of tasks.
 #'  See Details for more information. Default is to compute the average for each task across subjects.
 #' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
@@ -104,12 +104,13 @@ BayesGLM2 <- function(results,
   # Instead, we can get this working for multi-session data. To begin, we will
   # assume the same number of sessions for each subject, but this can be changed
   # later.
-  if(num_sessions > 1) {
-    message("Currently, multi-session analysis is only possible using the averages across sessions.")
-    use_avg <- "matrix" %in% class(results[[1]]$avg_beta_estimates)
-    if(!use_avg) stop("This function does not currently support group analysis on multiple sessions unless the analysis is done on subject-level averages across sessions.")
-    num_sessions <- 1
-  }
+  # if(num_sessions > 1) {
+  #   message("Currently, multi-session analysis is only possible using the averages across sessions.")
+  #   use_avg <- "matrix" %in% class(results[[1]]$avg_beta_estimates)
+  #   if(!use_avg) stop("This function does not currently support group analysis on multiple sessions unless the analysis is done on subject-level averages across sessions.")
+  #   num_sessions <- 1
+  # }
+  # use_avg <- FALSE
 
   #### SET UP OR CHECK CONTRAST VECTOR(S)
 
@@ -124,7 +125,8 @@ BayesGLM2 <- function(results,
     contrasts <- vector('list', length=K)
     names(contrasts) <- paste0(beta_names,'_avg')
     for(k in 1:K){
-      contrast_onesubj_k <- c(rep(0, k-1), 1/(num_sessions*M), rep(0, K-k)) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K, unless there are multiple sessions
+      # Old, broken, fixed?
+      contrast_onesubj_k <- rep(c(rep(0, k-1), 1/(num_sessions*M), rep(0, K-k)),num_sessions) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K, for each session
       contrast_allsubj_k <- rep(contrast_onesubj_k, M)
       contrasts[[k]] <- contrast_allsubj_k
     }
@@ -134,7 +136,7 @@ BayesGLM2 <- function(results,
   num_contrasts <- length(contrasts)
   length_each_contrast <- sapply(contrasts, length)
   class_each_contrast <- sapply(contrasts, is.numeric)
-  if(any(length_each_contrast != M*K)) stop('each contrast vector must be of length M*K')
+  if(any(length_each_contrast != M*K*num_sessions)) stop('each contrast vector must be of length M*K*num_sessions')
   if(any(!class_each_contrast)) stop('each contrast vector must be numeric, but at least one is not')
 
   #Check excursions settings
@@ -177,13 +179,13 @@ BayesGLM2 <- function(results,
         results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
       }
       if(class(results[[m]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
-      use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
+      # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
       num_sessions_m <- length(results[[m]]$session_names)
-      if(use_avg & use_avg_m) num_sessions_m <- 1
+      # if(use_avg & use_avg_m) num_sessions_m <- 1
       if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
     }
     if(m == 1) num_sessions_m <- num_sessions
-    use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
+    # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
 
     #Check match of beta names
     beta_names_m <- results[[m]]$beta_names
@@ -194,8 +196,8 @@ BayesGLM2 <- function(results,
     if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
 
     #Check that model is single session or average
-    if(num_sessions_m>1 & !use_avg_m)
-      stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
+    # if(num_sessions_m>1 & !use_avg_m)
+    # stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
 
     #Collect posterior mean and precision of hyperparameters
     mu_theta_m <- results[[m]]$mu.theta
@@ -265,21 +267,19 @@ BayesGLM2 <- function(results,
     no_cores <- min(max_no_cores, no_cores)
     cl <- parallel::makeCluster(no_cores)
     beta.posteriors <- parallel::parApply(cl, theta.samp,
-                                MARGIN=2,
-                                FUN=beta.posterior.thetasamp,
-                                spde=spde,
-                                Xcros = Xcros.all,
-                                Xycros = Xycros.all,
-                                contrasts=contrasts,
-                                quantiles=quantiles,
-                                excursion_type=excursion_type,
-                                gamma=gamma,
-                                alpha=alpha,
-                                nsamp_beta=nsamp_beta)
+                                          MARGIN=2,
+                                          FUN=beta.posterior.thetasamp,
+                                          spde=spde,
+                                          Xcros = Xcros.all,
+                                          Xycros = Xycros.all,
+                                          contrasts=contrasts,
+                                          quantiles=quantiles,
+                                          excursion_type=excursion_type,
+                                          gamma=gamma,
+                                          alpha=alpha,
+                                          nsamp_beta=nsamp_beta)
     parallel::stopCluster(cl)
   }
-
-
 
   ## Sum over samples using weights
 
@@ -425,18 +425,18 @@ beta.posterior.thetasamp <- function(theta,
   for(l in 1:num_contrasts){
 
     #Construct "A" matrix from paper (linear combinations)
-    ctr.mat <- kronecker(t(contrasts[[l]]), Diagonal(n.mesh*num_sessions, 1))
+    ctr.mat <- kronecker(t(contrasts[[l]]), Diagonal(n.mesh, 1))
 
     #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
-    samples_l <- as.matrix(ctr.mat%*%beta.samples)  # N*num_sessions x nsamp_beta
+    samples_l <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
     # For multiple sessions, add the beta samples for the sessions together
-    if(num_sessions > 1) {
-      session_betas <- sapply(seq(num_sessions), function(sess) {
-        session_inds <- seq(N) + (sess - 1)*N
-        return(samples_l[session_inds,])
-      }, simplify = FALSE)
-      samples_l <- Reduce(`+`, session_betas)
-    }
+    # if(num_sessions > 1) {
+    #   session_betas <- sapply(seq(num_sessions), function(sess) {
+    #     session_inds <- seq(N) + (sess - 1)*N
+    #     return(samples_l[session_inds,])
+    #   }, simplify = FALSE)
+    #   samples_l <- Reduce(`+`, session_betas)
+    # }
     mu.contr[,l] <- rowMeans(samples_l) #compute mean over beta samples
     if(num_quantiles > 0){
       for(iq in 1:num_quantiles){

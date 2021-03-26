@@ -99,7 +99,8 @@ id_activations_cifti <- function(model_obj,
   }
 
   #map results to xifti objects
-  activations_xifti <- 0*model_obj$betas_Bayesian[[1]]
+  activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
+  if(length(field_names) != length(model_obj$beta_names)) activations_xifti$meta$cifti$names <- field_names
   if(do_left) {
     datL <- 1*activations$cortexL$active
     if(method=='classical') datL <- datL[!is.na(datL[,1]),] #remove medial wall locations
@@ -410,6 +411,10 @@ id_activations.classical <- function(model_obj,
     areas_all <- areas_act <- NULL
   }
 
+  na_pvalues <- which(is.na(p_values[,1]))
+  p_values <- p_values[-na_pvalues,, drop = F]
+  p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
+  active <- active[-na_pvalues,, drop = F]
 
   result <- list(p_values = p_values,
                  p_values_adj = p_values_adj,
@@ -422,17 +427,4 @@ id_activations.classical <- function(model_obj,
   return(result)
 }
 
-# Significance using Benjamini-Hochsberg False Discovery Rate
-#
-# @param p A vector of p-values
-# @param FDR The false discovery rate
-#
-# @return A 0-1 vector that classifies the p-value vector as "significant" or not.
-# @export
-# BH_FDR <- function(p, FDR = 0.05) {
-#   p_rank <- rank(-p, na.last=T)
-#   BH_cutoff <- FDR * p_rank / length(p_rank)
-#   out <- ifelse(is.na(p), 1, p)
-#   out <- ifelse(out < BH_cutoff, 1,0)
-#   return(out)
-# }
+
