@@ -46,7 +46,7 @@ organize_data <- function(y, X, transpose = TRUE){
 		if(k==1) bigX <- X_k else bigX <- cbind(bigX, X_k)
 	}
 
-	result <- list(y=y, X=bigX)
+	result <- list(BOLD=y, design=bigX)
 	return(result)
 }
 

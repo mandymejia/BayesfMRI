@@ -7,7 +7,7 @@
 #' @param design The TxQ matrix of nuisance regressors.
 #'
 #' @return The data after nuisance regression.
-#' 
+#'
 #' @export
 nuisance_regression <- function(Y, design){
   # Z <- design

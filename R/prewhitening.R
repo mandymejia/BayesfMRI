@@ -231,6 +231,7 @@ prewhiten_prep <- function(data,
       y_reg <- BOLD_s
       X_reg <- data[[s]]$design
     }
+
     resids <- nuisance_regression(y_reg, X_reg)
     for(v in 1:V) {
       if (is.na(resids[1,v])) next
@@ -248,9 +249,9 @@ prewhiten_prep <- function(data,
   avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
 
   list(
-    avg_AR=avg_AR, avg_var=avg_var, 
+    avg_AR=avg_AR, avg_var=avg_var,
     data=data, ntime=ntime, ar_order=ar_order,
-    V=V, V_all=V_all, 
+    V=V, V_all=V_all,
     mask=mask, mask_use=mask_use, mask_orig=mask_orig
   )
 }
@@ -371,4 +372,30 @@ prewhiten_do <- function(prewhiten_result,
               AR_coeffs = avg_AR,
               AR_var = avg_var,
               ar_order = ar_order))
+}
+
+#### NEW PREWHITENING FUNCTIONS 3/25/2021
+
+#' Estimate residual autocorrelation for prewhitening
+#'
+#' @param data Estimated residuals
+#' @param ar_order Order of the AR used to prewhiten the data at each location
+#' @importFrom stats ar.yw
+#'
+#' @return Estimaed AR coefficients and residual variance at every vertex
+pw_estimate <- function(resids, ar_order){
+
+  V <- ncol(resids)
+  AR_coeffs <- matrix(NA, V, ar_order)
+  AR_resid_var <- rep(NA, V)
+  for(v in 1:V) {
+    if (is.na(resids[1,v])) next
+    ar_v <- ar.yw(resids[,v],aic = FALSE, order.max = ar_order)
+    # aic_order <- ar.yw(resids[,v])$order # This should be the order
+    # of the time series if the AIC is used to select the best order
+    AR_coeffs[v,] <- ar_v$ar # The AR parameter estimates
+    AR_resid_var[v] <- ar_v$var.pred # Residual variance
+  }
+  return(list(phi = AR_coeffs, sigma_sq = AR_resid_var))
+
 }

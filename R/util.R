@@ -135,19 +135,19 @@
 
 
 #' Find nonzero elements in matrix
-#' 
+#'
 #' Find nonzero element in a matrix using 2-means clustering
 #'
 #' @importFrom stats kmeans
-#' 
+#'
 #' @param beta_est A vector or matrix of values from which values close to zero
 #'  should be assigned a value of zero.
 #'
 #' @return A vector or matrix of the same dimension as beta_est in which values
-#'  close to zero are assigned the value of zero. The closeness of a value to 
+#'  close to zero are assigned the value of zero. The closeness of a value to
 #'  zero is found by performing two-means clustering on the absolute values of
 #'  beta_est, and ...
-#' 
+#'
 #' @export
 #'
 find_nonzero <- function(beta_est) {
@@ -163,13 +163,13 @@ find_nonzero <- function(beta_est) {
 
 #' Sequential 2-means variable selection
 #'
-#' @param x A vector consisting of all variables of interest for a single draw 
+#' @param x A vector consisting of all variables of interest for a single draw
 #'  from a posterior distribution
 #' @param b A scale parameter used to determine at what distance cluster centers
 #'  are considered to be the same.
 #'
 #' @return The number of nonzero values detected within x
-#' 
+#'
 #' @export
 s2m <- function(x,b){
   two_means <- kmeans(abs(x),2)
@@ -193,9 +193,9 @@ s2m <- function(x,b){
 #' @param sigma  A scale parameter used to determine at what distance cluster centers are considered to be the same.
 #'
 #' @return An array of dimension `head(dim(B),-1)` with a point estimate of B based on the sequential 2-means method
-#' 
+#'
 #' @importFrom stats quantile median
-#' 
+#'
 #' @export
 #'
 #' @md
@@ -219,11 +219,11 @@ s2m_B <- function(B,sigma){
 #' @inheritParams mask_Param_vertices
 #' @param boundary_width a positive integer. Vertices no more than this number
 #'  of edges from any vertex in the input mask will be placed in the boundary mask.
-#' 
+#'
 #' @return The boundary mask, a length-V logical vector. TRUE indicates vertices
 #'  within the boundary mask.
 #'
-#' @keywords internal 
+#' @keywords internal
 boundary_mask <- function(faces, mask, boundary_width){
   s <- ncol(faces)
   v <- max(faces)
@@ -317,4 +317,35 @@ match_input <- function(
   )
 
   invisible(NULL)
+}
+
+
+#' Create a mask based on vertices that are invalid
+#'
+#' @param data A list of sessions, where each session is a list with elements
+#'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
+#'  for more details.
+#'
+#' @importFrom matrixStats colVars
+#' @return A logical vector indicating valid vertices, or NULL if there were no invalid vertices
+#'
+make_mask <- function(data){
+
+  #ID any zero-variance voxels and remove from analysis
+  zero_var <- sapply(data, function(x){
+    x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall or other locations coded as NA
+    x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall or other locations coded as NaN
+    vars <- matrixStats::colVars(x$BOLD)
+    return(vars < 1e-6)
+  })
+  zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
+
+  #remove zero var locations
+  if(sum(zero_var) > 0){
+    mask <- !zero_var
+  } else {
+    mask <- NULL
+  }
+
+  return(mask)
 }

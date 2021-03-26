@@ -61,8 +61,8 @@
 #'
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
-#' @param nuisance_include (Optional) Additional nuisance covariates to include. 
-#'  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal 
+#' @param nuisance_include (Optional) Additional nuisance covariates to include.
+#'  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
 #'  derivative of each column of design matrix). Set to \code{NULL} to not do any
 #'  nuisance regressors, or just one of these to use only one.
 #' @inheritParams scale_BOLD_Param
@@ -93,7 +93,7 @@
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
 #' @import ciftiTools
-#' @importFrom matrixStats rowVars rowSums2
+#' @importFrom matrixStats rowVars rowSums2 colVars
 #' @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom parallel detectCores
 #'
@@ -153,31 +153,24 @@ BayesGLM_cifti <- function(cifti_fname,
     }
     #for single session data, onsets is a list (representing tasks) of data frames or matrices
     if(('data.frame' %in% class(onsets[[1]])) | ('matrix' %in% class(onsets[[1]]))) {
-      if(is.null(names(onsets)))
-        beta_names <- paste0("beta",seq_len(length(onsets)))
-      if(!is.null(names(onsets)))
-        beta_names <- names(onsets)
+      if(is.null(names(onsets))) beta_names <- paste0("beta",seq_len(length(onsets)))
+      if(!is.null(names(onsets))) beta_names <- names(onsets)
     }
   }
   if(!is.null(design)) {
+    #for multi-session data
     if(class(design) == "list") {
       if(is.null(colnames(design[[1]])))
         beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
       if(!is.null(colnames(design[[1]])))
         beta_names <- colnames(design[[1]])
     }
+    #for single session data
     if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
-      if(is.null(colnames(design)))
-        beta_names <- paste0("beta",seq_len(ncol(design)))
-      if(!is.null(colnames(design)))
-        beta_names <- colnames(design)
+      if(is.null(colnames(design))) beta_names <- paste0("beta",seq_len(ncol(design)))
+      if(!is.null(colnames(design))) beta_names <- colnames(design)
     }
   }
-
-  # Check prewhitening arguments.
-  if(is.null(ar_order)) ar_order <- 0
-  ar_order <- as.numeric(ar_order)
-  prewhiten <- (ar_order > 0)
 
   if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
@@ -193,9 +186,9 @@ BayesGLM_cifti <- function(cifti_fname,
   if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
-    if(!is.null(design)) design <- list(design)
-    if(!is.null(onsets)) onsets <- list(onsets)
-    if(!is.null(nuisance)) nuisance <- list(nuisance)
+    if(!is.null(design)) design <- list(single_session = design)
+    if(!is.null(onsets)) onsets <- list(single_session = onsets)
+    if(!is.null(nuisance)) nuisance <- list(single_session = nuisance)
   } else {
     if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
     if(!is.null(design)){ if(length(design) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), design must be a list of length equal to the number of sessions (or NULL, if onsets provided).') }
@@ -279,7 +272,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n RUNNING MODELS \n')
 
-  classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
+  #classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
   BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
 
   ### FORMAT DESIGN MATRIX
@@ -326,6 +319,10 @@ BayesGLM_cifti <- function(cifti_fname,
       session_data[[ss]] <- sess
     }
 
+    ### CHECK FOR FLAT/NA/NaN VERTICES
+
+    mask_left <- make_mask(data = session_data)
+
     ### FIT GLM(s)
 
     if(!is.null(outfile)) {
@@ -343,30 +340,30 @@ BayesGLM_cifti <- function(cifti_fname,
     ### THIS WILL PREVENT HAVING TO DEAL WITH MASKING REPEATEDLY
     ### CONSIDER MAKING MASKING A FUNCTION, SINCE NEEDS TO HAPPEN IN LEFT AND RIGHT HEMISPHERES
 
-    scale_BOLD_left <- scale_BOLD
-    if(prewhiten) {
-      pw_data_left <- prewhiten_cifti(data = session_data,
-                                      scale_BOLD = scale_BOLD_left,
-                                      scale_design = FALSE,
-                                      ar_order = ar_order,
-                                      ar_smooth =  ar_smooth,
-                                      hemisphere = 'left',
-                                      cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_right"),
-                                      num.threads = num.threads)
-      scale_BOLD_left <- FALSE # done in prewhitening
-      session_data <- pw_data_left$data
-    }
+    # scale_BOLD_left <- scale_BOLD
+    # if(prewhiten) {
+    #   pw_data_left <- prewhiten_cifti(data = session_data,
+    #                                   scale_BOLD = scale_BOLD_left,
+    #                                   scale_design = FALSE,
+    #                                   ar_order = ar_order,
+    #                                   ar_smooth =  ar_smooth,
+    #                                   hemisphere = 'left',
+    #                                   cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_right"),
+    #                                   num.threads = num.threads)
+    #   scale_BOLD_left <- FALSE # done in prewhitening
+    #   session_data <- pw_data_left$data
+    # }
 
-    if(do_classical) classicalGLM_left <- classicalGLM(data=session_data,
-                                                         scale_BOLD=scale_BOLD_left,
-                                                         scale_design = FALSE) # done above
 
     if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts_left,
                                               faces = faces_left,
-                                              scale_BOLD = scale_BOLD_left,
+                                              mask = mask_left,
+                                              scale_BOLD = scale_BOLD,
                                               scale_design = FALSE, # done above
+                                              ar_order = ar_order,
+                                              ar_smooth = ar_smooth,
                                               num.threads = num.threads,
                                               return_INLA_result = return_INLA_result,
                                               outfile = outfile_left,
@@ -374,7 +371,15 @@ BayesGLM_cifti <- function(cifti_fname,
                                               avg_sessions = avg_sessions,
                                               trim_INLA = trim_INLA)
 
+    if(method=='classical') classicalGLM_left <- classicalGLM(data=session_data,
+                                                       scale_BOLD=scale_BOLD_left,
+                                                       ar_order=ar_order,
+                                                       ar_smooth=ar_smooth,
+                                                       scale_design = FALSE) # done above
+
   }
+
+  #HERE
 
 
   ### RIGHT HEMISPHERE
@@ -582,13 +587,13 @@ BayesGLM_cifti <- function(cifti_fname,
   }
 
 
-  prewhitening_info <- list()
-  if(prewhiten) {
-    # I take out the first element here because the first argument
-    # is a copy of the data, which are already provided.
-    if(do_left) prewhitening_info$left <- pw_data_left[-1]
-    if(do_right) prewhitening_info$right <- pw_data_right[-1]
-  }
+  # prewhitening_info <- list()
+  # if(prewhiten) {
+  #   # I take out the first element here because the first argument
+  #   # is a copy of the data, which are already provided.
+  #   if(do_left) prewhitening_info$left <- pw_data_left[-1]
+  #   if(do_right) prewhitening_info$right <- pw_data_right[-1]
+  # }
 
   result <- list(session_names = session_names,
                  beta_names = beta_names,
@@ -600,7 +605,7 @@ BayesGLM_cifti <- function(cifti_fname,
                  GLMs_classical = list(cortexL = classicalGLM_left,
                                        cortexR = classicalGLM_right),
                  #subcortical = classicalGLM_vol),
-                 prewhitening_info = prewhitening_info,
+                 #prewhitening_info = prewhitening_info,
                  design = design)
 
   cat('\n DONE! \n')
@@ -629,6 +634,12 @@ BayesGLM_cifti <- function(cifti_fname,
 #'  vertex is to be included.
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
+#' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
+#'  should be a number indicating the order of the autoregressive model to use
+#'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
+#' @param ar_smooth FWHM parameter for smoothing. Remember that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+#'  to not do any smoothing. Default: \code{5}.
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_result_Param_TRUE
 #' @param outfile File name where results will be written (for use by
@@ -644,6 +655,8 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
+#' @importFrom Matrix bandSparse bdiag crossprod solve
+#' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #'
 #' @export
 BayesGLM <- function(
@@ -655,6 +668,8 @@ BayesGLM <- function(
   mask = NULL,
   scale_BOLD=TRUE,
   scale_design = TRUE,
+  ar_order = 6,
+  ar_smooth = 5,
   num.threads=4,
   return_INLA_result=TRUE,
   outfile = NULL,
@@ -689,37 +704,37 @@ BayesGLM <- function(
   # V <- ncol(data[[1]]$BOLD) #number of data locations
   # K <- ncol(data[[1]]$design) #number of tasks
   V <- ncol(data[[1]]$BOLD) #number of data locations
-  is_missing <- is.na(data[[1]]$BOLD[1,])
-  V_nm <- V - sum(is_missing)
+  #is_missing <- is.na(data[[1]]$BOLD[1,])
+  #V_nm <- V - sum(is_missing)
   ntime <- nrow(data[[1]]$BOLD)
-  is_pw <- nrow(data[[1]]$design) == (ntime * sum(!is_missing))
-  if(!is_pw) {
-    K <- ncol(data[[1]]$design) #number of tasks
-  } else {
-    K <- ncol(data[[1]]$design) / sum(!is_missing)
-  }
+  #is_pw <- nrow(data[[1]]$design) == (ntime * sum(!is_missing))
+  #if(!is_pw) {
+  K <- ncol(data[[1]]$design) #number of tasks
+  #} else {
+  #  K <- ncol(data[[1]]$design) / sum(!is_missing)
+  #}
 
   if(!is.null(beta_names)){
     if(length(beta_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of beta_names is ', length(beta_names), '.  Please fix beta_names.'))
   }
 
   if(is.null(beta_names)){
-    if(!is_pw){
-      beta_names_maybe <- colnames(data[[1]]$design) #if no prewhitening, can grab beta names from design (if not provided)
+    #if(!is_pw){
+      beta_names_maybe <- colnames(data[[1]]$design) #grab beta names from design (if not provided)
       if(!is.null(beta_names_maybe)) beta_names <- beta_names_maybe
       if(is.null(beta_names_maybe)) beta_names <- paste0('beta',1:K)
-    } else {
-     beta_names <- paste0('beta',1:K)
-    }
+    #} else {
+    # beta_names <- paste0('beta',1:K)
+    #}
   }
 
 
   #Check that data locations same across sessions
-  if(n_sess > 1){
-    is_missing_all <- sapply(data, function(x) is.na(x$BOLD[1,]))
-    tmp <- is_missing_all - is_missing
-    if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
-  }
+  #if(n_sess > 1){
+  #  is_missing_all <- sapply(data, function(x) is.na(x$BOLD[1,]))
+  #  tmp <- is_missing_all - is_missing
+  #  if(max(abs(tmp))>0) stop('Missing (NA) data locations in BOLD must be consistent across sessions, but they are not.')
+  #}
 
   # for(s in 1:n_sess){
   #   if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
@@ -729,11 +744,11 @@ BayesGLM <- function(
   for(s in 1:n_sess){
     if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(!is_pw) {
+    #if(!is_pw) {
       if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-    } else {
-      if(ncol(data[[s]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-    }
+    #} else {
+    #  if(ncol(data[[s]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    #}
   }
 
   if(is.null(outfile)){
@@ -742,46 +757,52 @@ BayesGLM <- function(
 
   if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
 
-  #ID any zero-variance voxels and remove from analysis
-  zero_var <- sapply(data, function(x){
-    x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
-    x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
-    vars <- matrixStats::colVars(x$BOLD)
-    return(vars < 1e-6)
-  })
-  zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
-
-  #1. Apply mask to mesh, data and zero_var
-  #2. If sum(zero_var) > 0, remove zero_var locations from data and create Amat
-  #   Else, let Amat = identity matrix
-
-  #remove zero var locations from mask
-  if(sum(zero_var) > 0){
-    if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
-    if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
-    if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
-    mask_orig <- mask
-    if(!is.null(mask)) mask[zero_var==TRUE] <- 0
-    if(is.null(mask)) mask <- !zero_var
-  } else {
-    mask_orig <- NULL
-  }
+  # #ID any zero-variance voxels and remove from analysis
+  # zero_var <- sapply(data, function(x){
+  #   x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
+  #   x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
+  #   vars <- matrixStats::colVars(x$BOLD)
+  #   return(vars < 1e-6)
+  # })
+  # zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
+  #
+  # #1. Apply mask to mesh, data and zero_var
+  # #2. If sum(zero_var) > 0, remove zero_var locations from data and create Amat
+  # #   Else, let Amat = identity matrix
+  #
+  # #remove zero var locations from mask
+  # if(sum(zero_var) > 0){
+  #   if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
+  #   if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+  #   if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
+  #   mask_orig <- mask
+  #   if(!is.null(mask)) mask[zero_var==TRUE] <- 0
+  #   if(is.null(mask)) mask <- !zero_var
+  # } else {
+  #   mask_orig <- NULL
+  # }
 
   #apply mask to mesh
   if(!is.null(mask)) {
     mask <- as.logical(mask)
     mesh_orig <- mesh #for later plotting
     mesh <- excursions::submesh.mesh(mask, mesh)
-    mask <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
-    mesh$idx$loc <- mesh$idx$loc[mask]
+    mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
+    mesh$idx$loc <- mesh$idx$loc[mask2]
     for(s in 1:n_sess){
-      data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
+      data[[s]]$BOLD <- data[[s]]$BOLD[,mask2]
     }
-    V <- sum(mask)
     #zero_var <- zero_var[mask]
   } else {
     mesh_orig <- NULL
+    mask2 <- mask <- rep(TRUE, V)
   }
+  V <- sum(mask2)
+  V_all <- length(mask2)
+
+  #make sure no invalid vertices exist after masking
+  tmp <- make_mask(data)
+  if(!is.null(tmp)) stop('Flat/NA/NaN vertices exist outside the mask. Update mask to exclude these.')
 
   # #remove zero var locations from set of data locations, but leave in the mesh (if no mask provided)
   # Amat <- Diagonal(V, x=1)
@@ -796,25 +817,32 @@ BayesGLM <- function(
   spde <- inla.spde2.matern(mesh)
 
   #collect data and design matrices
-  y_all <- c()
-  X_all_list <- NULL
   design <- vector('list', length=n_sess)
 
+  #compute AR coefficients and average over sessions
+  if(is.null(ar_order)) ar_order <- 0
+  ar_order <- as.numeric(ar_order)
+  do_pw <- (ar_order > 0)
+  if(do_pw){
+    AR_coeffs <- array(dim = c(V,ar_order,n_sess))
+    AR_resid_var <- array(dim = c(V,n_sess))
+  }
   for(s in 1:n_sess){
 
     #extract and mask BOLD data for current session
     BOLD_s <- data[[s]]$BOLD
 
     #scale data to represent % signal change (or just center if scale=FALSE)
-    if(!is_pw) BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
+    #if(!is_pw)
+    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
     if(scale_design) {
       design_s <- scale_design_mat(data[[s]]$design)
     } else {
-      if(!is_pw) {
-        design_s <- scale(data[[s]]$design, scale = F)
-      } else {
-        design_s <- data[[s]]$design # Don't scale prewhitened data or the matrix will not be sparse
-      }
+      #if(!is_pw) {
+      design_s <- scale(data[[s]]$design, scale = F)
+      #} else {
+      #  design_s <- data[[s]]$design # Don't scale prewhitened data or the matrix will not be sparse
+      #}
     }
     design[[s]] <- design_s #after scaling but before nuisance regression
 
@@ -827,19 +855,119 @@ BayesGLM <- function(
       y_reg <- BOLD_s
       X_reg <- design_s
     }
+    data[[s]]$BOLD <- y_reg
+    data[[s]]$design <- X_reg
+
+    #estimate prewhitening parameters
+    if(do_pw){
+      resids <- nuisance_regression(y_reg, X_reg)
+      AR_est <- pw_estimate(resids, ar_order)
+      AR_coeffs[,,s] <- AR_est$phi
+      AR_resid_var[,s] <- AR_est$sigma_sq
+    }
+  }
+
+  #average prewhitening parameters across sessions
+  if(do_pw){
+    avg_AR <- apply(AR_coeffs, 1:2, mean)
+    avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
+  }
+
+  #smooth prewhitening parameters
+  #TO DO
+
+  #apply prewhitening
+  if(do_pw){
+    # Create the sparse pre-whitening matrix
+    cat("Prewhitening... ")
+    if(is.null(num.threads) | num.threads < 2) {
+      # Initialize the block diagonal covariance matrix
+      template_pw <- Matrix::bandSparse(n = ntime,
+                                        k = 0:(ar_order + 1),
+                                        symmetric = TRUE)
+      template_pw_list <- rep(list(template_pw),V)
+      rows.rm <- numeric()
+      for(v in 1:V) {
+        if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
+        template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
+                                             ntime = ntime,
+                                             AR_var = avg_var[v])
+      }
+    } else {
+      if (!requireNamespace("parallel", quietly = TRUE)) {
+        stop("Prewhitening in parallel requires the `parallel` package. Please install it.", call. = FALSE)
+      }
+      max_threads <- max(parallel::detectCores(), 25)
+      num_threads <- min(max_threads,num.threads)
+      cl <- parallel::makeCluster(num_threads)
+      template_pw_list <-
+        parallel::clusterMap(
+          cl,
+          prewhiten.v,
+          AR_coeffs = split(avg_AR, row(avg_AR)),
+          ntime = ntime,
+          AR_var = avg_var,
+          SIMPLIFY = FALSE
+        )
+      parallel::stopCluster(cl)
+    }
+    cat("done!\n")
+
+    #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
+    sqrtInv_all <- Matrix::bdiag(template_pw_list)
+
+    #apply prewhitening matrix to BOLD and design for each session
+    data <- sapply(data, function(data_s) {
+      #bold_out <- matrix(NA, ntime, V)
+      bold_out <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
+      #bold_out[,mask] <- pw_BOLD
+      all_design <- Matrix::bdiag(rep(list(data_s$design),V))
+      pw_design <- sqrtInv_all %*% all_design
+      return(list(BOLD = bold_out, design = pw_design))
+    }, simplify = F)
+
+
+  #organize data
+  y_all <- c()
+  X_all_list <- NULL
+  result_classical <- vector('list', length=n_sess)
+  for(s in 1:n_sess){
 
     #set up data and design matrix
-    if(!is_pw) {
-      data_org <- organize_data(y_reg, X_reg)
-    } else {
-      data_org <- organize_data_pw(y_reg, X_reg)
-    }
-    y_vec <- data_org$y
-    X_list <- list(data_org$X)
-    names(X_list) <- session_names[s]
+    if(!do_pw) data_s <- organize_data(data[[s]]$BOLD, data[[s]]$design)
+    #if(do_pw) data_org <- organize_data_pw(y_reg, X_reg)
+    if(do_pw) data_s <- data[[s]]
 
-    y_all <- c(y_all, y_vec)
+    y_all <- c(y_all, data_s$BOLD)
+    X_list <- list(data_s$design)
+    names(X_list) <- session_names[s]
     X_all_list <- c(X_all_list, X_list)
+
+    #perform classical GLM after any prewhitening
+    beta_hat_s <- SE_beta_hat_s <- matrix(NA, K, V_all)
+    y_reg <- data_s$BOLD #a vector (grouped by location)
+    X_reg <- data_s$design
+    XTX_inv <- try(Matrix::solve(Matrix::crossprod(data_s$design)))
+    if("try-error" %in% class(XTX_inv)) {
+      stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
+    }
+    coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
+    beta_hat_s[,mask2==TRUE] <- coef_s #RHS is a vector
+    resid_s <- matrix(y_reg - X_reg %*% coef_s, ncol = V)
+
+    # ESTIMATE STANDARD ERRORS OF ESTIIMATES
+    #compute residual SD
+    DOF <- ntime - K - 1
+    var_error <- matrixStats::colVars(resid_s) * (ntime - 1) / DOF #correct for DOF
+    if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
+    sd_error <- sqrt(var_error)
+    #compute SE of betas
+    SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = K)
+    SE_beta_hat_s[,mask2==TRUE] <- SE_beta_s
+
+    result_classical[[s]] <- list(estimates = t(beta_hat_s),
+                            SE_estimates = t(SE_beta_hat_s),
+                            DOF = DOF)
   }
 
   #construct betas and repls objects
@@ -879,7 +1007,6 @@ BayesGLM <- function(
         num.threads=num.threads, verbose=verbose, contrasts = contrasts
       )
     )
-    cat('\n ...... model estimation completed')
   } else {
     #estimate model using INLA
     cat('\n ...... estimating model with INLA')
@@ -889,11 +1016,11 @@ BayesGLM <- function(
         num.threads=num.threads, verbose=verbose, contrasts = contrasts
       )
     )
-    cat('\n ...... model estimation completed')
   }
+  cat('\n ...... model estimation completed')
 
   #extract useful stuff from INLA model result
-  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
+  beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
   theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
   # The mean of the mean beta estimates across sessions
   if(n_sess > 1 & avg_sessions) {
@@ -914,47 +1041,32 @@ BayesGLM <- function(
   Q.theta <- solve(INLA_result$misc$cov.intern)
 
   #construct object to be returned
-  if(return_INLA_result){
-    if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
-    result <- list(INLA_result = INLA_result,
-                   mesh = mesh,
-                   mesh_orig = mesh_orig,
-                   mask = mask,
-                   mask_orig = mask_orig,
-                   design = design,
-                   session_names = session_names,
-                   beta_names = beta_names,
-                   beta_estimates = beta_estimates,
-                   avg_beta_estimates = avg_beta_estimates,
-                   theta_posteriors = theta_posteriors,
-                   mu.theta = mu.theta, #for joint group model
-                   Q.theta = Q.theta, #for joint group model
-                   y = y_all, #for joint group model
-                   X = X_all_list, #for joint group model
-                   #model_data, #temporary
-                   #formula, #temporary
-                   call = match.call())
+  if(!return_INLA_result){
+    INLA_result <- NULL
   } else {
-    result <- list(INLA_result = NULL,
-                   mesh = mesh,
-                   mesh_orig = mesh_orig,
-                   mask = mask,
-                   mask_orig = mask_orig,
-                   design = design,
-                   session_names = session_names,
-                   beta_names = beta_names,
-                   beta_estimates = beta_estimates,
-                   avg_beta_estimates = avg_beta_estimates,
-                   theta_posteriors = theta_posteriors,
-                   mu.theta = mu.theta, #for joint group model
-                   Q.theta = Q.theta, #for joint group model
-                   y = y_all, #for joint group model
-                   X = X_all_list, #for joint group model
-                   #model_data, #temporary
-                   #formula, #temporary
-                   call = match.call())
+    if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
   }
 
+  if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var)
+  if(!do_pw) prewhiten_info <- NULL
+
+  result <- list(INLA_result = INLA_result,
+                 result_classical = result_classical,
+                 mesh = mesh,
+                 mesh_orig = mesh_orig,
+                 mask = mask,
+                 design = design,
+                 session_names = session_names,
+                 beta_names = beta_names,
+                 beta_estimates = beta_estimates,
+                 avg_beta_estimates = avg_beta_estimates,
+                 theta_posteriors = theta_posteriors,
+                 mu.theta = mu.theta, #for joint group model
+                 Q.theta = Q.theta, #for joint group model
+                 y = y_all, #for joint group model
+                 X = X_all_list, #for joint group model
+                 prewhiten_info = prewhiten_info,
+                 call = match.call())
 
   class(result) <- "BayesGLM"
 
