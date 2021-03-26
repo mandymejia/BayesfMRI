@@ -329,6 +329,7 @@ match_input <- function(
 #' @importFrom matrixStats colVars
 #' @return A logical vector indicating valid vertices, or NULL if there were no invalid vertices
 #'
+#' @export
 make_mask <- function(data){
 
   #ID any zero-variance voxels and remove from analysis

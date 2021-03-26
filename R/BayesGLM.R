@@ -369,7 +369,7 @@ BayesGLM_cifti <- function(cifti_fname,
       classicalGLM_left <- BayesGLM_left$result_classical
     }
 
-    if(method=='classical') classicalGLM_left <- classicalGLM(data=session_data,
+    if(GLM_method=='classical') classicalGLM_left <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_left,
                                                        ar_order=ar_order,
                                                        ar_smooth=ar_smooth,
@@ -535,14 +535,16 @@ BayesGLM_cifti <- function(cifti_fname,
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
       if(do_left) {
-        datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
-        maskL <- classicalGLM_left$avg$mask[cortexL_mwall == 1]
-        datL[maskL,] <- classicalGLM_left$avg$estimates[cortexL_mwall == 1,]
+        datL <- classicalGLM_left$avg$estimates[cortexL_mwall==1,]
+        # datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
+        # maskL <- classicalGLM_left$avg$mask[cortexL_mwall == 1]
+        # datL[maskL,] <- classicalGLM_left$avg$estimates[cortexL_mwall == 1,]
       }
       if(do_right) {
-        datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
-        maskR <- classicalGLM_right$avg$mask[cortexR_mwall == 1]
-        datR[maskR,] <- classicalGLM_right$avg$estimates[cortexR_mwall == 1,]
+        datR <- classicalGLM_right$avg$estimates[cortexR_mwall==1,]
+        # datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
+        # maskR <- classicalGLM_right$avg$mask[cortexR_mwall == 1]
+        # datR[maskR,] <- classicalGLM_right$avg$estimates[cortexR_mwall == 1,]
       }
       # Adding the averages to the front of the BayesGLM_cifti object
       classicalGLM_cifti <- c(
@@ -871,7 +873,27 @@ BayesGLM <- function(
   }
 
   #smooth prewhitening parameters
-  #TO DO
+  if(is.null(ar_smooth)) ar_smooth <- 0
+  if(ar_smooth > 0) {
+    surf_smooth <- make_surf(
+      list(
+        pointset = mesh$loc,
+        triangle = mesh$graph$tv
+      )
+    )
+    AR_xif <- ciftiTools:::make_xifti(
+      cortexL = avg_AR,
+      surfL = surf_smooth
+    )
+    AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = ar_smooth))
+    avg_AR <- AR_smoothed$data$cortex_left
+    var_xif <- ciftiTools:::make_xifti(
+      cortexL = avg_var,
+      surfL = surf_smooth
+    )
+    var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = ar_smooth))
+    avg_var <- var_smoothed$data$cortex_left
+  }
 
   #apply prewhitening
   if(do_pw){
@@ -927,24 +949,34 @@ BayesGLM <- function(
   #organize data
   y_all <- c()
   X_all_list <- NULL
-  result_classical <- vector('list', length=n_sess)
-  for(s in 1:n_sess){
+  # Classical GLM
+  num_GLM <- n_sess
+  if(avg_sessions) {
+    num_GLM <- n_sess + 1
+    classical_session_names <- append(session_names,"avg")
+  }
+  result_classical <- vector('list', length=num_GLM)
+  for(s in 1:num_GLM){
+    if(s <= n_sess) {
+      #set up data and design matrix
+      if(!do_pw) data_s <- organize_data(data[[s]]$BOLD, data[[s]]$design)
+      #if(do_pw) data_org <- organize_data_pw(y_reg, X_reg)
+      if(do_pw) data_s <- data[[s]]
 
-    #set up data and design matrix
-    if(!do_pw) data_s <- organize_data(data[[s]]$BOLD, data[[s]]$design)
-    #if(do_pw) data_org <- organize_data_pw(y_reg, X_reg)
-    if(do_pw) data_s <- data[[s]]
-
-    y_all <- c(y_all, data_s$BOLD)
-    X_list <- list(data_s$design)
-    names(X_list) <- session_names[s]
-    X_all_list <- c(X_all_list, X_list)
-
+      y_all <- c(y_all, data_s$BOLD)
+      X_list <- list(data_s$design)
+      names(X_list) <- session_names[s]
+      X_all_list <- c(X_all_list, X_list)
+      y_reg <- data_s$BOLD #a vector (grouped by location)
+      X_reg <- data_s$design
+    }
+    if(s == (n_sess + 1)) {
+      y_reg <- y_all
+      X_reg <- Reduce(rbind, X_all_list)
+    }
     #perform classical GLM after any prewhitening
     beta_hat_s <- SE_beta_hat_s <- matrix(NA, K, V_all)
-    y_reg <- data_s$BOLD #a vector (grouped by location)
-    X_reg <- data_s$design
-    XTX_inv <- try(Matrix::solve(Matrix::crossprod(data_s$design)))
+    XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
     if("try-error" %in% class(XTX_inv)) {
       stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     }
@@ -954,8 +986,8 @@ BayesGLM <- function(
 
     # ESTIMATE STANDARD ERRORS OF ESTIIMATES
     #compute residual SD
-    DOF <- ntime - K - 1
-    var_error <- matrixStats::colVars(resid_s) * (ntime - 1) / DOF #correct for DOF
+    DOF <- length(y_reg)/V - K - 1
+    var_error <- matrixStats::colVars(resid_s) * (length(y_reg)/V - 1) / DOF #correct for DOF
     if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
     sd_error <- sqrt(var_error)
     #compute SE of betas
@@ -965,7 +997,8 @@ BayesGLM <- function(
     result_classical[[s]] <- list(estimates = t(beta_hat_s),
                             SE_estimates = t(SE_beta_hat_s),
                             DOF = DOF)
-  }
+    }
+  names(result_classical) <- classical_session_names
 
   #construct betas and repls objects
   replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
