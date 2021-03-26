@@ -272,7 +272,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n RUNNING MODELS \n')
 
-  #classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
+  classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
   BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
 
   ### FORMAT DESIGN MATRIX
@@ -335,11 +335,6 @@ BayesGLM_cifti <- function(cifti_fname,
       outfile_left <- NULL
     }
 
-    ### TO DO: CONSTRUCT MASK HERE, PASS INTO PREWHITEN_CIFTI, CLASSICALGLM AND BAYESGLM
-    ### IN THOSE FUNCTIONS, ALL THE DATA PROVIDED IN DATA$BOLD MUST BE VALID LOCATIONS. OTHERWISE ERROR.
-    ### THIS WILL PREVENT HAVING TO DEAL WITH MASKING REPEATEDLY
-    ### CONSIDER MAKING MASKING A FUNCTION, SINCE NEEDS TO HAPPEN IN LEFT AND RIGHT HEMISPHERES
-
     # scale_BOLD_left <- scale_BOLD
     # if(prewhiten) {
     #   pw_data_left <- prewhiten_cifti(data = session_data,
@@ -355,7 +350,8 @@ BayesGLM_cifti <- function(cifti_fname,
     # }
 
 
-    if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
+    if(do_Bayesian) {
+      BayesGLM_left <- BayesGLM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts_left,
                                               faces = faces_left,
@@ -370,6 +366,8 @@ BayesGLM_cifti <- function(cifti_fname,
                                               verbose = verbose,
                                               avg_sessions = avg_sessions,
                                               trim_INLA = trim_INLA)
+      classicalGLM_left <- BayesGLM_left$result_classical
+    }
 
     if(method=='classical') classicalGLM_left <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_left,
@@ -701,7 +699,6 @@ BayesGLM <- function(
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
-  # V <- ncol(data[[1]]$BOLD) #number of data locations
   # K <- ncol(data[[1]]$design) #number of tasks
   V <- ncol(data[[1]]$BOLD) #number of data locations
   #is_missing <- is.na(data[[1]]$BOLD[1,])
@@ -921,11 +918,11 @@ BayesGLM <- function(
       #bold_out <- matrix(NA, ntime, V)
       bold_out <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
       #bold_out[,mask] <- pw_BOLD
-      all_design <- Matrix::bdiag(rep(list(data_s$design),V))
+      all_design <- Matrix::bdiag(rep(list(data_s$design),V)) #is this equivalent to organize_data?
       pw_design <- sqrtInv_all %*% all_design
       return(list(BOLD = bold_out, design = pw_design))
     }, simplify = F)
-
+  }
 
   #organize data
   y_all <- c()

@@ -25,12 +25,12 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   n_sess <- length(session_names)
   if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
 
-  is_pw <- !is.matrix(data[[1]]$design) #if prewhitening has been done, design is a large sparse matrix (class dgCMatrix)
-  if(is_pw){
-    if(scale_BOLD | scale_design) warning('If data is prewhitened, scale_BOLD and scale_design should be FALSE. Setting both to FALSE.')
-    scale_BOLD <- FALSE
-    scale_design <- FALSE
-  }
+  # is_pw <- !is.matrix(data[[1]]$design) #if prewhitening has been done, design is a large sparse matrix (class dgCMatrix)
+  # if(is_pw){
+  #   if(scale_BOLD | scale_design) warning('If data is prewhitened, scale_BOLD and scale_design should be FALSE. Setting both to FALSE.')
+  #   scale_BOLD <- FALSE
+  #   scale_design <- FALSE
+  # }
   #check dimensions
   V <- ncol(data[[1]]$BOLD)
   for(s in 1:n_sess){
@@ -38,26 +38,26 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
   }
 
-  #ID any zero-variance voxels and remove from analysis
-  zero_var <- sapply(data, function(x){
-    x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
-    x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
-    vars <- matrixStats::colVars(x$BOLD)
-    return(vars < 1e-6)
-  })
-  zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
-
-  #remove zero var locations from mask
-  if(sum(zero_var) > 0){
-    if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
-    #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
-    #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
-    mask_orig <- mask
-    if(!is.null(mask)) mask[zero_var==TRUE] <- 0
-    if(is.null(mask)) mask <- !zero_var
-  } else {
-    mask_orig <- NULL
-  }
+  # #ID any zero-variance voxels and remove from analysis
+  # zero_var <- sapply(data, function(x){
+  #   x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
+  #   x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
+  #   vars <- matrixStats::colVars(x$BOLD)
+  #   return(vars < 1e-6)
+  # })
+  # zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
+  #
+  # #remove zero var locations from mask
+  # if(sum(zero_var) > 0){
+  #   if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
+  #   #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
+  #   #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
+  #   mask_orig <- mask
+  #   if(!is.null(mask)) mask[zero_var==TRUE] <- 0
+  #   if(is.null(mask)) mask <- !zero_var
+  # } else {
+  #   mask_orig <- NULL
+  # }
 
   #apply mask to data
   if(is.null(mask)){
@@ -78,12 +78,12 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
       if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     }
   }
-  if(is_pw){
-    K <- ncol(data[[1]]$design) / V #number of tasks
-    for(s in 1:n_sess){
-      if(ncol(data[[s]]$design) != K*V) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-    }
-  }
+  # if(is_pw){
+  #   K <- ncol(data[[1]]$design) / V #number of tasks
+  #   for(s in 1:n_sess){
+  #     if(ncol(data[[s]]$design) != K*V) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+  #   }
+  # }
 
   if(avg_sessions) {
     num_GLM <- n_sess + 1
@@ -104,12 +104,13 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
         design_s <- scale_design_mat(data[[s]]$design)
       } else {
         #only center if no prewhitening (prewhitening centers data)
-        if(!is_pw) design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
-        if(is_pw) design_s <- data[[s]]$design
+        #if(!is_pw)
+        design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
+        #if(is_pw) design_s <- data[[s]]$design
       }
       #regress nuisance parameters from BOLD data and design matrix (only for non-pw data, since pw data has already been nuisance regressed)
       do_nuisance <- ('nuisance' %in% names(data[[s]]))
-      if(is_pw & do_nuisance) stop('Prewhitened data should not include nuisance. Contact developer.')
+      #if(is_pw & do_nuisance) stop('Prewhitened data should not include nuisance. Contact developer.')
       if(do_nuisance){
         nuisance_s <- data[[s]]$nuisance
         y_reg <- nuisance_regression(BOLD_s, nuisance_s)
