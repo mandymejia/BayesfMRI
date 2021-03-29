@@ -299,7 +299,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
-  ### LEFT HEMISPHERE
+  ### >> LEFT HEMISPHERE ----
   if(do_left){
 
     cat('\n ... LEFT CORTEX \n')
@@ -377,19 +377,14 @@ BayesGLM_cifti <- function(cifti_fname,
 
   }
 
-  #HERE
-
-
-  ### RIGHT HEMISPHERE
+  ### >> RIGHT HEMISPHERE ----
   if(do_right){
 
     cat('\n ... RIGHT CORTEX \n')
 
     #set up mesh
-    #surf_right <- readGIfTI(surfR_fname)$data
     verts_right <- surf_right$vertices #first surface is used for modeling
     faces_right <- surf_right$faces
-    #if(min(faces_right)==0) faces_right <- faces_right + 1
 
     #set up session list
     session_data <- vector('list', n_sess)
@@ -400,7 +395,11 @@ BayesGLM_cifti <- function(cifti_fname,
       session_data[[ss]] <- sess
     }
 
-    ### FIT GLM
+    ### CHECK FOR FLAT/NA/NaN VERTICES
+
+    mask_right <- make_mask(data = session_data)
+
+    ### FIT GLM(s)
 
     if(!is.null(outfile)) {
       if (endsWith(outfile, ".rds")) {
@@ -412,35 +411,31 @@ BayesGLM_cifti <- function(cifti_fname,
       outfile_right <- NULL
     }
 
-    scale_BOLD_right <- scale_BOLD
-    if(prewhiten) {
-      pw_data_right <- prewhiten_cifti(session_data,
-                                       scale_BOLD = scale_BOLD_right,
-                                       scale_design = FALSE,
-                                       ar_smooth =  ar_smooth,
-                                       ar_order = ar_order,
-                                        hemisphere = 'right',
-                                        cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_left"),
-                                        num.threads = num.threads)
-      scale_BOLD_right <- FALSE #done in prewhitening
-      session_data <- pw_data_right$data
+    if(do_Bayesian) {
+      BayesGLM_right <- BayesGLM(data = session_data,
+                                beta_names = beta_names,
+                                vertices = verts_right,
+                                faces = faces_right,
+                                mask = mask_right,
+                                scale_BOLD = scale_BOLD,
+                                scale_design = FALSE, # done above
+                                ar_order = ar_order,
+                                ar_smooth = ar_smooth,
+                                num.threads = num.threads,
+                                return_INLA_result = return_INLA_result,
+                                outfile = outfile_right,
+                                verbose = verbose,
+                                avg_sessions = avg_sessions,
+                                trim_INLA = trim_INLA)
+      classicalGLM_right <- BayesGLM_right$result_classical
     }
-    if(do_classical) classicalGLM_right <- classicalGLM(data = session_data,
-                                                         scale_BOLD=scale_BOLD_right,
-                                                         scale_design = FALSE) #done above
 
-    if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
-                                               beta_names = beta_names,
-                                               vertices = verts_right,
-                                                faces = faces_right,
-                                                scale_BOLD=scale_BOLD_right,
-                                                scale_design = FALSE, #done above
-                                                num.threads=num.threads,
-                                                return_INLA_result=return_INLA_result,
-                                                outfile = outfile_right,
-                                                verbose=verbose,
-                                                avg_sessions = avg_sessions,
-                                                trim_INLA = trim_INLA)
+    if(GLM_method=='classical') classicalGLM_right <- classicalGLM(data=session_data,
+                                                                  scale_BOLD=scale_BOLD_right,
+                                                                  ar_order=ar_order,
+                                                                  ar_smooth=ar_smooth,
+                                                                  scale_design = FALSE) # done above
+
   }
 
   # ### SUBCORTICAL
