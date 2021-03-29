@@ -378,7 +378,7 @@ prewhiten_do <- function(prewhiten_result,
 
 #' Estimate residual autocorrelation for prewhitening
 #'
-#' @param data Estimated residuals
+#' @param resids Estimated residuals
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @importFrom stats ar.yw
 #'

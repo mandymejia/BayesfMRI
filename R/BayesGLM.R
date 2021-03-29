@@ -370,9 +370,10 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if(GLM_method=='classical') classicalGLM_left <- classicalGLM(data=session_data,
-                                                       scale_BOLD=scale_BOLD_left,
-                                                       ar_order=ar_order,
-                                                       ar_smooth=ar_smooth,
+                                                       scale_BOLD=scale_BOLD,
+                                                       # These will need to be uncommented once the classicalGLM function is complete
+                                                       # ar_order=ar_order,
+                                                       # ar_smooth=ar_smooth,
                                                        scale_design = FALSE) # done above
 
   }
@@ -431,9 +432,10 @@ BayesGLM_cifti <- function(cifti_fname,
     }
 
     if(GLM_method=='classical') classicalGLM_right <- classicalGLM(data=session_data,
-                                                                  scale_BOLD=scale_BOLD_right,
-                                                                  ar_order=ar_order,
-                                                                  ar_smooth=ar_smooth,
+                                                                  scale_BOLD=scale_BOLD,
+                                                                  # These will need to be uncommented once the classicalGLM function is complete
+                                                                  # ar_order=ar_order,
+                                                                  # ar_smooth=ar_smooth,
                                                                   scale_design = FALSE) # done above
 
   }

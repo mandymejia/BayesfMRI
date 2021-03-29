@@ -14,6 +14,8 @@
 #' @importFrom matrixStats colVars
 #' @export
 classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, avg_sessions = TRUE){
+  is_pw <- FALSE # This will need to be fixed
+  mask_orig <- mask # This will also need to be fixed
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   if(!is.list(data)) stop('I expect data to be a list, but it is not')

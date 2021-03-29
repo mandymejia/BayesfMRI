@@ -7,9 +7,9 @@
 pw_estimate(resids, ar_order)
 }
 \arguments{
-\item{ar_order}{Order of the AR used to prewhiten the data at each location}
+\item{resids}{Estimated residuals}
 
-\item{data}{Estimated residuals}
+\item{ar_order}{Order of the AR used to prewhiten the data at each location}
 }
 \value{
 Estimaed AR coefficients and residual variance at every vertex
