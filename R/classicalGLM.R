@@ -50,6 +50,9 @@ classicalGLM <- function(data,
   n_sess <- length(session_names)
   if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
 
+  is_pw <- FALSE # This will need to be fixed
+  mask_orig <- mask # This will also need to be fixed
+
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')

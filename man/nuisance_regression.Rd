@@ -7,9 +7,9 @@
 nuisance_regression(Y, design)
 }
 \arguments{
-\item{Y}{The TxV or VxT data.}
+\item{Y}{The \eqn{T \times V} or \eqn{V \times T} data.}
 
-\item{design}{The TxQ matrix of nuisance regressors.}
+\item{design}{The \eqn{T \times Q} matrix of nuisance regressors.}
 }
 \value{
 The data after nuisance regression.

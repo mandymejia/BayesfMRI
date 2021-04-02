@@ -56,11 +56,15 @@ make_HRFs <- function(onsets, TR, duration, downsample=100){
     for(ii in 1:length(onsets_k)){
       start_ii <- round(onsets_k[ii]*downsample)
       end_ii <- round(onsets_k[ii]*downsample + durations_k[ii]*downsample)
+      if (end_ii > length(stimulus_k)) { 
+        warning("Truncating stimulus for an event ending after the scan.")
+        end_ii <- length(stimulus_k)
+      }
       stimulus_k[start_ii:end_ii] <- 1
     }
 
     # Convolve boxcar with canonical HRF & add to design matrix
-    HRF_k <- convolve(stimulus_k, rev(HRF), type='open')
+    HRF_k <- stats::convolve(stimulus_k, rev(HRF), type='open')
     design[,k] <- HRF_k[inds]
   }
 

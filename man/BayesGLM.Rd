@@ -13,6 +13,8 @@ BayesGLM(
   mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
+  ar_order = 6,
+  ar_smooth = 5,
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
@@ -50,6 +52,14 @@ centered.}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
+
+\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
+should be a number indicating the order of the autoregressive model to use
+for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
+
+\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+to not do any smoothing. Default: \code{5}.}
 
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}
