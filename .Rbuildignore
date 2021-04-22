@@ -11,6 +11,7 @@
 ^vignettes/BayesfMRI_HCP\.Rmd$
 ^R/simulate_slice_data_1\.R$
 ^R/EM_functions\.R$
+^R/EM_utils\.R$
 ^R/id_activations_2means\.R$
 ^R/classicalGLM_pw\.R$
 ^vignettes/BayesfMRI_simulation\.Rmd$
