@@ -391,6 +391,8 @@ beta.posterior.thetasamp <- function(theta,
   beta.samples <- NULL
   #~5 seconds per subject with PARDISO
   # print('Looping over subjects or sessions')
+  num_sessions <- 1
+  Q_mm <- Q
   for(mm in 1:M){
     if(nrow(Q) != nrow(Xcros[[mm]])) {
       num_sessions <- nrow(Xcros[[mm]]) / nrow(Q)
