@@ -50,8 +50,8 @@ classicalGLM <- function(data,
   n_sess <- length(session_names)
   if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
 
-  is_pw <- FALSE # This will need to be fixed
-  mask_orig <- mask # This will also need to be fixed
+  is_pw <- FALSE # This will need to be removed throughout
+  mask_orig <- mask # This will also need to be removed throughout
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
@@ -154,59 +154,30 @@ classicalGLM <- function(data,
   if(is.null(ar_smooth)) ar_smooth <- 0
   if(ar_smooth > 0){
 
-      #check that only mesh OR vertices+faces supplied
-      has_mesh <- !is.null(mesh)
-      has_verts_faces <- !is.null(vertices) & !is.null(faces)
-      has_howmany <- has_mesh + has_verts_faces
-      if(has_howmany != 1) stop('Must supply either mesh or vertices and faces for AR smoothing.')
+    #check that only mesh OR vertices+faces supplied
+    has_mesh <- !is.null(mesh)
+    has_verts_faces <- !is.null(vertices) & !is.null(faces)
+    has_howmany <- has_mesh + has_verts_faces
+    if(has_howmany != 1) stop('Must supply either mesh or vertices and faces for AR smoothing.')
 
+    #if mesh provided, grab vertices and faces
+    if(has_mesh){
+      vertices <- mesh$loc
+      faces <- mesh$graph$tv
+    }
 
-      #HERE
+    #smooth prewhitening parameters
+    if(is.null(ar_smooth)) ar_smooth <- 0
+    if(ar_smooth > 0) {
+      AR_smoothed_list <- pw_smooth(vertices=vertices,
+                                    faces=faces,
+                                    AR=avg_AR,
+                                    var=avg_var,
+                                    FWHM=ar_smooth)
+      avg_AR <- AR_smoothed_list$AR
+      avg_var <- AR_smoothed_list$var
+    }
   }
-
-
-
-  #####
-
-
-  # #ID any zero-variance voxels and remove from analysis
-  # zero_var <- sapply(data, function(x){
-  #   x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall locations coded as NA
-  #   x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall locations coded as NaN
-  #   vars <- matrixStats::colVars(x$BOLD)
-  #   return(vars < 1e-6)
-  # })
-  # zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
-  #
-  # #remove zero var locations from mask
-  # if(sum(zero_var) > 0){
-  #   if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
-  #   #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
-  #   #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
-  #   mask_orig <- mask
-  #   if(!is.null(mask)) mask[zero_var==TRUE] <- 0
-  #   if(is.null(mask)) mask <- !zero_var
-  # } else {
-  #   mask_orig <- NULL
-  # }
-
-  #apply mask to data
-  if(is.null(mask)){
-    mask_use <- rep(TRUE, V)
-  } else {
-    mask_use <- as.logical(mask)
-  }
-  V_all <- length(mask_use)
-  V <- sum(mask_use)
-  for(s in 1:n_sess){
-    data[[s]]$BOLD <- data[[s]]$BOLD[,mask_use]
-  }
-
-  #check dimensions
-  for(s in 1:n_sess){
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-  }
-
 
   if(avg_sessions) {
     num_GLM <- n_sess + 1
@@ -215,72 +186,61 @@ classicalGLM <- function(data,
   if(!avg_sessions) num_GLM <- n_sess
   GLM_result <- vector('list', length=num_GLM)
   names(GLM_result) <- session_names
-  if(avg_sessions){
-    y_reg_all <- X_reg_all <- NULL
-  }
-  for(s in 1:num_GLM){
-    if(s <= n_sess){
-      #scale data to represent % signal change (or just center to remove baseline if scale=FALSE)
-      BOLD_s <- data[[s]]$BOLD #[,!is_missing]
-      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
-      if(scale_design) {
-        design_s <- scale_design_mat(data[[s]]$design)
-      } else {
-        #only center if no prewhitening (prewhitening centers data)
-        #if(!is_pw)
-        design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
-        #if(is_pw) design_s <- data[[s]]$design
+
+
+  #If not prewhitening, do matrix operations to analyze all vertices simultaneously
+  if(!do_pw){
+
+    if(avg_sessions) y_reg_all <- X_reg_all <- NULL
+
+    #if analyzing a session
+    for(s in 1:num_GLM){
+      if(s <= n_sess){
+        y_reg <- data[[s]]$BOLD
+        X_reg <- data[[s]]$design
+        if(avg_sessions){
+          y_reg_all <- rbind(y_reg_all, y_reg)
+          X_reg_all <- rbind(X_reg_all, X_reg)
+        }
       }
-      #regress nuisance parameters from BOLD data and design matrix (only for non-pw data, since pw data has already been nuisance regressed)
-      do_nuisance <- ('nuisance' %in% names(data[[s]]))
-      #if(is_pw & do_nuisance) stop('Prewhitened data should not include nuisance. Contact developer.')
-      if(do_nuisance){
-        nuisance_s <- data[[s]]$nuisance
-        y_reg <- nuisance_regression(BOLD_s, nuisance_s)
-        X_reg <- nuisance_regression(design_s, nuisance_s)
-      } else {
-        y_reg <- BOLD_s
-        X_reg <- design_s
-      }
-      if(avg_sessions){
-        y_reg_all <- cbind(y_reg_all, y_reg)
-        X_reg_all <- rbind(X_reg_all, X_reg)
-      }
-    }
-    #for average, analyze time-concatenated data and design
-    if(s == n_sess + 1){
-      y_reg <- y_reg_all
-      X_reg <- X_reg_all
-    }
-    # ESTIMATE MODEL COEFFICIENTS
-    beta_hat_s <- SE_beta_hat_s <- matrix(NA, K, V_all)
-    if(is_pw){
-      y_reg <- c(y_reg) #make y a vector (grouped by location)
-      XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
-      if("try-error" %in% class(XTX_inv)) {
-        stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
-      }
-      coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
-      beta_hat_s[,mask_use==TRUE] <- coef_s #RHS is a vector
-      resid_s <- matrix(y_reg - X_reg %*% coef_s, ncol = V)
-    }
-    if(!is_pw){
+      #for average, analyze time-concatenated data and design
+      if(s == n_sess + 1){ y_reg <- y_reg_all; X_reg <- X_reg_all }
+      ntime_s <- nrow(X_reg)
+
+      # ESTIMATE MODEL COEFFICIENTS
+      beta_hat_s <- SE_beta_hat_s <- matrix(NA, K, V_all)
       XTX_inv <- try(solve(t(X_reg) %*% X_reg))
       if("try-error" %in% class(XTX_inv)) stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
       coef_s <- XTX_inv %*% t(X_reg) %*% y_reg
-      beta_hat_s[,mask_use==TRUE] <- coef_s   #RHS is a matrix
+      beta_hat_s[,mask==TRUE] <- coef_s   #RHS is a matrix
       resid_s <- y_reg - X_reg %*% coef_s
+
+      # ESTIMATE STANDARD ERRORS OF ESTIIMATES
+      #compute residual SD
+      DOF <- ntime_s - K - 1
+      var_error <- matrixStats::colVars(resid_s) * (ntime_s - 1) / DOF #correct for DOF
+      #if(is_pw) var_error <- rep(mean(var_error), length(var_error))
+      sd_error <- sqrt(var_error)
+      #compute SE of betas
+      #if(is_pw) SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = K)
+      #if(!is_pw)
+      SE_beta_s <- matrix(sqrt(diag(XTX_inv)), nrow=K, ncol=V) * matrix(sd_error, nrow=K, ncol=V, byrow = TRUE)
+      SE_beta_hat_s[,mask==TRUE] <- SE_beta_s
     }
-    # ESTIMATE STANDARD ERRORS OF ESTIIMATES
-    #compute residual SD
-    DOF <- ntime - K - 1
-    var_error <- matrixStats::colVars(resid_s) * (ntime - 1) / DOF #correct for DOF
-    if(is_pw) var_error <- rep(mean(var_error), length(var_error))
-    sd_error <- sqrt(var_error)
-    #compute SE of betas
-    if(is_pw) SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = K)
-    if(!is_pw) SE_beta_s <- matrix(sqrt(diag(XTX_inv)), nrow=K, ncol=V) * matrix(sd_error, nrow=K, ncol=V, byrow = TRUE)
-    SE_beta_hat_s[,mask_use==TRUE] <- SE_beta_s
+  }
+
+  #HERE ----
+
+  if(do_pw){
+
+    #loop over voxels, do prewhitening, compute beta-hat and SE-beta-hat
+    #do concatenation for averaging over sessions within each voxel
+
+  }
+
+
+
+
 
     GLM_result[[s]] <- list(estimates = t(beta_hat_s),
                             SE_estimates = t(SE_beta_hat_s),

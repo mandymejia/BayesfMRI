@@ -399,3 +399,51 @@ pw_estimate <- function(resids, ar_order){
   return(list(phi = AR_coeffs, sigma_sq = AR_resid_var))
 
 }
+
+
+
+#' Smooth AR coefficients and white noise variance
+#'
+#' @inheritParams vertices_Param
+#' @inheritParams faces_Param
+#' @param AR A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order
+#' @param var A vector length V containing the white noise variance estimates from the AR model
+#' @param FWHM FWHM parameter for smoothing. Remember that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+#'  to not do any smoothing. Default: \code{5}.#'
+#'
+#' @importFrom ciftiTools smooth_cifti make_surf
+#'
+#' @return Smoothed AR coefficients and residual variance at every vertex
+pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
+
+  V <- nrow(vertices)
+  V1 <- nrow(AR)
+  V2 <- length(var)
+  if(V != V1) stop('Number of rows in AR must match number of vertices')
+  if(V != V2) stop('Length of var must match number of vertices')
+
+  surf_smooth <- make_surf(
+    list(
+      pointset = vertices,
+      triangle = faces
+    )
+  )
+  AR_xif <- ciftiTools:::make_xifti(
+    cortexL = AR,
+    surfL = surf_smooth
+  )
+  AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
+  AR_smoothed <- AR_smoothed$data$cortex_left
+
+  var_xif <- ciftiTools:::make_xifti(
+    cortexL = var,
+    surfL = surf_smooth
+  )
+  var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
+  var_smoothed <- var_smoothed$data$cortex_left
+
+  return(list(AR = AR_smoothed, var = var_smoothed))
+
+}
+
