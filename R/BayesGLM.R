@@ -636,8 +636,8 @@ BayesGLM_cifti <- function(cifti_fname,
 #'  vertex is to be included.
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
-#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' 
-#' for the classical GLM only, or 'both' to return both classical and Bayesian estimates 
+#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical'
+#' for the classical GLM only, or 'both' to return both classical and Bayesian estimates
 #' of task activation. Currently, classical GLM results are always returned.
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
@@ -712,7 +712,7 @@ BayesGLM <- function(
     has_mesh <- !is.null(mesh)
     has_verts_faces <- !is.null(vertices) & !is.null(faces)
     has_howmany <- has_mesh + has_verts_faces
-    if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')    
+    if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')
   } else {
     mesh <- mesh_orig <- NULL
   }
@@ -752,8 +752,8 @@ BayesGLM <- function(
   }
 
   if(need_mesh){
-    if(is.null(mesh)) mesh <- make_mesh(vertices, faces) 
-  }   
+    if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
+  }
   #apply mask to mesh and data
   mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
   if(is.null(mask)){
@@ -768,8 +768,8 @@ BayesGLM <- function(
       mesh$idx$loc <- mesh$idx$loc[mask2]
     }
     #apply (possibly updated) mask to data
-    for(s in 1:n_sess){ data[[s]]$BOLD <- data[[s]]$BOLD[,mask2] }
-  } 
+    for(s in 1:n_sess){ data[[s]]$BOLD <- data[[s]]$BOLD[,mask2==TRUE] }
+  }
   V <- sum(mask2)
   V_all <- length(mask2)
 
@@ -899,9 +899,10 @@ BayesGLM <- function(
   X_all_list <- NULL
   # Classical GLM
   num_GLM <- n_sess
+  classical_session_names <- session_names
   if(avg_sessions) {
     num_GLM <- n_sess + 1
-    classical_session_names <- append(session_names,"avg")
+    classical_session_names <- append(classical_session_names,"avg")
   }
   result_classical <- vector('list', length=num_GLM)
   for(s in 1:num_GLM){
@@ -1029,14 +1030,11 @@ BayesGLM <- function(
     } else {
       if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
     }
-
   }
-
-
 
   if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var)
   if(!do_pw) prewhiten_info <- NULL
-  if(!do_Bayesian) INLA_result <- beta_estimates <- theta_posteriors <- avg_beta_estimates <- mu.theta <- Q.theta <- NULL
+  if(!do_Bayesian) INLA_result <- beta_estimates <- theta_posteriors <- avg_beta_estimates <- mu.theta <- Q.theta <- y_all <- X_all_list <- NULL
 
   result <- list(INLA_result = INLA_result,
                  result_classical = result_classical,
