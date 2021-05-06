@@ -12,6 +12,7 @@
 ^R/EM_functions\.R$
 ^R/id_activations_2means\.R$
 ^R/classicalGLM_pw\.R$
+^R/BayesGLM_cifti\.R$
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
