@@ -46,7 +46,7 @@ BayesGLMEM <- function(data,
                        mask = NULL,
                        scale_BOLD = TRUE,
                        scale_design = TRUE,
-                       EM_method = "joint",
+                       EM_method = "separate",
                        use_SQUAREM = TRUE,
                        tol = 1e-3,
                        pct_change_limit = 1,
@@ -76,11 +76,21 @@ BayesGLMEM <- function(data,
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
   V <- ncol(data[[1]]$BOLD) #number of data locations
-  K <- ncol(data[[1]]$design) #number of tasks
+  is_pw <- nrow(data[[1]]$design) == prod(dim(data[[1]]$BOLD))
+  if(is_pw) {
+    K <- ncol(data[[1]]$design) / V # number of tasks
+  } else {
+    K <- ncol(data[[1]]$design) #number of tasks
+  }
   for(s in 1:n_sess){
     if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    if(is_pw) {
+      if(ncol(data[[s]]$design) / V != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    } else {
+      if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    }
+
   }
 
   if(is.null(outfile)){
