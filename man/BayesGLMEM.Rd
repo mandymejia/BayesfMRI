@@ -6,6 +6,7 @@
 \usage{
 BayesGLMEM(
   data,
+  beta_names = NULL,
   vertices = NULL,
   faces = NULL,
   mesh = NULL,
@@ -14,8 +15,7 @@ BayesGLMEM(
   scale_design = TRUE,
   EM_method = "separate",
   use_SQUAREM = TRUE,
-  tol = 0.001,
-  pct_change_limit = 1,
+  tol = NULL,
   num.threads = 1,
   outfile = NULL,
   verbose = FALSE
@@ -26,6 +26,8 @@ BayesGLMEM(
 BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
 for more details.
 List element names represent session names.}
+
+\item{beta_names}{(Optional) Names of tasks represented in design matrix}
 
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
 coordinates at which a given vertex in the mesh is located. \eqn{V} is the
@@ -54,13 +56,10 @@ should share hyperparameter values.}
 \item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
 convergence?}
 
-\item{tol}{A small, positive scalar that determines when iterations should be
-terminated.  Default is 1e-3. This is used only if \code{use_SQUAREM} is
-\code{TRUE}.}
-
-\item{pct_change_limit}{The numeric threshold for the percent
-(NOT probability) change below which the EM algorithm will stop updates
-(default = 1). This is used only if \code{use_SQUAREM} is \code{FALSE}.}
+\item{tol}{If use_SQUAREM == TRUE, an absolute change limit for
+when the EM algorithm should be stopped (Default = 1e-3). If use_SQUAREM ==
+FALSE, a percent change limit for when the EM algorithm should be stopped
+(Default = 1). A value of NULL will result in the default value being used.}
 
 \item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}

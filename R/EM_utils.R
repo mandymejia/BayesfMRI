@@ -6,10 +6,11 @@
 #' @param Psi a conversion matrix (N by V) (or N by n)
 #' @param K number of covariates
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
+#' @param num.threads In this function for compatibility with SQUAREM
 #'
 #' @return a vector with the same length as \code{theta}, the EM updates
 #' @keywords internal
-GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
+GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1) {
   Q_k <- mapply(BayesfMRI:::spde_Q_phi, kappa2 = theta[1], phi = theta[2], MoreArgs = list(spde = spde), SIMPLIFY = F)
   Q_new <- Matrix::bdiag(rep(Q_k,K))
   Sig_inv <- Q_new + A/theta[3]
@@ -41,67 +42,6 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A) {
                 Matrix::crossprod(mu,Q_tilde%*%mu))@x
   phi_new <- Tr_QEww / (4*pi*spde$n.spde*K)
   return(c(kappa2_new,phi_new,sigma2_new))
-}
-
-EM_update <-
-  function(theta,
-           spde,
-           Phi,
-           K,
-           A,
-           model_data,
-           pct_tol,
-           EM_method,
-           use_SQUAREM) {
-    if(EM_method == "joint") em_fn <- GLMEM_fixptjoint
-    if(EM_method == "separate") em_fn <- GLMEM_fixptseparate
-    if(use_SQUAREM) {
-      squareem_output <-
-        squarem(
-          par = theta,
-          fixptfn = GLMEM_fixptjoint,
-          objfn = GLMEM_objfn,
-          control = list(tol = tol, trace = verbose),
-          spde = spde,
-          model_data = model_data,
-          Psi = Psi,
-          K = K,
-          A = A
-        )
-      theta_new <- squareem_output$par
-      kappa2_new <- theta_new[1]
-      phi_new <- theta_new[2]
-      sigma2_new <- theta_new[3]
-    } else {
-      step <- 1
-      max_pct_change <- Inf
-      while(max_pct_change > pct_change_limit) {
-        theta_new <-
-          GLMEM_fixptjoint(
-            theta = theta,
-            spde = spde,
-            model_data = model_data,
-            Psi = Psi,
-            K = K,
-            A = A
-          )
-        kappa2_new <- theta_new[1]
-        phi_new <- theta_new[2]
-        sigma2_new <- theta_new[3]
-        sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
-        phi_pct_change <- 100*abs((phi_new - phi) / phi)
-        kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
-        max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
-        if(verbose) {
-          cat("Step",step, "kappa^2 (%change) =",kappa2_new,"(",kappa2_pct_change,")", "phi (%change) =", phi_new, "(", phi_pct_change,")", "sigma^2 (%change) =",sigma2_new,"(",sigma2_pct_change,")","\n")
-        }
-        kappa2 <- kappa2_new
-        phi <- phi_new
-        sigma2 <- sigma2_new
-        theta <- theta_new
-        step <- step+1
-      }
-    }
 }
 
 #' Fixed point function for the joint BayesGLMEM update algorithm

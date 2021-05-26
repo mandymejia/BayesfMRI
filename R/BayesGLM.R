@@ -113,12 +113,14 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE){
 
-  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
+#  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
+  GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
+  do_EM <- (GLM_method %in% c('all','EM'))
 
-  check_BayesGLM(require_PARDISO=do_Bayesian)
+  check_BayesGLM(require_PARDISO=(do_Bayesian|do_EM))
 
   avail_cores <- parallel::detectCores()
   if(avail_cores < 2) {
@@ -133,9 +135,9 @@ BayesGLM_cifti <- function(cifti_fname,
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-  do_left <- ('left' %in% brainstructures)
-  do_right <- ('right' %in% brainstructures)
-  do_sub <- FALSE
+#   do_left <- ('left' %in% brainstructures)
+#   do_right <- ('right' %in% brainstructures)
+#   do_sub <- FALSE
   #do_sub <- ('subcortical' %in% brainstructures)
   if(!is.null(onsets)){
     #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
@@ -173,8 +175,10 @@ BayesGLM_cifti <- function(cifti_fname,
   ar_order <- as.numeric(ar_order)
   prewhiten <- (ar_order > 0)
 
-  if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
+  # if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
+  # if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
+if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')if('right' %in% brainstructures & is.null(surfR_fname)) stop('surfR_fname must be provided if brainstructures includes "right"')
+
   if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
   if(!is.null(onsets) & is.null(TR)) stop('Please provide TR if onsets provided')
   # if(do_sub){
@@ -201,55 +205,84 @@ BayesGLM_cifti <- function(cifti_fname,
   cat('\n SETTING UP DATA \n')
 
   ### For each session, separate the CIFTI data into left/right/sub and read in files
-  if(do_left) cifti_left <- vector('list', n_sess)
-  if(do_right) cifti_right <- vector('list', n_sess)
+  # if(do_left) cifti_left <- vector('list', n_sess)
+  # if(do_right) cifti_right <- vector('list', n_sess)
   #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
 
-  if(is.null(design)) {
-    make_design <- TRUE
-    design <- vector('list', length=n_sess)
-  }
+  # if(is.null(design)) {
+  #   make_design <- TRUE
+  #   design <- vector('list', length=n_sess)
+  # }
 
-  for(ss in 1:n_sess){
+  # for(ss in 1:n_sess){
 
-    cat(paste0('    Reading in data for session ', ss,'\n'))
+  #   cat(paste0('    Reading in data for session ', ss,'\n'))
 
-    if(ss==1){
+  #   if(ss==1){
+  #     cifti_ss <- read_cifti(
+  #       cifti_fname[ss],
+  #       surfL_fname=surfL_fname, surfR_fname=surfR_fname,
+  #       brainstructures=brainstructures,
+  #       resamp_res=resamp_res
+  #     )
+  #     if(do_left) surf_left <- cifti_ss$surf$cortex_left
+  #     if(do_right) surf_right <- cifti_ss$surf$cortex_right
+  #   } else {
+  #     cifti_ss <- read_cifti(
+  #       cifti_fname[ss],
+  #       brainstructures=brainstructures,
+  #       resamp_res=resamp_res
+  #     )
+  #   }
+
+  #   if(do_left) {
+  #     cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
+  #     cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
+  #     ntime <- ncol(cifti_left[[ss]])
+  #   }
+  #   if(do_right) {
+  #     cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
+  #     cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
+  #     ntime <- ncol(cifti_right[[ss]])
+  #   }
+  #   #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
+  #   #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
+
+  #   if(make_design){
+  #     cat(paste0('    Constructing design matrix for session ', ss, '\n'))
+  #     design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+  #   }
+
+  # }
+  cat("READING IN CIFTI DATA \n")
+  cifti_data <- sapply(brainstructures, function(each_hem) {
+    sapply(1:n_sess, function(ss){
       cifti_ss <- read_cifti(
         cifti_fname[ss],
         surfL_fname=surfL_fname, surfR_fname=surfR_fname,
         brainstructures=brainstructures,
         resamp_res=resamp_res
       )
-      if(do_left) surf_left <- cifti_ss$surf$cortex_left
-      if(do_right) surf_right <- cifti_ss$surf$cortex_right
-    } else {
-      cifti_ss <- read_cifti(
-        cifti_fname[ss],
-        brainstructures=brainstructures,
-        resamp_res=resamp_res
-      )
-    }
+      mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[each_hem]]
+      cdata <- cifti_ss$data[[paste0("cortex_",each_hem)]]
+      cifti_out <- matrix(NA,
+                          nrow = length(mwall_mask),
+                          ncol=ncol(cdata))
+      cifti_out[mwall_mask,] <- cdata
+      return(list(
+        data = cifti_out,
+        surf = cifti_ss$surf[[paste0("cortex_", each_hem)]],
+        ntime = ncol(cdata),
+        cifti = cifti_ss
+      ))
+    }, simplify = F)
+  }, simplify = F)
+  
+  ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
+  
+  cat("MAKING DESIGN MATRICES \n")
+  design <- mapply(make_HRFs, onsets, TR = TR, duration = ntimes[[1]], SIMPLIFY = F)
 
-    if(do_left) {
-      cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
-      cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
-      ntime <- ncol(cifti_left[[ss]])
-    }
-    if(do_right) {
-      cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
-      cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
-      ntime <- ncol(cifti_right[[ss]])
-    }
-    #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
-    #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
-
-    if(make_design){
-      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
-    }
-
-  }
   # #check that labels are the same across all sessions (subcortical)
   # if(do_sub) {
   #   if(n_sess > 1) {
@@ -273,17 +306,22 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n RUNNING MODELS \n')
 
-  classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
-  BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
+  # classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
+  # BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
+  classicalGLM_results <- list(left=NULL,right=NULL,vol=NULL)
+  BayesGLM_results <- list(left=NULL,right=NULL,vol=NULL)
+  GLMEM_results <- list(left=NULL, right=NULL,vol=NULL)
 
   ### FORMAT DESIGN MATRIX
-  for(ss in 1:n_sess){
-    if(scale_design){
-      design[[ss]] <- scale_design_mat(design[[ss]])
-    } else {
-      design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
-    }
-  }
+  # for(ss in 1:n_sess){
+  #   if(scale_design){
+  #     design[[ss]] <- scale_design_mat(design[[ss]])
+  #   } else {
+  #     design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
+  #   }
+  # }
+  if(scale_design) design <- sapply(design, scale_design_mat, simplify = F)
+  if(!scale_design) design <- sapply(design, scale, scale=F, simplify = F)
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
   for(ss in 1:n_sess){
@@ -300,141 +338,62 @@ BayesGLM_cifti <- function(cifti_fname,
 
   #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
-  ### LEFT HEMISPHERE
-  if(do_left){
-
-    cat('\n ... LEFT CORTEX \n')
-
-    #set up mesh
-    #surf_left <- readGIfTI(surfL_fname)$data
-    verts_left <- surf_left$vertices #first surface is used for modeling
-    faces_left <- surf_left$faces
-    #if(min(faces_left)==0) faces_left <- faces_left + 1
-
+  # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
+  for(each_hem in brainstructures) {
+    cat("\n ...",toupper(each_hem),"CORTEX \n")
+    verts <- cifti_data[[each_hem]][[1]]$surf$vertices
+    faces <- cifti_data[[each_hem]][[1]]$surf$faces
+  
     #set up session list
     session_data <- vector('list', n_sess)
     names(session_data) <- session_names
     for(ss in 1:n_sess){
-      sess <- list(BOLD = t(cifti_left[[ss]]), design=design[[ss]])
+      sess <- list(BOLD = t(cifti_data[[each_hem]][[ss]]$data), design=design[[ss]])
       if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
       session_data[[ss]] <- sess
     }
-
-    ### FIT GLM(s)
-
+  
     if(!is.null(outfile)) {
       if (endsWith(outfile, ".rds")) {
-        outfile_left <- gsub(".rds$", "_left.rds", outfile)
+        outfile_name <- gsub(".rds$", paste0("_",each_hem,".rds"), outfile)
       } else {
-        outfile_left <- paste0(outfile, "_left.rds")
+        outfile_name <- paste0(outfile, "_",each_hem,".rds")
       }
     } else {
-      outfile_left <- NULL
+      outfile_name <- NULL
     }
-
-    ### TO DO: CONSTRUCT MASK HERE, PASS INTO PREWHITEN_CIFTI, CLASSICALGLM AND BAYESGLM
-    ### IN THOSE FUNCTIONS, ALL THE DATA PROVIDED IN DATA$BOLD MUST BE VALID LOCATIONS. OTHERWISE ERROR.
-    ### THIS WILL PREVENT HAVING TO DEAL WITH MASKING REPEATEDLY
-    ### CONSIDER MAKING MASKING A FUNCTION, SINCE NEEDS TO HAPPEN IN LEFT AND RIGHT HEMISPHERES
-
-    scale_BOLD_left <- scale_BOLD
-    if(prewhiten) {
-      pw_data_left <- prewhiten_cifti(data = session_data,
-                                      scale_BOLD = scale_BOLD_left,
-                                      scale_design = FALSE,
-                                      ar_order = ar_order,
-                                      ar_smooth =  ar_smooth,
-                                      hemisphere = 'left',
-                                      cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_right"),
-                                      num.threads = num.threads)
-      scale_BOLD_left <- FALSE # done in prewhitening
-      session_data <- pw_data_left$data
-    }
-
-    if(do_classical) classicalGLM_left <- classicalGLM(data=session_data,
-                                                         scale_BOLD=scale_BOLD_left,
-                                                         scale_design = FALSE) # done above
-
-    if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
+  
+    scale_BOLD_hem <- scale_BOLD
+    other_hem <- grep(each_hem, c("left","right"), value = T, invert = T)
+    if(do_classical) classicalGLM_out <- classicalGLM(data=session_data,
+                                                       scale_BOLD=scale_BOLD_hem,
+                                                       scale_design = FALSE) # done above
+    if(do_Bayesian) BayesGLM_out <- BayesGLM(data = session_data,
                                               beta_names = beta_names,
-                                              vertices = verts_left,
-                                              faces = faces_left,
-                                              scale_BOLD = scale_BOLD_left,
+                                              vertices = verts,
+                                              faces = faces,
+                                              scale_BOLD = scale_BOLD_hem,
                                               scale_design = FALSE, # done above
                                               num.threads = num.threads,
                                               return_INLA_result = return_INLA_result,
-                                              outfile = outfile_left,
+                                              outfile = outfile_name,
                                               verbose = verbose,
                                               avg_sessions = avg_sessions,
                                               trim_INLA = trim_INLA)
-
+    if(do_EM) EM_out <- BayesGLMEM(data = session_data,
+                                   vertices = verts,
+                                   faces = faces,
+                                   scale_BOLD = scale_BOLD_hem,
+                                   scale_design = FALSE,
+                                   EM_method = "separate",
+                                   use_SQUAREM = TRUE,
+                                   tol = 1e-3,
+                                   num.threads = num.threads,
+                                   outfile = outfile_name,
+                                   verbose = verbose)
   }
 
-
-  ### RIGHT HEMISPHERE
-  if(do_right){
-
-    cat('\n ... RIGHT CORTEX \n')
-
-    #set up mesh
-    #surf_right <- readGIfTI(surfR_fname)$data
-    verts_right <- surf_right$vertices #first surface is used for modeling
-    faces_right <- surf_right$faces
-    #if(min(faces_right)==0) faces_right <- faces_right + 1
-
-    #set up session list
-    session_data <- vector('list', n_sess)
-    names(session_data) <- session_names
-    for(ss in 1:n_sess){
-      sess <- list(BOLD = t(cifti_right[[ss]]), design=design[[ss]])
-      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
-      session_data[[ss]] <- sess
-    }
-
-    ### FIT GLM
-
-    if(!is.null(outfile)) {
-      if (endsWith(outfile, ".rds")) {
-        outfile_right <- gsub(".rds$", "_right.rds", outfile)
-      } else {
-        outfile_right <- paste0(outfile, "_right.rds")
-      }
-    } else {
-      outfile_right <- NULL
-    }
-
-    scale_BOLD_right <- scale_BOLD
-    if(prewhiten) {
-      pw_data_right <- prewhiten_cifti(session_data,
-                                       scale_BOLD = scale_BOLD_right,
-                                       scale_design = FALSE,
-                                       ar_smooth =  ar_smooth,
-                                       ar_order = ar_order,
-                                        hemisphere = 'right',
-                                        cifti_data = ciftiTools::remove_xifti(cifti_ss, "cortex_left"),
-                                        num.threads = num.threads)
-      scale_BOLD_right <- FALSE #done in prewhitening
-      session_data <- pw_data_right$data
-    }
-    if(do_classical) classicalGLM_right <- classicalGLM(data = session_data,
-                                                         scale_BOLD=scale_BOLD_right,
-                                                         scale_design = FALSE) #done above
-
-    if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
-                                               beta_names = beta_names,
-                                               vertices = verts_right,
-                                                faces = faces_right,
-                                                scale_BOLD=scale_BOLD_right,
-                                                scale_design = FALSE, #done above
-                                                num.threads=num.threads,
-                                                return_INLA_result=return_INLA_result,
-                                                outfile = outfile_right,
-                                                verbose=verbose,
-                                                avg_sessions = avg_sessions,
-                                                trim_INLA = trim_INLA)
-  }
-
-  # ### SUBCORTICAL
+    # ### SUBCORTICAL
   # if(do_sub){
   #
   #   cat('\n ... SUBCORTICAL \n')

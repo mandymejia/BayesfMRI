@@ -4,7 +4,7 @@
 \alias{GLMEM_fixptjoint}
 \title{Fixed point function for the joint BayesGLMEM update algorithm}
 \usage{
-GLMEM_fixptjoint(theta, spde, model_data, Psi, K, A)
+GLMEM_fixptjoint(theta, spde, model_data, Psi, K, A, num.threads = 1)
 }
 \arguments{
 \item{theta}{a vector containing kappa2, phi, and sigma2, in that order}
@@ -18,6 +18,8 @@ GLMEM_fixptjoint(theta, spde, model_data, Psi, K, A)
 \item{K}{number of covariates}
 
 \item{A}{The value for Matrix::crossprod(X\%*\%Psi) (saves time on computation)}
+
+\item{num.threads}{In this function for compatibility with SQUAREM}
 }
 \value{
 a vector with the same length as \code{theta}, the EM updates
