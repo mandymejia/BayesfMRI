@@ -111,8 +111,10 @@ BayesGLM_cifti <- function(cifti_fname,
                      outfile=NULL,
                      return_INLA_result=FALSE,
                      avg_sessions = TRUE,
-                     trim_INLA = TRUE){
-
+                     trim_INLA = TRUE,
+                     keep = FALSE,
+                     twostage = FALSE)
+{
   GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
@@ -366,7 +368,9 @@ BayesGLM_cifti <- function(cifti_fname,
                                               outfile = outfile_left,
                                               verbose = verbose,
                                               avg_sessions = avg_sessions,
-                                              trim_INLA = trim_INLA)
+                                              trim_INLA = trim_INLA,
+                                              keep = keep,
+                                              twostage = twostage)
 
   }
 
@@ -431,7 +435,9 @@ BayesGLM_cifti <- function(cifti_fname,
                                                 outfile = outfile_right,
                                                 verbose=verbose,
                                                 avg_sessions = avg_sessions,
-                                                trim_INLA = trim_INLA)
+                                                trim_INLA = trim_INLA,
+                                                keep = keep,
+                                                twostage = twostage)
   }
 
   # ### SUBCORTICAL
@@ -655,7 +661,9 @@ BayesGLM <- function(
   verbose=FALSE,
   contrasts = NULL,
   avg_sessions = TRUE,
-  trim_INLA = TRUE){
+  trim_INLA = TRUE,
+  keep = keep,
+  twostage = twostage){
 
   #check whether data is a list OR a session (for single-session analysis)
   #check whether each element of data is a session (use is.session)
@@ -870,7 +878,8 @@ BayesGLM <- function(
     system.time(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=design_pred, spde, prec_initial=1,
-        num.threads=num.threads, verbose=verbose, contrasts = contrasts
+        num.threads=num.threads, verbose=verbose, contrasts = contrasts,
+        keep = keep, twostage = twostage
       )
     )
     cat('\n ...... model estimation completed')
@@ -880,7 +889,8 @@ BayesGLM <- function(
     system.time(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
-        num.threads=num.threads, verbose=verbose, contrasts = contrasts
+        num.threads=num.threads, verbose=verbose, contrasts = contrasts,
+        keep = keep, twostage = twostage
       )
     )
     cat('\n ...... model estimation completed')

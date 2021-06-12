@@ -53,13 +53,25 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @importFrom INLA inla
 #'
 #' @export
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
+estimate_model <- function(formula,
+                           data,
+                           A,
+                           spde,
+                           prec_initial,
+                           num.threads=4,
+                           int.strategy = "eb",
+                           verbose=FALSE,
+                           contrasts = NULL,
+                           lincomb = NULL,
+                           keep = FALSE,
+                           twostage = FALSE){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
-                 verbose = verbose, keep = FALSE, num.threads = num.threads,
+                 verbose = verbose, keep = keep, num.threads = num.threads,
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) #required for excursions
+                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb,
+                 twostage = twostage) #required for excursions
   return(result)
 }
 
