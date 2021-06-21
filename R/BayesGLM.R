@@ -209,6 +209,7 @@ BayesGLM_cifti <- function(cifti_fname,
     make_design <- TRUE
     design <- vector('list', length=n_sess)
   }
+  if(!is.null(design)) make_design <- FALSE
 
   for(ss in 1:n_sess){
 
