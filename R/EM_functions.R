@@ -75,9 +75,12 @@ BayesGLMEM <- function(data,
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
   V <- ncol(data[[1]]$BOLD) #number of data locations
-  is_pw <- nrow(data[[1]]$design) == prod(dim(data[[1]]$BOLD))
+  is_missing <- is.na(data[[1]]$BOLD[1,])
+  V_nm <- V - sum(is_missing)
+  ntime <- nrow(data[[1]]$BOLD)
+  is_pw <- nrow(data[[1]]$design) == (ntime * sum(!is_missing))
   if(is_pw) {
-    K <- ncol(data[[1]]$design) / V # number of tasks
+    K <- ncol(data[[1]]$design) / V_nm # number of tasks
   } else {
     K <- ncol(data[[1]]$design) #number of tasks
   }
@@ -85,7 +88,7 @@ BayesGLMEM <- function(data,
     if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(is_pw) {
-      if(ncol(data[[s]]$design) / V != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+      if(ncol(data[[s]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     } else {
       if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     }
@@ -159,11 +162,15 @@ BayesGLMEM <- function(data,
     BOLD_s <- data[[s]]$BOLD
 
     #scale data to represent % signal change (or just center if scale=FALSE)
-    BOLD_s <- scale_timeseries(BOLD_s, scale=scale_BOLD, transpose = TRUE)
+    if(!is_pw) BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
     if(scale_design) {
       design_s <- scale_design_mat(data[[s]]$design)
     } else {
-      design_s <- scale(data[[s]]$design, scale = F)
+      if(!is_pw) {
+        design_s <- scale(data[[s]]$design, scale = F)
+      } else {
+        design_s <- data[[s]]$design # Don't scale prewhitened data or the matrix will not be sparse
+      }
     }
     design[[s]] <- design_s #after scaling but before nuisance regression
 
@@ -178,7 +185,11 @@ BayesGLMEM <- function(data,
     }
 
     #set up data and design matrix
-    data_org <- organize_data(y_reg, X_reg)
+    if(!is_pw) {
+      data_org <- organize_data(y_reg, X_reg)
+    } else {
+      data_org <- organize_data_pw(y_reg, X_reg)
+    }
     y_vec <- data_org$y
     X_list <- list(data_org$X)
     names(X_list) <- session_names[s]
@@ -208,16 +219,59 @@ BayesGLMEM <- function(data,
     A <- Matrix::crossprod(model_data$X)
   }
   # Initial values for kappa and tau
-  if(EM_method == "joint") {
-    kappa2 <- 4
-    num.threads <- 1
-  } else {
-    kappa2 <- rep(4,K)
-  }
-  # kappa2 <- ifelse(EM_method == "joint", 4, rep(4,K)) # This is a value that matches BayesGLM
+  # Using values matching BayesGLM
+  if(EM_method == "joint") num.threads <- 1
+  kappa2 <- 4
   phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
   sigma2 <- var(model_data$y)
   theta <- c(kappa2, phi, sigma2)
+  # Using values based on the classical GLM
+  cat("... FINDING BEST GUESS INITIAL VALUES\n")
+  beta_hat <- (Matrix::solve(Matrix::crossprod(model_data$X)) %*%
+                 Matrix::crossprod(model_data$X,model_data$y))@x
+  sigma2 <- ((Matrix::crossprod(model_data$y) -
+                Matrix::crossprod(model_data$y,model_data$X) %*% Psi %*%
+                beta_hat + sum(diag(Matrix::crossprod(model_data$X%*%Psi) %*%
+                                      Matrix::tcrossprod(beta_hat)))) /
+               length(model_data$y))@x
+  if(EM_method == "joint") {
+    require(SQUAREM)
+    init_output <-
+      squarem(
+        par = c(kappa2, phi),
+        fixptfn = init_fixpt,
+        # objfn = init_objfn, # This isn't strictly necessary, and may cost a small amount of time.
+        spde = spde,
+        beta_hat = beta_hat,
+        control = list(tol = 1e-3, trace = verbose)
+      )
+    theta <- c(init_output$par, sigma2)
+    cat("...... DONE!")
+  }
+  if(EM_method == "separate") {
+    beta_hat <- matrix(beta_hat, ncol = K)
+    require(parallel)
+    cl <- makeCluster(min(num.threads,K))
+    kappa2_phi <- parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
+      require(SQUAREM)
+      require(Matrix)
+      init_output <-
+        squarem(
+          par = c(kappa2, phi),
+          fixptfn = init_fixpt,
+          # objfn = init_objfn, # Not needed
+          spde = spde,
+          beta_hat = bh,
+          control = list(tol = 1e-3, trace = verbose)
+        )
+      return(init_output)
+    },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
+    kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
+    theta <- c(t(kappa2_phi),sigma2)
+    cat("...... DONE!")
+    parallel::stopCluster(cl)
+  }
+
   # > Start EM algorithm ----
   if(EM_method == "joint") {
     if(length(theta) != 3) stop("The length of theta should be 3 for the joint update")
@@ -237,7 +291,7 @@ BayesGLMEM <- function(data,
       squarem(
         par = theta,
         fixptfn = em_fn,
-        objfn = GLMEM_objfn,
+        # objfn = GLMEM_objfn,
         control = list(tol = tol, trace = verbose),
         spde = spde,
         model_data = model_data,
@@ -246,8 +300,9 @@ BayesGLMEM <- function(data,
         A = A,
         num.threads = num.threads
       )
+    theta_new <- squareem_output$par
     em_output <- list(
-      theta_new = squareem_output$par,
+      theta_new = theta_new,
       kappa2_new = theta_new[k_idx],
       phi_new = theta_new[p_idx],
       sigma2_new = theta_new[s_idx]
@@ -255,7 +310,7 @@ BayesGLMEM <- function(data,
   } else {
     step <- 1
     max_pct_change <- Inf
-    while(max_pct_change > tol) {
+    while(max_pct_change > tol | step <= 5) {
       theta_new <-
         em_fn(
           theta = theta,

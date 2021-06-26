@@ -262,3 +262,77 @@ ELL <- function(Q, sigma2, model_data, Psi, mu, Sigma, A) {
   ELL_out <- R1@x + R2@x
   return(ELL_out)
 }
+
+#' Trace of Q beta' beta
+#'
+#' @param kappa2 scalar
+#' @param beta_hat a vector
+#' @param spde an spde object
+#'
+#' @return a scalar
+#' @keywords internal
+TrQbb <- function(kappa2, beta_hat, spde) {
+  Qt <- BayesfMRI:::Q_prime(kappa2, spde)
+  KK <- length(beta_hat) / spde$mesh$n
+  if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  return(sum(diag(Qt %*% tcrossprod(beta_hat))))
+}
+
+#' Function to optimize over kappa2
+#'
+#' @param kappa2 scalar
+#' @param phi scalar
+#' @param spde an spde object
+#' @param beta_hat vector
+#'
+#' @return a scalar
+#' @keywords internal
+kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
+  Qt <- BayesfMRI:::Q_prime(kappa2, spde)
+  KK <- length(beta_hat) / spde$mesh$n
+  if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T))))
+  out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
+  return(-out)
+}
+
+#' Objective function for the initialization of kappa2 and phi
+#'
+#' @param theta a vector c(kappa2,phi)
+#' @param spde an spde object
+#' @param beta_hat vector
+#'
+#' @return scalar
+#' @keywords internal
+init_objfn <- function(theta, spde, beta_hat) {
+  QQ <- BayesfMRI:::spde_Q_phi(kappa2 = theta[1],phi = theta[2], spde)
+  KK <- length(beta_hat) / spde$mesh$n
+  if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) QQ <- Matrix::bdiag(rep(list(QQ),KK))
+  log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(QQ,pivot = T))))
+  out <- (log_det_Q / 2 - crossprod(beta_hat,QQ)%*%beta_hat / 2)@x
+  return(-out)
+}
+
+#' The fix point function for the initialization of kappa2 and phi
+#'
+#' @param theta a vector c(kappa2,phi)
+#' @param spde an spde object
+#' @param beta_hat vector
+#'
+#' @return scalar
+#' @keywords internal
+init_fixpt <- function(theta, spde, beta_hat) {
+  kappa2 <- theta[1]
+  K <- length(beta_hat) / spde$mesh$n
+  phi <- TrQbb(kappa2,beta_hat,spde) / (4*pi*spde$mesh$n*K)
+  kappa2 <-
+    optimize(
+      f = kappa_init_fn,
+      phi = phi,
+      spde = spde,
+      beta_hat = beta_hat,
+      lower = 0,
+      upper = 50
+    )$minimum
+  return(c(kappa2, phi))
+}

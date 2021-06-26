@@ -16,7 +16,7 @@ BayesGLM_cifti(
   nuisance_include = c("drift", "dHRF"),
   scale_BOLD = TRUE,
   scale_design = TRUE,
-  GLM_method = "both",
+  GLM_method = "all",
   ar_order = 6,
   ar_smooth = 5,
   session_names = NULL,
@@ -69,7 +69,7 @@ centered.}
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{GLM_method}{Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.}
+\item{GLM_method}{One of \code{Bayesian}, \code{classical}, \code{EM}, or \code{all}, depending on the specific type of analysis that should be performed. Default method is \code{all}.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use

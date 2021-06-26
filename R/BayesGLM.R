@@ -64,7 +64,7 @@
 #' @param nuisance_include (Optional) Additional nuisance covariates to include.  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal derivative of each column of design matrix).
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
-#' @param GLM_method Either 'Bayesian' for spatial Bayesian GLM only, 'classical' for the classical GLM only, or 'both' to return both classical and Bayesian estimates of task activation.
+#' @param GLM_method One of \code{Bayesian}, \code{classical}, \code{EM}, or \code{all}, depending on the specific type of analysis that should be performed. Default method is \code{all}.
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
 #'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
@@ -101,7 +101,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      design=NULL, onsets=NULL, TR=NULL,
                      nuisance=NULL, nuisance_include=c('drift','dHRF'),
                      scale_BOLD=TRUE, scale_design=TRUE,
-                     GLM_method='both',
+                     GLM_method='all',
                      ar_order = 6,
                      ar_smooth = 5,
                      session_names=NULL,
@@ -116,8 +116,8 @@ BayesGLM_cifti <- function(cifti_fname,
 #  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
   GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
 
-  do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
-  do_classical <- (GLM_method %in% c('both','classical'))
+  do_Bayesian <- (GLM_method %in% c('all','Bayesian'))
+  do_classical <- (GLM_method %in% c('all','classical'))
   do_EM <- (GLM_method %in% c('all','EM'))
 
   check_BayesGLM(require_PARDISO=(do_Bayesian|do_EM))
@@ -177,7 +177,8 @@ BayesGLM_cifti <- function(cifti_fname,
 
   # if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   # if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')if('right' %in% brainstructures & is.null(surfR_fname)) stop('surfR_fname must be provided if brainstructures includes "right"')
+  if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
+  if('right' %in% brainstructures & is.null(surfR_fname)) stop('surfR_fname must be provided if brainstructures includes "right"')
 
   if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
   if(!is.null(onsets) & is.null(TR)) stop('Please provide TR if onsets provided')
@@ -277,11 +278,13 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
       ))
     }, simplify = F)
   }, simplify = F)
-  
+
   ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
-  
-  cat("MAKING DESIGN MATRICES \n")
-  design <- mapply(make_HRFs, onsets, TR = TR, duration = ntimes[[1]], SIMPLIFY = F)
+
+  if(is.null(design)) {
+    cat("MAKING DESIGN MATRICES \n")
+    design <- mapply(make_HRFs, onsets, TR = TR, duration = ntimes[[1]], SIMPLIFY = F)
+  }
 
   # #check that labels are the same across all sessions (subcortical)
   # if(do_sub) {
@@ -311,6 +314,7 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
   classicalGLM_results <- list(left=NULL,right=NULL,vol=NULL)
   BayesGLM_results <- list(left=NULL,right=NULL,vol=NULL)
   GLMEM_results <- list(left=NULL, right=NULL,vol=NULL)
+  pw_data <- list(left=NULL,right=NULL,vol=NULL)
 
   ### FORMAT DESIGN MATRIX
   # for(ss in 1:n_sess){
@@ -343,7 +347,7 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
     cat("\n ...",toupper(each_hem),"CORTEX \n")
     verts <- cifti_data[[each_hem]][[1]]$surf$vertices
     faces <- cifti_data[[each_hem]][[1]]$surf$faces
-  
+
     #set up session list
     session_data <- vector('list', n_sess)
     names(session_data) <- session_names
@@ -352,7 +356,26 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
       if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
       session_data[[ss]] <- sess
     }
-  
+
+    scale_BOLD_hem <- scale_BOLD
+
+    if(prewhiten) {
+      pw_data[[each_hem]] <-
+        prewhiten_cifti(
+          data = session_data,
+          mask = NULL,
+          scale_BOLD = TRUE,
+          scale_design = TRUE,
+          ar_order = ar_order,
+          ar_smooth = ar_smooth,
+          cifti_data = cifti_data[[each_hem]][[1]]$cifti,
+          hemisphere = each_hem,
+          num.threads = num.threads
+        )
+      session_data <- pw_data[[each_hem]]$data
+      scale_BOLD_hem <- FALSE # Done above
+    }
+
     if(!is.null(outfile)) {
       if (endsWith(outfile, ".rds")) {
         outfile_name <- gsub(".rds$", paste0("_",each_hem,".rds"), outfile)
@@ -362,35 +385,46 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
     } else {
       outfile_name <- NULL
     }
-  
-    scale_BOLD_hem <- scale_BOLD
+
     other_hem <- grep(each_hem, c("left","right"), value = T, invert = T)
-    if(do_classical) classicalGLM_out <- classicalGLM(data=session_data,
+    if(do_classical) {
+      start_time <- proc.time()[3]
+      classicalGLM_results[[each_hem]] <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_hem,
                                                        scale_design = FALSE) # done above
-    if(do_Bayesian) BayesGLM_out <- BayesGLM(data = session_data,
-                                              beta_names = beta_names,
+      classicalGLM_results[[each_hem]]$total_time <- proc.time()[3] - start_time
+    }
+    if(do_Bayesian) {
+      start_time <- proc.time()[3]
+      BayesGLM_results[[each_hem]] <- BayesGLM(data = session_data,
+                                               beta_names = beta_names,
+                                               vertices = verts,
+                                               faces = faces,
+                                               scale_BOLD = scale_BOLD_hem,
+                                               scale_design = FALSE, # done above
+                                               num.threads = num.threads,
+                                               return_INLA_result = return_INLA_result,
+                                               outfile = outfile_name,
+                                               verbose = verbose,
+                                               avg_sessions = avg_sessions,
+                                               trim_INLA = trim_INLA)
+      BayesGLM_results[[each_hem]]$total_time <- proc.time()[3] - start_time
+    }
+    if(do_EM) {
+      start_time <- proc.time()[3]
+      GLMEM_results[[each_hem]] <- BayesGLMEM(data = session_data,
                                               vertices = verts,
                                               faces = faces,
                                               scale_BOLD = scale_BOLD_hem,
-                                              scale_design = FALSE, # done above
+                                              scale_design = FALSE,
+                                              EM_method = "separate",
+                                              use_SQUAREM = TRUE,
+                                              tol = 1e-3,
                                               num.threads = num.threads,
-                                              return_INLA_result = return_INLA_result,
                                               outfile = outfile_name,
-                                              verbose = verbose,
-                                              avg_sessions = avg_sessions,
-                                              trim_INLA = trim_INLA)
-    if(do_EM) EM_out <- BayesGLMEM(data = session_data,
-                                   vertices = verts,
-                                   faces = faces,
-                                   scale_BOLD = scale_BOLD_hem,
-                                   scale_design = FALSE,
-                                   EM_method = "separate",
-                                   use_SQUAREM = TRUE,
-                                   tol = 1e-3,
-                                   num.threads = num.threads,
-                                   outfile = outfile_name,
-                                   verbose = verbose)
+                                              verbose = verbose)
+      GLMEM_results[[each_hem]]$total_time <- proc.time()[3] - start_time
+    }
   }
 
     # ### SUBCORTICAL
@@ -443,15 +477,17 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
 
   cat('\n PUTTING RESULTS IN CIFTI FORMAT \n')
 
-  classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
-  names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
+  classicalGLM_cifti <- BayesGLM_cifti <- GLMEM_cifti <- vector('list', n_sess)
+  names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- names(GLMEM_cifti) <- session_names
   datL <- datR <- cortexL_mwall <- cortexR_mwall <- NULL
-  if(do_left) cortexL_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$left)
-  if(do_right) cortexR_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$right)
+  do_left <- 'left' %in% brainstructures
+  do_right <- 'right' %in% brainstructures
+  if(do_left) cortexL_mwall <- as.numeric(cifti_data$left[[1]]$cifti$meta$cortex$medial_wall_mask$left)
+  if(do_right) cortexR_mwall <- as.numeric(cifti_data$right[[1]]$cifti$meta$cortex$medial_wall_mask$right)
   for(ss in 1:n_sess){
     if(do_classical){
-      if(do_left) datL <- classicalGLM_left[[ss]]$estimates[cortexL_mwall==1,]
-      if(do_right) datR <- classicalGLM_right[[ss]]$estimates[cortexR_mwall==1,]
+      if(do_left) datL <- classicalGLM_results$left[[ss]]$estimates[cortexL_mwall==1,]
+      if(do_right) datR <- classicalGLM_results$right[[ss]]$estimates[cortexR_mwall==1,]
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
@@ -465,8 +501,8 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
       classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      if(do_left) datL <- BayesGLM_left$beta_estimates[[ss]][cortexL_mwall==1,]
-      if(do_right) datR <- BayesGLM_right$beta_estimates[[ss]][cortexR_mwall==1,]
+      if(do_left) datL <- BayesGLM_results$left$beta_estimates[[ss]][cortexL_mwall==1,]
+      if(do_right) datR <- BayesGLM_results$right$beta_estimates[[ss]][cortexR_mwall==1,]
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
@@ -478,6 +514,20 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
       )
       BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
+    if(do_EM) {
+      if(do_left) datL <- GLMEM_results$left$beta_estimates[[ss]]
+      if(do_right) datR <- GLMEM_results$right$beta_estimates[[ss]]
+      GLMEM_cifti[[ss]] <- as.xifti(
+        cortexL = datL,
+        cortexL_mwall = cortexL_mwall,
+        cortexR = datR,
+        cortexR_mwall = cortexR_mwall
+        #subcortVol = BayesGLM_vol$single_session,
+        #mask = mask,
+        #subcortLab = nifti_labels
+      )
+      GLMEM_cifti[[ss]]$meta$cifti$names <- beta_names
+    }
   }
 
   if(avg_sessions) {
@@ -486,13 +536,13 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
       # linear combinations or the xifti object will be mis-mapped.
       if(do_left) {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
-        maskL <- classicalGLM_left$avg$mask[cortexL_mwall == 1]
-        datL[maskL,] <- classicalGLM_left$avg$estimates[cortexL_mwall == 1,]
+        maskL <- classicalGLM_results$left$avg$mask[cortexL_mwall == 1]
+        datL[maskL,] <- classicalGLM_results$left$avg$estimates[cortexL_mwall == 1,]
       }
       if(do_right) {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
-        maskR <- classicalGLM_right$avg$mask[cortexR_mwall == 1]
-        datR[maskR,] <- classicalGLM_right$avg$estimates[cortexR_mwall == 1,]
+        maskR <- classicalGLM_results$right$avg$mask[cortexR_mwall == 1]
+        datR[maskR,] <- classicalGLM_results$right$avg$estimates[cortexR_mwall == 1,]
       }
       # Adding the averages to the front of the BayesGLM_cifti object
       classicalGLM_cifti <- c(
@@ -512,13 +562,13 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
       # linear combinations or the xifti object will be mis-mapped.
       if(do_left) {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
-        maskL <- BayesGLM_left$mask[cortexL_mwall == 1]
-        datL[maskL,] <- BayesGLM_left$avg_beta_estimates
+        maskL <- BayesGLM_results$left$mask[cortexL_mwall == 1]
+        datL[maskL,] <- BayesGLM_results$left$avg_beta_estimates
       }
       if(do_right) {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
-        maskR <- BayesGLM_right$mask[cortexR_mwall == 1]
-        datR[maskR,] <- BayesGLM_right$avg_beta_estimates
+        maskR <- BayesGLM_results$right$mask[cortexR_mwall == 1]
+        datR[maskR,] <- BayesGLM_results$right$avg_beta_estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object
       BayesGLM_cifti <- c(
@@ -539,20 +589,23 @@ if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be
   if(prewhiten) {
     # I take out the first element here because the first argument
     # is a copy of the data, which are already provided.
-    if(do_left) prewhitening_info$left <- pw_data_left[-1]
-    if(do_right) prewhitening_info$right <- pw_data_right[-1]
+    if(do_left) prewhitening_info$left <- pw_data$left[-1]
+    if(do_right) prewhitening_info$right <- pw_data$right[-1]
   }
 
   result <- list(session_names = session_names,
                  beta_names = beta_names,
                  betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
-                 GLMs_Bayesian = list(cortexL = BayesGLM_left,
-                                      cortexR = BayesGLM_right),
+                 betas_EM = GLMEM_cifti,
+                 GLMs_Bayesian = list(cortexL = BayesGLM_results$left,
+                                      cortexR = BayesGLM_results$right),
                  #subcortical = BayesGLM_vol),
-                 GLMs_classical = list(cortexL = classicalGLM_left,
-                                       cortexR = classicalGLM_right),
+                 GLMs_classical = list(cortexL = classicalGLM_results$left,
+                                       cortexR = classicalGLM_results$right),
                  #subcortical = classicalGLM_vol),
+                 GLMs_EM = list(cortexL = GLMEM_results$left,
+                                cortexR = GLMEM_results$right),
                  prewhitening_info = prewhitening_info,
                  design = design)
 
