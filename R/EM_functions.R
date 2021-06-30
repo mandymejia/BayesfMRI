@@ -401,6 +401,7 @@ BayesGLMEM <- function(data,
                  beta_names = beta_names,
                  beta_estimates = beta_estimates,
                  theta_estimates = theta_estimates,
+                 posterior_Sig_inv = Sig_inv, # For excursions
                  mu.theta = mu.theta, #for joint group model
                  y = y_all, #for joint group model
                  X = X_all_list, #for joint group model
