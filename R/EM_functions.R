@@ -36,6 +36,7 @@
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @importFrom SQUAREM squarem
+#' @importFrom parallel makeCluster parApply
 #'
 #' @export
 BayesGLMEM <- function(data,
@@ -223,7 +224,7 @@ BayesGLMEM <- function(data,
   if(EM_method == "joint") num.threads <- 1
   kappa2 <- 4
   phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
-  sigma2 <- var(model_data$y)
+  # sigma2 <- var(model_data$y)
   theta <- c(kappa2, phi, sigma2)
   # Using values based on the classical GLM
   cat("... FINDING BEST GUESS INITIAL VALUES\n")
@@ -235,9 +236,9 @@ BayesGLMEM <- function(data,
                                       Matrix::tcrossprod(beta_hat)))) /
                length(model_data$y))@x
   if(EM_method == "joint") {
-    require(SQUAREM)
+    # require(SQUAREM)
     init_output <-
-      squarem(
+      SQUAREM::squarem(
         par = c(kappa2, phi),
         fixptfn = init_fixpt,
         # objfn = init_objfn, # This isn't strictly necessary, and may cost a small amount of time.
@@ -250,13 +251,13 @@ BayesGLMEM <- function(data,
   }
   if(EM_method == "separate") {
     beta_hat <- matrix(beta_hat, ncol = K)
-    require(parallel)
-    cl <- makeCluster(min(num.threads,K))
-    kappa2_phi <- parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
-      require(SQUAREM)
-      require(Matrix)
+    # require(parallel)
+    cl <- parallel::makeCluster(min(num.threads,K))
+    kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
+      # require(SQUAREM)
+      # require(Matrix)
       init_output <-
-        squarem(
+        SQUAREM::squarem(
           par = c(kappa2, phi),
           fixptfn = init_fixpt,
           # objfn = init_objfn, # Not needed

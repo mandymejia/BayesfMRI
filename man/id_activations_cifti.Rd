@@ -9,7 +9,7 @@ id_activations_cifti(
   field_names = NULL,
   session_name = NULL,
   alpha = 0.05,
-  method = c("Bayesian", "classical"),
+  method = c("Bayesian", "classical", "EM"),
   threshold = NULL,
   area.limit = NULL,
   correction = c("FWER", "FDR", "none"),
@@ -27,7 +27,7 @@ examined. If \code{NULL} (default), the average across all sessions is used.}
 
 \item{alpha}{Significance level (e.g. 0.05)}
 
-\item{method}{Either 'Bayesian' or 'classical'}
+\item{method}{One of 'Bayesian', 'classical', or 'EM'}
 
 \item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)}
 

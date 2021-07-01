@@ -32,6 +32,7 @@ Imports:
     neuRosim,
     stats,
     sp,
+    SQUAREM,
     utils
 Suggests:
     abind,

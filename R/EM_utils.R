@@ -8,10 +8,12 @@
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
 #' @param num.threads In this function for compatibility with SQUAREM
 #'
+#' @importFrom stats optimize
+#'
 #' @return a vector with the same length as \code{theta}, the EM updates
 #' @keywords internal
 GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1) {
-  Q_k <- mapply(BayesfMRI:::spde_Q_phi, kappa2 = theta[1], phi = theta[2], MoreArgs = list(spde = spde), SIMPLIFY = F)
+  Q_k <- mapply(spde_Q_phi, kappa2 = theta[1], phi = theta[2], MoreArgs = list(spde = spde), SIMPLIFY = F)
   Q_new <- Matrix::bdiag(rep(Q_k,K))
   Sig_inv <- Q_new + A/theta[3]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[3]
@@ -25,8 +27,8 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1
                  sum(Matrix::colSums(A*Sigma_new))) / length(model_data$y)
   # >> Update kappa2 ----
   optim_output_k <-
-    optimize(
-      f = BayesfMRI:::neg_kappa_fn,
+    stats::optimize(
+      f = neg_kappa_fn,
       spde = spde,
       phi = theta[2],
       Sigma = Sigma_new,
@@ -36,7 +38,7 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1
     )
   kappa2_new <- optim_output_k$minimum
   # >> Update phi ----
-  Q_tildek <- BayesfMRI:::Q_prime(kappa2_new, spde)
+  Q_tildek <- Q_prime(kappa2_new, spde)
   Q_tilde <- Matrix::bdiag(rep(list(Q_tildek),K))
   Tr_QEww <- (sum(Matrix::colSums(Q_tilde*Sigma_new)) +
                 Matrix::crossprod(mu,Q_tilde%*%mu))@x
@@ -58,6 +60,7 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1
 #' @importFrom Matrix bdiag colSums crossprod
 #' @importFrom INLA inla.qinv inla.qsolve
 #' @importFrom parallel detectCores makeCluster parSapply
+#' @importFrom stats optimize
 #'
 #' @return a vector with the same length as \code{theta}, the EM updates
 #' @keywords internal
@@ -105,7 +108,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
       k_inds <- seq(spde$n.spde) + (k - 1) * spde$n.spde
       # >> Update kappa2 ----
       optim_output_k <-
-        optimize(
+        stats::optimize(
           f = neg_kappa_fn,
           spde = spde,
           phi = theta[phi_inds][k],
@@ -162,7 +165,7 @@ GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL) 
     sigma2_ind <- 3
   }
   TN <- length(model_data$y)
-  Q_k <- mapply(BayesfMRI:::spde_Q_phi,
+  Q_k <- mapply(spde_Q_phi,
                 kappa2 = theta[kappa2_inds],
                 phi = theta[phi_inds],
                 MoreArgs = list(spde = spde),
@@ -272,7 +275,7 @@ ELL <- function(Q, sigma2, model_data, Psi, mu, Sigma, A) {
 #' @return a scalar
 #' @keywords internal
 TrQbb <- function(kappa2, beta_hat, spde) {
-  Qt <- BayesfMRI:::Q_prime(kappa2, spde)
+  Qt <- Q_prime(kappa2, spde)
   KK <- length(beta_hat) / spde$mesh$n
   if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
   return(sum(diag(Qt %*% tcrossprod(beta_hat))))
@@ -288,7 +291,7 @@ TrQbb <- function(kappa2, beta_hat, spde) {
 #' @return a scalar
 #' @keywords internal
 kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
-  Qt <- BayesfMRI:::Q_prime(kappa2, spde)
+  Qt <- Q_prime(kappa2, spde)
   KK <- length(beta_hat) / spde$mesh$n
   if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
   log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T))))
@@ -305,7 +308,7 @@ kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
 #' @return scalar
 #' @keywords internal
 init_objfn <- function(theta, spde, beta_hat) {
-  QQ <- BayesfMRI:::spde_Q_phi(kappa2 = theta[1],phi = theta[2], spde)
+  QQ <- spde_Q_phi(kappa2 = theta[1],phi = theta[2], spde)
   KK <- length(beta_hat) / spde$mesh$n
   if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) QQ <- Matrix::bdiag(rep(list(QQ),KK))
   log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(QQ,pivot = T))))
@@ -319,6 +322,8 @@ init_objfn <- function(theta, spde, beta_hat) {
 #' @param spde an spde object
 #' @param beta_hat vector
 #'
+#' @importFrom stats optimize
+#'
 #' @return scalar
 #' @keywords internal
 init_fixpt <- function(theta, spde, beta_hat) {
@@ -326,7 +331,7 @@ init_fixpt <- function(theta, spde, beta_hat) {
   K <- length(beta_hat) / spde$mesh$n
   phi <- TrQbb(kappa2,beta_hat,spde) / (4*pi*spde$mesh$n*K)
   kappa2 <-
-    optimize(
+    stats::optimize(
       f = kappa_init_fn,
       phi = phi,
       spde = spde,

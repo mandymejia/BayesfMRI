@@ -8,7 +8,7 @@
 #' @param session_name (character) The name of the session that should be
 #' examined. If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
-#' @param method Either 'Bayesian' or 'classical'
+#' @param method One of 'Bayesian', 'classical', or 'EM'
 #' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)
 #' @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
 #'   Correction), depending on the method that should be used to find the
@@ -36,7 +36,7 @@ id_activations_cifti <- function(model_obj,
                                  field_names=NULL,
                                  session_name=NULL,
                                  alpha=0.05,
-                                 method=c('Bayesian','classical'),
+                                 method=c('Bayesian','classical','EM'),
                                  threshold=NULL,
                                  area.limit=NULL,
                                  correction = c("FWER","FDR","none"),
@@ -45,8 +45,8 @@ id_activations_cifti <- function(model_obj,
 
   if(class(model_obj) != 'BayesGLM_cifti') stop('The model_obj argument must be of class BayesGLM_cifti (output of BayesGLM_cifti function), but it is not.')
 
-  method <- match.arg(method, c('Bayesian','classical'))
-  if(!(method %in% c('Bayesian','classical'))) stop("The method argument should only be 'Bayesian' or 'classical'.")
+  method <- match.arg(method, c('Bayesian','classical','EM'))
+  if(!(method %in% c('Bayesian','classical','EM'))) stop("The method argument should only be 'Bayesian', 'classical', or 'EM'.")
 
   if(is.null(threshold)){
     if(method=='classical') threshold <- 0
@@ -55,6 +55,7 @@ id_activations_cifti <- function(model_obj,
 
   if(method=='Bayesian') GLM_list <- model_obj$GLMs_Bayesian
   if(method=='classical') GLM_list <- model_obj$GLMs_classical
+  if(method=='EM') GLM_list <- model_obj$GLMs_EM
   num_models <- length(GLM_list)
   activations <- vector('list', length=num_models)
   names(activations) <- names(GLM_list)
@@ -93,6 +94,22 @@ id_activations_cifti <- function(model_obj,
                                         threshold=threshold,
                                         alpha=alpha,
                                         correction=correction)
+
+      activations[[mm]] <- act_m
+    }
+  }
+
+  if(method=='EM'){
+    for(mm in 1:num_models){
+      if(is.null(GLM_list[[mm]])) next
+      model_m <- GLM_list[[mm]]
+      if(verbose) cat(paste0('Identifying Bayesian GLM activations in ',names(GLM_list)[mm],'\n'))
+      act_m <- id_activations.em(model_obj=model_m,
+                                        field_names=field_names,
+                                        session_name=session_name,
+                                        threshold=threshold,
+                                        alpha=alpha,
+                                        area.limit=area.limit)
 
       activations[[mm]] <- act_m
     }
@@ -427,4 +444,107 @@ id_activations.classical <- function(model_obj,
   return(result)
 }
 
+#' Identify activations using joint posterior probabilities with EM results
+#'
+#' Identifies areas of activation given an activation threshold and significance
+#'  level using joint posterior probabilities
+#'
+#' For a given latent field, identifies locations that exceed a certain activation
+#'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
+#'  posterior distribution of the latent field.
+#'
+#' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLMEM
+#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
+#' @param session_name (character) The name of the session that should be examined.
+#' If \code{NULL} (default), the average across all sessions is used.
+#' @param alpha Significance level (e.g. 0.05)
+#' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
+#' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
+#'
+#'
+#' @return A list with two elements: \code{active}, which gives a matrix of zeros
+#' and ones of the same dimension as \code{model_obj$beta_estimates${session_name}},
+#' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+#'  more information).
+#'
+#' @importFrom excursions excursions
+#'
+#' @export
+id_activations.em <-
+  function(model_obj,
+           field_names = NULL,
+           session_name = NULL,
+           alpha = 0.05,
+           threshold,
+           area.limit = NULL) {
+    if (class(model_obj) != "BayesGLM")
+      stop(paste0(
+        "The model object is of class ",
+        class(model_obj),
+        " but should be of class 'BayesGLM'."
+      ))
+    #check session_name argument
 
+    #if only one session, analyze that one
+    all_sessions <- model_obj$session_names
+    n_sess <- length(all_sessions)
+    if (n_sess == 1) {
+      session_name <- all_sessions
+    }
+
+    #if averages not available and session_name=NULL, pick first session and return a warning
+    has_avg <- is.matrix(model_obj$avg_beta_estimates)
+    if(is.null(session_name) & !has_avg){
+      session_name <- all_sessions[1]
+      warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+    }
+
+    #if session_name is still NULL, use average and check excur_method argument
+    # if(is.null(session_name)){
+    #   if(has_avg & excur_method != "EB") {
+    #     excur_method <- 'EB'
+    #     warning("To id activations for averaged beta estimates, only the excur_method='EB' is supported. Setting excur_method to 'EB'.")
+    #   }
+    # }
+
+    #check session_name not NULL, check that a valid session name
+    if(!is.null(session_name)){
+      if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+      sess_ind <- which(all_sessions == session_name)
+    }
+
+    #check field_names argument
+    if(is.null(field_names)) field_names <- model_obj$beta_names
+    if(!any(field_names %in% model_obj$beta_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+
+    #check alpha argument
+    if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
+
+    mesh <- model_obj$mesh
+    n_vox <- mesh$n
+
+    #for a specific session
+    if(!is.null(session_name)){
+
+      inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
+
+      #loop over latent fields
+      excur <- vector('list', length=length(field_names))
+      act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+      colnames(act) <- field_names
+      res.exc <-
+        excursions(
+          alpha = alpha,
+          u = threshold,
+          mu = c(model_obj$beta_estimates[[session_name]]),
+          Q = model_obj$posterior_Sig_inv,
+          type = ">", ind = inds, method = "EB"
+        )
+      for(f in field_names) {
+        which_f <- which(field_names==f)
+        act[,which_f] <- res.exc$E[inds]
+      }
+  }
+  result <- list(active=act, excursions_result=res.exc)
+  return(result)
+}

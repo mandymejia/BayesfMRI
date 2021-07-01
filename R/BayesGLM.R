@@ -413,6 +413,7 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_EM) {
       start_time <- proc.time()[3]
       GLMEM_results[[each_hem]] <- BayesGLMEM(data = session_data,
+                                              beta_names = beta_names,
                                               vertices = verts,
                                               faces = faces,
                                               scale_BOLD = scale_BOLD_hem,
