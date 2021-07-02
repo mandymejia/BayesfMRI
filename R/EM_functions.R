@@ -210,7 +210,10 @@ BayesGLMEM <- function(data,
   n_beta <- length(names(betas))
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
   # > Model setup and initials ----
-  if(use_SQUAREM) {tol <- 1e-3} else {tol <- 1}
+  if(is.null(tol)){
+    if(use_SQUAREM) tol <- 1e-3
+    if(!use_SQUAREM) tol <- 1
+  }
   if(!is.null(in_mask)) {
     Psi_k <- INLA::inla.spde.make.A(mesh = mesh, loc = in_mask)
     Psi <- Matrix::bdiag(rep(list(Psi_k),K))
@@ -247,7 +250,7 @@ BayesGLMEM <- function(data,
         control = list(tol = 1e-3, trace = verbose)
       )
     theta <- c(init_output$par, sigma2)
-    cat("...... DONE!")
+    cat("...... DONE!\n")
   }
   if(EM_method == "separate") {
     beta_hat <- matrix(beta_hat, ncol = K)
