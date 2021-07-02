@@ -85,6 +85,8 @@
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param tol Only used when \code{method} is set to 'EM'. The numeric tolerance
+#'   used to determine convergence of the EM algorithm.
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -111,7 +113,8 @@ BayesGLM_cifti <- function(cifti_fname,
                      outfile=NULL,
                      return_INLA_result=FALSE,
                      avg_sessions = TRUE,
-                     trim_INLA = TRUE){
+                     trim_INLA = TRUE,
+                     tol = 1e-3){
 
 #  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
   GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
@@ -420,7 +423,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                               scale_design = FALSE,
                                               EM_method = "separate",
                                               use_SQUAREM = TRUE,
-                                              tol = 1e-3,
+                                              tol = tol,
                                               num.threads = num.threads,
                                               outfile = outfile_name,
                                               verbose = verbose)

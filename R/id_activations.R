@@ -103,7 +103,7 @@ id_activations_cifti <- function(model_obj,
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
-      if(verbose) cat(paste0('Identifying Bayesian GLM activations in ',names(GLM_list)[mm],'\n'))
+      if(verbose) cat(paste0('Identifying EM GLM activations in ',names(GLM_list)[mm],'\n'))
       act_m <- id_activations.em(model_obj=model_m,
                                         field_names=field_names,
                                         session_name=session_name,
@@ -526,7 +526,7 @@ id_activations.em <-
     #for a specific session
     if(!is.null(session_name)){
 
-      inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
+      # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
 
       #loop over latent fields
       excur <- vector('list', length=length(field_names))
@@ -538,11 +538,12 @@ id_activations.em <-
           u = threshold,
           mu = c(model_obj$beta_estimates[[session_name]]),
           Q = model_obj$posterior_Sig_inv,
-          type = ">", ind = inds, method = "EB"
+          type = ">", method = "EB"
         )
       for(f in field_names) {
         which_f <- which(field_names==f)
-        act[,which_f] <- res.exc$E[inds]
+        f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+        act[,which_f] <- res.exc$E[f_inds]
       }
   }
   result <- list(active=act, excursions_result=res.exc)

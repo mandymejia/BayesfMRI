@@ -26,7 +26,8 @@ BayesGLM_cifti(
   outfile = NULL,
   return_INLA_result = FALSE,
   avg_sessions = TRUE,
-  trim_INLA = TRUE
+  trim_INLA = TRUE,
+  tol = 0.001
 )
 }
 \arguments{
@@ -105,6 +106,9 @@ sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+
+\item{tol}{Only used when \code{method} is set to 'EM'. The numeric tolerance
+used to determine convergence of the EM algorithm.}
 }
 \value{
 An object of class \code{"BayesGLM"}, a list containing...

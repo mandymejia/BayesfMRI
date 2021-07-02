@@ -225,7 +225,7 @@ BayesGLMEM <- function(data,
   kappa2 <- 4
   phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
   # sigma2 <- var(model_data$y)
-  theta <- c(kappa2, phi, sigma2)
+  # theta <- c(kappa2, phi, sigma2)
   # Using values based on the classical GLM
   cat("... FINDING BEST GUESS INITIAL VALUES\n")
   beta_hat <- (Matrix::solve(Matrix::crossprod(model_data$X)) %*%
