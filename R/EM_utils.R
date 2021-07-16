@@ -83,6 +83,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
       SIMPLIFY = F
     )
   Q_new <- Matrix::bdiag(Q_k)
+  n_sess_em <- nrow(A) / nrow(Q_new)
+  if(n_sess_em > 1) Q_new <- Matrix::bdiag(lapply(seq(n_sess_em),function(x) Q_new))
   Sig_inv <- Q_new + A/theta[sigma2_ind]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[sigma2_ind]
   mu <- INLA::inla.qsolve(Q = Sig_inv,B = m, method = "solve")
@@ -105,7 +107,12 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    phi_inds,
                    Sigma_new,
                    mu) {
-      k_inds <- seq(spde$n.spde) + (k - 1) * spde$n.spde
+      big_K <- length(kappa2_inds)
+      big_N <- spde$n.spde
+      n_sess_em <- length(mu) / (big_K * spde$n.spde)
+      k_inds <- c(sapply(seq(n_sess_em), function(ns) {
+        seq( big_N * (big_K * (ns - 1) + k - 1) + 1, big_N * (big_K * (ns - 1) + k))
+      }))
       # >> Update kappa2 ----
       optim_output_k <-
         stats::optimize(
@@ -121,12 +128,13 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
       # >> Update phi ----
       Q_tildek <-
         Q_prime(kappa2_new, spde)
+      Q_tildek <- Matrix::bdiag(lapply(seq(n_sess_em), function(x) Q_tildek))
       Tr_QEww <-
         (sum(Matrix::colSums(Q_tildek * Sigma_new[k_inds, k_inds])) +
            Matrix::crossprod(mu[k_inds, ], Q_tildek %*%
                                mu[k_inds, ]))@x
       phi_new <-
-        Tr_QEww / (4 * pi * spde$n.spde)
+        Tr_QEww / (4 * pi * spde$n.spde * n_sess_em)
       return(c(kappa2_new, phi_new))
     },
     spde = spde,

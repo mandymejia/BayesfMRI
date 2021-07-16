@@ -272,7 +272,7 @@ BayesGLMEM <- function(data,
     },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
     kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
     theta <- c(t(kappa2_phi),sigma2)
-    cat("...... DONE!")
+    cat("...... DONE!\n")
     parallel::stopCluster(cl)
   }
 
@@ -366,7 +366,7 @@ BayesGLMEM <- function(data,
     )
   }
   # > End EM algorithm ----
-  cat(".... EM algorithm complete!")
+  cat(".... EM algorithm complete!\n")
   list2env(em_output, envir = environment())
   Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
                    MoreArgs = list(spde=spde), SIMPLIFY = F)
@@ -375,14 +375,15 @@ BayesGLMEM <- function(data,
   } else {
     Q <- Matrix::bdiag(Qk_new)
   }
+  if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
   Sig_inv <- Q + A/sigma2_new
   m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
   mu <- INLA::inla.qsolve(Sig_inv,m)
   Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
 
-  beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K)
-  colnames(beta_estimates) <- beta_names
-  beta_estimates <- list(beta_estimates)
+  beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K*n_sess)
+  colnames(beta_estimates) <- rep(beta_names, n_sess)
+  beta_estimates <- lapply(seq(n_sess), function(ns) beta_estimates[,(seq(K) + K * (ns - 1))])
   names(beta_estimates) <- session_names
   theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
   if(EM_method == "joint") {
