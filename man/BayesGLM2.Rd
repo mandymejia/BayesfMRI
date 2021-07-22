@@ -15,7 +15,8 @@ BayesGLM2(
   nsamp_theta = 50,
   nsamp_beta = 100,
   no_cores = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  use_EM = FALSE
 )
 
 BayesGLM_group(

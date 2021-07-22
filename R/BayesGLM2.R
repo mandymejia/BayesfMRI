@@ -46,7 +46,8 @@ BayesGLM2 <- function(results,
                            nsamp_theta = 50,
                            nsamp_beta = 100,
                            no_cores = NULL,
-                           verbose = TRUE){
+                           verbose = TRUE,
+                           use_EM = FALSE){
 
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
@@ -89,8 +90,14 @@ BayesGLM2 <- function(results,
     results <- vector('list', length=M)
     results[[1]] <- readRDS(fnames[1])
     if(class(results[[1]]) == "BayesGLM_cifti") {
-      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
-      results[[1]] <- results[[1]]$GLMs_Bayesian[[which_BayesGLM]]
+      if(use_EM) {
+        which_BayesGLM <- which(sapply(results[[1]]$GLMs_EM,class) == "BayesGLM")
+        results[[1]] <- results[[1]]$GLMs_EM[[which_BayesGLM]]
+      }
+      if(!use_EM) {
+        which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
+        results[[1]] <- results[[1]]$GLMs_Bayesian[[which_BayesGLM]]
+      }
     }
     if(class(results[[1]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
   }
@@ -165,7 +172,10 @@ BayesGLM2 <- function(results,
   }
 
   # Collecting theta posteriors from subject models
-  Qmu_theta <- Q_theta <- 0
+  if(!use_EM) {
+    Qmu_theta <- Q_theta <- 0
+  }
+  if(use_EM) mu_theta <- 0
 
   # Collecting X and y cross-products from subject models (for posterior distribution of beta)
   Xcros.all <- Xycros.all <- vector("list", M)
@@ -175,8 +185,14 @@ BayesGLM2 <- function(results,
     if(use_files & (m > 1)){
       results[[m]] <- readRDS(fnames[m])
       if(class(results[[m]]) == "BayesGLM_cifti") {
-        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
-        results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
+        if(use_EM) {
+          which_BayesGLM <- which(sapply(results[[m]]$GLMs_EM,class) == "BayesGLM")
+          results[[m]] <- results[[m]]$GLMs_EM[[which_BayesGLM]]
+        }
+        if(!use_EM) {
+          which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
+          results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
+        }
       }
       if(class(results[[m]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
       # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
@@ -201,11 +217,17 @@ BayesGLM2 <- function(results,
 
     #Collect posterior mean and precision of hyperparameters
     mu_theta_m <- results[[m]]$mu.theta
-    Q_theta_m <- results[[m]]$Q.theta
-    #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
-    Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
-    Q_theta <- Q_theta + Q_theta_m
-    rm(mu_theta_m, Q_theta_m)
+    if(!use_EM) {
+      Q_theta_m <- results[[m]]$Q.theta
+      #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
+      Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
+      Q_theta <- Q_theta + Q_theta_m
+      rm(mu_theta_m, Q_theta_m)
+    }
+    if(use_EM) {
+      mu_theta <- mu_theta + mu_theta_m
+      rm(mu_theta_m)
+    }
 
     #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
     y_vec <- results[[m]]$y
@@ -224,22 +246,29 @@ BayesGLM2 <- function(results,
 
     if(m > 1) results[[m]] <- c(0) #to save memory
   }
-  mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+  if(!use_EM) {
+    mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = posterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
 
-  #### DRAW SAMPLES FROM q(theta|y)
+    #### DRAW SAMPLES FROM q(theta|y)
 
-  #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
-  if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
-  theta.samp <- inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+    #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
+    if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+    theta.samp <- inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
 
-  #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
+    #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
 
-  if(verbose) cat('Computing weights for each theta sample \n')
-  logwt <- rep(NA, nsamp_theta)
-  for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
-  #weights to apply to each posterior sample of theta
-  wt.tmp <- exp(logwt - max(logwt))
-  wt <- wt.tmp/(sum(wt.tmp))
+    if(verbose) cat('Computing weights for each theta sample \n')
+    logwt <- rep(NA, nsamp_theta)
+    for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
+    #weights to apply to each posterior sample of theta
+    wt.tmp <- exp(logwt - max(logwt))
+    wt <- wt.tmp/(sum(wt.tmp))
+  }
+  if(use_EM) {
+    mu_theta <- mu_theta / M
+    theta.samp <- as.matrix(mu_theta)
+    wt <- 1
+  }
 
   #get posterior quantities of beta, conditional on a value of theta
   if(verbose) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
