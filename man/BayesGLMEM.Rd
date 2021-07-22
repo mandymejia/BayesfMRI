@@ -18,7 +18,8 @@ BayesGLMEM(
   tol = NULL,
   num.threads = 1,
   outfile = NULL,
-  verbose = FALSE
+  verbose = FALSE,
+  avg_sessions = TRUE
 )
 }
 \arguments{
@@ -68,6 +69,9 @@ to work in parallel across the different tasks}
 BayesGLMEM result to use in Bayesian group modeling.}
 
 \item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
+
+\item{avg_sessions}{Average estimates for betas over multiple
+sessions? Default: \code{TRUE}.}
 }
 \value{
 A list containing...

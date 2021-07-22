@@ -57,6 +57,8 @@ or a vector thereof (each element corresponding to one contrast).  If NULL, no i
 \item{no_cores}{The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.}
 
 \item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
+
+\item{use_EM}{(logical) Should the method for the EM algorithm be used?}
 }
 \value{
 A list containing the estimates, PPMs and areas of activation for each contrast.

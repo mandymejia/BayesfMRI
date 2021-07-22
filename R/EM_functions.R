@@ -29,6 +29,7 @@
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLMEM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_direct_TRUE
+#' @inheritParams avg_sessions_Param
 #'
 #' @return A list containing...
 #'
@@ -52,7 +53,8 @@ BayesGLMEM <- function(data,
                        tol = NULL,
                        num.threads = 1,
                        outfile = NULL,
-                       verbose = FALSE) {
+                       verbose = FALSE,
+                       avg_sessions = TRUE) {
 
   # > Data setup ----
   #check whether data is a list OR a session (for single-session analysis)
@@ -385,6 +387,8 @@ BayesGLMEM <- function(data,
   colnames(beta_estimates) <- rep(beta_names, n_sess)
   beta_estimates <- lapply(seq(n_sess), function(ns) beta_estimates[,(seq(K) + K * (ns - 1))])
   names(beta_estimates) <- session_names
+  avg_beta_estimates <- NULL
+  if(avg_sessions) avg_beta_estimates <- Reduce(`+`,beta_estimates) / n_sess
   theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
   if(EM_method == "joint") {
     names(theta_estimates) <- c("sigma2","phi","kappa2")
@@ -405,6 +409,7 @@ BayesGLMEM <- function(data,
                  session_names = session_names,
                  beta_names = beta_names,
                  beta_estimates = beta_estimates,
+                 avg_beta_estimates = avg_beta_estimates,
                  theta_estimates = theta_estimates,
                  posterior_Sig_inv = Sig_inv, # For excursions
                  mu.theta = mu.theta, #for joint group model

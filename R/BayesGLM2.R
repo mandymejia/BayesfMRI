@@ -29,6 +29,7 @@
 #' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
 #' @param no_cores The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.
 #' @inheritParams verbose_Param_direct_TRUE
+#' @param use_EM (logical) Should the method for the EM algorithm be used?
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
 #'

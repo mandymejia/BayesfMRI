@@ -586,6 +586,32 @@ BayesGLM_cifti <- function(cifti_fname,
       )
       BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
     }
+
+    if (do_EM) {
+      # Need to include the missing locations for medial walls within the
+      # linear combinations or the xifti object will be mis-mapped.
+      if(do_left) {
+        datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
+        maskL <- GLMEM_results$left$mask[cortexL_mwall == 1]
+        datL[maskL,] <- GLMEM_results$left$avg_beta_estimates
+      }
+      if(do_right) {
+        datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
+        maskR <- GLMEM_results$right$mask[cortexR_mwall == 1]
+        datR[maskR,] <- GLMEM_results$right$avg_beta_estimates
+      }
+      # Adding the averages to the front of the BayesGLM_cifti object
+      GLMEM_cifti <- c(
+        list(avg = as.xifti(
+          cortexL = datL,
+          cortexL_mwall = cortexL_mwall,
+          cortexR = datR,
+          cortexR_mwall = cortexR_mwall
+        )),
+        GLMEM_cifti
+      )
+      GLMEM_cifti[[1]]$meta$cifti$names <- beta_names
+    }
   }
 
 
