@@ -277,7 +277,7 @@ BayesGLMEM <- function(data,
     cat("...... DONE!\n")
     parallel::stopCluster(cl)
   }
-
+  initial_theta <- theta
   # > Start EM algorithm ----
   if(EM_method == "joint") {
     if(length(theta) != 3) stop("The length of theta should be 3 for the joint update")
@@ -396,8 +396,11 @@ BayesGLMEM <- function(data,
     names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
   }
   #extract stuff needed for group analysis
+  tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
+  mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
   tau2 <- 1 / (4*pi*kappa2_new*phi_new)
   mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new))))) # This is a guess about the order and might be wrong
+
   # Q.theta <- Q # This is not right. This is supposed to be the covariance between
   # the hyperparameters (kappa,phi,sigma2) This might need to be examined. Perhaps
   # an estimate can be made using the iteration values for the parameters?
@@ -413,6 +416,7 @@ BayesGLMEM <- function(data,
                  theta_estimates = theta_estimates,
                  posterior_Sig_inv = Sig_inv, # For excursions
                  mu.theta = mu.theta, #for joint group model
+                 mu.theta_init = mu.theta_init, # To examine convergence
                  y = y_all, #for joint group model
                  X = X_all_list, #for joint group model
                  call = match.call())
