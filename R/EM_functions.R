@@ -38,6 +38,7 @@
 #' @importFrom matrixStats colVars
 #' @importFrom SQUAREM squarem
 #' @importFrom parallel makeCluster parApply
+#' @importFrom utils tail
 #'
 #' @export
 BayesGLMEM <- function(data,
@@ -277,7 +278,7 @@ BayesGLMEM <- function(data,
     cat("...... DONE!\n")
     parallel::stopCluster(cl)
   }
-  initial_theta <- theta
+  theta_init <- theta
   # > Start EM algorithm ----
   if(EM_method == "joint") {
     if(length(theta) != 3) stop("The length of theta should be 3 for the joint update")
