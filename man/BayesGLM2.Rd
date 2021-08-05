@@ -10,7 +10,7 @@ BayesGLM2(
   contrasts = NULL,
   quantiles = NULL,
   excursion_type = NULL,
-  gamma = 0,
+  gamma = list(0),
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
@@ -46,7 +46,7 @@ See Details for more information. Default is to compute the average for each tas
 \item{excursion_type}{(For inference only) The type of excursion function for the contrast (">", "<", "!="),
 or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.}
 
-\item{gamma}{(For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).}
+\item{gamma}{(For inference only) List of vectors of activation thresholds for the excursion set (each element corresponding to one contrast). Remember that if a contrast is not specified, the average is found.}
 
 \item{alpha}{(For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).}
 

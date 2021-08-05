@@ -32,7 +32,7 @@ beta.posterior.thetasamp(
 
 \item{excursion_type}{Vector of excursion function type (">", "<", "!=") for each contrast}
 
-\item{gamma}{Vector of activation thresholds for each contrast}
+\item{gamma}{List of vector of activation thresholds. Each list element should correspond to a contrast}
 
 \item{alpha}{Significance level for activation for the excursion sets}
 

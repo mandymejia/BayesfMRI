@@ -23,7 +23,7 @@
 #' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
 #' @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="),
 #'  or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.
-#' @param gamma (For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).
+#' @param gamma (For inference only) List of vectors of activation thresholds for the excursion set (each element corresponding to one contrast). Remember that if a contrast is not specified, the average is found.
 #' @param alpha (For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).
 #' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
 #' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
@@ -42,7 +42,7 @@ BayesGLM2 <- function(results,
                            contrasts = NULL,
                            quantiles = NULL,
                            excursion_type=NULL,
-                           gamma = 0,
+                           gamma = list(0),
                            alpha = 0.05,
                            nsamp_theta = 50,
                            nsamp_beta = 100,
@@ -274,7 +274,7 @@ BayesGLM2 <- function(results,
   #get posterior quantities of beta, conditional on a value of theta
   if(verbose) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
   if(is.null(no_cores)){
-    #6 minutes in simuation
+    #6 minutes in simulation
     beta.posteriors <- apply(theta.samp,
                              MARGIN=2,
                              FUN=beta.posterior.thetasamp,
@@ -337,12 +337,25 @@ BayesGLM2 <- function(results,
   ## Posterior probabilities and activations
   if(do_excur){
     ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
-    ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
-    ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
-    active <- array(0, dim=dim(ppm.summ))
-    for(l in 1:num_contrasts){
-      active[ppm.summ[,l] > (1-alpha[l]),l] <- 1
-    }
+    ppm.wt <- mapply(function(x, a){sapply(x,function(xx,aa) xx*aa, aa = a, simplify = F)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
+    # ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
+    ppm.summ <- Reduce(function(x,y) {
+      output_list <- vector("list",num_contrasts)
+      for(l in 1:num_contrasts) {
+        output_list[[l]] <- x[[l]] + y[[l]]
+      }
+      return(output_list)
+    }, ppm.wt)
+    # ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
+    active <- mapply(function(ppm,al){
+      output_matrix <- array(0,dim = dim(ppm))
+      output_matrix[c(ppm) > (1 - al)] <- 1
+      return(output_matrix)
+    }, ppm = ppm.summ, al = alpha, SIMPLIFY = F)
+    # active <- array(0, dim=dim(ppm.summ))
+    # for(l in 1:num_contrasts){
+    #   active[ppm.summ[,l] > (1-alpha[l]),l] <- 1
+    # }
   } else {
     ppm.summ <- active <- NULL
   }
@@ -377,7 +390,7 @@ BayesGLM2 <- function(results,
 #' @param contrasts A list of vectors of length M*K specifying the contrasts of interest.
 #' @param quantiles Vector of posterior quantiles to return in addition to the posterior mean
 #' @param excursion_type Vector of excursion function type (">", "<", "!=") for each contrast
-#' @param gamma Vector of activation thresholds for each contrast
+#' @param gamma List of vector of activation thresholds. Each list element should correspond to a contrast
 #' @param alpha Significance level for activation for the excursion sets
 #' @param nsamp_beta The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))
 #'
@@ -444,8 +457,15 @@ beta.posterior.thetasamp <- function(theta,
 
   # Loop over contrasts
   num_contrasts <- length(contrasts)
+  # mu.contr <- sapply(seq(num_contrasts), function(l) {
+  #   matrix(NA, nrow = n.mesh, ncol = length(gamma[[l]]))
+  # }, simplify = F)
   mu.contr <- matrix(NA, nrow=n.mesh, ncol=num_contrasts)
-  if(do_excur) F.contr <- mu.contr else F.contr <- NULL
+  if(do_excur) {
+    F.contr <- sapply(seq(num_contrasts), function(l) {
+      matrix(NA, nrow = n.mesh, ncol = length(gamma[[l]]))
+    }, simplify = F)
+  } else F.contr <- NULL
   if(!is.null(quantiles)){
     num_quantiles <- length(quantiles)
     quantiles.contr <- rep(list(mu.contr), num_quantiles)
@@ -469,6 +489,7 @@ beta.posterior.thetasamp <- function(theta,
     #   }, simplify = FALSE)
     #   samples_l <- Reduce(`+`, session_betas)
     # }
+    # mu.contr[[l]] <- rowMeans(samples_l) #compute mean over beta samples
     mu.contr[,l] <- rowMeans(samples_l) #compute mean over beta samples
     if(num_quantiles > 0){
       for(iq in 1:num_quantiles){
@@ -478,11 +499,15 @@ beta.posterior.thetasamp <- function(theta,
 
     # Estimate excursions set for current contrast
     if(do_excur){
-      excur_l <- excursions::excursions.mc(samples_l, u = gamma[l], type = excursion_type[l], alpha = alpha[l])
-      F.contr[,l] <- excur_l$F
+      excur_l <- sapply(gamma[[l]], function(each_gamma) {
+        excur_lm <- excursions::excursions.mc(samples_l, u = each_gamma, type = excursion_type[l], alpha = alpha[l])
+      }, simplify = FALSE)
+      names(excur_l) <- as.character(gamma[[l]])
+      F.contr[[l]] <- Reduce(cbind,sapply(excur_l,getElement,"F", simplify = F))
+      # F.contr[,l] <- excur_l$F
     }
   }
-
+  names(F.contr) <- names(contrasts)
   result <- list(mu = mu.contr, quantiles=quantiles.contr, F = F.contr)
   return(result)
 }
