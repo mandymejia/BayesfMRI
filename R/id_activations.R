@@ -28,7 +28,7 @@
 #'
 # @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
-#' @importFrom ciftiTools convert_to_dlabel
+#' @importFrom ciftiTools convert_xifti
 #' @export
 #'
 #'
@@ -113,7 +113,7 @@ id_activations_cifti <- function(model_obj,
     activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
   }
 
-  activations_xifti <- convert_to_dlabel(activations_xifti, colors='red')
+  activations_xifti <- convert_xifti(activations_xifti, to="dlabel", colors='red')
 
   result <- list(activations = activations,
                  activations_xifti = activations_xifti)
