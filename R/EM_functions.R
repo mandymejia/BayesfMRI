@@ -234,13 +234,19 @@ BayesGLMEM <- function(data,
   # theta <- c(kappa2, phi, sigma2)
   # Using values based on the classical GLM
   cat("... FINDING BEST GUESS INITIAL VALUES\n")
-  beta_hat <- (Matrix::solve(Matrix::crossprod(model_data$X)) %*%
-                 Matrix::crossprod(model_data$X,model_data$y))@x
-  sigma2 <- ((Matrix::crossprod(model_data$y) -
-                Matrix::crossprod(model_data$y,model_data$X) %*% Psi %*%
-                beta_hat + sum(diag(Matrix::crossprod(model_data$X%*%Psi) %*%
-                                      Matrix::tcrossprod(beta_hat)))) /
-               length(model_data$y))@x
+  XTX <- Matrix::crossprod(model_data$X)
+  XTX_inv <- Matrix::solve(XTX)
+  XTy <- Matrix::crossprod(model_data$X,model_data$y)
+  beta_hat <- (XTX_inv %*% XTy)@x
+  res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+  sigma2 <- var(res_y)
+  # beta_hat <- (Matrix::solve(Matrix::crossprod(model_data$X)) %*%
+  #                Matrix::crossprod(model_data$X,model_data$y))@x
+  # sigma2 <- ((Matrix::crossprod(model_data$y) -
+  #               Matrix::crossprod(model_data$y,model_data$X) %*% Psi %*%
+  #               beta_hat + sum(diag(Matrix::crossprod(model_data$X%*%Psi) %*%
+  #                                     Matrix::tcrossprod(beta_hat)))) /
+  #              length(model_data$y))@x
   if(EM_method == "joint") {
     # require(SQUAREM)
     init_output <-
