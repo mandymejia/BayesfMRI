@@ -39,6 +39,7 @@
 #' @importFrom SQUAREM squarem
 #' @importFrom parallel makeCluster parApply
 #' @importFrom utils tail
+#' @importFrom stats var
 #'
 #' @export
 BayesGLMEM <- function(data,
@@ -239,7 +240,7 @@ BayesGLMEM <- function(data,
   XTy <- Matrix::crossprod(model_data$X,model_data$y)
   beta_hat <- (XTX_inv %*% XTy)@x
   res_y <- (model_data$y - model_data$X %*% beta_hat)@x
-  sigma2 <- var(res_y)
+  sigma2 <- stats::var(res_y)
   # beta_hat <- (Matrix::solve(Matrix::crossprod(model_data$X)) %*%
   #                Matrix::crossprod(model_data$X,model_data$y))@x
   # sigma2 <- ((Matrix::crossprod(model_data$y) -
@@ -388,7 +389,8 @@ BayesGLMEM <- function(data,
   Sig_inv <- Q + A/sigma2_new
   m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
   mu <- INLA::inla.qsolve(Sig_inv,m)
-  Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
+  # We don't actually need this very expensive function here
+  # Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
 
   beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K*n_sess)
   colnames(beta_estimates) <- rep(beta_names, n_sess)
