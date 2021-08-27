@@ -10,7 +10,7 @@ NULL
 #' avg_sessions
 #'
 #' @param avg_sessions Average estimates for betas over multiple
-#'  sessions? Default: \code{TRUE}.
+#'  sessions? Default: \code{FALSE}.
 #'
 #' @name avg_sessions_Param
 NULL
@@ -147,3 +147,12 @@ NULL
 #'
 #' @name vertices_Param
 NULL
+
+#'  Bayes
+#'
+#' @param Bayes If TRUE, will fit a spatial Bayesian GLM in addition to the
+#' classical GLM. Classical GLM results are always returned.
+#'
+#' @name Bayes_Param
+NULL
+

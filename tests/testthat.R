@@ -1,4 +1,4 @@
-library(testthat)
-library(BayesfMRI)
+#library(testthat)
+#library(BayesfMRI)
 
-test_check("BayesfMRI")
+#test_check("BayesfMRI")

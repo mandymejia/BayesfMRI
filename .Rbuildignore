@@ -18,3 +18,4 @@
 ^vignettes/BayesfMRI_simulation_files$
 ^LICENSE\.md$
 ^tests/run_BayesfMRI_tests\.R$
+

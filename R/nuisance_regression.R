@@ -5,7 +5,7 @@
 #' @param design The \eqn{T \times Q} design matrix
 #'
 #' @return The \eqn{T \times T} hat matrix
-#' 
+#'
 #' @keywords internal
 hat_matrix <- function(design){
   design <- as.matrix(design)
@@ -27,7 +27,7 @@ hat_matrix <- function(design){
 #' @param design The \eqn{T \times Q} matrix of nuisance regressors.
 #'
 #' @return The data after nuisance regression.
-#' 
+#'
 #' @export
 nuisance_regression <- function(Y, design){
   # Z <- design

@@ -5,7 +5,7 @@
 \title{avg_sessions}
 \arguments{
 \item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+sessions? Default: \code{FALSE}.}
 }
 \description{
 avg_sessions

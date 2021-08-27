@@ -13,6 +13,7 @@ BayesGLM(
   mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
+  Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
   num.threads = 4,
@@ -20,7 +21,7 @@ BayesGLM(
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
-  avg_sessions = TRUE,
+  avg_sessions = FALSE,
   trim_INLA = TRUE
 )
 }
@@ -53,6 +54,9 @@ centered.}
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
+\item{Bayes}{If TRUE, will fit a spatial Bayesian GLM in addition to the
+classical GLM. Classical GLM results are always returned.}
+
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
 for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
@@ -77,7 +81,7 @@ posterior quantities of group means or contrasts.}
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+sessions? Default: \code{FALSE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
