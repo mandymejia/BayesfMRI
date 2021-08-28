@@ -31,6 +31,7 @@
 #' @return A list containing...
 #'
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check
+#' @importFrom stats as.formula
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){

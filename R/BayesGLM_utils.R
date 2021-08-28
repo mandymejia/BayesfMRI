@@ -1,6 +1,7 @@
 #' Check arguments and packages for BayesGLM-related functions
 #'
-#' Check arguments and packages for \code{\link{BayesGLM}} and \code{\link{BayesGLM_cifti}}.
+# TO DO: update with function links (removed b/c BayesGLM_cifti has been hidden)
+#' Check arguments and packages for \code{BayesGLM} and \code{BayesGLM_cifti}.
 #'
 #' @param require_PARDISO Is PARDISO required? Default: \code{TRUE}.
 #' @return \code{NULL}, invisibly
