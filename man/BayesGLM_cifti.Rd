@@ -26,7 +26,8 @@ BayesGLM_cifti(
   outfile = NULL,
   return_INLA_result = FALSE,
   avg_sessions = TRUE,
-  trim_INLA = TRUE
+  trim_INLA = TRUE,
+  num_permute = 0
 )
 }
 \arguments{
@@ -105,6 +106,11 @@ sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+
+\item{num_permute}{For GLM_method = 'classical'. The number of permutations
+that should be performed in order to allow for permutation testing to
+determine activations. A value of 0 will not perform any permutations, and
+permutation testing will not be available.}
 }
 \value{
 An object of class \code{"BayesGLM"}, a list containing...

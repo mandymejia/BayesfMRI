@@ -8,13 +8,16 @@
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams avg_sessions_Param
+#' @param num_permute The number of permutations that should be performed
+#'   in order to allow for permutation testing to determine activations. A value
+#'   of 0 will not perform any permutations, and permutation testing will not
+#'   be available.
 #'
 #' @return A list of lists containing classical GLM task activation estimates, standard error estimates, and degrees of freedom. Each list element represents a session.
 #'
 #' @importFrom matrixStats colVars
 #' @export
-classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, avg_sessions = TRUE){
-
+classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE, avg_sessions = TRUE, num_permute = 0){
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   if(!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')
@@ -24,6 +27,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   session_names <- names(data)
   n_sess <- length(session_names)
   if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
+
+  do_permute <- num_permute > 0
 
   is_pw <- !is.matrix(data[[1]]$design) #if prewhitening has been done, design is a large sparse matrix (class dgCMatrix)
   if(is_pw){
@@ -94,6 +99,7 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
   names(GLM_result) <- session_names
   if(avg_sessions){
     y_reg_all <- X_reg_all <- NULL
+    if(do_permute) permuted_y_all <- NULL
   }
   for(s in 1:num_GLM){
     if(s <= n_sess){
@@ -118,40 +124,88 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
         y_reg <- BOLD_s
         X_reg <- design_s
       }
+      if(do_permute) {
+        permuted_y <- sapply(seq(num_permute), function(m) {
+          ntime_m <- nrow(BOLD_s)
+          shift_size <- sample(-ntime_m:ntime_m, size = 1)
+          perm_y <- BOLD_s[((seq(ntime_m) + shift_size) %% ntime_m) + 1,]
+          return(perm_y)
+        }, simplify = F)
+      }
       if(avg_sessions){
         y_reg_all <- cbind(y_reg_all, y_reg)
         X_reg_all <- rbind(X_reg_all, X_reg)
+        if(do_permute) {
+          if(!is.null(permuted_y_all))
+            permuted_y_all <- mapply(rbind, permuted_y_all, permuted_y, SIMPLIFY = F)
+          if(is.null(permuted_y_all)) permuted_y_all <- permuted_y
+        }
       }
     }
     #for average, analyze time-concatenated data and design
     if(s == n_sess + 1){
       y_reg <- y_reg_all
       X_reg <- X_reg_all
+      if(do_permute) permuted_y <- permuted_y_all
     }
     # ESTIMATE MODEL COEFFICIENTS
     beta_hat_s <- SE_beta_hat_s <- matrix(NA, K, V_all)
+    beta_hat_null <- SE_beta_hat_null <- NULL
+    if(do_permute) {
+      beta_hat_null <- SE_beta_hat_null <- array(NA, dim = c(K,V_all,num_permute))
+    }
+    ntime <- length(y_reg) / V
+    if(round(ntime) != ntime) stop('Error, contact developer')
+    #compute residual SD
+    DOF <- ntime - K - 1
     if(is_pw){
       y_reg <- c(y_reg) #make y a vector (grouped by location)
       XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
       if("try-error" %in% class(XTX_inv)) {
         stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
       }
-      coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
+      XTX_invXT <- Matrix::tcrossprod(XTX_inv,X_reg)
+      coef_s <- as.matrix(XTX_invXT %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
       beta_hat_s[,mask_use==TRUE] <- coef_s #RHS is a vector
       resid_s <- matrix(y_reg - X_reg %*% coef_s, ncol = V)
+      if(do_permute) {
+        cat("Performing permutations for session",session_names[s],"\n")
+        for(m in seq(num_permute)) {
+          y_perm <- c(permuted_y[[m]])
+          beta_hat_null[,mask_use,m] <- as.matrix(XTX_invXT %*% y_perm)
+          fit_perm <- X_reg %*% c(beta_hat_null[,mask_use,m])
+          resid_perm <- matrix(y_perm - fit_perm, ncol = V)
+          var_error_perm <- matrixStats::colVars(resid_perm) * (ntime - 1) / DOF #correct for DOF
+          var_error_perm <- rep(mean(var_error_perm), length(var_error_perm))
+          sd_error_perm <- sqrt(var_error_perm)
+          #compute SE of betas
+          SE_beta_hat_null[,mask_use,m] <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error_perm, each = K)
+        }
+      }
     }
     if(!is_pw){
       XTX_inv <- try(solve(t(X_reg) %*% X_reg))
       if("try-error" %in% class(XTX_inv)) stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
-      coef_s <- XTX_inv %*% t(X_reg) %*% y_reg
+      XTX_invXT <- tcrossprod(XTX_inv,X_reg)
+      coef_s <-XTX_invXT %*% y_reg
       beta_hat_s[,mask_use==TRUE] <- coef_s   #RHS is a matrix
       resid_s <- y_reg - X_reg %*% coef_s
+      if(do_permute) {
+        cat("Performing permutations for session",session_names[s],"\n")
+        for(m in seq(num_permute)) {
+          y_perm <- c(permuted_y[[m]])
+          beta_hat_null[,mask_use,m] <- as.matrix(XTX_invXT %*% y_perm)
+          fit_perm <- X_reg %*% c(beta_hat_null[,mask_use,m])
+          resid_perm <- matrix(y_perm - fit_perm, ncol = V)
+          var_error_perm <- matrixStats::colVars(resid_perm) * (ntime - 1) / DOF #correct for DOF
+          var_error_perm <- rep(mean(var_error_perm), length(var_error_perm))
+          sd_error_perm <- sqrt(var_error_perm)
+          #compute SE of betas
+          SE_beta_hat_null[,mask_use,m] <- matrix(sqrt(diag(XTX_inv)), nrow=K, ncol=V) * matrix(sd_error_perm, nrow=K, ncol=V, byrow = TRUE)
+        }
+      }
     }
-    # ESTIMATE STANDARD ERRORS OF ESTIIMATES
-    ntime <- length(y_reg) / V
-    if(round(ntime) != ntime) stop('Error, contact developer')
-    #compute residual SD
-    DOF <- ntime - K - 1
+    # ESTIMATE STANDARD ERRORS OF ESTIMATES
     var_error <- matrixStats::colVars(resid_s) * (ntime - 1) / DOF #correct for DOF
     if(is_pw) var_error <- rep(mean(var_error), length(var_error))
     sd_error <- sqrt(var_error)
@@ -162,6 +216,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
 
     GLM_result[[s]] <- list(estimates = t(beta_hat_s),
                             SE_estimates = t(SE_beta_hat_s),
+                            null_estimates = aperm(beta_hat_null, perm = c(2,1,3)),
+                            null_SE_estimates = aperm(SE_beta_hat_null, perm = c(2,1,3)),
                             DOF = DOF,
                             mask = mask,
                             mask_orig = mask_orig)

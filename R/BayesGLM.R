@@ -85,6 +85,10 @@
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param num_permute For GLM_method = 'classical'. The number of permutations
+#'   that should be performed in order to allow for permutation testing to
+#'   determine activations. A value of 0 will not perform any permutations, and
+#'   permutation testing will not be available.
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -111,7 +115,8 @@ BayesGLM_cifti <- function(cifti_fname,
                      outfile=NULL,
                      return_INLA_result=FALSE,
                      avg_sessions = TRUE,
-                     trim_INLA = TRUE){
+                     trim_INLA = TRUE,
+                     num_permute = 0){
 
   GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
 
@@ -204,12 +209,12 @@ BayesGLM_cifti <- function(cifti_fname,
   if(do_left) cifti_left <- vector('list', n_sess)
   if(do_right) cifti_right <- vector('list', n_sess)
   #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
-
+  if(!is.null(design)) make_design <- FALSE
   if(is.null(design)) {
     make_design <- TRUE
     design <- vector('list', length=n_sess)
   }
-  if(!is.null(design)) make_design <- FALSE
+
 
   for(ss in 1:n_sess){
 
@@ -354,7 +359,8 @@ BayesGLM_cifti <- function(cifti_fname,
 
     if(do_classical) classicalGLM_left <- classicalGLM(data=session_data,
                                                          scale_BOLD=scale_BOLD_left,
-                                                         scale_design = FALSE) # done above
+                                                         scale_design = FALSE, # done above
+                                                         num_permute = num_permute)
 
     if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
                                               beta_names = beta_names,
@@ -419,7 +425,8 @@ BayesGLM_cifti <- function(cifti_fname,
     }
     if(do_classical) classicalGLM_right <- classicalGLM(data = session_data,
                                                          scale_BOLD=scale_BOLD_right,
-                                                         scale_design = FALSE) #done above
+                                                         scale_design = FALSE, #done above
+                                                         num_permute = num_permute)
 
     if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
                                                beta_names = beta_names,

@@ -39,7 +39,7 @@ id_activations_cifti <- function(model_obj,
                                  method=c('Bayesian','classical'),
                                  threshold=NULL,
                                  area.limit=NULL,
-                                 correction = c("FWER","FDR","none"),
+                                 correction = c("FWER","FDR","permutation","none"),
                                  excur_method = c("EB","QC"),
                                  verbose = TRUE){
 
@@ -333,10 +333,18 @@ id_activations.classical <- function(model_obj,
                                      threshold = 0,
                                      correction = c("FWER","FDR","none"),
                                      mesh = NULL) {
-
+  # Bring in data for debugging
+  # model_obj <- readRDS("~/Desktop/id_activations_classical_input.rds")
+  # field_inds = NULL
+  # session_name = NULL
+  # alpha = 0.05
+  # threshold = 0
+  # correction = 'permutation'
+  # mesh = NULL
+  # Argument check
   if(class(model_obj) != "classicalGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
 
-  correction <- match.arg(correction, c("FWER","FDR","none"))
+  correction <- match.arg(correction, c("FWER","FDR","permutation","none"))
 
   if(is.null(threshold)) threshold <- 0
 
@@ -350,8 +358,8 @@ id_activations.classical <- function(model_obj,
   # #if averages not available and session_name=NULL, pick first session and return a warning
   has_avg <- ('avg' %in% names(model_obj))
   if(is.null(session_name) & !has_avg){
-     session_name <- all_sessions[1]
-     warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+    session_name <- all_sessions[1]
+    warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
 
   # If averages are available and no session name is defined, use the averages
@@ -389,6 +397,7 @@ id_activations.classical <- function(model_obj,
   t_star <- (beta_est - threshold) / se_beta
   if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nvox)
   #perform multiple comparisons correction
+  if(correction != "permutation") {
   p_values <- p_values_adj <- active <- matrix(NA, nvox, K)
   for(k in 1:K){
     p_values_k <- sapply(t_star[,k], pt, df = DOF, lower.tail = F)
@@ -399,6 +408,25 @@ id_activations.classical <- function(model_obj,
     p_values[,k] <- p_values_k
     p_values_adj[,k] <- p_vals_adj_k
     active[,k] <- (p_vals_adj_k < alpha)
+  }
+  na_pvalues <- which(is.na(p_values[,1]))
+  p_values <- p_values[-na_pvalues,, drop = F]
+  p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
+  active <- active[-na_pvalues,, drop = F]
+  }
+
+  if(correction == "permutation") {
+    if(sum(c("null_estimates","null_SE_estimates") %in% names(model_obj[[sess_ind]])) != 2) stop("This model_obj is from an older version and is not compatible with permutation testing.")
+    if(is.null(model_obj[[sess_ind]]$null_estimates) | is.null(model_obj[[sess_ind]]$null_SE_estimates)) stop("Permutations were not completed in the analysis that created the model_obj. Please choose a different correction method.")
+    p_values <- p_values_adj <- NULL
+    t_stats <- (model_obj[[sess_ind]]$null_estimates - threshold) / model_obj[[sess_ind]]$null_SE_estimates
+    max_tstats <- apply(t_stats,2:3,max, na.rm = TRUE)
+    null_thresholds <- apply(max_tstats, 1, quantile, probs = (1 - alpha))
+    active <- mapply(function(ts,null_ts) {
+      return(ts > null_ts)
+    }, ts = split(t_star, col(t_star)), null_ts = null_thresholds)
+    if(!"matrix" %in% class(active)) active <- as.matrix(active)
+    active <- active[!is.na(active[,1]),]
   }
 
   #compute size of activations
@@ -411,10 +439,7 @@ id_activations.classical <- function(model_obj,
     areas_all <- areas_act <- NULL
   }
 
-  na_pvalues <- which(is.na(p_values[,1]))
-  p_values <- p_values[-na_pvalues,, drop = F]
-  p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
-  active <- active[-na_pvalues,, drop = F]
+
 
   result <- list(p_values = p_values,
                  p_values_adj = p_values_adj,
@@ -426,5 +451,3 @@ id_activations.classical <- function(model_obj,
                  areas_act = areas_act)
   return(result)
 }
-
-

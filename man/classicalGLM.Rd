@@ -9,7 +9,8 @@ classicalGLM(
   mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
-  avg_sessions = TRUE
+  avg_sessions = TRUE,
+  num_permute = 0
 )
 }
 \arguments{
@@ -29,6 +30,11 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
 sessions? Default: \code{TRUE}.}
+
+\item{num_permute}{The number of permutations that should be performed
+in order to allow for permutation testing to determine activations. A value
+of 0 will not perform any permutations, and permutation testing will not
+be available.}
 }
 \value{
 A list of lists containing classical GLM task activation estimates, standard error estimates, and degrees of freedom. Each list element represents a session.

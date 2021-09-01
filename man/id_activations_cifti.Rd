@@ -12,7 +12,7 @@ id_activations_cifti(
   method = c("Bayesian", "classical"),
   threshold = NULL,
   area.limit = NULL,
-  correction = c("FWER", "FDR", "none"),
+  correction = c("FWER", "FDR", "permutation", "none"),
   excur_method = c("EB", "QC"),
   verbose = TRUE
 )
