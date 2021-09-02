@@ -331,7 +331,7 @@ id_activations.classical <- function(model_obj,
                                      session_name = NULL,
                                      alpha = 0.05,
                                      threshold = 0,
-                                     correction = c("FWER","FDR","none"),
+                                     correction = c("FWER","FDR","permutation","none"),
                                      mesh = NULL) {
   # Bring in data for debugging
   # model_obj <- readRDS("~/Desktop/id_activations_classical_input.rds")

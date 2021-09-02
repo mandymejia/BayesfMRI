@@ -127,8 +127,10 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
       if(do_permute) {
         permuted_y <- sapply(seq(num_permute), function(m) {
           ntime_m <- nrow(BOLD_s)
-          shift_size <- sample(-ntime_m:ntime_m, size = 1)
-          perm_y <- BOLD_s[((seq(ntime_m) + shift_size) %% ntime_m) + 1,]
+          perm_idx <- sample(seq(ntime_m),size = ntime_m,replace = F)
+          perm_y <- BOLD_s[perm_idx,]
+          # shift_size <- sample(-ntime_m:ntime_m, size = 1)
+          # perm_y <- BOLD_s[((seq(ntime_m) + shift_size) %% ntime_m) + 1,]
           return(perm_y)
         }, simplify = F)
       }

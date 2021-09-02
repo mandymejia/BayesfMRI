@@ -10,7 +10,7 @@ id_activations.classical(
   session_name = NULL,
   alpha = 0.05,
   threshold = 0,
-  correction = c("FWER", "FDR", "none"),
+  correction = c("FWER", "FDR", "permutation", "none"),
   mesh = NULL
 )
 }
