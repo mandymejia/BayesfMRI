@@ -419,7 +419,8 @@ id_activations.classical <- function(model_obj,
     if(sum(c("null_estimates","null_SE_estimates") %in% names(model_obj[[sess_ind]])) != 2) stop("This model_obj is from an older version and is not compatible with permutation testing.")
     if(is.null(model_obj[[sess_ind]]$null_estimates) | is.null(model_obj[[sess_ind]]$null_SE_estimates)) stop("Permutations were not completed in the analysis that created the model_obj. Please choose a different correction method.")
     p_values <- p_values_adj <- NULL
-    t_stats <- (model_obj[[sess_ind]]$null_estimates - threshold) / model_obj[[sess_ind]]$null_SE_estimates
+    # Do not subtract the threshold here because the null hypothesis is that beta = threshold
+    t_stats <- (model_obj[[sess_ind]]$null_estimates) / model_obj[[sess_ind]]$null_SE_estimates
     max_tstats <- apply(t_stats,2:3,max, na.rm = TRUE)
     null_thresholds <- apply(max_tstats, 1, quantile, probs = (1 - alpha))
     active <- mapply(function(ts,null_ts) {
