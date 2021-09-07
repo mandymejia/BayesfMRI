@@ -183,6 +183,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
           #compute SE of betas
           SE_beta_hat_null[,mask_use,m] <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error_perm, each = K)
         }
+        beta_hat_null <- aperm(beta_hat_null, perm = c(2,1,3))
+        SE_beta_hat_null <- aperm(SE_beta_hat_null, perm = c(2,1,3))
       }
     }
     if(!is_pw){
