@@ -205,6 +205,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
           #compute SE of betas
           SE_beta_hat_null[,mask_use,m] <- matrix(sqrt(diag(XTX_inv)), nrow=K, ncol=V) * matrix(sd_error_perm, nrow=K, ncol=V, byrow = TRUE)
         }
+        beta_hat_null <- aperm(beta_hat_null, perm = c(2,1,3))
+        SE_beta_hat_null <- aperm(SE_beta_hat_null, perm = c(2,1,3))
       }
     }
     # ESTIMATE STANDARD ERRORS OF ESTIMATES
@@ -218,8 +220,8 @@ classicalGLM <- function(data, mask = NULL, scale_BOLD=TRUE, scale_design = TRUE
 
     GLM_result[[s]] <- list(estimates = t(beta_hat_s),
                             SE_estimates = t(SE_beta_hat_s),
-                            null_estimates = aperm(beta_hat_null, perm = c(2,1,3)),
-                            null_SE_estimates = aperm(SE_beta_hat_null, perm = c(2,1,3)),
+                            null_estimates = beta_hat_null,
+                            null_SE_estimates = SE_beta_hat_null,
                             DOF = DOF,
                             mask = mask,
                             mask_orig = mask_orig)
