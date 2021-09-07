@@ -357,23 +357,31 @@ BayesGLM_cifti <- function(cifti_fname,
       session_data <- pw_data_left$data
     }
 
-    if(do_classical) classicalGLM_left <- classicalGLM(data=session_data,
-                                                         scale_BOLD=scale_BOLD_left,
-                                                         scale_design = FALSE, # done above
-                                                         num_permute = num_permute)
+    if(do_classical) {
+      start_time <- proc.time()[3]
+      classicalGLM_left <- classicalGLM(data=session_data,
+                                        scale_BOLD=scale_BOLD_left,
+                                        scale_design = FALSE, # done above
+                                        num_permute = num_permute)
+      classicalGLM_left$total_time <- proc.time()[3] - start_time
+    }
 
-    if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
-                                              beta_names = beta_names,
-                                              vertices = verts_left,
-                                              faces = faces_left,
-                                              scale_BOLD = scale_BOLD_left,
-                                              scale_design = FALSE, # done above
-                                              num.threads = num.threads,
-                                              return_INLA_result = return_INLA_result,
-                                              outfile = outfile_left,
-                                              verbose = verbose,
-                                              avg_sessions = avg_sessions,
-                                              trim_INLA = trim_INLA)
+    if(do_Bayesian) {
+      start_time <- proc.time()[3]
+      BayesGLM_left <- BayesGLM(data = session_data,
+                                beta_names = beta_names,
+                                vertices = verts_left,
+                                faces = faces_left,
+                                scale_BOLD = scale_BOLD_left,
+                                scale_design = FALSE, # done above
+                                num.threads = num.threads,
+                                return_INLA_result = return_INLA_result,
+                                outfile = outfile_left,
+                                verbose = verbose,
+                                avg_sessions = avg_sessions,
+                                trim_INLA = trim_INLA)
+      BayesGLM_left$total_time <- proc.time()[3] - start_time
+    }
 
   }
 
@@ -423,23 +431,31 @@ BayesGLM_cifti <- function(cifti_fname,
       scale_BOLD_right <- FALSE #done in prewhitening
       session_data <- pw_data_right$data
     }
-    if(do_classical) classicalGLM_right <- classicalGLM(data = session_data,
-                                                         scale_BOLD=scale_BOLD_right,
-                                                         scale_design = FALSE, #done above
-                                                         num_permute = num_permute)
+    if(do_classical) {
+      start_time <- proc.time()[3]
+      classicalGLM_right <- classicalGLM(data = session_data,
+                                         scale_BOLD=scale_BOLD_right,
+                                         scale_design = FALSE, #done above
+                                         num_permute = num_permute)
+      classicalGLM_right$total_time <- proc.time()[3] - start_time
+    }
 
-    if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
-                                               beta_names = beta_names,
-                                               vertices = verts_right,
-                                                faces = faces_right,
-                                                scale_BOLD=scale_BOLD_right,
-                                                scale_design = FALSE, #done above
-                                                num.threads=num.threads,
-                                                return_INLA_result=return_INLA_result,
-                                                outfile = outfile_right,
-                                                verbose=verbose,
-                                                avg_sessions = avg_sessions,
-                                                trim_INLA = trim_INLA)
+    if(do_Bayesian) {
+      start_time <- proc.time()[3]
+      BayesGLM_right <- BayesGLM(session_data,
+                                 beta_names = beta_names,
+                                 vertices = verts_right,
+                                 faces = faces_right,
+                                 scale_BOLD=scale_BOLD_right,
+                                 scale_design = FALSE, #done above
+                                 num.threads=num.threads,
+                                 return_INLA_result=return_INLA_result,
+                                 outfile = outfile_right,
+                                 verbose=verbose,
+                                 avg_sessions = avg_sessions,
+                                 trim_INLA = trim_INLA)
+      BayesGLM_right$total_time <- proc.time()[3] - start_time
+    }
   }
 
   # ### SUBCORTICAL
