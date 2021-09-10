@@ -232,7 +232,7 @@ BayesGLM <- function(
 
   if(do_pw){
     # Create the sparse pre-whitening matrix
-    cat("Prewhitening... ")
+    cat(" .... prewhitening... ")
     if(is.null(num.threads) | num.threads < 2) {
       # Initialize the block diagonal covariance matrix
       template_pw <- Matrix::bandSparse(n = ntime,
@@ -334,7 +334,7 @@ BayesGLM <- function(
   if(do_Bayesian){
 
     #construct betas and repls objects
-    replicates_list <- BayesfMRI:::organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
+    replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
@@ -349,23 +349,21 @@ BayesGLM <- function(
     formula_str <- paste(formula_vec, collapse=' + ')
     formula <- as.formula(formula_str, env = globalenv())
 
-    model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     #estimate model using INLA
-    cat('\n ...... estimating model with INLA')
+    cat('\n .... estimating model with INLA')
     system.time(
-      INLA_result <- BayesfMRI:::estimate_model(
+      INLA_result <- estimate_model(
         formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
         num.threads=num.threads, verbose=verbose, contrasts = contrasts
       )
     )
-    cat('\n ...... model estimation completed')
-
-    # HERE (error in extract_estimates having to do with mask)
+    cat("done!\n")
 
     #extract useful stuff from INLA model result
-    beta_estimates <- BayesfMRI:::extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
-    theta_posteriors <- BayesfMRI:::get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+    beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
+    theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
 
     #extract stuff needed for group analysis
     mu.theta <- INLA_result$misc$theta.mode
@@ -375,7 +373,7 @@ BayesGLM <- function(
     if(!return_INLA_result){
       INLA_result <- NULL
     } else {
-      if(trim_INLA) INLA_result <- BayesfMRI:::trim_INLA_result(INLA_result)
+      if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
     }
   }
 

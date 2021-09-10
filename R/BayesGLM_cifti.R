@@ -173,15 +173,11 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  if('right' %in% brainstructures & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "right"')
+  if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
+  if(do_right & is.null(surfR_fname)) stop('surfR_fname must be provided if brainstructures includes "right"')
 
   if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
   if(!is.null(onsets) & is.null(TR)) stop('Please provide TR if onsets provided')
-  # if(do_sub){
-  #   if(length(unique(vol_regions)) != length(vol_regions)) stop('vol_regions must contain no repeated values.')
-  #   if(min(is.element(vol_regions, 3:21))==0) stop('vol_regions must include only integer values between 3 and 21.')
-  # }
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(cifti_fname)
@@ -207,7 +203,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   for(ss in 1:n_sess){
 
-    cat(paste0('    Reading in data for session ', ss,'\n'))
+    if(n_sess > 1) cat(paste0(' .. reading in data for session ', ss,'\n'))
 
     if(ss==1){
       #only read in surfaces with first session
@@ -253,32 +249,8 @@ BayesGLM_cifti <- function(cifti_fname,
   surf_list$right <- surf_right #if RHS if NULL, 'right' will be removed from list
   rm(BOLD_left, BOLD_right, surf_left, surf_right); gc()
 
-  # cat("READING IN CIFTI DATA \n")
-  # system.time(cifti_data <- sapply(brainstructures, function(each_hem) {
-  #   sapply(1:n_sess, function(ss){
-  #     cifti_ss <- read_cifti(
-  #       cifti_fname[ss],
-  #       surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-  #       brainstructures=brainstructures,
-  #       resamp_res=resamp_res
-  #     )
-  #     mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[each_hem]]
-  #     cdata <- cifti_ss$data[[paste0("cortex_",each_hem)]]
-  #     cifti_out <- matrix(NA,
-  #                         nrow = length(mwall_mask),
-  #                         ncol=ncol(cdata))
-  #     cifti_out[mwall_mask,] <- cdata
-  #     return(list(
-  #       data = cifti_out,
-  #       surf = cifti_ss$surf[[paste0("cortex_", each_hem)]],
-  #       ntime = ncol(cdata),
-  #       cifti = cifti_ss
-  #     ))
-  #   }, simplify = F)
-  # }, simplify = F))
-
   if(is.null(design)) {
-    cat("MAKING DESIGN MATRICES \n")
+    cat(" MAKING DESIGN MATRICES \n")
     #currently assumes that all sessions have the same duration, could relax this
     #ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
     design <- mapply(make_HRFs, onsets, TR = TR, duration = ntime, SIMPLIFY = F)
@@ -296,7 +268,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
-  cat('\n RUNNING MODELS \n')
+  cat(' RUNNING MODELS \n')
   classicalGLM_results <- list(left = NULL, right = NULL)
   BayesGLM_results <- list(left = NULL, right = NULL)
 
@@ -319,7 +291,7 @@ BayesGLM_cifti <- function(cifti_fname,
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
   for(each_hem in brainstructures) {
 
-    cat("\n ...",toupper(each_hem),"CORTEX ANALYSIS \n")
+    cat("\n ..",toupper(each_hem),"CORTEX ANALYSIS \n")
     verts_hem <- surf_list[[each_hem]]$vertices #verts_hem_old <- cifti_data[[each_hem]][[1]]$surf$vertices
     faces_hem <- surf_list[[each_hem]]$faces #faces_hem_old <- cifti_data[[each_hem]][[1]]$surf$faces
 
@@ -377,9 +349,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
 
-  cat('\n PUTTING RESULTS IN CIFTI FORMAT \n')
-
-  #we don't have cifti_data (or cifti_ss) anymore!  fix this based on old way of reading in CIFTI data
+  cat(' PUTTING RESULTS IN CIFTI FORMAT \n')
 
   classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
@@ -411,6 +381,8 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
 
+  #TO DO: Combine hyperparameters across hemispheres, rename "beta" to "task" (and in BayesGLM)
+  # Rename theta_posteriors to hyperpar_posteriors
 
   result <- list(betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
