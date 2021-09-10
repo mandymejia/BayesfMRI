@@ -40,6 +40,7 @@
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
+#' @importFrom stats as.formula
 #'
 #' @export
 BayesGLM <- function(
