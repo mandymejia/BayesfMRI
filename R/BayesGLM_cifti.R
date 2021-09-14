@@ -160,7 +160,7 @@ BayesGLM_cifti <- function(cifti_fname,
   }
   if(!is.null(design)) {
     #for multi-session data
-    if(class(design) == "list") {
+    if('list' %in% class(design)) {
       if(is.null(colnames(design[[1]])))
         beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
       if(!is.null(colnames(design[[1]])))
@@ -217,8 +217,8 @@ BayesGLM_cifti <- function(cifti_fname,
       if(do_left) surf_left <- cifti_ss$surf$cortex_left else surf_left <- NULL
       if(do_right) surf_right <- cifti_ss$surf$cortex_right else surf_right <- NULL
       #grab medial wall masks
-      if(do_left) cortexL_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$left)
-      if(do_right) cortexR_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$right)
+      if(do_left) cortexL_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$left) else cortexL_mwall <- NULL
+      if(do_right) cortexR_mwall <- as.numeric(cifti_ss$meta$cortex$medial_wall_mask$right) else cortexR_mwall <- NULL
     } else {
       cifti_ss <- read_cifti(
         cifti_fname[ss],

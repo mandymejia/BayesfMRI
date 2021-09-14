@@ -40,7 +40,6 @@
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
-#' @importFrom stats as.formula
 #'
 #' @export
 BayesGLM <- function(
@@ -195,6 +194,7 @@ BayesGLM <- function(
     n_sess <- 1
   }
 
+
   ## ESTIMATE PREWHITENING PARAMETERS -----
 
   #compute AR coefficients and average over sessions
@@ -303,29 +303,31 @@ BayesGLM <- function(
     X_reg <- data_s$design
 
     #perform classical GLM after any prewhitening
-    beta_hat_s <- SE_beta_hat_s <- matrix(NA, K, V_all)
+    beta_hat_s <- SE_beta_hat_s <- matrix(NA, V_all, K)
     XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
     if("try-error" %in% class(XTX_inv)) {
       stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     }
     coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
-    beta_hat_s[,mask2==TRUE] <- coef_s #RHS is a vector
-    resid_s <- matrix(y_reg - X_reg %*% coef_s, ncol = V)
+    coef_s_mat <- matrix(coef_s, nrow = V, ncol = K)
+    beta_hat_s[mask2==TRUE,] <- coef_s_mat
+    resid_s <- matrix(y_reg - X_reg %*% coef_s, nrow = V)
 
     # ESTIMATE STANDARD ERRORS OF ESTIIMATES
     #compute residual SD
     #using length(y_reg)/V instead of ntime here because we want ntime for single session case and ntime*n_sess for multi-session case
-    DOF <- (length(y_reg)/V) - K - 1
-    var_error <- matrixStats::colVars(resid_s) * (length(y_reg)/V - 1) / DOF #correct for DOF
+    DOF_true <- (length(y_reg)/V) - K - 1
+    DOF_false <- (length(y_reg)/V - 1)
+    var_error <- matrixStats::rowVars(resid_s) * DOF_false / DOF_true #correct DOF
     if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
     sd_error <- sqrt(var_error)
     #compute SE of betas
-    SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = K)
-    SE_beta_hat_s[,mask2==TRUE] <- SE_beta_s
+    SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = K) #each?
+    SE_beta_hat_s[mask2==TRUE,] <- SE_beta_s
 
-    result_classical[[s]] <- list(estimates = t(beta_hat_s),
-                            SE_estimates = t(SE_beta_hat_s),
-                            DOF = DOF)
+    result_classical[[s]] <- list(estimates = beta_hat_s,
+                                  SE_estimates = SE_beta_hat_s,
+                                  DOF = DOF_true)
   }
   names(result_classical) <- classical_session_names
 
@@ -333,6 +335,8 @@ BayesGLM <- function(
   ## ESTIMATE BAYESIAN GLM -----
 
   if(do_Bayesian){
+
+    ### THIS PART WILL CHANGE WITH EM VERSION
 
     #construct betas and repls objects
     replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
@@ -357,7 +361,7 @@ BayesGLM <- function(
     system.time(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
-        num.threads=num.threads, verbose=verbose, contrasts = contrasts
+        num.threads=num.threads, verbose=verbose#, contrasts = contrasts
       )
     )
     cat("done!\n")
@@ -368,7 +372,7 @@ BayesGLM <- function(
 
     #extract stuff needed for group analysis
     mu.theta <- INLA_result$misc$theta.mode
-    Q.theta <- solve(INLA_result$misc$cov.intern)
+    Q.theta <- solve(INLA_result$misc$cov.intern) #not needed for EM version
 
     #construct object to be returned
     if(!return_INLA_result){
@@ -376,6 +380,9 @@ BayesGLM <- function(
     } else {
       if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
     }
+
+    ### END OF PART THAT WILL CHANGE WITH EM VERSION
+
   }
 
   if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var)
