@@ -40,6 +40,7 @@
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
+#' @importFrom stats as.formula
 #'
 #' @export
 BayesGLM <- function(
@@ -327,7 +328,8 @@ BayesGLM <- function(
 
     result_classical[[s]] <- list(estimates = beta_hat_s,
                                   SE_estimates = SE_beta_hat_s,
-                                  DOF = DOF_true)
+                                  DOF = DOF_true,
+                                  mask = mask2)
   }
   names(result_classical) <- classical_session_names
 

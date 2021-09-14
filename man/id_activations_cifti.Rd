@@ -11,9 +11,7 @@ id_activations_cifti(
   alpha = 0.05,
   method = c("Bayesian", "classical"),
   threshold = NULL,
-  area.limit = NULL,
   correction = c("FWER", "FDR", "none"),
-  excur_method = c("EB", "QC"),
   verbose = TRUE
 )
 }
@@ -31,11 +29,7 @@ examined. If \code{NULL} (default), the average across all sessions is used.}
 
 \item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)}
 
-\item{area.limit}{For method = 'Bayesian' only: Below this value, clusters of activations will be considered spurious.  If NULL (default), no limit.}
-
-\item{correction}{For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)}
-
-\item{excur_method}{Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
+\item{correction}{For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)
 depending on the method that should be used to find the excursions set. Note that to ID
 activations for averages across sessions, the method chosen must be \code{EB}. The difference
 in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.}

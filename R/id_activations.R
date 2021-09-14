@@ -10,15 +10,12 @@
 #' @param alpha Significance level (e.g. 0.05)
 #' @param method Either 'Bayesian' or 'classical'
 #' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)
-#' @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile
-#'   Correction), depending on the method that should be used to find the
-#'   excursions set. Note that if any contrasts (including averages across
-#'   sessions) are used in the modeling, the method chosen must be \code{EB}.
-#'   The difference in the methods is that the \code{EB} method assumes Gaussian
-#'    posterior distributions for the parameters.
-#' @param area.limit For method = 'Bayesian' only: Below this value, clusters of activations will be considered spurious.  If NULL (default), no limit.
+# @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile Correction), depending on the method that should be used to find the
+#   excursions set. Note that if any contrasts (including averages across sessions) are used in the modeling, the method chosen must be \code{EB}.
+#   The difference in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
+# @param area.limit For method = 'Bayesian' only: Below this value, clusters of activations will be considered spurious.  If NULL (default), no limit.
 #' @param correction For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)
-#' @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
+# @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
 #' depending on the method that should be used to find the excursions set. Note that to ID
 #' activations for averages across sessions, the method chosen must be \code{EB}. The difference
 #' in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
@@ -38,13 +35,17 @@ id_activations_cifti <- function(model_obj,
                                  alpha=0.05,
                                  method=c('Bayesian','classical'),
                                  threshold=NULL,
-                                 area.limit=NULL,
+                                 #area.limit=NULL,
                                  correction = c("FWER","FDR","none"),
-                                 excur_method = c("EB","QC"),
+                                 #excur_method = c("EB","QC"),
                                  verbose = TRUE){
 
   if(class(model_obj) != 'BayesGLM_cifti') stop('The model_obj argument must be of class BayesGLM_cifti (output of BayesGLM_cifti function), but it is not.')
 
+  ## HERE -- figure out how to trigger NULL if Bayes=FALSE  (also below when adding the mesh)
+  ## If no Bayesian results but method=Bayesian, should return error (or switch to classical with a warning)
+
+  if(is.null(model_obj$betas_Bayesian[[1]])) method <- 'classical'
   method <- match.arg(method, c('Bayesian','classical'))
   if(!(method %in% c('Bayesian','classical'))) stop("The method argument should only be 'Bayesian' or 'classical'.")
 
@@ -66,17 +67,18 @@ id_activations_cifti <- function(model_obj,
   field_inds <- which(model_obj$beta_names %in% field_names)
 
   if(method=='Bayesian'){
+    #loop over hemispheres/structures
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
       if(verbose) cat(paste0('Identifying Bayesian GLM activations in ',names(GLM_list)[mm],'\n'))
       act_m <- id_activations.posterior(model_obj=model_m,
-                                                    field_names=field_names,
-                                                    session_name=session_name,
-                                                    threshold=threshold,
-                                                    alpha=alpha,
-                                                    area.limit=area.limit,
-                                                    excur_method=excur_method)
+                                        field_names=field_names,
+                                        session_name=session_name,
+                                        threshold=threshold,
+                                        alpha=alpha)
+                                        #area.limit=area.limit,
+                                        #excur_method=excur_method)
 
       activations[[mm]] <- act_m
     }
@@ -87,12 +89,14 @@ id_activations_cifti <- function(model_obj,
     for(mm in 1:num_models){
       if(is.null(GLM_list[[mm]])) next
       model_m <- GLM_list[[mm]]
+      mesh_m <- model_obj$GLMs_Bayesian[[mm]]$mesh #will be NULL if GLMs_Bayesian is NULL (no Bayesian model was fit)
       act_m <- id_activations.classical(model_obj=model_m,
                                         field_inds=field_inds,
                                         session_name=session_name,
                                         threshold=threshold,
                                         alpha=alpha,
-                                        correction=correction)
+                                        correction=correction,
+                                        mesh=mesh_m)
 
       activations[[mm]] <- act_m
     }
@@ -127,44 +131,6 @@ id_activations_cifti <- function(model_obj,
 
 
 
-
-  # model_result <- result$model_result
-  # active_xifti <- clear_data(result$subjICmean_xifti)
-  # nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
-  # nright <- nrow(result$subjICmean_xifti$data$cortex_right)
-  #
-  # if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
-  # if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
-  # if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
-  #   warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
-  #   spatial_model <- FALSE
-  # }
-  #
-  # #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
-  # if(class(model_result)=='stICA' & spatial_model==FALSE){
-  #   model_result <- model_result$result_tICA
-  # }
-  #
-  # #run activations function
-  # activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
-  #
-  # #construct xifti object for activation maps
-  # act_viz <- activations_result$active*1
-  # act_viz[act_viz==0] <- NA
-  # active_xifti$data$cortex_left <- act_viz[1:nleft,]
-  # active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
-  #
-  # #include convert_to_dlabel function
-  #
-  # return(list(activations = activations_result,
-  #             active_xifti = active_xifti))
-
-
-
-
-
-## HERE: Update this function to use field_inds instead of field_names
-
 #' Identify activations using joint posterior probabilities
 #'
 #' Identifies areas of activation given an activation threshold and significance
@@ -180,11 +146,11 @@ id_activations_cifti <- function(model_obj,
 #' If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
 #' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
-#' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
-#' @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
-#' depending on the method that should be used to find the excursions set. Note that to ID
-#' activations for averages across sessions, the method chosen must be \code{EB}. The difference
-#' in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
+# @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
+# @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
+# depending on the method that should be used to find the excursions set. Note that to ID
+# activations for averages across sessions, the method chosen must be \code{EB}. The difference
+# in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
 #'
 #'
 #' @return A list with two elements: \code{active}, which gives a matrix of zeros
@@ -199,99 +165,59 @@ id_activations.posterior <- function(model_obj,
                                      field_names=NULL,
                                      session_name=NULL,
                                      alpha=0.05,
-                                     threshold,
-                                     area.limit=NULL,
-                                     excur_method = c("EB","QC")){
+                                     threshold){
+                                     #area.limit=NULL,
+                                     #excur_method = c("EB","QC")
 
   if(class(model_obj) != "BayesGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
 
-  excur_method <- match.arg(excur_method, c("EB","QC"))
+  #excur_method <- match.arg(excur_method, c("EB","QC"))
 
-  #check session_name argument
+  ### Check session_name argument
 
   #if only one session, analyze that one
   all_sessions <- model_obj$session_names
   n_sess <- length(all_sessions)
+  #if only one session available, use that one
   if(n_sess == 1){ session_name <- all_sessions }
-
-  #if averages not available and session_name=NULL, pick first session and return a warning
-  has_avg <- is.matrix(model_obj$avg_beta_estimates)
-  if(is.null(session_name) & !has_avg){
-    session_name <- all_sessions[1]
-    warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
-  }
-
-  #if session_name is still NULL, use average and check excur_method argument
+  #if session_name=NULL and multiple sessions available, pick first session and return a warning
   if(is.null(session_name)){
-    if(has_avg & excur_method != "EB") {
-      excur_method <- 'EB'
-      warning("To id activations for averaged beta estimates, only the excur_method='EB' is supported. Setting excur_method to 'EB'.")
-    }
+    session_name <- all_sessions[1]
+    warning(paste0("Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
-
-  #check session_name not NULL, check that a valid session name
-  if(!is.null(session_name)){
-    if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
-    sess_ind <- which(all_sessions == session_name)
-  }
+  #check that session_name is valid
+  if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+  sess_ind <- which(all_sessions == session_name)
 
   #check field_names argument
   if(is.null(field_names)) field_names <- model_obj$beta_names
-  if(!any(field_names %in% model_obj$beta_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+  if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
 
   #check alpha argument
 	if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
 
   mesh <- model_obj$mesh
   n_vox <- mesh$n
+  #indices of beta vector corresponding to specified session
+  inds <- (1:n_vox) + (sess_ind-1)*n_vox
 
-	#for a specific session
-	if(!is.null(session_name)){
+	#loop over latent fields
+	excur <- vector('list', length=length(field_names))
+	act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+	colnames(act) <- field_names
+	for(f in field_names){
 
-	  inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
-
-		#loop over latent fields
-		excur <- vector('list', length=length(field_names))
-		act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-		colnames(act) <- field_names
-		for(f in field_names){
-
-  		if(is.null(area.limit)){
-  			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha)
-  		} else {
-  			res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
-  		}
-		  which_f <- which(field_names==f)
-  		act[,which_f] <- res.exc$E[inds]
-      excur[[which_f]] <- res.exc
-		}
-		result <- list(active=act, excursions_result=excur)
+		#if(is.null(area.limit)){
+			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds, u=threshold, type='>', alpha=alpha, method="EB")
+		#} else {
+		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
+		#}
+	  which_f <- which(field_names==f)
+		act[,which_f] <- res.exc$E[inds]
+    excur[[which_f]] <- res.exc
 	}
+	result <- list(active=act, excursions_result=excur)
 
-	#for the average over sessions
-	if(is.null(session_name)){
-
-	  avg_inds <- model_obj$INLA_result$misc$configs$config[[1]]$pred_idx
-	  mu_avg <- model_obj$INLA_result$misc$configs$config[[1]]$mean[avg_inds]
-	  Q_avg <- model_obj$INLA_result$misc$configs$config[[1]]$Q[avg_inds,avg_inds]
-	  avg_exc <- excursions(alpha = alpha,
-	                        u = threshold,
-	                        mu = mu_avg,
-	                        Q = Q_avg,
-	                        type = ">",
-	                        method = "EB")
-	  act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-	  for(f in field_names){
-	    which_f <- which(field_names==f)
-	    f_inds <- (1:n_vox) + (which_f - 1)*n_vox
-	    act[,which_f] <- avg_exc$E[f_inds]
-	  }
-
-	  result <- list(
-	    active = act,
-	    excursions_result = avg_exc
-	  )
-	}
 
   #compute size of activations
   areas_all <- diag(inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
@@ -340,38 +266,29 @@ id_activations.classical <- function(model_obj,
 
   if(is.null(threshold)) threshold <- 0
 
-  #check session_name argument
+  ### Check session_name argument
 
   #if only one session, analyze that one
   all_sessions <- names(model_obj)
   n_sess <- length(all_sessions)
+  #if only one session available, use that one
   if(n_sess == 1){ session_name <- all_sessions }
-
-  # #if averages not available and session_name=NULL, pick first session and return a warning
-  has_avg <- ('avg' %in% names(model_obj))
-  if(is.null(session_name) & !has_avg){
-     session_name <- all_sessions[1]
-     warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+  #if session_name=NULL and multiple sessions available, pick first session and return a warning
+  if(is.null(session_name)){
+    session_name <- all_sessions[1]
+    warning(paste0("Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
-
-  # If averages are available and no session name is defined, use the averages
-  if(is.null(session_name) & has_avg){
-    session_name <- 'avg'
-    message("No session name defined. Using the average of sessions.")
-    sess_ind <- which(all_sessions == session_name)
-  }
-
-  #check session_name not NULL, check that a valid session name
-  if(!is.null(session_name)){
-    if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
-    sess_ind <- which(all_sessions == session_name)
-  }
+  #check that session_name is valid
+  if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+  sess_ind <- which(all_sessions == session_name)
 
   # #check field_inds argument
+  num_fields <- ncol(model_obj[[sess_ind]]$estimates)
   if(is.null(field_inds)){
-    num_fields <- ncol(model_obj[[sess_ind]]$estimates)
     field_inds <- seq(num_fields)
     if(num_fields > 1) message(paste0('Since field_inds=NULL, I will analyze all ', num_fields, ' tasks.'))
+  } else {
+    if(any(!(field_inds %in% seq(num_fields)))) stop(paste0("Please specify only field inds between 1 and ",num_fields))
   }
 
   beta_est <- model_obj[[sess_ind]]$estimates
@@ -379,8 +296,7 @@ id_activations.classical <- function(model_obj,
   DOF <- model_obj[[sess_ind]]$DOF
 
   nvox <- nrow(beta_est)
-  K <- ncol(beta_est)
-  if(any(!(field_inds %in% 1:K))) stop(paste0('field_inds must be between 1 and the number of tasks, ',K))
+  #if(any(!(field_inds %in% 1:K))) stop(paste0('field_inds must be between 1 and the number of tasks, ',K))
   beta_est <- matrix(beta_est[,field_inds], nrow=nvox) #need matrix() in case beta_est[,field_inds] is a vector
   se_beta <- matrix(se_beta[,field_inds], nrow=nvox) #need matrix() in case beta_est[,field_inds] is a vector
   K <- length(field_inds)
@@ -403,7 +319,7 @@ id_activations.classical <- function(model_obj,
 
   #compute size of activations
   if(!is.null(mesh)){
-    mask <- model_obj[[1]]$mask
+    mask <- model_obj[[sess_ind]]$mask
     if(sum(mask) != nrow(mesh$loc)) stop('Supplied mesh is not consistent with mask in model_obj.')
     areas_all <- diag(inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
     areas_act <- apply(active[mask==1,], 2, function(x) sum(areas_all[x==1]))

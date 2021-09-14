@@ -334,6 +334,8 @@ BayesGLM_cifti <- function(cifti_fname,
 
     BayesGLM_results[[each_hem]] <- BayesGLM_out[-grep("classical", names(BayesGLM_out))]
     classicalGLM_results[[each_hem]] <- BayesGLM_out$result_classical
+    class(BayesGLM_results[[each_hem]]) <- 'BayesGLM'
+    class(classicalGLM_results[[each_hem]]) <- 'classicalGLM'
 
     rm(BayesGLM_out); gc()
   }

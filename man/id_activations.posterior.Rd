@@ -9,9 +9,7 @@ id_activations.posterior(
   field_names = NULL,
   session_name = NULL,
   alpha = 0.05,
-  threshold,
-  area.limit = NULL,
-  excur_method = c("EB", "QC")
+  threshold
 )
 }
 \arguments{
@@ -25,13 +23,6 @@ If \code{NULL} (default), the average across all sessions is used.}
 \item{alpha}{Significance level (e.g. 0.05)}
 
 \item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)}
-
-\item{area.limit}{Below this value, activations will be considered spurious.  If NULL, no limit.}
-
-\item{excur_method}{Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
-depending on the method that should be used to find the excursions set. Note that to ID
-activations for averages across sessions, the method chosen must be \code{EB}. The difference
-in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.}
 }
 \value{
 A list with two elements: \code{active}, which gives a matrix of zeros
