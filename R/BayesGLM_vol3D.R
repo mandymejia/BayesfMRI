@@ -29,26 +29,12 @@
 #' @inheritParams verbose_Param_inla
 #'
 #' @return A list containing...
-#'
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check
 #' @importFrom stats as.formula
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
 
-  # Check to see that the INLA package is installed
-  if (!requireNamespace("INLA", quietly = TRUE))
-    stop("This function requires the `INLA` package (see www.r-inla.org/download)")
-
-
-  # Check to see if PARDISO is installed
-  if(!exists("inla.pardiso.check", mode = "function")){
-    warning("Please update to the latest version of INLA for full functionality and PARDISO compatibility (see www.r-inla.org/download)")
-  }else{
-    if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
-      warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
-    #inla.pardiso()
-  }
+  check_INLA(FALSE)
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
@@ -250,15 +236,15 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 #' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
-#' @importFrom INLA inla.spde2.result inla.extract.el
-#'
 #' @export
 get_posterior_densities_vol3D <- function(object, spde){
+
+  check_INLA(FALSE)
 
   hyper_names <- names(object$marginals.hyperpar)
 
   for(h in hyper_names){
-    df.h <- inla.extract.el(object$marginals.hyperpar, h)
+    df.h <- INLA::inla.extract.el(object$marginals.hyperpar, h)
     df.h <- as.data.frame(df.h)
     names(df.h) <- c('x','y')
     df.h$hyper_name <- h
@@ -354,7 +340,7 @@ BayesGLM_slice <- function(
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
-  check_BayesGLM(require_PARDISO=do_Bayesian)
+  check_INLA(require_PARDISO=do_Bayesian)
 
   image_dims <- head(dim(BOLD[[1]]),-1)
   if (is.null(binary_mask))

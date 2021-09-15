@@ -35,7 +35,7 @@ for model estimation. Default: \code{4}.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{lincomb}{A linear combinations object created with \code{inla.make.lincomb}}
 }

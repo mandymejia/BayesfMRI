@@ -32,7 +32,6 @@
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
 #'
-#' @importFrom INLA inla.spde2.matern inla.spde.make.A
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
 #'
@@ -53,7 +52,7 @@ BayesGLM2 <- function(results,
   }
 
   # Check to see that the INLA package is installed
-  check_BayesGLM(require_PARDISO=TRUE)
+  check_INLA(require_PARDISO=TRUE)
 
   #Check if results are model objects or file paths
 
@@ -154,8 +153,8 @@ BayesGLM2 <- function(results,
 
   # Mesh and SPDE object
   mesh <- results[[1]]$mesh
-  spde <- inla.spde2.matern(mesh)
-  Amat <- inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
+  spde <- INLA::inla.spde2.matern(mesh)
+  Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
   Amat <- Amat[mesh$idx$loc,]
   Amat.tot <- bdiag(rep(list(Amat), K)) #Psi_m from paper (VKxNK)
 
@@ -230,7 +229,7 @@ BayesGLM2 <- function(results,
 
   #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
   if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
-  theta.samp <- inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+  theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
 
   #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
 
@@ -353,21 +352,13 @@ BayesGLM2 <- function(results,
 #'
 #' @importFrom excursions excursions.mc
 #' @importFrom Matrix Diagonal
-#' @importFrom INLA inla.spde2.precision inla.qsample inla.qsolve
 #'
 #' @return A list containing...
 #'
 #' @keywords internal
-beta.posterior.thetasamp <- function(theta,
-                                     spde,
-                                     Xcros,
-                                     Xycros,
-                                     contrasts,
-                                     quantiles,
-                                     excursion_type,
-                                     gamma,
-                                     alpha,
-                                     nsamp_beta=100){
+beta.posterior.thetasamp <- function(
+  theta, spde, Xcros, Xycros, contrasts, 
+  quantiles, excursion_type, gamma, alpha, nsamp_beta=100){
 
   n.mesh <- spde$n.spde
 
@@ -381,7 +372,7 @@ beta.posterior.thetasamp <- function(theta,
   Q.beta <- list()
   for(k in 1:K) {
     theta_k <- theta_spde[,k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
-    Q.beta[[k]] <- inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+    Q.beta[[k]] <- INLA::inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
   }
   Q <- bdiag(Q.beta) #Q_theta in the paper
 
@@ -400,10 +391,10 @@ beta.posterior.thetasamp <- function(theta,
     }
     #compute posterior mean and precision of beta|theta
     Q.m <- prec.error*Xcros[[mm]] + Q_mm #Q_m in paper
-    mu.m <- inla.qsolve(Q.m, prec.error*Xycros[[mm]]) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
+    mu.m <- INLA::inla.qsolve(Q.m, prec.error*Xycros[[mm]]) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
 
     #draw samples from pi(beta_m|theta,y)
-    beta.samp.m <- inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
+    beta.samp.m <- INLA::inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
 
     #concatenate samples over models
     beta.samples <- rbind(beta.samples, beta.samp.m) #will be a (N*K*M*num_sessions) x nsamp_beta matrix

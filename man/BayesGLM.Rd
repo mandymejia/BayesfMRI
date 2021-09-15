@@ -78,7 +78,7 @@ posterior quantities of group means or contrasts.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
 sessions? Default: \code{FALSE}.}

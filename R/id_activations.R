@@ -220,7 +220,7 @@ id_activations.posterior <- function(model_obj,
 
 
   #compute size of activations
-  areas_all <- diag(inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
+  areas_all <- diag(INLA::inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
   areas_act <- apply(act, 2, function(x) sum(areas_all[x==1]))
 
   result$areas_all <- areas_all
@@ -321,7 +321,7 @@ id_activations.classical <- function(model_obj,
   if(!is.null(mesh)){
     mask <- model_obj[[sess_ind]]$mask
     if(sum(mask) != nrow(mesh$loc)) stop('Supplied mesh is not consistent with mask in model_obj.')
-    areas_all <- diag(inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
+    areas_all <- diag(INLA::inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
     areas_act <- apply(active[mask==1,], 2, function(x) sum(areas_all[x==1]))
   } else {
     areas_all <- areas_act <- NULL

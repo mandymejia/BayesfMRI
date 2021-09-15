@@ -8,21 +8,22 @@
 #'
 #' @return SPDE object representing triangular mesh structure on data locations
 #' 
-#' @importFrom INLA inla.mesh.create inla.spde2.generic
 #' @importFrom Matrix sparseMatrix colSums Diagonal t solve
 #'
 #' @export
 create_spde_vol3D <- function(locs, labs, lab_set = NULL){
 
-  # Check to see that the INLA package is installed
+  # Check to see that the `rdist` package is installed
   if (!requireNamespace("rdist", quietly = TRUE)) {
     stop("`create_spde_vol3D` requires the `rdist` package. Please install it.", call. = FALSE)
   }
 
-  # Check to see that the INLA package is installed
+  # Check to see that the `geometry` package is installed
   if (!requireNamespace("geometry", quietly = TRUE)) {
     stop("`create_spde_vol3D` requires the `geometry` package. Please install it.", call. = FALSE)
   }
+
+  check_INLA(FALSE)
 
   if(is.null(labs) & !is.null(lab_set)) stop('If labs is NULL, then lab_set must not be specified.')
 
@@ -133,12 +134,12 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
 
   # Part 2
   tG <- t(G)
-  M0 = C
-  M1 = G + tG
-  M2 = tG %*% solve(C,G)
+  M0 <- C
+  M1 <- G + tG
+  M2 <- tG %*% solve(C,G)
 
   # Create the spde object. Note that the priors theta.mu and theta.Q have to be set reasonably here!!!
-  spde = inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
+  spde <- INLA::inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
                             B0 = matrix(c(0,1,0),1,3),
                             B1 = matrix(c(0,0,1),1,3),
                             B2 = 1,

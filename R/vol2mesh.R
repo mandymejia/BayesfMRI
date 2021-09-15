@@ -6,12 +6,13 @@
 #'
 #' @return An inla.mesh object.  See \code{\link{inla.mesh.2d}} for details.
 #' 
-#' @importFrom INLA inla.nonconvex.hull inla.mesh.2d
-#' 
 #' @export
 #'
 vol2mesh <- function(mask){
+
+  check_INLA(FALSE)
+  
   xy.in <- which(mask==1, arr.ind=TRUE)[,2:1]
-  boundary <- inla.nonconvex.hull(xy.in, resolution = 100)
-  mesh <- inla.mesh.2d(loc = xy.in, boundary = boundary, max.edge = c(2, 4))
+  boundary <- INLA::inla.nonconvex.hull(xy.in, resolution = 100)
+  mesh <- INLA::inla.mesh.2d(loc = xy.in, boundary = boundary, max.edge = c(2, 4))
 }

@@ -9,10 +9,10 @@
 #'
 #' @return Triangular mesh from matrices and vertices
 #' 
-#' @importFrom INLA inla.mesh.create
-#' 
 #' @export
 make_mesh <- function(vertices, faces){
+
+  check_INLA(FALSE)
 
   # Check index of faces
   if(min(faces) == 0){
@@ -20,7 +20,7 @@ make_mesh <- function(vertices, faces){
   }
 
   # Construct mesh
-  mesh <- inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces))
+  mesh <- INLA::inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces))
   return(mesh)
 }
 

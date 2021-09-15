@@ -25,7 +25,6 @@ Imports:
     ciftiTools,
     excursions,
     foreach,
-    INLA (>= 0.0-1468840039),
     MASS,
     Matrix,
     matrixStats,
@@ -39,6 +38,7 @@ Suggests:
     geometry,
     ggplot2,
     grDevices,
+    INLA (>= 0.0-1468840039),
     knitr,
     parallel,
     purrr,
@@ -47,6 +47,6 @@ Suggests:
     testthat (>= 2.1.0)
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/BayesfMRI
 BugReports: https://github.com/mandymejia/BayesfMRI/issues

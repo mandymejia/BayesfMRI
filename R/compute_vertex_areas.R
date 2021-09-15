@@ -6,8 +6,6 @@
 #'
 #' @return Vector of areas
 #' 
-#' @importFrom INLA inla.fmesher.smorg
-#' 
 #' @export
 compute_vertex_areas <- function(mesh)
 {
@@ -16,7 +14,7 @@ compute_vertex_areas <- function(mesh)
 
   if(class(mesh)=="inla.mesh")
     {
-    areas <- diag(inla.fmesher.smorg(mesh$loc,mesh$graph$tv, fem = 0, output = list("c0"))$c0)
+    areas <- diag(INLA::inla.fmesher.smorg(mesh$loc,mesh$graph$tv, fem = 0, output = list("c0"))$c0)
     return(areas)
   }  else {
     stop("Error in the class of mesh you input.It needs to be inla.mesh")

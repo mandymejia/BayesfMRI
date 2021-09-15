@@ -6,7 +6,6 @@
 #' @param Q.theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
-#' @importFrom INLA inla.spde2.matern
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'

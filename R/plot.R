@@ -88,7 +88,6 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
 #' @return A ggplot2 object
 #'
 #' @importFrom ciftiTools ROY_BIG_BL
-#' @importFrom INLA inla.spde.make.A
 #'
 #' @export
 plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NULL) {
@@ -103,6 +102,8 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   if (!requireNamespace("purrr", quietly = TRUE)) {
     stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
   }
+
+  check_INLA(FALSE)
 
   # Create a conversion matrix
   in_binary_mask <- which(BayesGLM_object$mask == 1, arr.ind = T)

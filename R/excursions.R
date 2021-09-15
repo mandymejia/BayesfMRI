@@ -176,7 +176,6 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' the same elements as the output of \code{continuous}.
 #' 
 #' @import excursions
-#' @importFrom INLA inla.mesh.projector
 #' 
 #' @export
 excursions.no.spurious <- function(alpha,
@@ -366,8 +365,8 @@ excursions.no.spurious <- function(alpha,
     sets.marg <- excursions::continuous(ex = res.marg, geometry = mesh, alpha = alpha)
     areas <- find.smallest.activation(sets.marg,mesh,area.limit = area.limit,factor = factor)
   } else {
-    #area.el <- diag(inla.fmesher.smorg(mesh$loc,mesh$graph$tv, fem = 0, output = list("c0"))$c0)
-    area.el <- inla.fmesher.smorg(mesh$loc,mesh$graph$tv, fem = 0, output = list("c0"))$c0@x
+    #area.el <- diag(INLA::inla.fmesher.smorg(mesh$loc,mesh$graph$tv, fem = 0, output = list("c0"))$c0)
+    area.el <- INLA::inla.fmesher.smorg(mesh$loc,mesh$graph$tv, fem = 0, output = list("c0"))$c0@x
     areas <- find.smallest.activation(res.marg,mesh,area.limit = area.limit,factor = factor,
                                       area.el= area.el)
   }
@@ -377,7 +376,8 @@ excursions.no.spurious <- function(alpha,
   rho <- marg$rho
   rho.crop = rho[ind]
   if(use.continuous == FALSE && plot.progress){
-    proj <- inla.mesh.projector(mesh, dims = c(100,100))
+    check_INLA(FALSE)
+    proj <- INLA::inla.mesh.projector(mesh, dims = c(100,100))
   }
   ###########
   if(is.null(ind.rem)){
@@ -419,7 +419,7 @@ excursions.no.spurious <- function(alpha,
       # } else {
       #   E1 <- res.exc$E
       #   E1[ind.rem] <- 0
-      #   image(proj$x, proj$y, inla.mesh.project(proj, field = E1),asp = 1)
+      #   image(proj$x, proj$y, INLA::inla.mesh.project(proj, field = E1),asp = 1)
       # }
 
     }
@@ -468,7 +468,7 @@ excursions.no.spurious <- function(alpha,
       # } else {
       #   E1 <- res.exc$E
       #   E1[ind.rem] <- 0
-      #   image(proj$x, proj$y, inla.mesh.project(proj, field = E1),asp = 1)
+      #   image(proj$x, proj$y, INLA::inla.mesh.project(proj, field = E1),asp = 1)
       # }
 
     }

@@ -18,7 +18,6 @@
 #'  which is \code{NULL} for the "2means" method.
 #'
 #' @importFrom stats kmeans dist
-#' @importFrom INLA inla.posterior.sample
 #'
 #' @export
 #' @md
@@ -97,10 +96,13 @@ id_activations.2means <- function(
     }, simplify = FALSE)
     # complete_sample <- vector("list", length(model_obj$beta_names))
     # names(complete_sample) <- model_obj$beta_names
+
+    check_INLA(FALSE)
+
     while (n_remain > 0) {
       cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
       next_sample_size <- min(n_remain, 100)
-      test_sample <- inla.posterior.sample(
+      test_sample <- INLA::inla.posterior.sample(
         n = next_sample_size,
         result = model_obj$INLA_result,
         selection = select_vars

@@ -1,13 +1,10 @@
-#' Check arguments and packages for BayesGLM-related functions
-#'
-# TO DO: update with function links (removed b/c BayesGLM_cifti has been hidden)
-#' Check arguments and packages for \code{BayesGLM} and \code{BayesGLM_cifti}.
+#' Check INLA and PARDISO
 #'
 #' @param require_PARDISO Is PARDISO required? Default: \code{TRUE}.
 #' @return \code{NULL}, invisibly
 #'
 #' @keywords internal
-check_BayesGLM <- function(require_PARDISO=TRUE){
+check_INLA <- function(require_PARDISO=TRUE){
 
   # Check packages -------------------------------------------------------------
 
@@ -17,18 +14,20 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
   }
 
   # Check to see if PARDISO is installed
-  if (!exists("inla.pardiso.check", mode = "function")) {
-    warning(paste(
-      "Please update to the latest stable version of `INLA` for full functionality",
-      "and `PARDISO` compatibility. See www.r-inla.org/download\n"
-    ))
-  } else {
-    if (grepl("FAILURE", toupper(inla.pardiso.check()))) {
-      warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
+  if (require_PARDISO) {
+    if (!exists("inla.pardiso.check", mode = "function")) {
+      warning(paste(
+        "Please update to the latest stable version of `INLA` for full functionality",
+        "and `PARDISO` compatibility. See www.r-inla.org/download\n"
+      ))
     } else {
-      inla.setOption(smtp='pardiso')
+      if (grepl("FAILURE", toupper(INLA::inla.pardiso.check()))) {
+        warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
+      } else {
+        INLA::inla.setOption(smtp='pardiso')
+      }
+      #inla.pardiso()
     }
-    #inla.pardiso()
   }
 
   invisible(NULL)
@@ -51,17 +50,18 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #'
 #' @return Results from INLA
 #'
-#' @importFrom INLA inla
-#'
 #' @export
 estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
 
-  result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
-                 verbose = verbose, keep = FALSE, num.threads = num.threads,
-                 control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
-                 control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) #required for excursions
-  return(result)
+  check_INLA(require_PARDISO=FALSE)
+
+  INLA::inla(
+    formula, data=data, control.predictor=list(A=A, compute = TRUE),
+    verbose = verbose, keep = FALSE, num.threads = num.threads,
+    control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
+    control.family=list(hyper=list(prec=list(initial=prec_initial))),
+    control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb #required for excursions
+  )
 }
 
 
@@ -209,19 +209,17 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 #' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
-#' @importFrom INLA inla.spde2.result
-#'
 #' @keywords internal
 get_posterior_densities <- function(object, spde, beta_names){
 
   numbeta <- length(beta_names)
 
   for(b in 1:numbeta){
-    name_b = beta_names[b]
-    result.spde.b = inla.spde2.result(object, name_b, spde)
+    name_b <- beta_names[b]
+    result.spde.b <- INLA::inla.spde2.result(object, name_b, spde)
     # Kappa and Tau
-    log_kappa.b = as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
-    log_tau.b = as.data.frame(result.spde.b$marginals.log.tau$tau.1)
+    log_kappa.b <- as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
+    log_tau.b <- as.data.frame(result.spde.b$marginals.log.tau$tau.1)
     names(log_kappa.b) <- names(log_tau.b) <- c('value','density')
     log_kappa.b$param <- 'log_kappa'
     log_tau.b$param <- 'log_tau'
@@ -229,6 +227,6 @@ get_posterior_densities <- function(object, spde, beta_names){
     df.b$beta <- name_b
     if(b == 1) df <- df.b else df <- rbind(df, df.b)
   }
-  df <- df[,c('beta','param','value','density')]
-  return(df)
+  
+  df[,c('beta','param','value','density')]
 }

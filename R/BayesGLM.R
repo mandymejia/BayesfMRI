@@ -34,8 +34,7 @@
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @return A list containing...
-#'
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
+#' 
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
@@ -76,7 +75,7 @@ BayesGLM <- function(
   # K = number of unique tasks in all sessions
 
   do_Bayesian <- as.logical(Bayes)
-  if(do_Bayesian) check_BayesGLM(require_PARDISO=TRUE)
+  if(do_Bayesian) check_INLA(require_PARDISO=TRUE)
 
   if(is.null(ar_smooth)) ar_smooth <- 0
 
@@ -152,7 +151,7 @@ BayesGLM <- function(
   tmp <- make_mask(data)
   if(!is.null(tmp)) stop('Flat/NA/NaN vertices exist outside the mask. Update mask to exclude these.')
 
-  if(do_Bayesian) spde <- inla.spde2.matern(mesh)
+  if (do_Bayesian) spde <- INLA::inla.spde2.matern(mesh)
 
   #collect data and design matrices
   design <- vector('list', length=n_sess)

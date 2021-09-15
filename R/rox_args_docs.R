@@ -17,7 +17,7 @@ NULL
 
 #' contrasts: INLA
 #'
-#' @param contrasts List of contrast vectors to be passed to \code{\link{inla}}.
+#' @param contrasts List of contrast vectors to be passed to \code{inla::inla}.
 #'
 #' @name contrasts_Param_inla
 NULL

@@ -94,7 +94,6 @@
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
 #' @import ciftiTools
 #' @importFrom matrixStats rowVars rowSums2 colVars
-#' @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom parallel detectCores
 #'
 #' @export
@@ -126,7 +125,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   do_Bayesian <- as.logical(Bayes)
 
-  check_BayesGLM(require_PARDISO=do_Bayesian)
+  check_INLA(require_PARDISO=do_Bayesian)
   prewhiten <- ar_order > 0
 
   avail_cores <- parallel::detectCores()
