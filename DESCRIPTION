@@ -33,6 +33,7 @@ Imports:
     sp,
     utils
 Suggests:
+    covr,
     abind,
     dplyr,
     geometry,

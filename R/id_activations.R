@@ -49,6 +49,9 @@ id_activations_cifti <- function(model_obj,
   method <- match.arg(method, c('Bayesian','classical'))
   if(!(method %in% c('Bayesian','classical'))) stop("The method argument should only be 'Bayesian' or 'classical'.")
 
+  # [TO DO]: check that the requested method(s) actually exist in model_obj? 
+  # what's the best way to check this? all entries in e.g. `$betas_Bayesian` are `NULL`?
+
   if(is.null(threshold)){
     if(method=='classical') threshold <- 0
     if(method=='Bayesian') stop("Must specify an activation threshold when method='Bayesian'.")

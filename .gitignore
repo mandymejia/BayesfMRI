@@ -1,16 +1,16 @@
+.DS_Store
 .Rproj.user
 .Rhistory
 .RData
+.Ruserdata
 *~
 *.out
 *.Rout
-.Ruserdata
 R/summarize_sessions.R
 inst/doc
 R/EM_functions.R
 R/EM_utils.R
 vignettes/simulated-EM.Rmd
-.DS_Store
 vignettes/.DS_Store
 BayesfMRI 1.9 test.R
 BayesfMRI To-Do List.gdoc
