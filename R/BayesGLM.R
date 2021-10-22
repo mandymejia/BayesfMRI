@@ -85,6 +85,8 @@
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param groups_df Data frame indicating the name and model group of each
+#'   region.  See Details of the \code{BayesGLM_vol3D} function
 #' @param tol Only used when \code{method} is set to 'EM'. The numeric tolerance
 #'   used to determine convergence of the EM algorithm.
 #'
@@ -114,6 +116,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      return_INLA_result=FALSE,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE,
+                     groups_df = NULL,
                      tol = 1e-3){
 
 #  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
@@ -132,7 +135,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   # Check that arguments are compatible
   brainstructures <- ciftiTools:::match_input(
-    brainstructures, c("left","right"),
+    brainstructures, c("left","right","subcortical"),
     user_value_label="brainstructures"
   )
   if ("all" %in% brainstructures) {
@@ -208,79 +211,115 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n SETTING UP DATA \n')
 
-  ### For each session, separate the CIFTI data into left/right/sub and read in files
-  # if(do_left) cifti_left <- vector('list', n_sess)
-  # if(do_right) cifti_right <- vector('list', n_sess)
-  #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
+  if(class(cifti_fname) == "character") {
 
-  # if(is.null(design)) {
-  #   make_design <- TRUE
-  #   design <- vector('list', length=n_sess)
-  # }
+    ### For each session, separate the CIFTI data into left/right/sub and read in files
+    # if(do_left) cifti_left <- vector('list', n_sess)
+    # if(do_right) cifti_right <- vector('list', n_sess)
+    #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
 
-  # for(ss in 1:n_sess){
+    # if(is.null(design)) {
+    #   make_design <- TRUE
+    #   design <- vector('list', length=n_sess)
+    # }
 
-  #   cat(paste0('    Reading in data for session ', ss,'\n'))
+    # for(ss in 1:n_sess){
 
-  #   if(ss==1){
-  #     cifti_ss <- read_cifti(
-  #       cifti_fname[ss],
-  #       surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-  #       brainstructures=brainstructures,
-  #       resamp_res=resamp_res
-  #     )
-  #     if(do_left) surf_left <- cifti_ss$surf$cortex_left
-  #     if(do_right) surf_right <- cifti_ss$surf$cortex_right
-  #   } else {
-  #     cifti_ss <- read_cifti(
-  #       cifti_fname[ss],
-  #       brainstructures=brainstructures,
-  #       resamp_res=resamp_res
-  #     )
-  #   }
+    #   cat(paste0('    Reading in data for session ', ss,'\n'))
 
-  #   if(do_left) {
-  #     cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
-  #     cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
-  #     ntime <- ncol(cifti_left[[ss]])
-  #   }
-  #   if(do_right) {
-  #     cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
-  #     cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
-  #     ntime <- ncol(cifti_right[[ss]])
-  #   }
-  #   #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
-  #   #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
+    #   if(ss==1){
+    #     cifti_ss <- read_cifti(
+    #       cifti_fname[ss],
+    #       surfL_fname=surfL_fname, surfR_fname=surfR_fname,
+    #       brainstructures=brainstructures,
+    #       resamp_res=resamp_res
+    #     )
+    #     if(do_left) surf_left <- cifti_ss$surf$cortex_left
+    #     if(do_right) surf_right <- cifti_ss$surf$cortex_right
+    #   } else {
+    #     cifti_ss <- read_cifti(
+    #       cifti_fname[ss],
+    #       brainstructures=brainstructures,
+    #       resamp_res=resamp_res
+    #     )
+    #   }
 
-  #   if(make_design){
-  #     cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-  #     design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
-  #   }
+    #   if(do_left) {
+    #     cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
+    #     cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
+    #     ntime <- ncol(cifti_left[[ss]])
+    #   }
+    #   if(do_right) {
+    #     cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
+    #     cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
+    #     ntime <- ncol(cifti_right[[ss]])
+    #   }
+    #   #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
+    #   #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
 
-  # }
-  cat("READING IN CIFTI DATA \n")
-  cifti_data <- sapply(brainstructures, function(each_hem) {
-    sapply(1:n_sess, function(ss){
-      cifti_ss <- read_cifti(
-        cifti_fname[ss],
-        surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-        brainstructures=brainstructures,
-        resamp_res=resamp_res
-      )
-      mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[each_hem]]
-      cdata <- cifti_ss$data[[paste0("cortex_",each_hem)]]
-      cifti_out <- matrix(NA,
-                          nrow = length(mwall_mask),
-                          ncol=ncol(cdata))
-      cifti_out[mwall_mask,] <- cdata
-      return(list(
-        data = cifti_out,
-        surf = cifti_ss$surf[[paste0("cortex_", each_hem)]],
-        ntime = ncol(cdata),
-        cifti = cifti_ss
-      ))
+    #   if(make_design){
+    #     cat(paste0('    Constructing design matrix for session ', ss, '\n'))
+    #     design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+    #   }
+
+    # }
+    cat("READING IN CIFTI DATA \n")
+    cifti_data <- sapply(brainstructures, function(br_str) {
+      sapply(1:n_sess, function(ss){
+        cifti_ss <- read_cifti(
+          cifti_fname[ss],
+          surfL_fname=surfL_fname, surfR_fname=surfR_fname,
+          brainstructures=brainstructures,
+          resamp_res=resamp_res
+        )
+        if(br_str %in% c("left","right")) {
+          mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
+          cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
+          cifti_out <- matrix(NA,
+                              nrow = length(mwall_mask),
+                              ncol=ncol(cdata))
+          cifti_out[mwall_mask,] <- cdata
+          return(list(
+            data = cifti_out,
+            surf = cifti_ss$surf[[paste0("cortex_", br_str)]],
+            ntime = ncol(cdata),
+            cifti = cifti_ss
+          ))
+        }
+        if(br_str == "subcortical") {
+          cdata <- cifti_ss$data$subcort
+          return(list(
+            data = cdata,
+            surf = NULL,
+            ntime = ncol(cdata),
+            cifti = cifti_ss
+          ))
+        }
+      }, simplify = F)
     }, simplify = F)
-  }, simplify = F)
+  }
+
+  if(class(cifti_fname[[1]]) == "xifti") {
+    cifti_data <- sapply(brainstructures, function(br_str) {
+      sapply(1:n_sess, function(ss){
+        other_hem <- grep(br_str, c('left','right'), value = T, invert  = T)
+        cifti_ss <- cifti_fname[[ss]]
+        cifti_ss <- remove_xifti(cifti_ss, paste0("cortex_",other_hem))
+        mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
+        cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
+        cifti_out <- matrix(NA,
+                            nrow = length(mwall_mask),
+                            ncol=ncol(cdata))
+        cifti_out[mwall_mask,] <- cdata
+        return(list(
+          data = cifti_out,
+          surf = cifti_ss$surf[[paste0("cortex_", br_str)]],
+          ntime = ncol(cdata),
+          cifti = cifti_ss
+        ))
+      }, simplify = F)
+    }, simplify = F)
+  }
 
   ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
 
@@ -346,60 +385,62 @@ BayesGLM_cifti <- function(cifti_fname,
   #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
-  for(each_hem in brainstructures) {
-    cat("\n ...",toupper(each_hem),"CORTEX \n")
-    verts <- cifti_data[[each_hem]][[1]]$surf$vertices
-    faces <- cifti_data[[each_hem]][[1]]$surf$faces
+  for(br_str in brainstructures) {
+    # >>> Cortex models ----
+    if(br_str %in% c("left","right")) {
+      cat("\n ...",toupper(br_str),"CORTEX \n")
+      verts <- cifti_data[[br_str]][[1]]$surf$vertices
+      faces <- cifti_data[[br_str]][[1]]$surf$faces
 
-    #set up session list
-    session_data <- vector('list', n_sess)
-    names(session_data) <- session_names
-    for(ss in 1:n_sess){
-      sess <- list(BOLD = t(cifti_data[[each_hem]][[ss]]$data), design=design[[ss]])
-      if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
-      session_data[[ss]] <- sess
-    }
-
-    scale_BOLD_hem <- scale_BOLD
-
-    if(prewhiten) {
-      pw_data[[each_hem]] <-
-        prewhiten_cifti(
-          data = session_data,
-          mask = NULL,
-          scale_BOLD = TRUE,
-          scale_design = TRUE,
-          ar_order = ar_order,
-          ar_smooth = ar_smooth,
-          cifti_data = cifti_data[[each_hem]][[1]]$cifti,
-          hemisphere = each_hem,
-          num.threads = num.threads
-        )
-      session_data <- pw_data[[each_hem]]$data
-      scale_BOLD_hem <- FALSE # Done above
-    }
-
-    if(!is.null(outfile)) {
-      if (endsWith(outfile, ".rds")) {
-        outfile_name <- gsub(".rds$", paste0("_",each_hem,".rds"), outfile)
-      } else {
-        outfile_name <- paste0(outfile, "_",each_hem,".rds")
+      #set up session list
+      session_data <- vector('list', n_sess)
+      names(session_data) <- session_names
+      for(ss in 1:n_sess){
+        sess <- list(BOLD = t(cifti_data[[br_str]][[ss]]$data), design=design[[ss]])
+        if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+        session_data[[ss]] <- sess
       }
-    } else {
-      outfile_name <- NULL
-    }
 
-    other_hem <- grep(each_hem, c("left","right"), value = T, invert = T)
-    if(do_classical) {
-      start_time <- proc.time()[3]
-      classicalGLM_results[[each_hem]] <- classicalGLM(data=session_data,
+      scale_BOLD_hem <- scale_BOLD
+
+      if(prewhiten) {
+        pw_data[[br_str]] <-
+          prewhiten_cifti(
+            data = session_data,
+            mask = NULL,
+            scale_BOLD = TRUE,
+            scale_design = TRUE,
+            ar_order = ar_order,
+            ar_smooth = ar_smooth,
+            cifti_data = cifti_data[[br_str]][[1]]$cifti,
+            hemisphere = br_str,
+            num.threads = num.threads
+          )
+        session_data <- pw_data[[br_str]]$data
+        scale_BOLD_hem <- FALSE # Done above
+      }
+
+      if(!is.null(outfile)) {
+        if (endsWith(outfile, ".rds")) {
+          outfile_name <- gsub(".rds$", paste0("_",br_str,".rds"), outfile)
+        } else {
+          outfile_name <- paste0(outfile, "_",br_str,".rds")
+        }
+      } else {
+        outfile_name <- NULL
+      }
+
+      other_hem <- grep(br_str, c("left","right"), value = T, invert = T)
+      if(do_classical) {
+        start_time <- proc.time()[3]
+        classicalGLM_results[[br_str]] <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_hem,
                                                        scale_design = FALSE) # done above
-      classicalGLM_results[[each_hem]]$total_time <- proc.time()[3] - start_time
-    }
-    if(do_Bayesian) {
-      start_time <- proc.time()[3]
-      BayesGLM_results[[each_hem]] <- BayesGLM(data = session_data,
+        classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+      }
+      if(do_Bayesian) {
+        start_time <- proc.time()[3]
+        BayesGLM_results[[br_str]] <- BayesGLM(data = session_data,
                                                beta_names = beta_names,
                                                vertices = verts,
                                                faces = faces,
@@ -411,11 +452,11 @@ BayesGLM_cifti <- function(cifti_fname,
                                                verbose = verbose,
                                                avg_sessions = avg_sessions,
                                                trim_INLA = trim_INLA)
-      BayesGLM_results[[each_hem]]$total_time <- proc.time()[3] - start_time
-    }
-    if(do_EM) {
-      start_time <- proc.time()[3]
-      GLMEM_results[[each_hem]] <- BayesGLMEM(data = session_data,
+        BayesGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+      }
+      if(do_EM) {
+        start_time <- proc.time()[3]
+        GLMEM_results[[br_str]] <- BayesGLMEM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts,
                                               faces = faces,
@@ -427,7 +468,78 @@ BayesGLM_cifti <- function(cifti_fname,
                                               num.threads = num.threads,
                                               outfile = outfile_name,
                                               verbose = verbose)
-      GLMEM_results[[each_hem]]$total_time <- proc.time()[3] - start_time
+        GLMEM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+      }
+    }
+    # >>> Subcortical model ----
+    if(br_str == "subcortical") {
+      cat("\n ... SUBCORTEX \n")
+      locs <- which(cifti_data[[br_str]][[1]]$cifti$meta$subcort$mask, arr.ind = T)
+      labs <- cifti_data[[br_str]][[1]]$cifti$meta$subcort$labels
+
+      #set up session list
+      session_data <- vector('list', n_sess)
+      names(session_data) <- session_names
+      for(ss in 1:n_sess){
+        sess <- list(BOLD = t(cifti_data[[br_str]][[ss]]$data), design=design[[ss]])
+        if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+        session_data[[ss]] <- sess
+      }
+
+      scale_BOLD_sub <- scale_BOLD
+
+      # THIS STILL NEEDS TO BE TESTED
+      if(prewhiten) {
+        pw_data[[br_str]] <-
+          prewhiten_cifti(
+            data = session_data,
+            mask = NULL,
+            scale_BOLD = TRUE,
+            scale_design = TRUE,
+            ar_order = ar_order,
+            ar_smooth = ar_smooth,
+            cifti_data = cifti_data[[br_str]][[1]]$cifti,
+            hemisphere = br_str,
+            num.threads = num.threads
+          )
+        session_data <- pw_data[[br_str]]$data
+        scale_BOLD_sub <- FALSE # Done above
+      }
+
+      if(!is.null(outfile)) {
+        if (endsWith(outfile, ".rds")) {
+          outfile_name <- gsub(".rds$", paste0("_",br_str,".rds"), outfile)
+        } else {
+          outfile_name <- paste0(outfile, "_",br_str,".rds")
+        }
+      } else {
+        outfile_name <- NULL
+      }
+
+      if(do_classical) {
+        start_time <- proc.time()[3]
+        classicalGLM_results$vol <- classicalGLM(data=session_data,
+                                                       scale_BOLD=scale_BOLD_sub,
+                                                       scale_design = FALSE) # done above
+        classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+      }
+      if(do_Bayesian) {
+        start_time <- proc.time()[3]
+        BayesGLM_results$vol <- BayesGLM_vol3D(
+          data = session_data,
+          locations = locs,
+          labels = labs,
+          groups_df = groups_df,
+          scale_BOLD=TRUE,
+          scale_design = FALSE, # Done above
+          return_INLA_result=return_INLA_result,
+          outfile = outfile_name,
+          num.threads = num.threads,
+          verbose=verbose
+        )
+        BayesGLM_resultsvol$total_time <- proc.time()[3] - start_time
+      }
+
     }
   }
 

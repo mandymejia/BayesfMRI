@@ -57,6 +57,7 @@ estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, 
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
                  verbose = verbose, keep = FALSE, num.threads = num.threads,
+                 inla.mode = "experimental",
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
                  control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) #required for excursions

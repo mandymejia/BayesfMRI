@@ -1,13 +1,13 @@
 #' Create SPDE for 3D volumetric data
 #'
 #' @inheritSection INLA_Description INLA Requirement
-#' 
+#'
 #' @param locs Locations of data points (Vx3 matrix)
 #' @param labs Region labels of data points (vector of length V). If NULL, treat observations as a single region.
 #' @param lab_set Only used if labs is not NULL. Vector of region labels for which to construct spde object. If NULL, use all region labels.
 #'
 #' @return SPDE object representing triangular mesh structure on data locations
-#' 
+#'
 #' @importFrom INLA inla.mesh.create inla.spde2.generic
 #' @importFrom Matrix sparseMatrix colSums Diagonal t solve
 #'
@@ -40,7 +40,7 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
   for(value in lab_set){
 
     ii <- which(lab_set==value)
-    ind <- (labs == value)
+    ind <- (as.numeric(labs) == value)
     P <- locs[ind,] #(x,y,z) coordinates of selected locations
 
     # In Triangulations for 3D data from original locations, note that there are big triangles that we don't want to keep.
@@ -178,7 +178,7 @@ get_spacing <- function(locations){
 #' @param P Matrix of vertex locations in triangularization
 #'
 #' @return A list of matrices C and G appearing in sparse SPDE precision
-#' 
+#'
 #' @export
 galerkin_db <- function(FV, P){
   d <- ncol(FV)-1

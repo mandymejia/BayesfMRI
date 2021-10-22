@@ -27,6 +27,7 @@ BayesGLM_cifti(
   return_INLA_result = FALSE,
   avg_sessions = TRUE,
   trim_INLA = TRUE,
+  groups_df = NULL,
   tol = 0.001
 )
 }
@@ -106,6 +107,9 @@ sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+
+\item{groups_df}{Data frame indicating the name and model group of each
+region.  See Details of the \code{BayesGLM_vol3D} function}
 
 \item{tol}{Only used when \code{method} is set to 'EM'. The numeric tolerance
 used to determine convergence of the EM algorithm.}

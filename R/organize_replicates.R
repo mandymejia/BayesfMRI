@@ -17,7 +17,20 @@ organize_replicates <- function(n_sess, beta_names, mesh){
   if(!(class(mesh) %in% c('inla.mesh','BayesfMRI.spde'))) stop('mesh must be of class inla.mesh  (for surface data, see `help(make_mesh)`) or BayesfMRI.spde (for subcortical data, see `help(create_spde_vol3D)`)')
   spatial <- mesh$idx$loc
 
-	nvox <- length(spatial)
+  if(class(mesh) == "BayesfMRI.spde") { # This is for the subcortical case
+    # We have additional locations within the mesh in this case, so we need to
+    # account for them while also taking into account the fact that the
+    # indices will increment between the regions
+    # mesh$idx is a list of indices within each region
+    spatial <- NULL # This will be a vector of indices across all regions within a group
+    max_length <- 0 # Preset the number to add to each region
+    for(r in 1:length(mesh$idx)) { # The length of mesh$idx gives the number of regions
+      spatial <- c(spatial, mesh$idx[[r]] + max_length) # Add in the indices of region r
+      max_length <- nrow(mesh$vertices[[r]]) + max_length # Gives the amount to increment
+    }
+  }
+
+  nvox <- length(spatial)
 
 	n_task <- length(beta_names)
 

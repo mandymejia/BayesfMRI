@@ -21,10 +21,10 @@
 #' @param locations Vx3 matrix of x,y,z coordinates of each voxel
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
-#' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  If FALSE, just center the data and design to exclude the baseline field.
+#' @inheritParams scale_BOLD_Param
+#' @inheritParams scale_design_Param
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
-#' @param GLM If TRUE, classical GLM estimates will also be returned
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
 #'
@@ -33,7 +33,7 @@
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check
 #'
 #' @export
-BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
+BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD=TRUE, scale_design = TRUE, return_INLA_result=FALSE, outfile = NULL, num.threads = 6, verbose=FALSE){
 
   # Check to see that the INLA package is installed
   if (!requireNamespace("INLA", quietly = TRUE))
@@ -47,6 +47,22 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
     if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
       warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
     #inla.pardiso()
+  }
+
+  if(is.null(groups_df)) {
+    regions <- c('Accumbens-l','Accumbens-r', #3,4 -- 200 voxels - BASAL GANGLIA --> MODEL 1
+                 'Amygdala-l','Amygdala-r',   #5,6 -- 600 voxels  IMPORTANT --> MODEL 2
+                 'Brain Stem',                #7 -- 3,402 voxels  EXCLUDE
+                 'Caudate-L','Caudate-R',     #8,9 -- 1400 voxels  BASAL GANGLIA --> MODEL 1
+                 'Cerebellum-L','Cerebellum-R', #10,11 -- 9000 voxels each --> MODELS 3 AND 4
+                 'Diencephalon-L','Diencephalon-R', #12,13 -- 1400 voxels  --> MODEL 2
+                 'Hippocampus-L','Hippocampus-R', #14,15 -- 1500 voxels  IMPORTANT --> MODEL 2
+                 'Pallidum-L','Pallidum-R', #16,17 -- 500 voxels  BASAL GANGLIA --> MODEL 1
+                 'Putamen-L','Putamen-R', #18,19 -- 2000 voxels  BASAL GANGLIA --> MODEL 1
+                 'Thalamus-L','Thalamus-R' #20,21 -- 2500 voxels IMPORTANT --> MODEL 2
+    )
+    groups <- c(1,1,2,2,NA,1,1,3,4,2,2,2,2,1,1,1,1,2,2)
+    groups_df <- data.frame(label=3:21, region=regions, group=groups)
   }
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
@@ -72,14 +88,14 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
   if(nrow(locations) != V) stop('The locations argument should have V rows, the number of data locations in BOLD.')
   if(ncol(locations) != 3) stop('The locations argument should have 3 columns indicating the x,y,z coordinate of each data location.')
 
-  ### Fit classical GLM
+  ### Fit classical GLM #2021-10-22: We don't do this within the Bayesian function for this version
 
-  if(GLM){
-    # estimate model using GLM
-    GLM_result <- classicalGLM(data)
-  } else {
-    GLM_result <- NULL
-  }
+  # if(GLM){
+  #   # estimate model using GLM
+  #   GLM_result <- classicalGLM(data)
+  # } else {
+  #   GLM_result <- NULL
+  # }
 
   ### Run SPDE object for each group of regions
 
@@ -105,11 +121,11 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
   for(grp in group_set){
     label_set_grp <- groups_df$label[groups_df$group==grp]
     name_set_grp <- groups_df$region[groups_df$group==grp]
-    inds_grp <- labels %in% label_set_grp
+    inds_grp <- as.numeric(labels) %in% label_set_grp
     locs_grp <- locations[inds_grp,]
     labels_grp <- labels[inds_grp]
 
-    paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')')
+    paste0('Estimating Model ',grp,' (', paste(name_set_grp, collapse = ', '), ')')
 
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     #plot(spde_grp)
@@ -125,8 +141,10 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
       BOLD_s <- data[[s]]$BOLD[,inds_grp]
 
       #scale data to represent % signal change (or just center if scale=FALSE)
-      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose = FALSE)
-      design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
+      if(scale_BOLD) {
+        BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
+      }
+      design_s <- scale(data[[s]]$design, scale=scale_design) #center design matrix to eliminate baseline
 
       #regress nuisance parameters from BOLD data and design matrix
       if('nuisance' %in% names(data[[s]])){
@@ -142,7 +160,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
       #set up data and design matrix
       data_org <- organize_data(y_reg, X_reg, transpose = FALSE)
       y_vec <- data_org$y
-      X_list <- list(data_org$A)
+      X_list <- list(data_org$X)
       names(X_list) <- session_names[s]
 
       y_all <- c(y_all, y_vec)
@@ -169,7 +187,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
-    save(formula, model_data, spde, file='sample_data_inla5.Rdata')
+    # save(formula, model_data, spde, file='sample_data_inla5.Rdata')
 
     # estimate model using INLA
     t0 <- Sys.time()
@@ -205,8 +223,8 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
-                   call = match.call(),
-                   GLM_result = GLM_result)
+                   call = match.call()
+                   )
   } else {
     result <- list(INLA_result = NULL,
                    spde_obj = spde_obj,
@@ -215,8 +233,8 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
-                   call = match.call(),
-                   GLM_result = GLM_result)
+                   call = match.call()
+                   )
   }
 
 

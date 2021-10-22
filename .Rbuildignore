@@ -3,7 +3,6 @@
 ^vignettes$
 ^tests$
 ^R/summarize_sessions\.R$
-^R/BayesGLM_vol3D\.R$
 ^R/vol2mesh\.R$
 ^R/boundary\.R$
 ^R/plot_BayesGLM_slice\.R$
