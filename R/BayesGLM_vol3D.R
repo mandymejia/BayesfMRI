@@ -218,21 +218,21 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD
   if(return_INLA_result){
     result <- list(INLA_result = INLA_result_all,
                    spde_obj = spde_all,
-                   mesh = list(n = spde_obj$spde$n.spde),
+                   mesh = sapply(spde_all, function(x) x$spde$n.spde, simplify = F),
                    session_names = session_names,
                    beta_names = beta_names,
-                   beta_estimates = beta_estimates,
-                   theta_posteriors = theta_posteriors,
+                   beta_estimates = beta_estimates_all,
+                   theta_posteriors = theta_posteriors_all,
                    call = match.call()
                    )
   } else {
     result <- list(INLA_result = NULL,
-                   spde_obj = spde_obj,
-                   mesh = list(n = spde_obj$spde$n.spde),
+                   spde_obj = spde_all,
+                   mesh = sapply(spde_all, function(x) x$spde$n.spde, simplify = F),
                    session_names = session_names,
                    beta_names = beta_names,
-                   beta_estimates = beta_estimates,
-                   theta_posteriors = theta_posteriors,
+                   beta_estimates = beta_estimates_all,
+                   theta_posteriors = theta_posteriors_all,
                    call = match.call()
                    )
   }

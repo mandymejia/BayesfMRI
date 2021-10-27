@@ -12,14 +12,14 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 
   # Check to see that the INLA package is installed
   if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop("This function requires the `INLA` package. See www.r-inla.org/download")
+    stop("This function requires the `INLA` package. See https://www.r-inla.org/download-install")
   }
 
   # Check to see if PARDISO is installed
   if (!exists("inla.pardiso.check", mode = "function")) {
     warning(paste(
       "Please update to the latest stable version of `INLA` for full functionality",
-      "and `PARDISO` compatibility. See www.r-inla.org/download\n"
+      "and `PARDISO` compatibility. See https://www.r-inla.org/download-install\n"
     ))
   } else {
     if (grepl("FAILURE", toupper(inla.pardiso.check()))) {

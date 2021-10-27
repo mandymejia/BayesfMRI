@@ -141,6 +141,8 @@ BayesGLM_cifti <- function(cifti_fname,
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
+  if(do_EM & "subcortical" %in% brainstructures)
+    stop("The EM algorithm does not yet work with the subcortical model.")
 #   do_left <- ('left' %in% brainstructures)
 #   do_right <- ('right' %in% brainstructures)
 #   do_sub <- FALSE
@@ -595,20 +597,26 @@ BayesGLM_cifti <- function(cifti_fname,
 
   classicalGLM_cifti <- BayesGLM_cifti <- GLMEM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- names(GLMEM_cifti) <- session_names
-  datL <- datR <- cortexL_mwall <- cortexR_mwall <- NULL
+  datL <- datR <- dat_sub <- cortexL_mwall <- cortexR_mwall <- sub_mask <- NULL
   do_left <- 'left' %in% brainstructures
   do_right <- 'right' %in% brainstructures
+  do_sub <- "subcortical" %in% brainstructures
   if(do_left) cortexL_mwall <- as.numeric(cifti_data$left[[1]]$cifti$meta$cortex$medial_wall_mask$left)
   if(do_right) cortexR_mwall <- as.numeric(cifti_data$right[[1]]$cifti$meta$cortex$medial_wall_mask$right)
+  if(do_sub) sub_mask <- cifti_data$subcortical[[1]]$cifti$meta$subcort$mask
   for(ss in 1:n_sess){
     if(do_classical){
       if(do_left) datL <- classicalGLM_results$left[[ss]]$estimates[cortexL_mwall==1,]
       if(do_right) datR <- classicalGLM_results$right[[ss]]$estimates[cortexR_mwall==1,]
+      if(do_sub) dat_sub <- classicalGLM_results$vol[[ss]]$estimates
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
         cortexR = datR,
-        cortexR_mwall = cortexR_mwall
+        cortexR_mwall = cortexR_mwall,
+        subcortVol = dat_sub,
+        subcortLabs = labs,
+        subcortMask = sub_mask
         #subcortVol = classicalGLM_vol$single_session,
         #mask = mask,
         #subcortLab = nifti_labels
@@ -619,11 +627,15 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_Bayesian){
       if(do_left) datL <- BayesGLM_results$left$beta_estimates[[ss]][cortexL_mwall==1,]
       if(do_right) datR <- BayesGLM_results$right$beta_estimates[[ss]][cortexR_mwall==1,]
+      if(do_sub) dat_sub <- BayesGLM_results$vol$beta_estimates[[ss]]
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
         cortexR = datR,
-        cortexR_mwall = cortexR_mwall
+        cortexR_mwall = cortexR_mwall,
+        subcortVol = dat_sub,
+        subcortLabs = labs,
+        subcortMask = sub_mask
         #subcortVol = BayesGLM_vol$single_session,
         #mask = mask,
         #subcortLab = nifti_labels
@@ -741,11 +753,11 @@ BayesGLM_cifti <- function(cifti_fname,
                  betas_classical = classicalGLM_cifti,
                  betas_EM = GLMEM_cifti,
                  GLMs_Bayesian = list(cortexL = BayesGLM_results$left,
-                                      cortexR = BayesGLM_results$right),
-                 #subcortical = BayesGLM_vol),
+                                      cortexR = BayesGLM_results$right,
+                                      subcortical = BayesGLM_results$vol),
                  GLMs_classical = list(cortexL = classicalGLM_results$left,
-                                       cortexR = classicalGLM_results$right),
-                 #subcortical = classicalGLM_vol),
+                                       cortexR = classicalGLM_results$right,
+                                       subcortical = classicalGLM_results$vol),
                  GLMs_EM = list(cortexL = GLMEM_results$left,
                                 cortexR = GLMEM_results$right),
                  prewhitening_info = prewhitening_info,
