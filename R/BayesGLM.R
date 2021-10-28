@@ -415,7 +415,7 @@ BayesGLM_cifti <- function(cifti_fname,
             ar_order = ar_order,
             ar_smooth = ar_smooth,
             cifti_data = cifti_data[[br_str]][[1]]$cifti,
-            hemisphere = br_str,
+            brainstructure = br_str,
             num.threads = num.threads
           )
         session_data <- pw_data[[br_str]]$data
@@ -501,7 +501,7 @@ BayesGLM_cifti <- function(cifti_fname,
             ar_order = ar_order,
             ar_smooth = ar_smooth,
             cifti_data = cifti_data[[br_str]][[1]]$cifti,
-            hemisphere = br_str,
+            brainstructure = br_str,
             num.threads = num.threads
           )
         session_data <- pw_data[[br_str]]$data

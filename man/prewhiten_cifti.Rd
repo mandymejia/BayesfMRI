@@ -12,7 +12,7 @@ prewhiten_cifti(
   ar_order = 6,
   ar_smooth = 5,
   cifti_data,
-  hemisphere,
+  brainstructure,
   num.threads = NULL
 )
 }
@@ -35,7 +35,7 @@ to not do any smoothing. Default: \code{5}.}
 \item{cifti_data}{A \code{xifti} object used to map the AR coefficient
 estimates onto the surface mesh for smoothing.}
 
-\item{hemisphere}{'left' or 'right'}
+\item{brainstructure}{'left' or 'right' or 'subcortical'}
 
 \item{num.threads}{(scalar) The number of threads to use in parallelizing the
 prewhitening}

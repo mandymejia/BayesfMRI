@@ -99,7 +99,7 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #'  to not do any smoothing. Default: \code{5}.
 #' @param cifti_data A \code{xifti} object used to map the AR coefficient
 #'   estimates onto the surface mesh for smoothing.
-#' @param hemisphere 'left' or 'right'
+#' @param brainstructure 'left' or 'right' or 'subcortical'
 #' @param num.threads (scalar) The number of threads to use in parallelizing the
 #'   prewhitening
 #' @importFrom Matrix bandSparse bdiag
@@ -118,7 +118,7 @@ prewhiten_cifti <- function(data,
                             ar_order = 6,
                             ar_smooth = 5,
                             cifti_data,
-                            hemisphere,
+                            brainstructure,
                             num.threads = NULL) {
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
@@ -128,8 +128,8 @@ prewhiten_cifti <- function(data,
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
-  if(missing(hemisphere)) stop('Please provide valid hemisphere argument.')
-  if(!(hemisphere %in% c('left','right'))) stop('Please provide valid hemisphere argument.')
+  if(missing(brainstructure)) stop('Please provide valid brainstructure argument.')
+  if(!(brainstructure %in% c('left','right','subcortical'))) stop('Please provide valid brainstructure argument.')
 
   ######################
 
@@ -222,21 +222,34 @@ prewhiten_cifti <- function(data,
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
   if((ar_smooth != 0) & !is.null(cifti_data)) {
     cat("Smoothing AR coefficients and residual variance...")
-    #set up template xifti object with only one hemisphere
+    #set up template xifti object with only one brainstructure
     avg_xifti <- cifti_data
-    if(hemisphere=='left') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$left
-    if(hemisphere=='right') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$right
-    mask_tmp <- as.logical(mask_use[mwall_mask==TRUE])
-    #smooth AR coefficients
-    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=ar_order)
-    avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,] <- avg_AR
-    smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-    avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,]
-    #smooth variance
-    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=1)
-    avg_xifti$data[[paste0("cortex_",hemisphere)]][as.logical(mask_tmp),] <- avg_var
-    smooth_var_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-    avg_var <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,,drop=FALSE]
+    if(brainstructure %in% c("left","right")) {
+      if(brainstructure=='left') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$left
+      if(brainstructure=='right') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$right
+      mask_tmp <- as.logical(mask_use[mwall_mask==TRUE])
+      #smooth AR coefficients
+      avg_xifti$data[[paste0("cortex_",brainstructure)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=ar_order)
+      avg_xifti$data[[paste0("cortex_",brainstructure)]][mask_tmp,] <- avg_AR
+      smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
+      avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",brainstructure)]][mask_tmp,]
+      #smooth variance
+      avg_xifti$data[[paste0("cortex_",brainstructure)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=1)
+      avg_xifti$data[[paste0("cortex_",brainstructure)]][as.logical(mask_tmp),] <- avg_var
+      smooth_var_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
+      avg_var <- smooth_var_xifti$data[[paste0("cortex_",brainstructure)]][mask_tmp,,drop=FALSE]
+    }
+    if(brainstructure == 'subcortical') {
+      sub_mask <- avg_xifti$meta$subcort$mask
+      #smooth AR coefficients
+      avg_xifti$data$subcort <- as.matrix(avg_AR)
+      smooth_avg_xifti <- smooth_cifti(avg_xifti, vol_FWHM = ar_smooth)
+      avg_AR <- smooth_avg_xifti$data$subcort
+      #smooth variance
+      avg_xifti$data$subcort <- as.matrix(avg_var)
+      smooth_var_xifti <- smooth_cifti(avg_xifti, vol_FWHM = ar_smooth)
+      avg_var <- smooth_var_xifti$data$subcort
+    }
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix
