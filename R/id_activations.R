@@ -61,6 +61,7 @@ id_activations_cifti <- function(model_obj,
   names(activations) <- names(GLM_list)
   do_left <- !is.null(GLM_list$cortexL)
   do_right <- !is.null(GLM_list$cortexR)
+  do_sub <- !is.null(GLM_list$subcortical)
 
   if(is.null(field_names)) field_names <- model_obj$beta_names
   if(any(!(field_names %in% model_obj$beta_names))) stop(paste0('All elements of field_names must appear in model_obj$beta_names: ', paste(model_obj$beta_names, collapse=',')))
@@ -129,6 +130,12 @@ id_activations_cifti <- function(model_obj,
     if(method=='classical') datR <- datR[!is.na(datR[,1]),] #remove medial wall locations
     #datR[datR==0] <- NA
     activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
+  }
+  if(do_sub) {
+    datS <- 1*activations$subcortical$active
+    if(method=='classical') datS <- datS[!is.na(datS[,1]),] #remove masked locations
+    #datR[datR==0] <- NA
+    activations_xifti$data$subcort <- matrix(datS, ncol=length(field_names))
   }
 
   activations_xifti <- convert_xifti(activations_xifti, to="dlabel", colors='red')
@@ -429,9 +436,11 @@ id_activations.classical <- function(model_obj,
   }
 
   na_pvalues <- which(is.na(p_values[,1]))
-  p_values <- p_values[-na_pvalues,, drop = F]
-  p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
-  active <- active[-na_pvalues,, drop = F]
+  if(length(na_pvalues) > 0) {
+    p_values <- p_values[-na_pvalues,, drop = F]
+    p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
+    active <- active[-na_pvalues,, drop = F]
+  }
 
   result <- list(p_values = p_values,
                  p_values_adj = p_values_adj,
