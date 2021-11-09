@@ -286,7 +286,14 @@ TrQbb <- function(kappa2, beta_hat, spde) {
   Qt <- Q_prime(kappa2, spde)
   KK <- length(beta_hat) / spde$mesh$n
   if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
-  return(sum(diag(Qt %*% tcrossprod(beta_hat))))
+  out <- sum(diag(Qt %*% tcrossprod(beta_hat)))
+  # The below is an approximation that may be faster in higher dimensions
+  # Ns <- 50
+  # v <- matrix(sample(x = c(-1,1), size = nrow(Qt) * Ns, replace = TRUE), nrow(Qt), Ns)
+  # vQ <- apply(v,2, crossprod, y = Qt)
+  # vbb <- apply(v,2,crossprod, y = tcrossprod(beta_hat))
+  # out2 <- sum(unlist(mapply(function(q,b) (q %*% b)@x, q = vQ, b = split(vbb, col(vbb))))) / Ns
+  return(out)
 }
 
 #' Function to optimize over kappa2

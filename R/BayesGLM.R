@@ -164,7 +164,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
   if(!is.null(design)) {
-    if(class(design) == "list") {
+    if(any(class(design) == "list")) {
       if(is.null(colnames(design[[1]])))
         beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
       if(!is.null(colnames(design[[1]])))
@@ -303,23 +303,40 @@ BayesGLM_cifti <- function(cifti_fname,
 
   if(class(cifti_fname[[1]]) == "xifti") {
     cifti_data <- sapply(brainstructures, function(br_str) {
-      sapply(1:n_sess, function(ss){
-        other_hem <- grep(br_str, c('left','right'), value = T, invert  = T)
-        cifti_ss <- cifti_fname[[ss]]
-        cifti_ss <- remove_xifti(cifti_ss, paste0("cortex_",other_hem))
-        mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
-        cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
-        cifti_out <- matrix(NA,
-                            nrow = length(mwall_mask),
-                            ncol=ncol(cdata))
-        cifti_out[mwall_mask,] <- cdata
-        return(list(
-          data = cifti_out,
-          surf = cifti_ss$surf[[paste0("cortex_", br_str)]],
-          ntime = ncol(cdata),
-          cifti = cifti_ss
-        ))
-      }, simplify = F)
+      if(br_str %in% c('left','right')) {
+        hem_sess_cifti <- sapply(1:n_sess, function(ss){
+          other_hem <- grep(br_str, c('left','right'), value = T, invert  = T)
+          cifti_ss <- cifti_fname[[ss]]
+          cifti_ss <- remove_xifti(cifti_ss, paste0("cortex_",other_hem))
+          mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
+          cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
+          cifti_out <- matrix(NA,
+                              nrow = length(mwall_mask),
+                              ncol=ncol(cdata))
+          cifti_out[mwall_mask,] <- cdata
+          return(list(
+            data = cifti_out,
+            surf = cifti_ss$surf[[paste0("cortex_", br_str)]],
+            ntime = ncol(cdata),
+            cifti = cifti_ss
+          ))
+        }, simplify = F)
+        return(hem_sess_cifti)
+      }
+      if(br_str == "subcortical") {
+        sub_sess_cifti <- sapply(1:n_sess, function(ss){
+          cifti_ss <- cifti_fname[[ss]]
+          cifti_ss <- remove_xifti(cifti_ss, paste0("cortex_",c('left','right')))
+          cdata <- cifti_ss$data$subcort
+          return(list(
+            data = cdata,
+            surf = NULL,
+            ntime = ncol(cdata),
+            cifti = cifti_ss
+          ))
+        }, simplify = F)
+        return(sub_sess_cifti)
+      }
     }, simplify = F)
   }
 
@@ -597,13 +614,16 @@ BayesGLM_cifti <- function(cifti_fname,
 
   classicalGLM_cifti <- BayesGLM_cifti <- GLMEM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- names(GLMEM_cifti) <- session_names
-  datL <- datR <- dat_sub <- cortexL_mwall <- cortexR_mwall <- sub_mask <- NULL
+  datL <- datR <- dat_sub <- cortexL_mwall <- cortexR_mwall <- sub_mask <- out_labs <- NULL
   do_left <- 'left' %in% brainstructures
   do_right <- 'right' %in% brainstructures
   do_sub <- "subcortical" %in% brainstructures
   if(do_left) cortexL_mwall <- as.numeric(cifti_data$left[[1]]$cifti$meta$cortex$medial_wall_mask$left)
   if(do_right) cortexR_mwall <- as.numeric(cifti_data$right[[1]]$cifti$meta$cortex$medial_wall_mask$right)
-  if(do_sub) sub_mask <- cifti_data$subcortical[[1]]$cifti$meta$subcort$mask
+  if(do_sub) {
+    sub_mask <- cifti_data$subcortical[[1]]$cifti$meta$subcort$mask
+    out_labs <- labs
+  }
   for(ss in 1:n_sess){
     if(do_classical){
       if(do_left) datL <- classicalGLM_results$left[[ss]]$estimates[cortexL_mwall==1,]
@@ -615,7 +635,7 @@ BayesGLM_cifti <- function(cifti_fname,
         cortexR = datR,
         cortexR_mwall = cortexR_mwall,
         subcortVol = dat_sub,
-        subcortLabs = labs,
+        subcortLabs = out_labs,
         subcortMask = sub_mask
         #subcortVol = classicalGLM_vol$single_session,
         #mask = mask,

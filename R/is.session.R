@@ -53,7 +53,7 @@ is.session <- function(sess){
     if(! (is.numeric(sess$BOLD))){stop('I expected BOLD to be numeric, but it is not')}
     if(! (is.matrix(sess$BOLD))){stop('I expected BOLD to be a matrix, but it is not')}
 
-    if(! class(sess$design) %in% c("matrix","dgCMatrix") ){stop('I expected design to be a matrix, but it is not')}
+    if(! any(class(sess$design) %in% c("matrix","dgCMatrix")) ){stop('I expected design to be a matrix, but it is not')}
     is_pw <- !is.matrix(sess$design) #if prewhitening has been done, design is a large sparse matrix (class dgCMatrix)
 
     if(!is_pw){

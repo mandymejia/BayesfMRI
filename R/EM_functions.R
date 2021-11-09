@@ -97,7 +97,6 @@ BayesGLMEM <- function(data,
     } else {
       if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     }
-
   }
 
   if(!is.null(beta_names)){
@@ -267,8 +266,6 @@ BayesGLMEM <- function(data,
     # require(parallel)
     cl <- parallel::makeCluster(min(num.threads,K))
     kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
-      # require(SQUAREM)
-      # require(Matrix)
       init_output <-
         SQUAREM::squarem(
           par = c(kappa2, phi),
