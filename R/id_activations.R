@@ -351,7 +351,8 @@ id_activations.classical <- function(model_obj,
   #check session_name argument
 
   #if only one session, analyze that one
-  result_list <- which(is.list(model_obj))
+  # result_list <- which(is.list(model_obj)) # This will always be 1 because the model object is a list
+  result_list <- which(sapply(model_obj,is.list))
   all_sessions <- names(model_obj)[result_list]
   n_sess <- length(all_sessions)
   if(n_sess == 1){ session_name <- all_sessions }
