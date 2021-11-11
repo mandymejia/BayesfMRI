@@ -263,14 +263,12 @@ BayesGLMEM <- function(data,
   }
   if(EM_method == "separate") {
     beta_hat <- matrix(beta_hat, ncol = K)
-    # require(parallel)
     cl <- parallel::makeCluster(min(num.threads,K))
     kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
       init_output <-
         SQUAREM::squarem(
           par = c(kappa2, phi),
           fixptfn = init_fixpt,
-          # objfn = init_objfn, # Not needed
           spde = spde,
           beta_hat = bh,
           control = list(tol = 1e-3, trace = verbose)
@@ -302,7 +300,6 @@ BayesGLMEM <- function(data,
       squarem(
         par = theta,
         fixptfn = em_fn,
-        # objfn = GLMEM_objfn,
         control = list(tol = tol, trace = verbose),
         spde = spde,
         model_data = model_data,
