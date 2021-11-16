@@ -654,7 +654,7 @@ BayesGLM_cifti <- function(cifti_fname,
         cortexR = datR,
         cortexR_mwall = cortexR_mwall,
         subcortVol = dat_sub,
-        subcortLabs = labs,
+        subcortLabs = out_labs,
         subcortMask = sub_mask
         #subcortVol = BayesGLM_vol$single_session,
         #mask = mask,
@@ -665,11 +665,15 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_EM) {
       if(do_left) datL <- GLMEM_results$left$beta_estimates[[ss]]
       if(do_right) datR <- GLMEM_results$right$beta_estimates[[ss]]
+      if(do_sub) dat_sub <- GLMEM_results$vol$beta_estimates[[ss]]
       GLMEM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
         cortexR = datR,
-        cortexR_mwall = cortexR_mwall
+        cortexR_mwall = cortexR_mwall,
+        subcortVol = dat_sub,
+        subcortLabs = out_labs,
+        subcortMask = sub_mask
         #subcortVol = BayesGLM_vol$single_session,
         #mask = mask,
         #subcortLab = nifti_labels
@@ -692,13 +696,19 @@ BayesGLM_cifti <- function(cifti_fname,
         maskR <- classicalGLM_results$right$avg$mask[cortexR_mwall == 1]
         datR[maskR,] <- classicalGLM_results$right$avg$estimates[cortexR_mwall == 1,]
       }
+      if(do_sub) {
+        dat_sub <- classicalGLM_results$vol$avg$estimates
+      }
       # Adding the averages to the front of the BayesGLM_cifti object
       classicalGLM_cifti <- c(
         list(avg = as.xifti(
           cortexL = datL,
           cortexL_mwall = cortexL_mwall,
           cortexR = datR,
-          cortexR_mwall = cortexR_mwall
+          cortexR_mwall = cortexR_mwall,
+          subcortVol = dat_sub,
+          subcortLabs = out_labs,
+          subcortMask = sub_mask
         )),
         classicalGLM_cifti
       )
@@ -718,13 +728,19 @@ BayesGLM_cifti <- function(cifti_fname,
         maskR <- BayesGLM_results$right$mask[cortexR_mwall == 1]
         datR[maskR,] <- BayesGLM_results$right$avg_beta_estimates
       }
+      if(do_sub) {
+        dat_sub <- BayesGLM_results$vol$avg_beta_estimates
+      }
       # Adding the averages to the front of the BayesGLM_cifti object
       BayesGLM_cifti <- c(
         list(avg = as.xifti(
           cortexL = datL,
           cortexL_mwall = cortexL_mwall,
           cortexR = datR,
-          cortexR_mwall = cortexR_mwall
+          cortexR_mwall = cortexR_mwall,
+          subcortVol = dat_sub,
+          subcortLabs = out_labs,
+          subcortMask = sub_mask
         )),
         BayesGLM_cifti
       )
@@ -744,13 +760,19 @@ BayesGLM_cifti <- function(cifti_fname,
         maskR <- GLMEM_results$right$mask[cortexR_mwall == 1]
         datR[maskR,] <- GLMEM_results$right$avg_beta_estimates
       }
+      if(do_sub) {
+        dat_sub <- GLMEM_results$vol$avg_beta_estimates
+      }
       # Adding the averages to the front of the BayesGLM_cifti object
       GLMEM_cifti <- c(
         list(avg = as.xifti(
           cortexL = datL,
           cortexL_mwall = cortexL_mwall,
           cortexR = datR,
-          cortexR_mwall = cortexR_mwall
+          cortexR_mwall = cortexR_mwall,
+          subcortVol = dat_sub,
+          subcortLabs = out_labs,
+          subcortMask = sub_mask
         )),
         GLMEM_cifti
       )

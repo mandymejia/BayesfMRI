@@ -4,7 +4,16 @@
 \alias{GLMEM_fixptseparate}
 \title{Fixed point function for the joint BayesGLMEM update algorithm}
 \usage{
-GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, num.threads = 1)
+GLMEM_fixptseparate(
+  theta,
+  spde,
+  model_data,
+  Psi,
+  K,
+  A,
+  num.threads = 1,
+  Ns = 50
+)
 }
 \arguments{
 \item{theta}{a list containing kappa2, phi, and sigma2, in that order}
@@ -21,6 +30,9 @@ GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, num.threads = 1)
 
 \item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}
+
+\item{Ns}{The number of samples used to approximate traces using the Hutchinson
+estimator. If set to 0, the exact trace is found.}
 }
 \value{
 a vector with the same length as \code{theta}, the EM updates

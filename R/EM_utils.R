@@ -56,6 +56,8 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
 #' @param num.threads (optional) allows users to specify the number of threads used
 #'   to work in parallel across the different tasks
+#' @param Ns The number of samples used to approximate traces using the Hutchinson
+#'   estimator. If set to 0, the exact trace is found.
 #'
 #' @importFrom Matrix bdiag colSums crossprod
 #' @importFrom INLA inla.qinv inla.qsolve
@@ -64,12 +66,13 @@ GLMEM_fixptjoint <- function(theta, spde, model_data, Psi, K, A, num.threads = 1
 #'
 #' @return a vector with the same length as \code{theta}, the EM updates
 #' @keywords internal
-GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads = 1) {
+GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads = 1, Ns = 50) {
   if (!requireNamespace("parallel", quietly = TRUE)) {
     stop("The separate update requires the `parallel` package. Please install it.", call. = FALSE)
   }
   max_num.threads <- min(parallel::detectCores() - 1, 25)
   num.threads <- min(max_num.threads, num.threads)
+  num.threads <- min(K, num.threads)
   cl <- parallel::makeCluster(num.threads)
   kappa2_inds <- seq(K)
   phi_inds <- seq(K) + K
@@ -88,13 +91,30 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
   Sig_inv <- Q_new + A/theta[sigma2_ind]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[sigma2_ind]
   mu <- INLA::inla.qsolve(Q = Sig_inv,B = m, method = "solve")
-  Sigma_new <- INLA::inla.qinv(Sig_inv)
+  X_Psi_mu <- model_data$X%*%Psi%*%mu
+  cp_X_Psi_mu <- Matrix::crossprod(X_Psi_mu)
   # >> Update sigma2 ----
+  if(Ns == 0) {
+    Sigma_new <- INLA::inla.qinv(Sig_inv)
+    traceAEww <-
+      cp_X_Psi_mu +
+      sum(Matrix::colSums(A*Sigma_new))
+    kappa_fn <- neg_kappa_fn
+  }
+  if(Ns > 0) {
+    Vh <- matrix(sample(x = c(-1,1), size = Ns * nrow(A), replace = TRUE),
+                 nrow(A), Ns)
+    P <- INLA::inla.qsolve(Sig_inv, Vh)
+    traceAEww <-
+      as.numeric(Matrix::crossprod(mu,A %*% mu)) +
+      TrSigB(P,A,Vh)
+    kappa_fn <- neg_kappa_fn2
+  }
   sigma2_new <-
     as.numeric(crossprod(model_data$y) -
-                 2*Matrix::crossprod(model_data$y,model_data$X%*%Psi%*%mu) +
-                 Matrix::crossprod(model_data$X%*%Psi%*%mu) +
-                 sum(Matrix::colSums(A*Sigma_new))) / length(model_data$y)
+                 2*Matrix::crossprod(model_data$y,X_Psi_mu) +
+                 traceAEww
+               ) / length(model_data$y)
   kappa2_new <- theta[kappa2_inds]
   phi_new <- theta[phi_inds]
   kp <- parallel::parSapply(
@@ -105,8 +125,10 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    theta,
                    kappa2_inds,
                    phi_inds,
-                   Sigma_new,
-                   mu) {
+                   P,
+                   mu,
+                   Vh
+                   ) {
       big_K <- length(kappa2_inds)
       big_N <- spde$n.spde
       n_sess_em <- length(mu) / (big_K * spde$n.spde)
@@ -114,25 +136,31 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
         seq( big_N * (big_K * (ns - 1) + k - 1) + 1, big_N * (big_K * (ns - 1) + k))
       }))
       # >> Update kappa2 ----
+      source("~/github/BayesfMRI/R/EM_utils.R")
+      # library(INLA)
       optim_output_k <-
         stats::optimize(
-          f = neg_kappa_fn,
+          f = neg_kappa_fn2,
           spde = spde,
           phi = theta[phi_inds][k],
-          Sigma = Sigma_new[k_inds, k_inds],
+          P = P[k_inds,],
           mu = mu[k_inds, ],
+          Vh = Vh[k_inds,], # Comment this out if using neg_kappa_fn
           lower = 0,
           upper = 50
         )
       kappa2_new <- optim_output_k$minimum
       # >> Update phi ----
-      Q_tildek <-
-        Q_prime(kappa2_new, spde)
-      Q_tildek <- Matrix::bdiag(lapply(seq(n_sess_em), function(x) Q_tildek))
+      # Q_tildek <-
+        # Q_prime(kappa2_new, spde)
+      # Q_tildek <- Matrix::bdiag(lapply(seq(n_sess_em), function(x) Q_tildek))
+      # Tr_QEww <-
+      #   (sum(Matrix::colSums(Q_tildek * Sigma_new[k_inds, k_inds])) +
+      #      Matrix::crossprod(mu[k_inds, ], Q_tildek %*%
+      #                          mu[k_inds, ]))@x
       Tr_QEww <-
-        (sum(Matrix::colSums(Q_tildek * Sigma_new[k_inds, k_inds])) +
-           Matrix::crossprod(mu[k_inds, ], Q_tildek %*%
-                               mu[k_inds, ]))@x
+        TrQEww(kappa2 = kappa2_new, spde = spde, P = P[k_inds,], mu = mu[k_inds,],Vh = Vh[k_inds,])
+        # TrQEww(kappa2 = kappa2_new, spde = spde, Sig_inv = Sig_inv[k_inds,k_inds],mu = mu[k_inds,],Vh = Vh)@x
       phi_new <-
         Tr_QEww / (4 * pi * spde$n.spde * n_sess_em)
       return(c(kappa2_new, phi_new))
@@ -141,8 +169,9 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
     theta = theta,
     kappa2_inds = kappa2_inds,
     phi_inds = phi_inds,
-    Sigma_new = Sigma_new,
-    mu = mu
+    P = P,
+    mu = mu,
+    Vh = Vh
   )
   parallel::stopCluster(cl)
   return(c(kp[1,],kp[2,],sigma2_new))
@@ -250,6 +279,81 @@ neg_kappa_fn <- function(kappa2, spde, phi, Sigma, mu) {
   return(out)
 }
 
+#' The negative of the objective function for kappa - Sig_inv
+#'
+#' @param kappa2 scalar
+#' @param spde an spde object
+#' @param phi scalar
+#' @param P Matrix of dimension nk by N_s found by \code{inla.qsolve(Sig_inv,Vh)}
+#' @param mu dgeMatrix
+#' @importFrom Matrix diag chol bdiag
+#'
+#' @return a scalar
+#' @keywords internal
+neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
+  Qt <- Q_prime(kappa2, spde)
+  KK <- nrow(P) / spde$mesh$n
+  if(nrow(P) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T)))) # compare direct determinant here
+  trace_QEww <-
+    TrQEww(
+      kappa2 = kappa2,
+      spde = spde,
+      P = P,
+      mu = mu,
+      Vh = Vh
+    )
+  out <- trace_QEww / (4*pi*phi) - log_det_Q
+  return(out)
+}
+
+#' Trace approximation function
+#'
+#' @param kappa2 a scalar
+#' @param spde spde object
+#' @param P Matrix of dimension nk by N_s found by \code{inla.qsolve(Sig_inv,Vh)}
+#' @param mu posterior mean
+#' @param Vh matrix of random vriables with \code{nrow(Sig_inv)} rows and Ns
+#'   columns
+#' @importFrom Matrix t crossprod bdiag
+#'
+#' @return a scalar
+#' @keywords internal
+TrQEww <- function(kappa2, spde, P, mu, Vh){
+  Cmat <- spde$param.inla$M0
+  Gmat <- (spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))/2
+  GtCinvG <- spde$param.inla$M2
+  n_sess_em <- nrow(P) / spde$mesh$n
+  if(n_sess_em > 1) {
+    Cmat <- Matrix::bdiag(rep(list(Cmat),n_sess_em))
+    Gmat <- Matrix::bdiag(rep(list(Gmat),n_sess_em))
+    GtCinvG <- Matrix::bdiag(rep(list(GtCinvG),n_sess_em))
+  }
+  k2uCu <- kappa2*Matrix::crossprod(mu,Cmat%*%mu)
+  two_uGu <- 2*Matrix::crossprod(mu,Gmat)%*%mu # This does not depend on kappa2, but needed for phi
+  kneg2uGCGu <- (1/kappa2)*Matrix::crossprod(mu,GtCinvG%*%mu)
+  k2TrCSig <- kappa2 * TrSigB(P,Cmat,Vh)
+  twoTrGSig <- 2 * TrSigB(P,Gmat,Vh)
+  kneg2GCGSig <- TrSigB(P,GtCinvG,Vh) / kappa2
+  trace_QEww <- as.numeric(k2uCu + kneg2uGCGu + k2TrCSig + twoTrGSig + kneg2GCGSig)
+  return(trace_QEww)
+}
+
+#' Hutchinson estimator of the trace
+#'
+#' @param P Matrix of dimension nk by N_s found by \code{inla.qsolve(Sig_inv,Vh)}
+#' @param B Matrix of dimension nk by nk inside the desired trace product
+#' @param vh Matrix of dimension nk by N_s in which elements are -1 or 1 with
+#'   equal probability.
+#'
+#' @return a scalar estimate of the trace of \code{Sigma %*% B}
+#' @keywords internal
+TrSigB <- function(P,B,vh) {
+  Ns <- ncol(P)
+  out <- sum(Matrix::diag(Matrix::crossprod(P,B %*% vh))) / Ns
+  return(out)
+}
+
 #' Expected log-likelihood function
 #'
 #' @param Q precision matrix
@@ -310,7 +414,8 @@ kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
   KK <- length(beta_hat) / spde$mesh$n
   if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
   log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T))))
-  out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
+  # out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
+  out <- log_det_Q / 2 - as.numeric(Matrix::crossprod(beta_hat, Qt %*% beta_hat)) / (8*pi*phi)
   return(-out)
 }
 
@@ -343,8 +448,10 @@ init_objfn <- function(theta, spde, beta_hat) {
 #' @keywords internal
 init_fixpt <- function(theta, spde, beta_hat) {
   kappa2 <- theta[1]
-  K <- length(beta_hat) / spde$mesh$n
-  phi <- TrQbb(kappa2,beta_hat,spde) / (4*pi*spde$mesh$n*K)
+  num_sessions <- length(beta_hat) / spde$mesh$n
+  Qp <- Q_prime(kappa2, spde)
+  if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))
+  phi <- as.numeric(Matrix::crossprod(beta_hat, Qp %*% beta_hat)) / (4 * pi * spde$mesh$n * num_sessions)
   kappa2 <-
     stats::optimize(
       f = kappa_init_fn,
@@ -352,7 +459,8 @@ init_fixpt <- function(theta, spde, beta_hat) {
       spde = spde,
       beta_hat = beta_hat,
       lower = 0,
-      upper = 50
+      upper = 50,
+      maximum = FALSE
     )$minimum
   return(c(kappa2, phi))
 }

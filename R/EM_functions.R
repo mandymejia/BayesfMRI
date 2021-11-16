@@ -256,13 +256,17 @@ BayesGLMEM <- function(data,
         # objfn = init_objfn, # This isn't strictly necessary, and may cost a small amount of time.
         spde = spde,
         beta_hat = beta_hat,
-        control = list(tol = 1e-3, trace = verbose)
+        control = list(tol = 1e-3, trace = verbose, K = 1)
       )
     theta <- c(init_output$par, sigma2)
     cat("...... DONE!\n")
   }
   if(EM_method == "separate") {
-    beta_hat <- matrix(beta_hat, ncol = K)
+    beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+    if(n_sess > 1) {
+      task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+      beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
+    }
     cl <- parallel::makeCluster(min(num.threads,K))
     kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
       init_output <-
@@ -271,7 +275,7 @@ BayesGLMEM <- function(data,
           fixptfn = init_fixpt,
           spde = spde,
           beta_hat = bh,
-          control = list(tol = 1e-3, trace = verbose)
+          control = list(tol = 1e-3, trace = verbose, K = 1)
         )
       return(init_output)
     },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
@@ -297,10 +301,10 @@ BayesGLMEM <- function(data,
   }
   if(use_SQUAREM) {
     squareem_output <-
-      squarem(
+      SQUAREM::squarem(
         par = theta,
         fixptfn = em_fn,
-        control = list(tol = tol, trace = verbose),
+        control = list(tol = tol, trace = verbose, K = 1),
         spde = spde,
         model_data = model_data,
         Psi = Psi,
