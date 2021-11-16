@@ -268,13 +268,13 @@ BayesGLM_cifti <- function(cifti_fname,
     cat("READING IN CIFTI DATA \n")
     cifti_data <- sapply(brainstructures, function(br_str) {
       sapply(1:n_sess, function(ss){
-        cifti_ss <- read_cifti(
-          cifti_fname[ss],
-          surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-          brainstructures=brainstructures,
-          resamp_res=resamp_res
-        )
         if(br_str %in% c("left","right")) {
+          cifti_ss <- read_cifti(
+            cifti_fname[ss],
+            surfL_fname=surfL_fname, surfR_fname=surfR_fname,
+            brainstructures=brainstructures,
+            resamp_res=resamp_res
+          )
           mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
           cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
           cifti_out <- matrix(NA,
@@ -289,6 +289,12 @@ BayesGLM_cifti <- function(cifti_fname,
           ))
         }
         if(br_str == "subcortical") {
+          cifti_ss <- read_cifti(
+            cifti_fname[ss],
+            surfL_fname=NULL, surfR_fname=NULL,
+            brainstructures=brainstructures,
+            resamp_res=NULL
+          )
           cdata <- cifti_ss$data$subcort
           return(list(
             data = cdata,
@@ -451,15 +457,17 @@ BayesGLM_cifti <- function(cifti_fname,
 
       other_hem <- grep(br_str, c("left","right"), value = T, invert = T)
       if(do_classical) {
+        # Adding the try() function here so that if one model fails, the others
+        # can still run
         start_time <- proc.time()[3]
-        classicalGLM_results[[br_str]] <- classicalGLM(data=session_data,
+        classicalGLM_results[[br_str]] <- try(classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_hem,
-                                                       scale_design = FALSE) # done above
+                                                       scale_design = FALSE)) # done above
         classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
-        BayesGLM_results[[br_str]] <- BayesGLM(data = session_data,
+        BayesGLM_results[[br_str]] <- try(BayesGLM(data = session_data,
                                                beta_names = beta_names,
                                                vertices = verts,
                                                faces = faces,
@@ -470,12 +478,12 @@ BayesGLM_cifti <- function(cifti_fname,
                                                outfile = outfile_name,
                                                verbose = verbose,
                                                avg_sessions = avg_sessions,
-                                               trim_INLA = trim_INLA)
+                                               trim_INLA = trim_INLA))
         BayesGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
       if(do_EM) {
         start_time <- proc.time()[3]
-        GLMEM_results[[br_str]] <- BayesGLMEM(data = session_data,
+        GLMEM_results[[br_str]] <- try(BayesGLMEM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts,
                                               faces = faces,
@@ -486,7 +494,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                               tol = tol,
                                               num.threads = num.threads,
                                               outfile = outfile_name,
-                                              verbose = verbose)
+                                              verbose = verbose))
         GLMEM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
     }
@@ -537,14 +545,14 @@ BayesGLM_cifti <- function(cifti_fname,
 
       if(do_classical) {
         start_time <- proc.time()[3]
-        classicalGLM_results$vol <- classicalGLM(data=session_data,
+        classicalGLM_results$vol <- try(classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_sub,
-                                                       scale_design = FALSE) # done above
+                                                       scale_design = FALSE)) # done above
         classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
-        BayesGLM_results$vol <- BayesGLM_vol3D(
+        BayesGLM_results$vol <- try(BayesGLM_vol3D(
           data = session_data,
           locations = locs,
           labels = labs,
@@ -555,7 +563,7 @@ BayesGLM_cifti <- function(cifti_fname,
           outfile = outfile_name,
           num.threads = num.threads,
           verbose=verbose
-        )
+        ))
         BayesGLM_resultsvol$total_time <- proc.time()[3] - start_time
       }
 
@@ -626,9 +634,15 @@ BayesGLM_cifti <- function(cifti_fname,
   }
   for(ss in 1:n_sess){
     if(do_classical){
-      if(do_left) datL <- classicalGLM_results$left[[ss]]$estimates[cortexL_mwall==1,]
-      if(do_right) datR <- classicalGLM_results$right[[ss]]$estimates[cortexR_mwall==1,]
-      if(do_sub) dat_sub <- classicalGLM_results$vol[[ss]]$estimates
+      if(do_left & class(classicalGLM_results$left) != "try-error") {
+        datL <- classicalGLM_results$left[[ss]]$estimates[cortexL_mwall==1,]
+      }
+      if(do_right & class(classicalGLM_results$right) != "try-error") {
+        datR <- classicalGLM_results$right[[ss]]$estimates[cortexR_mwall==1,]
+      }
+      if(do_sub & class(classicalGLM_results$vol) != "try-error") {
+        dat_sub <- classicalGLM_results$vol[[ss]]$estimates
+      }
       classicalGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
@@ -645,9 +659,12 @@ BayesGLM_cifti <- function(cifti_fname,
       classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      if(do_left) datL <- BayesGLM_results$left$beta_estimates[[ss]][cortexL_mwall==1,]
-      if(do_right) datR <- BayesGLM_results$right$beta_estimates[[ss]][cortexR_mwall==1,]
-      if(do_sub) dat_sub <- BayesGLM_results$vol$beta_estimates[[ss]]
+      if(do_left & class(BayesGLM_results$left) != "try-error")
+        datL <- BayesGLM_results$left$beta_estimates[[ss]][cortexL_mwall==1,]
+      if(do_right & class(BayesGLM_results$right) != "try-error")
+        datR <- BayesGLM_results$right$beta_estimates[[ss]][cortexR_mwall==1,]
+      if(do_sub & class(BayesGLM_results$vol) != "try-error")
+        dat_sub <- BayesGLM_results$vol$beta_estimates[[ss]]
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
@@ -663,9 +680,12 @@ BayesGLM_cifti <- function(cifti_fname,
       BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_EM) {
-      if(do_left) datL <- GLMEM_results$left$beta_estimates[[ss]]
-      if(do_right) datR <- GLMEM_results$right$beta_estimates[[ss]]
-      if(do_sub) dat_sub <- GLMEM_results$vol$beta_estimates[[ss]]
+      if(do_left & class(GLMEM_results$left) != "try-error")
+        datL <- GLMEM_results$left$beta_estimates[[ss]]
+      if(do_right & class(GLMEM_results$right) != "try-error")
+        datR <- GLMEM_results$right$beta_estimates[[ss]]
+      if(do_sub & class(GLMEM_results$vol) != "try-error")
+        dat_sub <- GLMEM_results$vol$beta_estimates[[ss]]
       GLMEM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = cortexL_mwall,
@@ -686,17 +706,17 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_classical) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
-      if(do_left) {
+      if(do_left & class(classicalGLM_results$left) != "try-error") {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
         maskL <- classicalGLM_results$left$avg$mask[cortexL_mwall == 1]
         datL[maskL,] <- classicalGLM_results$left$avg$estimates[cortexL_mwall == 1,]
       }
-      if(do_right) {
+      if(do_right & class(classicalGLM_results$right) != "try-error") {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
         maskR <- classicalGLM_results$right$avg$mask[cortexR_mwall == 1]
         datR[maskR,] <- classicalGLM_results$right$avg$estimates[cortexR_mwall == 1,]
       }
-      if(do_sub) {
+      if(do_sub & class(classicalGLM_results$vol) != "try-error") {
         dat_sub <- classicalGLM_results$vol$avg$estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object
@@ -718,17 +738,17 @@ BayesGLM_cifti <- function(cifti_fname,
     if (do_Bayesian) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
-      if(do_left) {
+      if(do_left & class(BayesGLM_results$left) != "try-error") {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
         maskL <- BayesGLM_results$left$mask[cortexL_mwall == 1]
         datL[maskL,] <- BayesGLM_results$left$avg_beta_estimates
       }
-      if(do_right) {
+      if(do_right & class(BayesGLM_results$right) != "try-error") {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
         maskR <- BayesGLM_results$right$mask[cortexR_mwall == 1]
         datR[maskR,] <- BayesGLM_results$right$avg_beta_estimates
       }
-      if(do_sub) {
+      if(do_sub & class(BayesGLM_results$vol) != "try-error") {
         dat_sub <- BayesGLM_results$vol$avg_beta_estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object
@@ -750,17 +770,17 @@ BayesGLM_cifti <- function(cifti_fname,
     if (do_EM) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
-      if(do_left) {
+      if(do_left & class(GLMEM_results$left) != "try-error") {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
         maskL <- GLMEM_results$left$mask[cortexL_mwall == 1]
         datL[maskL,] <- GLMEM_results$left$avg_beta_estimates
       }
-      if(do_right) {
+      if(do_right & class(GLMEM_results$right) != "try-error") {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
         maskR <- GLMEM_results$right$mask[cortexR_mwall == 1]
         datR[maskR,] <- GLMEM_results$right$avg_beta_estimates
       }
-      if(do_sub) {
+      if(do_sub & class(GLMEM_results$vol) != "try-error") {
         dat_sub <- GLMEM_results$vol$avg_beta_estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object
