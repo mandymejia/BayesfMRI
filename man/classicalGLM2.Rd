@@ -19,11 +19,20 @@ BayesGLM_cifti with classical results, or (2) a character vector of length M
 of file names output from the BayesGLM_cifti function. M is the number of
 subjects.}
 
+\item{brainstructure}{Character string indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface) or \code{"right"} (right
+cortical surface) or \code{"subcortical"}. Default: \code{c("left","right")}
+(entire cortical surface).}
+
+\item{session_name}{(character) The name of the session that should be
+examined. If \code{NULL} (default), the average across all sessions is used.}
+
 \item{gamma}{(For inference only) List of vectors of activation thresholds
 for the excursion set (each element corresponding to one contrast).
 Remember that if a contrast is not specified, the average is found.}
 
-\item{correction}{Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)}
+\item{correction}{Type of multiple comparisons correction, 'FDR'
+(Benjamini Hochberg) or 'FWER' (Bonferroni correction)}
 
 \item{alpha}{Significance level (e.g. 0.05)}
 }
