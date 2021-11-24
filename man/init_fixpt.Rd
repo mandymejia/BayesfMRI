@@ -4,7 +4,7 @@
 \alias{init_fixpt}
 \title{The fix point function for the initialization of kappa2 and phi}
 \usage{
-init_fixpt(theta, spde, beta_hat)
+init_fixpt(theta, spde, beta_hat, num_sessions)
 }
 \arguments{
 \item{theta}{a vector c(kappa2,phi)}
@@ -12,6 +12,8 @@ init_fixpt(theta, spde, beta_hat)
 \item{spde}{an spde object}
 
 \item{beta_hat}{vector}
+
+\item{num_sessions}{scalar, the number of sessions}
 }
 \value{
 scalar

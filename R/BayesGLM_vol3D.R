@@ -18,6 +18,7 @@
 #' @param data A list of sessions, where each session is a list with elements
 #'  BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
 #'  List element names represent session names.
+#' @param beta_names (Optional) Names of tasks represented in design matrix
 #' @param locations Vx3 matrix of x,y,z coordinates of each voxel
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
@@ -27,13 +28,27 @@
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
+#' @inheritParams avg_sessions_Param
 #'
 #' @return A list containing...
 #'
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check
 #'
 #' @export
-BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD=TRUE, scale_design = TRUE, return_INLA_result=FALSE, outfile = NULL, num.threads = 6, verbose=FALSE){
+BayesGLM_vol3D <-
+  function(data,
+           beta_names = NULL,
+           locations,
+           labels,
+           groups_df = NULL,
+           scale_BOLD = TRUE,
+           scale_design = TRUE,
+           return_INLA_result = FALSE,
+           outfile = NULL,
+           num.threads = 6,
+           verbose = FALSE,
+           avg_sessions = TRUE) {
+
 
   # Check to see that the INLA package is installed
   if (!requireNamespace("INLA", quietly = TRUE))
@@ -81,6 +96,22 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
 
+  if(!is.null(beta_names)){
+    if(length(beta_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of beta_names is ', length(beta_names), '.  Please fix beta_names.'))
+  }
+
+  ntime <- nrow(data[[1]]$BOLD)
+  is_pw <- nrow(data[[1]]$design) == (ntime * V)
+  if(is.null(beta_names)){
+    if(!is_pw){
+      beta_names_maybe <- colnames(data[[1]]$design) #if no prewhitening, can grab beta names from design (if not provided)
+      if(!is.null(beta_names_maybe)) beta_names <- beta_names_maybe
+      if(is.null(beta_names_maybe)) beta_names <- paste0('beta',1:K)
+    } else {
+      beta_names <- paste0('beta',1:K)
+    }
+  }
+
   if(is.null(outfile)){
     warning('No value supplied for outfile, which is required for group modeling (see `help(BayesGLM2)`).')
   }
@@ -113,6 +144,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD
 
   beta_estimates_all <- matrix(NA, nrow=V, ncol=K)
   beta_estimates_all <- rep(list(beta_estimates_all), n_sess)
+  avg_beta_estimates <- matrix(NA, nrow=V, ncol=K)
   INLA_result_all <- vector('list', length=length(group_set))
   spde_all <- vector('list', length=length(group_set))
   names(INLA_result_all) <- paste0('model_group_',group_set)
@@ -196,8 +228,13 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD
 
     #extract beta estimates and project back to data locations for current group
     beta_estimates_grp <- extract_estimates(object=INLA_result_grp, session_names=session_names) #posterior means of latent task field
+    transformed_betas <- vector("list", length = n_sess)
     for(s in 1:n_sess){
-      beta_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% beta_estimates_grp[[s]])
+      transformed_betas[[s]] <- as.matrix(spde_grp$Amat %*% beta_estimates_grp[[s]])
+      beta_estimates_all[[s]][inds_grp,] <- transformed_betas[[s]]
+    }
+    if(avg_sessions){
+      avg_beta_estimates[inds_grp,] <- Reduce(`+`, transformed_betas) / n_sess
     }
 
     #extract theta posteriors
@@ -222,6 +259,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates_all,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors_all,
                    call = match.call()
                    )
@@ -232,6 +270,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df = NULL, scale_BOLD
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates_all,
+                   avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors_all,
                    call = match.call()
                    )

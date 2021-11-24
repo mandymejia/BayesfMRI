@@ -28,7 +28,7 @@ BayesGLM_cifti(
   avg_sessions = TRUE,
   trim_INLA = TRUE,
   groups_df = NULL,
-  tol = 0.001
+  tol = NULL
 )
 }
 \arguments{

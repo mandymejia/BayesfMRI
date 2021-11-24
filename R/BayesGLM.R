@@ -117,7 +117,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE,
                      groups_df = NULL,
-                     tol = 1e-3){
+                     tol = NULL){
 
 #  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
   GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
@@ -141,8 +141,8 @@ BayesGLM_cifti <- function(cifti_fname,
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-  if(do_EM & "subcortical" %in% brainstructures)
-    stop("The EM algorithm does not yet work with the subcortical model.")
+  # if(do_EM & "subcortical" %in% brainstructures)
+    # stop("The EM algorithm does not yet work with the subcortical model.")
 #   do_left <- ('left' %in% brainstructures)
 #   do_right <- ('right' %in% brainstructures)
 #   do_sub <- FALSE
@@ -211,7 +211,7 @@ BayesGLM_cifti <- function(cifti_fname,
   }
   if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
 
-  cat('\n SETTING UP DATA \n')
+  cat('\nSETTING UP DATA\n')
 
   if(class(cifti_fname) == "character") {
 
@@ -548,7 +548,7 @@ BayesGLM_cifti <- function(cifti_fname,
         classicalGLM_results$vol <- try(classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_sub,
                                                        scale_design = FALSE)) # done above
-        classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+        classicalGLM_results$vol$total_time <- proc.time()[3] - start_time
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
@@ -564,9 +564,26 @@ BayesGLM_cifti <- function(cifti_fname,
           num.threads = num.threads,
           verbose=verbose
         ))
-        BayesGLM_resultsvol$total_time <- proc.time()[3] - start_time
+        BayesGLM_results$vol$total_time <- proc.time()[3] - start_time
       }
-
+      if(do_EM) {
+        start_time <- proc.time()[3]
+        GLMEM_results$vol <- try(BayesGLMEM_vol3D(
+          data = session_data,
+          locations = locs,
+          labels = labs,
+          EM_method = "separate",
+          use_SQUAREM = TRUE,
+          groups_df = groups_df,
+          scale_BOLD=TRUE,
+          scale_design = FALSE, # Done above
+          tol = tol,
+          outfile = outfile_name,
+          num.threads = num.threads,
+          verbose=verbose
+        ))
+        GLMEM_results$vol$total_time <- proc.time()[3] - start_time
+      }
     }
   }
 
@@ -821,7 +838,8 @@ BayesGLM_cifti <- function(cifti_fname,
                                        cortexR = classicalGLM_results$right,
                                        subcortical = classicalGLM_results$vol),
                  GLMs_EM = list(cortexL = GLMEM_results$left,
-                                cortexR = GLMEM_results$right),
+                                cortexR = GLMEM_results$right,
+                                subcortical = GLMEM_results$vol),
                  prewhitening_info = prewhitening_info,
                  design = design)
 

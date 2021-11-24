@@ -131,7 +131,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    ) {
       big_K <- length(kappa2_inds)
       big_N <- spde$n.spde
-      n_sess_em <- length(mu) / (big_K * spde$n.spde)
+      n_sess_em <- length(mu) / (big_K * big_N)
       k_inds <- c(sapply(seq(n_sess_em), function(ns) {
         seq( big_N * (big_K * (ns - 1) + k - 1) + 1, big_N * (big_K * (ns - 1) + k))
       }))
@@ -292,8 +292,10 @@ neg_kappa_fn <- function(kappa2, spde, phi, Sigma, mu) {
 #' @keywords internal
 neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
   Qt <- Q_prime(kappa2, spde)
-  KK <- nrow(P) / spde$mesh$n
-  if(nrow(P) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  n_spde <- spde$mesh$n
+  if(is.null(n_spde)) n_spde <- spde$n.spde
+  KK <- nrow(P) / n_spde
+  if(nrow(P) != n_spde & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
   log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T)))) # compare direct determinant here
   trace_QEww <-
     TrQEww(
@@ -323,7 +325,9 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
   Cmat <- spde$param.inla$M0
   Gmat <- (spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))/2
   GtCinvG <- spde$param.inla$M2
-  n_sess_em <- nrow(P) / spde$mesh$n
+  n_spde <- spde$mesh$n
+  if(is.null(n_spde)) n_spde <- spde$n.spde
+  n_sess_em <- nrow(P) / n_spde
   if(n_sess_em > 1) {
     Cmat <- Matrix::bdiag(rep(list(Cmat),n_sess_em))
     Gmat <- Matrix::bdiag(rep(list(Gmat),n_sess_em))
@@ -411,8 +415,10 @@ TrQbb <- function(kappa2, beta_hat, spde) {
 #' @keywords internal
 kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
   Qt <- Q_prime(kappa2, spde)
-  KK <- length(beta_hat) / spde$mesh$n
-  if(length(beta_hat) != spde$mesh$n & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  n_spde <- spde$mesh$n
+  if(is.null(n_spde)) n_spde <- spde$n.spde
+  KK <- length(beta_hat) / n_spde
+  if(length(beta_hat) != n_spde & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
   log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T))))
   # out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
   out <- log_det_Q / 2 - as.numeric(Matrix::crossprod(beta_hat, Qt %*% beta_hat)) / (8*pi*phi)
@@ -441,17 +447,20 @@ init_objfn <- function(theta, spde, beta_hat) {
 #' @param theta a vector c(kappa2,phi)
 #' @param spde an spde object
 #' @param beta_hat vector
+#' @param num_sessions scalar, the number of sessions
 #'
 #' @importFrom stats optimize
 #'
 #' @return scalar
 #' @keywords internal
-init_fixpt <- function(theta, spde, beta_hat) {
+init_fixpt <- function(theta, spde, beta_hat, num_sessions) {
   kappa2 <- theta[1]
-  num_sessions <- length(beta_hat) / spde$mesh$n
+  n_spde <- spde$mesh$n
+  if(is.null(n_spde)) n_spde <- spde$n.spde
+  num_sessions <- length(beta_hat) / n_spde
   Qp <- Q_prime(kappa2, spde)
-  if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))
-  phi <- as.numeric(Matrix::crossprod(beta_hat, Qp %*% beta_hat)) / (4 * pi * spde$mesh$n * num_sessions)
+  # if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))
+  phi <- as.numeric(Matrix::crossprod(beta_hat, Qp %*% beta_hat)) / (4 * pi * n_spde * num_sessions)
   kappa2 <-
     stats::optimize(
       f = kappa_init_fn,
