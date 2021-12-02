@@ -84,10 +84,11 @@ classicalGLM2 <- function(results,
         x$GLMs_classical[[brainstructure]][[session_name]]$estimates, simplify = "array")
   }
   avg_estimate <- apply(results, 1:2, mean)
-
+  in_mask <- !is.na(avg_estimate[,1])
+  avg_estimate <- avg_astimate[in_mask,]
   gamma_result <- sapply(gamma, function(g) {
     p_vals <-
-      apply(results, 1:2, function(x)
+      apply(results[in_mask,,], 1:2, function(x)
         stats::t.test(x, alternative = "greater", mu = g)$p.value)
     p_vals_adj <- apply(p_vals, 2, stats::p.adjust, method = p_method)
     active <- p_vals_adj < alpha
