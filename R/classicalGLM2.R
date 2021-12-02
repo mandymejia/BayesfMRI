@@ -85,7 +85,7 @@ classicalGLM2 <- function(results,
   }
   avg_estimate <- apply(results, 1:2, mean)
   in_mask <- !is.na(avg_estimate[,1])
-  avg_estimate <- avg_astimate[in_mask,]
+  avg_estimate <- avg_estimate[in_mask,]
   gamma_result <- sapply(gamma, function(g) {
     p_vals <-
       apply(results[in_mask,,], 1:2, function(x)
