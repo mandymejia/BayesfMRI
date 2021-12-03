@@ -188,10 +188,12 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
 #' @param K number of covariates
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
 #' @param num.threads Needed for SQUAREM (it is an argument to the fixed-point functions)
+#' @param Ns The number of samples used to approximate traces using the Hutchinson
+#'   estimator. If set to 0, the exact trace is found.
 #'
 #' @return A scalar value for the negative expected log-likelihood
 #' @keywords internal
-GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL) {
+GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL, Ns = NULL) {
   if(length(theta) > 3) { # This condition means that parameters are being updated separately
     kappa2_inds <- seq(K)
     phi_inds <- seq(K) + K
@@ -215,14 +217,17 @@ GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL) 
   Sig_inv <- Q + A/theta[sigma2_ind]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[sigma2_ind]
   mu <- INLA::inla.qsolve(Sig_inv,m, method = "solve")
-  Sigma <- INLA::inla.qinv(Sig_inv)
-  R1 <- -TN * log(theta[sigma2_ind]) / 2 - crossprod(model_data$y)/(2*theta[sigma2_ind]) +
-    Matrix::crossprod(model_data$y,model_data$X%*%Psi%*%mu) -
-    Matrix::crossprod(model_data$X%*%Psi%*%mu) / (2*theta[sigma2_ind]) -
-    sum(Matrix::colSums(A*Sigma)) / (2*theta[sigma2_ind])
-  R2 <- sum(2*log(Matrix::diag(Matrix::chol(Q,pivot = T))))/2 -
-    sum(Matrix::colSums(Q*Sigma)) / 2 - Matrix::crossprod(mu,Q%*%mu) / 2
-  ELL_out <- R1@x + R2@x
+  XB <- model_data$X%*%Psi%*%mu
+  y_res <- model_data$y - XB
+  ELL_out <- as.numeric(-TN * log(theta[sigma2_ind]) / 2 - Matrix::crossprod(y_res))
+  # Sigma <- INLA::inla.qinv(Sig_inv)
+  # R1 <- -TN * log(theta[sigma2_ind]) / 2 - crossprod(model_data$y)/(2*theta[sigma2_ind]) +
+  #   Matrix::crossprod(model_data$y,model_data$X%*%Psi%*%mu) -
+  #   Matrix::crossprod(model_data$X%*%Psi%*%mu) / (2*theta[sigma2_ind]) -
+  #   sum(Matrix::colSums(A*Sigma)) / (2*theta[sigma2_ind])
+  # R2 <- sum(2*log(Matrix::diag(Matrix::chol(Q,pivot = T))))/2 -
+  #   sum(Matrix::colSums(Q*Sigma)) / 2 - Matrix::crossprod(mu,Q%*%mu) / 2
+  # ELL_out <- R1@x + R2@x
   return(-ELL_out)
 }
 

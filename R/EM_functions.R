@@ -304,13 +304,15 @@ BayesGLMEM <- function(data,
       SQUAREM::squarem(
         par = theta,
         fixptfn = em_fn,
+        # objfn = GLMEM_objfn,
         control = list(tol = tol, trace = verbose, K = 1),
         spde = spde,
         model_data = model_data,
         Psi = Psi,
         K = K,
         A = A,
-        num.threads = num.threads
+        num.threads = num.threads,
+        Ns = 50
       )
     theta_new <- squareem_output$par
     em_output <- list(
@@ -697,7 +699,7 @@ BayesGLMEM_vol3D <-
       # }
       if(use_SQUAREM) {
         cl <- parallel::makeCluster(min(num.threads,K))
-        kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
+        kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, tol, verbose) {
           init_output <-
             SQUAREM::squarem(
               par = c(kappa2, phi),
@@ -708,7 +710,7 @@ BayesGLMEM_vol3D <-
               control = list(tol = tol, trace = verbose, K = 1)
             )
           return(init_output)
-        },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
+        },kappa2 = kappa2, phi = phi, spde = spde,tol = tol, verbose = verbose)
         kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
         theta <- c(t(kappa2_phi),sigma2)
         cat("...... DONE!\n")
@@ -779,13 +781,15 @@ BayesGLMEM_vol3D <-
         SQUAREM::squarem(
           par = theta,
           fixptfn = em_fn,
+          # objfn = GLMEM_objfn,
           control = list(tol = tol, trace = verbose, K = 1),
           spde = spde,
           model_data = model_data,
           Psi = Psi,
           K = K,
           A = A,
-          num.threads = num.threads
+          num.threads = num.threads,
+          Ns = 50
         )
       theta_new <- squareem_output$par
       em_output <- list(
