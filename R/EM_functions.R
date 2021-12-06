@@ -267,22 +267,45 @@ BayesGLMEM <- function(data,
       task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
       beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
     }
-    cl <- parallel::makeCluster(min(num.threads,K))
-    kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
-      init_output <-
-        SQUAREM::squarem(
-          par = c(kappa2, phi),
-          fixptfn = init_fixpt,
-          spde = spde,
-          beta_hat = bh,
-          control = list(tol = 1e-3, trace = verbose, K = 1)
-        )
-      return(init_output)
-    },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
-    kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
-    theta <- c(t(kappa2_phi),sigma2)
-    cat("...... DONE!\n")
-    parallel::stopCluster(cl)
+    if(use_SQUAREM) {
+      cl <- parallel::makeCluster(min(num.threads,K))
+      kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
+        init_output <-
+          SQUAREM::squarem(
+            par = c(kappa2, phi),
+            fixptfn = init_fixpt,
+            spde = spde,
+            beta_hat = bh,
+            control = list(tol = 1e-3, trace = verbose, K = 1)
+          )
+        return(init_output)
+      },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
+      kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
+      theta <- c(t(kappa2_phi),sigma2)
+      cat("...... DONE!\n")
+      parallel::stopCluster(cl)
+    }
+    if(!use_SQUAREM) {
+      theta_init <- apply(beta_hat,2,function(bh, kappa2, phi, spde) {
+        step <- 1
+        max_pct_change <- Inf
+        theta <- c(kappa2, phi)
+        while(max_pct_change > tol | step <= 5) {
+          theta_new <-
+            init_fixpt(
+              theta = theta,
+              spde = spde,
+              beta_hat = bh
+            )
+          theta_pct_change <- 100 * abs((theta_new - theta) / theta)
+          max_pct_change <- max(theta_pct_change)
+          theta <- theta_new
+          step <- step+1
+        }
+        return(theta)
+      }, kappa2 = kappa2, phi = phi, spde = spde)
+      theta <- c(t(theta_init), sigma2)
+    }
   }
   theta_init <- theta
   # > Start EM algorithm ----
@@ -730,8 +753,7 @@ BayesGLMEM_vol3D <-
               init_fixpt(
                 theta = c(kappa2, phi),
                 spde = spde,
-                beta_hat = beta_hat[,k],
-                num_sessions = n_sess
+                beta_hat = beta_hat[,k]
               )
             kappa2_new <- theta_new[1]
             phi_new <- theta_new[2]

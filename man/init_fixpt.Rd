@@ -4,7 +4,7 @@
 \alias{init_fixpt}
 \title{The fix point function for the initialization of kappa2 and phi}
 \usage{
-init_fixpt(theta, spde, beta_hat, num_sessions)
+init_fixpt(theta, spde, beta_hat)
 }
 \arguments{
 \item{theta}{a vector c(kappa2,phi)}

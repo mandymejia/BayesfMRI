@@ -458,13 +458,13 @@ init_objfn <- function(theta, spde, beta_hat) {
 #'
 #' @return scalar
 #' @keywords internal
-init_fixpt <- function(theta, spde, beta_hat, num_sessions) {
+init_fixpt <- function(theta, spde, beta_hat) {
   kappa2 <- theta[1]
   n_spde <- spde$mesh$n
   if(is.null(n_spde)) n_spde <- spde$n.spde
   num_sessions <- length(beta_hat) / n_spde
   Qp <- Q_prime(kappa2, spde)
-  # if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))
+  if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))
   phi <- as.numeric(Matrix::crossprod(beta_hat, Qp %*% beta_hat)) / (4 * pi * n_spde * num_sessions)
   kappa2 <-
     stats::optimize(
