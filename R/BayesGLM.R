@@ -570,17 +570,19 @@ BayesGLM_cifti <- function(cifti_fname,
         start_time <- proc.time()[3]
         GLMEM_results$vol <- try(BayesGLMEM_vol3D(
           data = session_data,
+          beta_names = NULL,
           locations = locs,
           labels = labs,
           EM_method = "separate",
-          use_SQUAREM = TRUE,
+          use_SQUAREM = FALSE,
           groups_df = groups_df,
           scale_BOLD=TRUE,
           scale_design = FALSE, # Done above
           tol = tol,
           outfile = outfile_name,
           num.threads = num.threads,
-          verbose=verbose
+          verbose=verbose,
+          avg_sessions = TRUE
         ))
         GLMEM_results$vol$total_time <- proc.time()[3] - start_time
       }
