@@ -574,7 +574,7 @@ BayesGLM_cifti <- function(cifti_fname,
           locations = locs,
           labels = labs,
           EM_method = "separate",
-          use_SQUAREM = FALSE,
+          use_SQUAREM = TRUE,
           groups_df = groups_df,
           scale_BOLD=TRUE,
           scale_design = FALSE, # Done above

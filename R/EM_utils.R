@@ -452,7 +452,6 @@ init_objfn <- function(theta, spde, beta_hat) {
 #' @param theta a vector c(kappa2,phi)
 #' @param spde an spde object
 #' @param beta_hat vector
-#' @param num_sessions scalar, the number of sessions
 #'
 #' @importFrom stats optimize
 #'

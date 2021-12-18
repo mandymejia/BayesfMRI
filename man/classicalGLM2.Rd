@@ -20,8 +20,8 @@ of file names output from the BayesGLM_cifti function. M is the number of
 subjects.}
 
 \item{brainstructure}{Character string indicating which brain structure(s)
-to obtain: \code{"left"} (left cortical surface) or \code{"right"} (right
-cortical surface) or \code{"subcortical"}. Default: \code{c("left","right")}
+to obtain: \code{"cortexL"} (left cortical surface) or \code{"cortexR"} (right
+cortical surface) or \code{"subcortical"}. Default: \code{c("cortexL","cortexR")}
 (entire cortical surface).}
 
 \item{session_name}{(character) The name of the session that should be

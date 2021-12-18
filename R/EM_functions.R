@@ -729,7 +729,7 @@ BayesGLMEM_vol3D <-
               fixptfn = init_fixpt,
               spde = spde,
               beta_hat = bh,
-              num_sessions = n_sess,
+              # num_sessions = n_sess,
               control = list(tol = tol, trace = verbose, K = 1)
             )
           return(init_output)

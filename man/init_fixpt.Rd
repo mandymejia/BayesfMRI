@@ -12,8 +12,6 @@ init_fixpt(theta, spde, beta_hat)
 \item{spde}{an spde object}
 
 \item{beta_hat}{vector}
-
-\item{num_sessions}{scalar, the number of sessions}
 }
 \value{
 scalar
