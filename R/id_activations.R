@@ -502,11 +502,15 @@ id_activations.em <-
     }
 
     #if averages not available and session_name=NULL, pick first session and return a warning
-    has_avg <- is.matrix(model_obj$avg_beta_estimates)
+    # has_avg <- is.matrix(model_obj$avg_beta_estimates)
+    has_avg <- "avg" %in% all_sessions
     if(is.null(session_name) & !has_avg){
       session_name <- all_sessions[1]
       warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
     }
+
+    # Make an indicator for subcortical data
+    is_subcort <- "BayesGLMEM_vol3D" %in% as.character(model_obj$call)
 
     #if session_name is still NULL, use average and check excur_method argument
     # if(is.null(session_name)){
@@ -530,6 +534,31 @@ id_activations.em <-
     if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
 
     mesh <- model_obj$mesh
+    if(is_subcort) {
+      n_subcort_models <- length(model_obj$spde_obj)
+      result <- vector("list", length = n_subcort_models)
+      for(m in 1:n_subcort_models){
+        mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
+                          model_obj$spde_obj[[m]]$faces[[1]])
+        n_vox <- mesh$n
+        excur <- vector('list', length=length(field_names))
+        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+        colnames(act) <- field_names
+        res.exc <-
+          excursions(
+            alpha = alpha,
+            u = threshold,
+            mu = c(model_obj$beta_estimates[[which(all_sessions == session_name)]]),
+            Q = model_obj$EM_result_all[[which(all_sessions == session_name)]]$posterior_Sig_inv,
+            type = ">", method = "EB"
+          )
+        for(f in field_names) {
+          which_f <- which(field_names==f)
+          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+          act[,which_f] <- res.exc$E[f_inds]
+        }
+      }
+    }
     n_vox <- mesh$n
 
     #for a specific session

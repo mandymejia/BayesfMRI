@@ -936,6 +936,7 @@ BayesGLMEM_vol3D <-
   result <- list(spde_obj = spde_all,
                  mesh = sapply(spde_all, function(x) x$spde$n.spde, simplify = F),
                  session_names = session_names,
+                 EM_result_all = EM_result_all,
                  beta_names = beta_names,
                  beta_estimates = beta_estimates_all,
                  avg_beta_estimates = avg_beta_estimates_all,
