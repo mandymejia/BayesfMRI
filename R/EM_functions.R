@@ -911,7 +911,8 @@ BayesGLMEM_vol3D <-
     for(s in 1:n_sess){
       beta_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% beta_estimates[[s]])
     }
-    avg_beta_estimates_all[inds_grp,] <- as.matrix(spde_grp$Amat %*% avg_beta_estimates)
+    if(avg_sessions)
+      avg_beta_estimates_all[inds_grp,] <- as.matrix(spde_grp$Amat %*% avg_beta_estimates)
     #extract theta estimates and project back to data locations for current group
     theta_estimates_all[grp,] <- mu.theta
 
@@ -922,6 +923,7 @@ BayesGLMEM_vol3D <-
                    beta_estimates = beta_estimates,
                    avg_beta_estimates = avg_beta_estimates,
                    theta_estimates = theta_estimates,
+                   posterior_mu = mu, # For excursions
                    posterior_Sig_inv = Sig_inv, # For excursions
                    mu.theta = mu.theta, #for joint group model
                    mu.theta_init = mu.theta_init, # To examine convergence

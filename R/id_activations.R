@@ -501,12 +501,22 @@ id_activations.em <-
       session_name <- all_sessions
     }
 
+    #check session_name not NULL, check that a valid session name
+    if(!is.null(session_name)){
+      if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+      sess_ind <- which(all_sessions == session_name)
+    }
+
     #if averages not available and session_name=NULL, pick first session and return a warning
     # has_avg <- is.matrix(model_obj$avg_beta_estimates)
-    has_avg <- "avg" %in% all_sessions
+    has_avg <- !is.null(model_obj$avg_beta_estimates)
     if(is.null(session_name) & !has_avg){
       session_name <- all_sessions[1]
       warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+    }
+
+    if(is.null(session_name) & has_avg){
+      session_name <- 'avg'
     }
 
     # Make an indicator for subcortical data
@@ -520,12 +530,6 @@ id_activations.em <-
     #   }
     # }
 
-    #check session_name not NULL, check that a valid session name
-    if(!is.null(session_name)){
-      if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
-      sess_ind <- which(all_sessions == session_name)
-    }
-
     #check field_names argument
     if(is.null(field_names)) field_names <- model_obj$beta_names
     if(!any(field_names %in% model_obj$beta_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
@@ -538,18 +542,35 @@ id_activations.em <-
       n_subcort_models <- length(model_obj$spde_obj)
       result <- vector("list", length = n_subcort_models)
       for(m in 1:n_subcort_models){
-        mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
-                          model_obj$spde_obj[[m]]$faces[[1]])
-        n_vox <- mesh$n
-        excur <- vector('list', length=length(field_names))
-        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-        colnames(act) <- field_names
+        # mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
+        #                   model_obj$spde_obj[[m]]$faces[[1]])
+        # n_vox <- mesh$n
+        # excur <- vector('list', length=length(field_names))
+        # act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+        # colnames(act) <- field_names
+
+        if(session_name == "avg") {
+          beta_est <- c(model_obj$EM_result_all[[m]]$posterior_mu)
+        }
+        if(session_name != "avg") {
+          beta_mesh_est <- c(model_obj$beta_estimates[[which(all_sessions == session_name)]])
+          beta_est <- beta_mesh_est[!is.na(beta_mesh_est)]
+        }
+        Phi <-
+          Matrix::bdiag(rep(
+            list(model_obj$EM_result_all[[m]]$mesh$Amat),
+            length(field_names)
+          ))
+        # w <- beta_est %*% Phi
+        Sig_inv <- model_obj$EM_result_all[[m]]$posterior_Sig_inv
+        # Q_est <- Matrix::tcrossprod(Phi %*% Sig_inv, Phi)
+
         res.exc <-
           excursions(
             alpha = alpha,
             u = threshold,
-            mu = c(model_obj$beta_estimates[[which(all_sessions == session_name)]]),
-            Q = model_obj$EM_result_all[[which(all_sessions == session_name)]]$posterior_Sig_inv,
+            mu = beta_est,
+            Q = Sig_inv,
             type = ">", method = "EB"
           )
         for(f in field_names) {
@@ -559,31 +580,34 @@ id_activations.em <-
         }
       }
     }
-    n_vox <- mesh$n
 
-    #for a specific session
-    if(!is.null(session_name)){
+    if(!is_subcort) {
+      n_vox <- mesh$n
 
-      # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
+      #for a specific session
+      if(!is.null(session_name)){
 
-      #loop over latent fields
-      excur <- vector('list', length=length(field_names))
-      act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-      colnames(act) <- field_names
-      res.exc <-
-        excursions(
-          alpha = alpha,
-          u = threshold,
-          mu = c(model_obj$beta_estimates[[session_name]]),
-          Q = model_obj$posterior_Sig_inv,
-          type = ">", method = "EB"
-        )
-      for(f in field_names) {
-        which_f <- which(field_names==f)
-        f_inds <- (1:n_vox) + (which_f - 1)*n_vox
-        act[,which_f] <- res.exc$E[f_inds]
+        # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
+
+        #loop over latent fields
+        excur <- vector('list', length=length(field_names))
+        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+        colnames(act) <- field_names
+        res.exc <-
+          excursions(
+            alpha = alpha,
+            u = threshold,
+            mu = c(model_obj$beta_estimates[[session_name]]),
+            Q = model_obj$posterior_Sig_inv,
+            type = ">", method = "EB"
+          )
+        for(f in field_names) {
+          which_f <- which(field_names==f)
+          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+          act[,which_f] <- res.exc$E[f_inds]
+        }
       }
-  }
+    }
   result <- list(active=act, excursions_result=res.exc)
   return(result)
 }
