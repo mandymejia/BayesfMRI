@@ -33,7 +33,7 @@
 #'
 #' @return A list containing...
 #'
-#' @importFrom INLA inla.spde2.matern inla.qinv inla.qsolve
+#' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @importFrom SQUAREM squarem
@@ -323,6 +323,23 @@ BayesGLMEM <- function(data,
     s_idx <- (2*K + 1)
   }
   if(use_SQUAREM) {
+    ### This is new code for testing
+    # Q_k <-
+    #   mapply(
+    #     spde_Q_phi,
+    #     kappa2 = theta[k_idx],
+    #     phi = theta[p_idx],
+    #     MoreArgs = list(spde = spde),
+    #     SIMPLIFY = F
+    #   )
+    # Q_new <- Matrix::bdiag(Q_k)
+    # # Q_new <- Reduce(spam::bdiag.spam,Q_k)
+    # n_sess_em <- nrow(A) / nrow(Q_new)
+    # if(n_sess_em > 1) Q_new <- Matrix::bdiag(lapply(seq(n_sess_em),function(x) Q_new))
+    # Sig_inv <- Q_new + A/theta[sigma2_ind]
+    # U_init <- spam::chol(Sig_inv)
+    ### End new code section
+
     squareem_output <-
       SQUAREM::squarem(
         par = theta,
@@ -331,6 +348,7 @@ BayesGLMEM <- function(data,
         control = list(tol = tol, trace = verbose, K = 1),
         spde = spde,
         model_data = model_data,
+        # U = U_init,
         Psi = Psi,
         K = K,
         A = A,

@@ -132,8 +132,11 @@ id_activations_cifti <- function(model_obj,
     activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
   }
   if(do_sub) {
-    datS <- 1*activations$subcortical$active
-    if(method=='classical') datS <- datS[!is.na(datS[,1]),] #remove masked locations
+    for(m in 1:length(activations$subcortical)){
+      datS <- 1*activations$subcortical[[m]]$active
+      activations_xifti$data$subcort[!is.na(model_obj$betas_EM[[1]]$data$subcort[,1]),] <-
+        datS
+    }
     #datR[datR==0] <- NA
     activations_xifti$data$subcort <- matrix(datS, ncol=length(field_names))
   }
@@ -279,7 +282,6 @@ id_activations.posterior <- function(model_obj,
 		act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
 		colnames(act) <- field_names
 		for(f in field_names){
-
   		if(is.null(area.limit)){
   			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha)
   		} else {
@@ -556,28 +558,42 @@ id_activations.em <-
           beta_mesh_est <- c(model_obj$beta_estimates[[which(all_sessions == session_name)]])
           beta_est <- beta_mesh_est[!is.na(beta_mesh_est)]
         }
-        Phi <-
-          Matrix::bdiag(rep(
-            list(model_obj$EM_result_all[[m]]$mesh$Amat),
-            length(field_names)
-          ))
+        Phi_k <- model_obj$EM_result_all[[m]]$mesh$Amat
+        # Phi <-
+        #   Matrix::bdiag(rep(
+        #     list(Phi_k),
+        #     length(field_names)
+        #   ))
         # w <- beta_est %*% Phi
         Sig_inv <- model_obj$EM_result_all[[m]]$posterior_Sig_inv
         # Q_est <- Matrix::tcrossprod(Phi %*% Sig_inv, Phi)
 
+        ### use the ind argument for excursions to get the marginal posterior
+        ### excursions sets (much faster)
+
+        n_vox <- length(beta_est) / length(field_names)
+        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+
+        V <- Matrix::diag(INLA::inla.qinv(Sig_inv))
+
+        for(f in field_names) {
+        which_f <- which(field_names==f)
+        f_inds <- (1:n_vox) + (which_f - 1)*n_vox
         res.exc <-
           excursions(
             alpha = alpha,
             u = threshold,
             mu = beta_est,
             Q = Sig_inv,
+            vars = V,
+            ind = f_inds,
             type = ">", method = "EB"
           )
-        for(f in field_names) {
-          which_f <- which(field_names==f)
-          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+
           act[,which_f] <- res.exc$E[f_inds]
         }
+        act <- as.matrix(Phi_k %*% act)
+        result[[m]] <- list(active = act, excursions_result=res.exc)
       }
     }
 
@@ -607,7 +623,8 @@ id_activations.em <-
           act[,which_f] <- res.exc$E[f_inds]
         }
       }
+      result <- list(active=act, excursions_result=res.exc)
     }
-  result <- list(active=act, excursions_result=res.exc)
+
   return(result)
 }

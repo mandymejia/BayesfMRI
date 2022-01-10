@@ -90,12 +90,22 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
   if(n_sess_em > 1) Q_new <- Matrix::bdiag(lapply(seq(n_sess_em),function(x) Q_new))
   Sig_inv <- Q_new + A/theta[sigma2_ind]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[sigma2_ind]
-  mu <- INLA::inla.qsolve(Q = Sig_inv,B = m, method = "solve")
+
+  ### First compute the Cholesky factorization (spam::chol) in the first
+  ### iteration and then use spam::update.spam.chol.NgPeyton.
+
+  U <- spam::chol(Sig_inv)
+  U <- update(U,Siv_inv)
+  mu <- spam::solve(U,m)
+
+  ## The excursions function is also supposed to work with the spam matrices
+
+  mu <- INLA::inla.qsolve(Q = Sig_inv,B = m, method = "solve") # This would be replaced by the above code
   X_Psi_mu <- model_data$X%*%Psi%*%mu
   cp_X_Psi_mu <- Matrix::crossprod(X_Psi_mu)
   # >> Update sigma2 ----
   if(Ns == 0) {
-    Sigma_new <- INLA::inla.qinv(Sig_inv)
+    Sigma_new <- INLA::inla.qinv(Sig_inv) # This does not perform the full solve, just "partial immersion", which ignores places where the precision is zero
     traceAEww <-
       cp_X_Psi_mu +
       sum(Matrix::colSums(A*Sigma_new))
@@ -114,7 +124,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
     as.numeric(crossprod(model_data$y) -
                  2*Matrix::crossprod(model_data$y,X_Psi_mu) +
                  traceAEww
-               ) / length(model_data$y)
+    ) / length(model_data$y)
   kappa2_new <- theta[kappa2_inds]
   phi_new <- theta[phi_inds]
   kp <- parallel::parSapply(
@@ -128,7 +138,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    P,
                    mu,
                    Vh
-                   ) {
+    ) {
       big_K <- length(kappa2_inds)
       big_N <- spde$n.spde
       n_sess_em <- length(mu) / (big_K * big_N)
@@ -136,8 +146,10 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
         seq( big_N * (big_K * (ns - 1) + k - 1) + 1, big_N * (big_K * (ns - 1) + k))
       }))
       # >> Update kappa2 ----
-      source("~/github/BayesfMRI/R/EM_utils.R")
+      # source("~/github/BayesfMRI/R/EM_utils.R")
       # library(INLA)
+      # Try the optimParallel function in its eponymous package to see if this
+      # can be sped up using the num_threads arguments
       optim_output_k <-
         stats::optimize(
           f = neg_kappa_fn2,
@@ -152,7 +164,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
       kappa2_new <- optim_output_k$minimum
       # >> Update phi ----
       # Q_tildek <-
-        # Q_prime(kappa2_new, spde)
+      # Q_prime(kappa2_new, spde)
       # Q_tildek <- Matrix::bdiag(lapply(seq(n_sess_em), function(x) Q_tildek))
       # Tr_QEww <-
       #   (sum(Matrix::colSums(Q_tildek * Sigma_new[k_inds, k_inds])) +
@@ -160,7 +172,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
       #                          mu[k_inds, ]))@x
       Tr_QEww <-
         TrQEww(kappa2 = kappa2_new, spde = spde, P = P[k_inds,], mu = mu[k_inds,],Vh = Vh[k_inds,])
-        # TrQEww(kappa2 = kappa2_new, spde = spde, Sig_inv = Sig_inv[k_inds,k_inds],mu = mu[k_inds,],Vh = Vh)@x
+      # TrQEww(kappa2 = kappa2_new, spde = spde, Sig_inv = Sig_inv[k_inds,k_inds],mu = mu[k_inds,],Vh = Vh)@x
       phi_new <-
         Tr_QEww / (4 * pi * spde$n.spde * n_sess_em)
       return(c(kappa2_new, phi_new))
@@ -329,6 +341,7 @@ neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
 TrQEww <- function(kappa2, spde, P, mu, Vh){
   Cmat <- spde$param.inla$M0
   Gmat <- (spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))/2
+  # Gmat <- (spde$param.inla$M1 + spam::t(spde$param.inla$M1))/2
   GtCinvG <- spde$param.inla$M2
   n_spde <- spde$mesh$n
   if(is.null(n_spde)) n_spde <- spde$n.spde
@@ -337,10 +350,16 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
     Cmat <- Matrix::bdiag(rep(list(Cmat),n_sess_em))
     Gmat <- Matrix::bdiag(rep(list(Gmat),n_sess_em))
     GtCinvG <- Matrix::bdiag(rep(list(GtCinvG),n_sess_em))
+    # Cmat <- spam::bdiag(rep(list(Cmat),n_sess_em))
+    # Gmat <- spam::bdiag(rep(list(Gmat),n_sess_em))
+    # GtCinvG <- spam::bdiag(rep(list(GtCinvG),n_sess_em))
   }
   k2uCu <- kappa2*Matrix::crossprod(mu,Cmat%*%mu)
   two_uGu <- 2*Matrix::crossprod(mu,Gmat)%*%mu # This does not depend on kappa2, but needed for phi
   kneg2uGCGu <- (1/kappa2)*Matrix::crossprod(mu,GtCinvG%*%mu)
+  # k2uCu <- kappa2*spam::crossprod(mu,Cmat%*%mu)
+  # two_uGu <- 2*spam::crossprod(mu,Gmat)%*%mu # This does not depend on kappa2, but needed for phi
+  # kneg2uGCGu <- (1/kappa2)*spam::crossprod(mu,GtCinvG%*%mu)
   k2TrCSig <- kappa2 * TrSigB(P,Cmat,Vh)
   twoTrGSig <- 2 * TrSigB(P,Gmat,Vh)
   kneg2GCGSig <- TrSigB(P,GtCinvG,Vh) / kappa2
@@ -356,10 +375,13 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
 #'   equal probability.
 #'
 #' @return a scalar estimate of the trace of \code{Sigma %*% B}
+#'
+#' @importFrom spam diag crossprod
 #' @keywords internal
 TrSigB <- function(P,B,vh) {
   Ns <- ncol(P)
   out <- sum(Matrix::diag(Matrix::crossprod(P,B %*% vh))) / Ns
+  # out <- sum(spam::diag(spam::crossprod(P,B %*% vh))) / Ns
   return(out)
 }
 
