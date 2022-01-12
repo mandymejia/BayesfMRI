@@ -348,7 +348,7 @@ BayesGLM2 <- function(results,
     }, ppm.wt)
     # ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
     active <- mapply(function(ppm,al){
-      output_matrix <- array(0,dim = dim(ppm))
+      output_matrix <- array(0,dim = dim(as.matrix(ppm)))
       output_matrix[c(ppm) > (1 - al)] <- 1
       return(output_matrix)
     }, ppm = ppm.summ, al = alpha, SIMPLIFY = F)
