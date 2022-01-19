@@ -516,6 +516,9 @@ BayesGLM_cifti <- function(cifti_fname,
       scale_BOLD_sub <- scale_BOLD
 
       # THIS STILL NEEDS TO BE TESTED
+      # For subcortical structures, it may make more sense to perform the
+      # prewhitening separately for each model group, in order to reduce
+      # computation time.
       if(prewhiten) {
         pw_data[[br_str]] <-
           prewhiten_cifti(
@@ -575,8 +578,11 @@ BayesGLM_cifti <- function(cifti_fname,
           labels = labs,
           EM_method = "separate",
           use_SQUAREM = TRUE,
+          ar_order = ar_order,
+          ar_smooth = ar_smooth,
+          cifti_data = cifti_data$subcortical[[1]]$cifti,
           groups_df = groups_df,
-          scale_BOLD=TRUE,
+          scale_BOLD=scale_BOLD_sub,
           scale_design = FALSE, # Done above
           tol = tol,
           outfile = outfile_name,

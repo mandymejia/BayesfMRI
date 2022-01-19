@@ -501,6 +501,14 @@ BayesGLMEM <- function(data,
 #'   should share hyperparameter values.
 #' @param use_SQUAREM (logical) Should the SQUAREM package be used to speed up
 #'   convergence?
+#' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
+#'  should be a number indicating the order of the autoregressive model to use
+#'  for prewhitening. If zero, do not prewhiten. Default: \code{0}.
+#' @param ar_smooth FWHM parameter for smoothing. Remember that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+#'  to not do any smoothing. Default: \code{0}.
+#' @param cifti_data A \code{xifti} object with data and metadata pertaining to
+#'   the subcortex. Used to smooth AR coefficients during prewhitening.
 #' @param tol If use_SQUAREM == TRUE, an absolute change limit for
 #'   when the EM algorithm should be stopped (Default = 1e-3). If use_SQUAREM ==
 #'   FALSE, a percent change limit for when the EM algorithm should be stopped
@@ -525,6 +533,9 @@ BayesGLMEM_vol3D <-
            labels,
            EM_method = "separate",
            use_SQUAREM = TRUE,
+           ar_order = 0,
+           ar_smooth = 0,
+           cifti_data = NULL,
            tol = NULL,
            groups_df = NULL,
            scale_BOLD = TRUE,
@@ -572,19 +583,20 @@ BayesGLMEM_vol3D <-
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
   V <- ncol(data[[1]]$BOLD) #number of data locations
-  K <- ncol(data[[1]]$design) #number of tasks
-  for(s in 1:n_sess){
-    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+  is_missing <- is.na(data[[1]]$BOLD[1,])
+  V_nm <- V - sum(is_missing)
+  ntime <- nrow(data[[1]]$BOLD)
+  is_pw <- nrow(data[[1]]$design) == (ntime * sum(!is_missing))
+  if(!is_pw) {
+    K <- ncol(data[[1]]$design) #number of tasks
+  } else {
+    K <- ncol(data[[1]]$design) / sum(!is_missing)
   }
 
   if(!is.null(beta_names)){
     if(length(beta_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of beta_names is ', length(beta_names), '.  Please fix beta_names.'))
   }
 
-  ntime <- nrow(data[[1]]$BOLD)
-  is_pw <- nrow(data[[1]]$design) == (ntime * V)
   if(is.null(beta_names)){
     if(!is_pw){
       beta_names_maybe <- colnames(data[[1]]$design) #if no prewhitening, can grab beta names from design (if not provided)
@@ -595,12 +607,27 @@ BayesGLMEM_vol3D <-
     }
   }
 
+  for(s in 1:n_sess){
+    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
+    if(!is_pw) {
+      if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    } else {
+      if(ncol(data[[s]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+    }
+  }
+
   if(is.null(outfile)){
     warning('No value supplied for outfile, which is required for group modeling (see `help(BayesGLM2)`).')
   }
 
   if(nrow(locations) != V) stop('The locations argument should have V rows, the number of data locations in BOLD.')
   if(ncol(locations) != 3) stop('The locations argument should have 3 columns indicating the x,y,z coordinate of each data location.')
+
+  # Check prewhitening arguments.
+  # if(is.null(ar_order)) ar_order <- 0
+  # ar_order <- as.numeric(ar_order)
+  # prewhiten <- (ar_order > 0)
 
   ### Run SPDE object for each group of regions
 
@@ -624,6 +651,25 @@ BayesGLMEM_vol3D <-
   names(EM_result_all) <- paste0('model_group_',group_set)
   spde_all <- vector('list', length=length(group_set))
   names(spde_all) <- paste0('model_group_',group_set)
+  # pw_data <- vector("list", length = length(group_set))
+
+  # Prewhiten data
+  # if(prewhiten) {
+  #   pw_data <-
+  #     prewhiten_cifti(
+  #       data = data,
+  #       mask = NULL,
+  #       scale_BOLD = TRUE,
+  #       scale_design = TRUE,
+  #       ar_order = ar_order,
+  #       ar_smooth = ar_smooth,
+  #       cifti_data = cifti_data,
+  #       brainstructure = "subcortical",
+  #       num.threads = num.threads
+  #     )
+  #   session_data <- pw_data$data
+  #   scale_BOLD_sub <- FALSE # Done above
+  # }
 
   for(grp in group_set){
     label_set_grp <- groups_df$label[groups_df$group==grp]
@@ -636,6 +682,47 @@ BayesGLMEM_vol3D <-
 
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     spde <- spde_grp$spde
+
+
+    #HERE ----
+
+    if(is_pw) {
+      nK_inds <- K*which(inds_grp)
+      nK_inds <- c(sapply(nK_inds, function(x) return(seq(x - (K-1), x))))
+      nT_inds <- ntime*which(inds_grp)
+      nT_inds <- c(sapply(nT_inds, function(x) return(seq(x - (ntime - 1),x))))
+      grp_data <- sapply(data, function(data_session){
+        BOLD <- data_session$BOLD[,inds_grp]
+        design <- data_session$design[nT_inds,nK_inds]
+        nuisance <- data_session$nuisance
+        return(list(
+          BOLD = BOLD,
+          design = design,
+          nuisance = nuisance
+        ))
+      }, simplify = F)
+    }
+
+    # grp_cifti <- cifti_data
+    # grp_cifti$data$subcort <- cifti_data$data$subcort[inds_grp,]
+    # grp_cifti$meta$subcort$mask[grp_cifti$meta$subcort$mask] <- inds_grp
+
+    # if(prewhiten) {
+    #   pw_data[[grp]] <-
+    #     prewhiten_cifti(
+    #       data = grp_data,
+    #       mask = NULL,
+    #       scale_BOLD = TRUE,
+    #       scale_design = TRUE,
+    #       ar_order = ar_order,
+    #       ar_smooth = ar_smooth,
+    #       cifti_data = grp_cifti,
+    #       brainstructure = br_str,
+    #       num.threads = num.threads
+    #     )
+    #   session_data <- pw_data[[br_str]]$data
+    #   scale_BOLD_sub <- FALSE # Done above
+    # }
 
     #collect data and design matrices
     y_all <- c()
@@ -650,7 +737,8 @@ BayesGLMEM_vol3D <-
       if(scale_BOLD) {
         BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
       }
-      design_s <- scale(data[[s]]$design, scale=scale_design) #center design matrix to eliminate baseline
+      if(!is_pw)
+        design_s <- scale(data[[s]]$design, scale=scale_design) #center design matrix to eliminate baseline
 
       #regress nuisance parameters from BOLD data and design matrix
       if('nuisance' %in% names(data[[s]])){
