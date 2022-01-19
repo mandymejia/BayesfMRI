@@ -85,7 +85,9 @@
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
-#'
+#' @param keep FALSE
+#' @param twostage Not used
+#' 
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
@@ -113,7 +115,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE,
                      keep = FALSE,
-                     twostage = FALSE)
+                     twostage=FALSE)
 {
   GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
 
@@ -638,7 +640,9 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
-#'
+#' @param keep FALSE
+#' @param twostage Not used
+#' 
 #' @return A list containing...
 #'
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs

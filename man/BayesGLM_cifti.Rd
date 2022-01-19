@@ -26,7 +26,9 @@ BayesGLM_cifti(
   outfile = NULL,
   return_INLA_result = FALSE,
   avg_sessions = TRUE,
-  trim_INLA = TRUE
+  trim_INLA = TRUE,
+  keep = FALSE,
+  twostage = FALSE
 )
 }
 \arguments{
@@ -105,6 +107,10 @@ sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+
+\item{keep}{FALSE}
+
+\item{twostage}{Not used}
 }
 \value{
 An object of class \code{"BayesGLM"}, a list containing...

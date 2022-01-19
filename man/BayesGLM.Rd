@@ -19,7 +19,9 @@ BayesGLM(
   verbose = FALSE,
   contrasts = NULL,
   avg_sessions = TRUE,
-  trim_INLA = TRUE
+  trim_INLA = TRUE,
+  keep = keep,
+  twostage = twostage
 )
 }
 \arguments{
@@ -71,6 +73,10 @@ sessions? Default: \code{TRUE}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+
+\item{keep}{FALSE}
+
+\item{twostage}{Not used}
 }
 \value{
 A list containing...
