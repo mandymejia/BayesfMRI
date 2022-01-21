@@ -270,6 +270,7 @@ BayesGLMEM <- function(data,
     if(use_SQUAREM) {
       cl <- parallel::makeCluster(min(num.threads,K))
       kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
+        # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
         init_output <-
           SQUAREM::squarem(
             par = c(kappa2, phi),
@@ -345,7 +346,8 @@ BayesGLMEM <- function(data,
         par = theta,
         fixptfn = em_fn,
         # objfn = GLMEM_objfn,
-        control = list(tol = tol, trace = verbose, K = 1),
+        # control = list(tol = tol, trace = verbose, K = 1),
+        control = list(tol = tol, trace = verbose),
         spde = spde,
         model_data = model_data,
         # U = U_init,

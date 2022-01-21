@@ -94,9 +94,9 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
   ### First compute the Cholesky factorization (spam::chol) in the first
   ### iteration and then use spam::update.spam.chol.NgPeyton.
 
-  U <- spam::chol(Sig_inv)
-  U <- update(U,Siv_inv)
-  mu <- spam::solve(U,m)
+  # U <- spam::chol(Sig_inv)
+  # U <- spam::update(U,Siv_inv)
+  # mu <- spam::solve(U,m)
 
   ## The excursions function is also supposed to work with the spam matrices
 
@@ -139,6 +139,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    mu,
                    Vh
     ) {
+      # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
       big_K <- length(kappa2_inds)
       big_N <- spde$n.spde
       n_sess_em <- length(mu) / (big_K * big_N)
@@ -376,7 +377,7 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
 #'
 #' @return a scalar estimate of the trace of \code{Sigma %*% B}
 #'
-#' @importFrom spam diag crossprod
+#' @importFrom Matrix diag crossprod
 #' @keywords internal
 TrSigB <- function(P,B,vh) {
   Ns <- ncol(P)

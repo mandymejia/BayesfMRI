@@ -11,6 +11,9 @@ BayesGLMEM_vol3D(
   labels,
   EM_method = "separate",
   use_SQUAREM = TRUE,
+  ar_order = 0,
+  ar_smooth = 0,
+  cifti_data = NULL,
   tol = NULL,
   groups_df = NULL,
   scale_BOLD = TRUE,
@@ -37,6 +40,17 @@ should share hyperparameter values.}
 
 \item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
 convergence?}
+
+\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
+should be a number indicating the order of the autoregressive model to use
+for prewhitening. If zero, do not prewhiten. Default: \code{0}.}
+
+\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+to not do any smoothing. Default: \code{0}.}
+
+\item{cifti_data}{A \code{xifti} object with data and metadata pertaining to
+the subcortex. Used to smooth AR coefficients during prewhitening.}
 
 \item{tol}{If use_SQUAREM == TRUE, an absolute change limit for
 when the EM algorithm should be stopped (Default = 1e-3). If use_SQUAREM ==

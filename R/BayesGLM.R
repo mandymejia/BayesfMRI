@@ -210,6 +210,7 @@ BayesGLM_cifti <- function(cifti_fname,
     if(!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
   }
   if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
+  if(is.null(nuisance) & length(nuisance_include) > 0) nuisance <- vector("list",length = n_sess)
 
   cat('\nSETTING UP DATA\n')
 
@@ -487,6 +488,8 @@ BayesGLM_cifti <- function(cifti_fname,
                                               beta_names = beta_names,
                                               vertices = verts,
                                               faces = faces,
+                                              mesh = NULL,
+                                              mask = NULL,
                                               scale_BOLD = scale_BOLD_hem,
                                               scale_design = FALSE,
                                               EM_method = "separate",
@@ -494,7 +497,8 @@ BayesGLM_cifti <- function(cifti_fname,
                                               tol = tol,
                                               num.threads = num.threads,
                                               outfile = outfile_name,
-                                              verbose = verbose))
+                                              verbose = verbose,
+                                              avg_sessions = avg_sessions))
         GLMEM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
     }
