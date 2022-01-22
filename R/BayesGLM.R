@@ -87,7 +87,7 @@
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #' @param keep FALSE
 #' @param twostage Not used
-#' 
+#'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
@@ -212,6 +212,8 @@ BayesGLM_cifti <- function(cifti_fname,
   if(is.null(design)) {
     make_design <- TRUE
     design <- vector('list', length=n_sess)
+  } else {
+    make_design <- FALSE
   }
 
   for(ss in 1:n_sess){
@@ -642,7 +644,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #' @param keep FALSE
 #' @param twostage Not used
-#' 
+#'
 #' @return A list containing...
 #'
 #' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
