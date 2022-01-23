@@ -128,8 +128,10 @@ prewhiten_cifti <- function(data,
   data_classes <- sapply(data, 'class')
   if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
 
-  if(missing(brainstructure)) stop('Please provide valid brainstructure argument.')
-  if(!(brainstructure %in% c('left','right','subcortical'))) stop('Please provide valid brainstructure argument.')
+  if (missing(brainstructure)) stop('Please provide valid brainstructure argument.')
+  if (length(brainstructure) > 1) { stop("Only one brainstructure permitted.") }
+  if (!(brainstructure %in% c('left','right','subcortical'))) stop('Please provide valid brainstructure argument.')
+  bs2 <- if (brainstructure=="subcortical") { brainstructure } else { paste0("cortex_", brainstructure) }
 
   ######################
 
@@ -143,104 +145,111 @@ prewhiten_cifti <- function(data,
   zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
 
   #remove zero var locations from mask
-  if(sum(zero_var) > 0){
-    if(is.null(mask)) num_flat <- sum(zero_var) else num_flat <- sum(zero_var[mask==1])
+  if (sum(zero_var) > 0) {
+    num_flat <- if (is.null(mask)) { sum(zero_var) } else { sum(zero_var[mask==1]) }
     #if(num_flat > 1) warning(paste0('I detected ', num_flat, ' vertices that are flat (zero variance), NA or NaN in at least one session. Removing these from analysis. See mask returned with function output.'))
     #if(num_flat == 1) warning(paste0('I detected 1 vertex that is flat (zero variance), NA or NaN in at least one session. Removing it from analysis. See mask returned with function output.'))
     mask_orig <- mask
-    if(!is.null(mask)) mask[zero_var==TRUE] <- 0
-    if(is.null(mask)) mask <- !zero_var
+    if (is.null(mask)) {
+      mask <- !zero_var
+    } else {
+      mask[zero_var] <- 0
+    }
   } else {
     mask_orig <- NULL
   }
 
   #apply mask to data
-  if(is.null(mask)) mask_use <- rep(TRUE, ncol(data[[1]]$BOLD)) else mask_use <- as.logical(mask)
+  mask_use <- if (is.null(mask)) { rep(TRUE, ncol(data[[1]]$BOLD)) } else { as.logical(mask) }
   V_all <- length(mask_use)
   V <- sum(mask_use)
-  for(s in 1:n_sess){
-    data[[s]]$BOLD <- data[[s]]$BOLD[,mask_use]
+  for (ss in 1:n_sess) {
+    data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask_use]
   }
 
   K <- ncol(data[[1]]$design) #number of tasks
   ntime <- nrow(data[[1]]$BOLD) # Number of time steps
-  for(s in 1:n_sess){
-    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+  for (ss in 1:n_sess) {
+    if(! is.session(data[[ss]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(ncol(data[[ss]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
+    if(ncol(data[[ss]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
 
   GLM_result <- vector('list', length=n_sess)
   names(GLM_result) <- session_names
-  AR_coeffs <- array(dim = c(V,ar_order,n_sess))
-  AR_resid_var <- array(dim = c(V,n_sess))
-  for(s in 1:n_sess){
+  AR_coeffs <- array(dim = c(V, ar_order, n_sess))
+  AR_resid_var <- array(dim = c(V, n_sess))
+
+  for(ss in 1:n_sess){
     #scale data to represent % signal change (or just center to remove baseline if scale=FALSE)
-    BOLD_s <- data[[s]]$BOLD
+    BOLD_s <- data[[ss]]$BOLD
     BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
     if(scale_design) {
-      design_s <- scale_design_mat(data[[s]]$design) #center design matrix and scale
+      design_s <- scale_design_mat(data[[ss]]$design) #center design matrix and scale
     } else {
-      design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
+      design_s <- scale(data[[ss]]$design, scale=FALSE) #center design matrix to eliminate baseline
     }
 
     #regress nuisance parameters from BOLD data and design matrix
-    if('nuisance' %in% names(data[[s]])){
-      design_s <- data[[s]]$design
-      nuisance_s <- data[[s]]$nuisance
+    if ('nuisance' %in% names(data[[ss]])) {
+      design_s <- data[[ss]]$design
+      nuisance_s <- data[[ss]]$nuisance
       y_reg <- nuisance_regress(BOLD_s, nuisance_s)
       X_reg <- nuisance_regress(design_s, nuisance_s)
     } else {
       y_reg <- BOLD_s
-      X_reg <- data[[s]]$design
+      X_reg <- data[[ss]]$design
     }
     XTX_inv <- try(solve(crossprod(X_reg)))
-    if("try-error" %in% class(XTX_inv)) {
+    if ("try-error" %in% class(XTX_inv)) {
       stop("There is some numerical instability in your design matrix
                     (due to very large or very small values). Scaling the design
                     matrix is suggested.")
     } else {
-      # GLM_result[[s]] <- t(XTX_inv %*% t(X_reg) %*% y_reg)
+      # GLM_result[[ss]] <- t(XTX_inv %*% t(X_reg) %*% y_reg)
       betas <- t(XTX_inv %*% t(X_reg) %*% y_reg)
       resids <- y_reg - tcrossprod(X_reg,betas)
-      for(v in 1:V) {
-        if(is.na(resids[1,v])) next
-        ar_v <- ar.yw(resids[,v],aic = FALSE,order.max = ar_order)
-        # aic_order <- ar.yw(resids[,v])$order # This should be the order
+      for(vv in 1:V) {
+        if(is.na(resids[1,vv])) next
+        ar_v <- ar.yw(resids[,vv],aic = FALSE,order.max = ar_order)
+        # aic_order <- ar.yw(resids[,vv])$order # This should be the order
         # of the time series if the AIC is used to select the best order
-        AR_coeffs[v,,s] <- ar_v$ar # The AR parameter estimates
-        AR_resid_var[v,s] <- ar_v$var.pred # Resulting variance
+        AR_coeffs[vv,,ss] <- ar_v$ar # The AR parameter estimates
+        AR_resid_var[vv,ss] <- ar_v$var.pred # Resulting variance
       }
     }
-    data[[s]]$BOLD <- y_reg
-    data[[s]]$design <- X_reg
+    data[[ss]]$BOLD <- y_reg
+    data[[ss]]$design <- X_reg
   }
 
-  avg_AR <- apply(AR_coeffs,1:2, mean)
-  avg_var <- apply(as.matrix(AR_resid_var),1,mean)
+  avg_AR <- apply(AR_coeffs, 1:2, mean)
+  avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
 
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
-  if((ar_smooth != 0) & !is.null(cifti_data)) {
+  if ((ar_smooth != 0) && !is.null(cifti_data)) {
     cat("Smoothing AR coefficients and residual variance...")
     #set up template xifti object with only one brainstructure
-    avg_xifti <- cifti_data
-    if(brainstructure %in% c("left","right")) {
-      if(brainstructure=='left') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$left
-      if(brainstructure=='right') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$right
-      mask_tmp <- as.logical(mask_use[mwall_mask==TRUE])
-      #smooth AR coefficients
-      avg_xifti$data[[paste0("cortex_",brainstructure)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=ar_order)
-      avg_xifti$data[[paste0("cortex_",brainstructure)]][mask_tmp,] <- avg_AR
+    to_remove <- setdiff(c("cortex_left", "cortex_right", "subcortical"), bs2)
+    avg_xifti <- remove_xifti(cifti_data, to_remove)
+    if (brainstructure %in% c("left","right")) {
+      mwall <- avg_xifti$meta$cortex$medial_wall_mask[[brainstructure]]
+
+      # smooth AR coefs
+      q <- matrix(NA, nrow=nrow(avg_xifti), ncol=ncol(avg_AR))
+      q[mask_use[mwall],] <- avg_AR[mwall[mask_use],]
+      avg_xifti <- newdata_xifti(select_xifti(avg_xifti, rep(1, ncol(avg_AR))), q)
       smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-      avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",brainstructure)]][mask_tmp,]
-      #smooth variance
-      avg_xifti$data[[paste0("cortex_",brainstructure)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=1)
-      avg_xifti$data[[paste0("cortex_",brainstructure)]][as.logical(mask_tmp),] <- avg_var
+      avg_AR <- as.matrix(move_to_mwall(smooth_avg_xifti))
+      # smooth variance
+      q <- rep(NA, nrow(avg_xifti))
+      q[mask_use[mwall]] <- avg_var[mwall[mask_use]]
+      avg_xifti <- newdata_xifti(select_xifti(avg_xifti, 1), q)
       smooth_var_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-      avg_var <- smooth_var_xifti$data[[paste0("cortex_",brainstructure)]][mask_tmp,,drop=FALSE]
-    }
-    if(brainstructure == 'subcortical') {
+      avg_var <- as.matrix(move_to_mwall(smooth_var_xifti))
+
+    } else if (brainstructure == 'subcortical') {
       sub_mask <- avg_xifti$meta$subcort$mask
+
       #smooth AR coefficients
       avg_xifti$data$subcort <- as.matrix(avg_AR)
       smooth_avg_xifti <- smooth_cifti(avg_xifti, vol_FWHM = ar_smooth)
@@ -253,19 +262,19 @@ prewhiten_cifti <- function(data,
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix
-  cat("Prewhitening... ")
-  if(is.null(num.threads) | num.threads < 2) {
+  cat ("Prewhitening... ")
+  if (is.null(num.threads) || num.threads < 2) {
     # Initialize the block diagonal covariance matrix
     template_pw <- Matrix::bandSparse(n = ntime,
                                       k = 0:(ar_order + 1),
                                       symmetric = TRUE)
     template_pw_list <- rep(list(template_pw),V)
     rows.rm <- numeric()
-    for(v in 1:V) {
-      if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
-      template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
+    for (vv in 1:V) {
+      if(vv %% 100 == 0) cat("\n Location",vv,"of",V,"")
+      template_pw_list[[vv]] <- prewhiten.v(AR_coeffs = avg_AR[vv,],
                                            ntime = ntime,
-                                           AR_var = avg_var[v])
+                                           AR_var = avg_var[vv])
     }
   } else {
     if (!requireNamespace("parallel", quietly = TRUE)) {
@@ -288,6 +297,17 @@ prewhiten_cifti <- function(data,
   cat("done!\n")
 
   sqrtInv_all <- Matrix::bdiag(template_pw_list)
+  return(list(
+    cl=cl,
+    prewhiten.v=prewhiten.v,
+    avg_AR=avg_AR,
+    AR_coeffs=split(avg_AR, row(avg_AR)),
+    ntime=ntime,
+    avg_var=avg_var,
+    template_pw_list=template_pw_list,
+    sqrtInv_all=sqrtInv_all,
+    data=data
+  ))
   pw_data <- sapply(data,function(data_s) {
     bold_out <- matrix(NA,ntime, V_all)
     pw_BOLD <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
