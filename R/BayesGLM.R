@@ -215,7 +215,7 @@ BayesGLM_cifti <- function(
   cat('\nSETTING UP DATA\n')
 
   ### For each session, separate the CIFTI data into left/right/sub and read in files
-  BOLD_list <- list(left=NULL, right-NULL)
+  BOLD_list <- list(left=NULL, right=NULL)
   mwallL <- mwallR <- ntime <- NULL
   for (ss in seq(n_sess)) {
     cat(paste0('... reading in data for session ', ss,'\n'))
@@ -1032,7 +1032,7 @@ BayesGLM <- function(
   hyper_initial <- rep(list(hyper_initial), K)
   hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-  formula_vec <- paste0('f(',beta_names, ', model = "spde", replicate = ', repl_names, hyper_vec, ')')
+  formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
   formula_vec <- c('y ~ -1', formula_vec)
   formula_str <- paste(formula_vec, collapse=' + ')
   formula <- as.formula(formula_str, env = globalenv())
