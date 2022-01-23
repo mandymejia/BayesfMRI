@@ -99,39 +99,29 @@
 #' @importFrom parallel detectCores
 #'
 #' @export
-BayesGLM_cifti <- function(cifti_fname,
-                     surfL_fname=NULL, surfR_fname=NULL,
-                     brainstructures=c('left','right'),
-                     design=NULL, onsets=NULL, TR=NULL,
-                     nuisance=NULL, nuisance_include=c('drift','dHRF'),
-                     scale_BOLD=TRUE, scale_design=TRUE,
-                     GLM_method='all',
-                     ar_order = 6,
-                     ar_smooth = 5,
-                     session_names=NULL,
-                     resamp_res=10000,
-                     num.threads=4,
-                     verbose=FALSE,
-                     outfile=NULL,
-                     return_INLA_result=FALSE,
-                     avg_sessions = TRUE,
-                     trim_INLA = TRUE,
-                     groups_df = NULL,
-                     tol = NULL){
+BayesGLM_cifti <- function(
+  cifti_fname,
+  surfL_fname=NULL, surfR_fname=NULL,
+  brainstructures=c('left','right'),
+  design=NULL, onsets=NULL, TR=NULL,
+  nuisance=NULL, nuisance_include=c('drift','dHRF'),
+  scale_BOLD=TRUE, scale_design=TRUE,
+  GLM_method='all',
+  ar_order = 6,
+  ar_smooth = 5,
+  resamp_res=10000,
+  num.threads=4,
+  verbose=FALSE,
+  outfile=NULL,
+  return_INLA_result=FALSE,
+  avg_sessions = TRUE,
+  session_names=NULL,
+  trim_INLA = TRUE,
+  groups_df = NULL, # Removed in 1.9
+  tol = NULL # Removed in 1.9
+  ){
 
-#  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
-  GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
-
-  do_Bayesian <- (GLM_method %in% c('all','Bayesian'))
-  do_classical <- (GLM_method %in% c('all','classical'))
-  do_EM <- (GLM_method %in% c('all','EM'))
-
-  check_BayesGLM(require_PARDISO=(do_Bayesian|do_EM))
-
-  avail_cores <- parallel::detectCores()
-  if(avail_cores < 2) {
-    num.threads <- 1
-  }
+  cifti_fname <- as.character(cifti_fname)
 
   # Check that arguments are compatible
   brainstructures <- ciftiTools:::match_input(
@@ -141,217 +131,136 @@ BayesGLM_cifti <- function(cifti_fname,
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-  # if(do_EM & "subcortical" %in% brainstructures)
-    # stop("The EM algorithm does not yet work with the subcortical model.")
-#   do_left <- ('left' %in% brainstructures)
-#   do_right <- ('right' %in% brainstructures)
-#   do_sub <- FALSE
-  #do_sub <- ('subcortical' %in% brainstructures)
-  if(!is.null(onsets)){
-    #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
-    if(class(onsets[[1]]) == 'list') {
-      if(is.null(names(onsets[[1]])))
-        beta_names <- paste0("beta",seq_len(length(onsets[[1]])))
-      if(!is.null(names(onsets[[1]])))
-        beta_names <- names(onsets[[1]])
-    }
-    #for single session data, onsets is a list (representing tasks) of data frames or matrices
-    if(('data.frame' %in% class(onsets[[1]])) | ('matrix' %in% class(onsets[[1]]))) {
-      if(is.null(names(onsets)))
-        beta_names <- paste0("beta",seq_len(length(onsets)))
-      if(!is.null(names(onsets)))
-        beta_names <- names(onsets)
-    }
-  }
-  if(!is.null(design)) {
-    if(any(class(design) == "list")) {
-      if(is.null(colnames(design[[1]])))
-        beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
-      if(!is.null(colnames(design[[1]])))
-        beta_names <- colnames(design[[1]])
-    }
-    if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
-      if(is.null(colnames(design)))
-        beta_names <- paste0("beta",seq_len(ncol(design)))
-      if(!is.null(colnames(design)))
-        beta_names <- colnames(design)
-    }
-  }
-
-  # Check prewhitening arguments.
-  if(is.null(ar_order)) ar_order <- 0
-  ar_order <- as.numeric(ar_order)
-  prewhiten <- (ar_order > 0)
+  do_left <- ('left' %in% brainstructures)
+  do_right <- ('right' %in% brainstructures)
+  do_sub <- ('subcortical' %in% brainstructures)
 
   # if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   # if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  if('right' %in% brainstructures & is.null(surfR_fname)) stop('surfR_fname must be provided if brainstructures includes "right"')
+  surf_list <- list(left=NULL, right=NULL)
+  if (do_left) {
+    if (is.null(surfL_fname)) {
+      cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
+      surfL_fname <- ciftiTools.files()$surf["left"]
+    }
+    surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
+  }
+  if (do_right) {
+    if (is.null(surfR_fname)) {
+      cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
+      surfR_fname <- ciftiTools.files()$surf["right"]
+    }
+    surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
+  }
 
-  if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
-  if(!is.null(onsets) & is.null(TR)) stop('Please provide TR if onsets provided')
   # if(do_sub){
   #   if(length(unique(vol_regions)) != length(vol_regions)) stop('vol_regions must contain no repeated values.')
   #   if(min(is.element(vol_regions, 3:21))==0) stop('vol_regions must include only integer values between 3 and 21.')
   # }
+  # if(do_EM && do_sub) {
+  #   stop("The EM algorithm does not yet work with the subcortical model.")
+  # }
+
+  # GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
+  GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
+  do_Bayesian <- (GLM_method %in% c('all','Bayesian'))
+  do_classical <- (GLM_method %in% c('all','classical'))
+  do_EM <- (GLM_method %in% c('all','EM'))
+
+  check_BayesGLM(require_PARDISO=(do_Bayesian||do_EM))
+
+  avail_cores <- parallel::detectCores()
+  if (avail_cores < 2) { num.threads <- 1 } # Removed in 1.9
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(cifti_fname)
-  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
-  if(n_sess==1){
-    if(is.null(session_names)) session_names <- 'single_session'
-    if(!is.null(design)) design <- list(design)
-    if(!is.null(onsets)) onsets <- list(onsets)
-    if(!is.null(nuisance)) nuisance <- list(nuisance)
+  if (n_sess == 1) {
+    if (avg_sessions) avg_sessions <- FALSE
+    if (is.null(session_names)) session_names <- 'single_session'
+    if (!is.null(design)) design <- list(single_session = design)
+    if (!is.null(onsets)) onsets <- list(single_session = onsets)
+    if (!is.null(nuisance)) nuisance <- list(single_session = nuisance)
   } else {
-    if(is.null(session_names)) session_names <- paste0('session', 1:n_sess)
-    if(!is.null(design)){ if(length(design) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), design must be a list of length equal to the number of sessions (or NULL, if onsets provided).') }
-    if(!is.null(onsets)){ if(length(onsets) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), onsets must be a list of length equal to the number of sessions (or NULL, if design provided).') }
-    if(!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
+    if (is.null(session_names)) session_names <- paste0('session', seq(n_sess))
+    if (!is.null(design)){ if(length(design) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), design must be a list of length equal to the number of sessions (or NULL, if onsets provided).') }
+    if (!is.null(onsets)){ if(length(onsets) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), onsets must be a list of length equal to the number of sessions (or NULL, if design provided).') }
+    if (!is.null(nuisance)){ if(length(nuisance) != n_sess) stop('If multiple sessions provided (because cifti_fname is a vector), nuisance must be a list of length equal to the number of sessions (or NULL).') }
   }
-  if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
-  if(is.null(nuisance) & length(nuisance_include) > 0) nuisance <- vector("list",length = n_sess)
+  if (length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
+  # if (is.null(nuisance) & length(nuisance_include) > 0) nuisance <- vector("list", length = n_sess)
+
+  # Check `design` and `onsets`. Get `beta_names`.
+  if (!xor(is.null(design), is.null(onsets))) { stop('`design` or `onsets` must be provided, but not both.') }
+  if (!is.null(onsets) && is.null(TR)) { stop('Please provide `TR` if onsets provided') }
+  if (!is.null(onsets)) {
+    do_multisesh <- inherits(onsets[[1]], "list")
+    if (!do_multisesh) { stopifnot(inherits(onsets, "matrix") || inherits(onsets, "data.frame")) }
+    o1 <- if (do_multisesh) { onsets[[1]] } else { onsets }
+    beta_names <- if (is.null(names(o1))) { paste0("beta", seq(length(o1))) } else { names(o1) }
+    rm(o1)
+  }
+  if (!is.null(design)) {
+    do_multisesh <- inherits(design, "list")
+    if (!do_multisesh) { stopifnot(inherits(design, "matrix") || inherits(design, "data.frame")) }
+    d1 <- if (do_multisesh) { design[[1]] } else { design }
+    beta_names <- if (is.null(colnames(d1))) { paste0("beta", seq(ncol(d1))) } else { names(d1) }
+    rm(d1)
+  }
+
+  # Check prewhitening arguments.
+  if (is.null(ar_order)) ar_order <- 0
+  ar_order <- as.numeric(ar_order)
+  do_prewhiten <- (ar_order > 0)
 
   cat('\nSETTING UP DATA\n')
 
-  if(class(cifti_fname) == "character") {
+  ### For each session, separate the CIFTI data into left/right/sub and read in files
+  BOLD_list <- list(left=NULL, right-NULL)
+  mwallL <- mwallR <- ntime <- NULL
+  for (ss in seq(n_sess)) {
+    cat(paste0('... reading in data for session ', ss,'\n'))
+    xii_ss <- read_cifti(cifti_fname[ss],
+      brainstructures=brainstructures,
+      resamp_res=resamp_res
+    )
+    mwallL_ss <- xii_ss$meta$cortex$medial_wall_mask$left
+    mwallR_ss <- xii_ss$meta$cortex$medial_wall_mask$right
 
-    ### For each session, separate the CIFTI data into left/right/sub and read in files
-    # if(do_left) cifti_left <- vector('list', n_sess)
-    # if(do_right) cifti_right <- vector('list', n_sess)
-    #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
+    # Get medial wall mask, or check that it matches.
+    if (ss == 1) {
+      ntime <- ncol(xii_ss)
+      if (do_left) { mwallL <- mwallL_ss }
+      if (do_right) { mwallR <- mwallR_ss }
+      # [TO DO] Check compatibility with `surf_list`
+    } else {
+      if (ntime != ncol(xii_ss)) { warning("Different time lengths.") }
+      if (do_left) {
+        stopifnot(length(mwallL) == length(mwallL_ss))
+        stopifnot(all(mwallL == mwallL_ss))
+      }
+      if (do_right) {
+        stopifnot(length(mwallR) == length(mwallR_ss))
+        stopifnot(all(mwallR == mwallR_ss))
+      }
+    }
 
-    # if(is.null(design)) {
-    #   make_design <- TRUE
-    #   design <- vector('list', length=n_sess)
-    # }
-
-    # for(ss in 1:n_sess){
-
-    #   cat(paste0('    Reading in data for session ', ss,'\n'))
-
-    #   if(ss==1){
-    #     cifti_ss <- read_cifti(
-    #       cifti_fname[ss],
-    #       surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-    #       brainstructures=brainstructures,
-    #       resamp_res=resamp_res
-    #     )
-    #     if(do_left) surf_left <- cifti_ss$surf$cortex_left
-    #     if(do_right) surf_right <- cifti_ss$surf$cortex_right
-    #   } else {
-    #     cifti_ss <- read_cifti(
-    #       cifti_fname[ss],
-    #       brainstructures=brainstructures,
-    #       resamp_res=resamp_res
-    #     )
-    #   }
-
-    #   if(do_left) {
-    #     cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
-    #     cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
-    #     ntime <- ncol(cifti_left[[ss]])
-    #   }
-    #   if(do_right) {
-    #     cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
-    #     cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
-    #     ntime <- ncol(cifti_right[[ss]])
-    #   }
-    #   #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
-    #   #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
-
-    #   if(make_design){
-    #     cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-    #     design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
-    #   }
-
-    # }
-    cat("READING IN CIFTI DATA \n")
-    cifti_data <- sapply(brainstructures, function(br_str) {
-      sapply(1:n_sess, function(ss){
-        if(br_str %in% c("left","right")) {
-          cifti_ss <- read_cifti(
-            cifti_fname[ss],
-            surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-            brainstructures=brainstructures,
-            resamp_res=resamp_res
-          )
-          mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
-          cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
-          cifti_out <- matrix(NA,
-                              nrow = length(mwall_mask),
-                              ncol=ncol(cdata))
-          cifti_out[mwall_mask,] <- cdata
-          return(list(
-            data = cifti_out,
-            surf = cifti_ss$surf[[paste0("cortex_", br_str)]],
-            ntime = ncol(cdata),
-            cifti = cifti_ss
-          ))
-        }
-        if(br_str == "subcortical") {
-          cifti_ss <- read_cifti(
-            cifti_fname[ss],
-            surfL_fname=NULL, surfR_fname=NULL,
-            brainstructures=brainstructures,
-            resamp_res=NULL
-          )
-          cdata <- cifti_ss$data$subcort
-          return(list(
-            data = cdata,
-            surf = NULL,
-            ntime = ncol(cdata),
-            cifti = cifti_ss
-          ))
-        }
-      }, simplify = F)
-    }, simplify = F)
+    # Grab BOLD data (input NAs in medial wall locations)
+    if (do_left) {
+      BOLD_list[["left"]][[ss]] <- ciftiTools:::unmask_cortex(xii_ss$data$cortex_left, mwallL)
+    }
+    if (do_right) {
+      BOLD_list[["right"]][[ss]] <- ciftiTools:::unmask_cortex(xii_ss$data$cortex_right, mwallR)
+    }
   }
 
-  if(class(cifti_fname[[1]]) == "xifti") {
-    cifti_data <- sapply(brainstructures, function(br_str) {
-      if(br_str %in% c('left','right')) {
-        hem_sess_cifti <- sapply(1:n_sess, function(ss){
-          other_hem <- grep(br_str, c('left','right'), value = T, invert  = T)
-          cifti_ss <- cifti_fname[[ss]]
-          cifti_ss <- remove_xifti(cifti_ss, paste0("cortex_",other_hem))
-          mwall_mask <- cifti_ss$meta$cortex$medial_wall_mask[[br_str]]
-          cdata <- cifti_ss$data[[paste0("cortex_",br_str)]]
-          cifti_out <- matrix(NA,
-                              nrow = length(mwall_mask),
-                              ncol=ncol(cdata))
-          cifti_out[mwall_mask,] <- cdata
-          return(list(
-            data = cifti_out,
-            surf = cifti_ss$surf[[paste0("cortex_", br_str)]],
-            ntime = ncol(cdata),
-            cifti = cifti_ss
-          ))
-        }, simplify = F)
-        return(hem_sess_cifti)
-      }
-      if(br_str == "subcortical") {
-        sub_sess_cifti <- sapply(1:n_sess, function(ss){
-          cifti_ss <- cifti_fname[[ss]]
-          cifti_ss <- remove_xifti(cifti_ss, paste0("cortex_",c('left','right')))
-          cdata <- cifti_ss$data$subcort
-          return(list(
-            data = cdata,
-            surf = NULL,
-            ntime = ncol(cdata),
-            cifti = cifti_ss
-          ))
-        }, simplify = F)
-        return(sub_sess_cifti)
-      }
-    }, simplify = F)
-  }
+  BOLD_list <- BOLD_list[!vapply(BOLD_list, is.null, FALSE)]
+  surf_list <- surf_list[!vapply(surf_list, is.null, FALSE)]
 
-  ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
-
-  if(is.null(design)) {
-    cat("MAKING DESIGN MATRICES \n")
-    design <- mapply(make_HRFs, onsets, TR = TR, duration = ntimes[[1]], SIMPLIFY = F)
+  if (is.null(design)) {
+    cat(" MAKING DESIGN MATRICES \n")
+    #currently assumes that all sessions have the same duration, could relax this
+    #ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
+    design <- mapply(make_HRFs, onsets, TR = TR, duration = ntime, SIMPLIFY = F)
   }
 
   # #check that labels are the same across all sessions (subcortical)
@@ -364,9 +273,9 @@ BayesGLM_cifti <- function(cifti_fname,
   # }
 
   ### Check that design matrix names consistent across sessions
-  if(n_sess > 1){
+  if (n_sess > 1) {
     tmp <- sapply(design, colnames)
-    if(length(beta_names) == 1) {
+    if (length(beta_names) == 1) {
       num_names <- length(unique(tmp))
       if(num_names > 1) stop('task names must match across sessions for multi-session modeling')
     } else {
@@ -376,7 +285,6 @@ BayesGLM_cifti <- function(cifti_fname,
   }
 
   cat('\n RUNNING MODELS \n')
-
   # classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
   # BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
   classicalGLM_results <- list(left=NULL,right=NULL,vol=NULL)
@@ -392,53 +300,67 @@ BayesGLM_cifti <- function(cifti_fname,
   #     design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
   #   }
   # }
-  if(scale_design) design <- sapply(design, scale_design_mat, simplify = F)
-  if(!scale_design) design <- sapply(design, scale, scale=F, simplify = F)
+  if (scale_design) design <- sapply(design, scale_design_mat, simplify = F)
+  if (!scale_design) design <- sapply(design, scale, scale=F, simplify = F)
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
-  for(ss in 1:n_sess){
+  for (ss in 1:n_sess) {
     ntime <- nrow(design[[ss]])
-    if('drift' %in% nuisance_include){
+    if ('drift' %in% nuisance_include) {
       drift <- (1:ntime)/ntime
-      if(!is.null(nuisance)) nuisance[[ss]] <- cbind(nuisance[[ss]], drift, drift^2) else nuisance[[ss]] <- cbind(drift, drift^2)
+      if(!is.null(nuisance)) {
+        nuisance[[ss]] <- cbind(nuisance[[ss]], drift, drift^2)
+      } else {
+        nuisance[[ss]] <- cbind(drift, drift^2)
+      }
     }
-    if('dHRF' %in% nuisance_include){
+    if ('dHRF' %in% nuisance_include) {
       dHRF <- gradient(design[[ss]])
-      if(!is.null(nuisance)) nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF) else nuisance[[ss]] <- dHRF
+      if (!is.null(nuisance)) {
+        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF)
+      } else {
+        nuisance[[ss]] <- dHRF
+      }
     }
   }
 
   #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
-  for(br_str in brainstructures) {
+  for (br_str in brainstructures) {
+
     # >>> Cortex models ----
-    if(br_str %in% c("left","right")) {
+    if (br_str %in% c("left","right")) {
       cat("\n ...",toupper(br_str),"CORTEX \n")
-      verts <- cifti_data[[br_str]][[1]]$surf$vertices
-      faces <- cifti_data[[br_str]][[1]]$surf$faces
+      verts <- surf_list[[br_str]]$vertices
+      faces <- surf_list[[br_str]]$faces
 
       #set up session list
       session_data <- vector('list', n_sess)
       names(session_data) <- session_names
-      for(ss in 1:n_sess){
-        sess <- list(BOLD = t(cifti_data[[br_str]][[ss]]$data), design=design[[ss]])
-        if(!is.null(nuisance)) sess$nuisance <- nuisance[[ss]]
+      for (ss in 1:n_sess) {
+        sess <- list(
+          BOLD = t(BOLD_list[[br_str]][[ss]]),
+          design = design[[ss]]
+        )
+        if (!is.null(nuisance)) { sess$nuisance <- nuisance[[ss]] }
         session_data[[ss]] <- sess
       }
-
       scale_BOLD_hem <- scale_BOLD
 
-      if(prewhiten) {
+      # just any template
+      cifti_data <- read_cifti(cifti_fname[ss], brainstructures=br_str, resamp_res=resamp_res)
+
+      if (do_prewhiten) {
         pw_data[[br_str]] <-
           prewhiten_cifti(
             data = session_data,
             mask = NULL,
-            scale_BOLD = TRUE,
+            scale_BOLD = scale_BOLD, # changed from FALSE
             scale_design = TRUE,
             ar_order = ar_order,
             ar_smooth = ar_smooth,
-            cifti_data = cifti_data[[br_str]][[1]]$cifti,
+            cifti_data = cifti_data,
             brainstructure = br_str,
             num.threads = num.threads
           )
@@ -446,27 +368,30 @@ BayesGLM_cifti <- function(cifti_fname,
         scale_BOLD_hem <- FALSE # Done above
       }
 
-      if(!is.null(outfile)) {
+      outfile_name <- NULL
+      if (!is.null(outfile)) {
         if (endsWith(outfile, ".rds")) {
-          outfile_name <- gsub(".rds$", paste0("_",br_str,".rds"), outfile)
+          outfile_name <- gsub(".rds$", paste0("_", br_str, ".rds"), outfile)
         } else {
-          outfile_name <- paste0(outfile, "_",br_str,".rds")
+          outfile_name <- paste0(outfile, "_", br_str, ".rds")
         }
-      } else {
-        outfile_name <- NULL
       }
 
       other_hem <- grep(br_str, c("left","right"), value = T, invert = T)
-      if(do_classical) {
+      if (do_classical) {
         # Adding the try() function here so that if one model fails, the others
         # can still run
         start_time <- proc.time()[3]
-        classicalGLM_results[[br_str]] <- try(classicalGLM(data=session_data,
-                                                       scale_BOLD=scale_BOLD_hem,
-                                                       scale_design = FALSE)) # done above
+        classicalGLM_results[[br_str]] <- try(
+          classicalGLM(
+            data=session_data,
+            scale_BOLD=scale_BOLD_hem,
+            scale_design = FALSE
+          )
+        ) # done above
         classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
-      if(do_Bayesian) {
+      if (do_Bayesian) {
         start_time <- proc.time()[3]
         BayesGLM_results[[br_str]] <- try(BayesGLM(data = session_data,
                                                beta_names = beta_names,
@@ -523,7 +448,7 @@ BayesGLM_cifti <- function(cifti_fname,
       # For subcortical structures, it may make more sense to perform the
       # prewhitening separately for each model group, in order to reduce
       # computation time.
-      if(prewhiten) {
+      if (do_prewhiten) {
         pw_data[[br_str]] <-
           prewhiten_cifti(
             data = session_data,
@@ -655,9 +580,9 @@ BayesGLM_cifti <- function(cifti_fname,
   do_left <- 'left' %in% brainstructures
   do_right <- 'right' %in% brainstructures
   do_sub <- "subcortical" %in% brainstructures
-  if(do_left) cortexL_mwall <- as.numeric(cifti_data$left[[1]]$cifti$meta$cortex$medial_wall_mask$left)
-  if(do_right) cortexR_mwall <- as.numeric(cifti_data$right[[1]]$cifti$meta$cortex$medial_wall_mask$right)
-  if(do_sub) {
+  if (do_left) cortexL_mwall <- as.numeric(cifti_data$left[[1]]$cifti$meta$cortex$medial_wall_mask$left)
+  if (do_right) cortexR_mwall <- as.numeric(cifti_data$right[[1]]$cifti$meta$cortex$medial_wall_mask$right)
+  if (do_sub) {
     sub_mask <- cifti_data$subcortical[[1]]$cifti$meta$subcort$mask
     out_labs <- labs
   }
@@ -831,11 +756,11 @@ BayesGLM_cifti <- function(cifti_fname,
 
 
   prewhitening_info <- list()
-  if(prewhiten) {
+  if (do_prewhiten) {
     # I take out the first element here because the first argument
     # is a copy of the data, which are already provided.
-    if(do_left) prewhitening_info$left <- pw_data$left[-1]
-    if(do_right) prewhitening_info$right <- pw_data$right[-1]
+    if (do_left) prewhitening_info$left <- pw_data$left[-1]
+    if (do_right) prewhitening_info$right <- pw_data$right[-1]
   }
 
   result <- list(session_names = session_names,
@@ -978,13 +903,13 @@ BayesGLM <- function(
   #   if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
   #   if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   # }
-  for(s in 1:n_sess){
-    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
+  for (ss in 1:n_sess) {
+    if(! is.session(data[[ss]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
+    if(ncol(data[[ss]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(!is_pw) {
-      if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+      if(ncol(data[[ss]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     } else {
-      if(ncol(data[[s]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+      if(ncol(data[[ss]]$design) / V_nm != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
     }
   }
 
@@ -1052,27 +977,26 @@ BayesGLM <- function(
   X_all_list <- NULL
   design <- vector('list', length=n_sess)
 
-  for(s in 1:n_sess){
-
+  for (ss in 1:n_sess) {
     #extract and mask BOLD data for current session
-    BOLD_s <- data[[s]]$BOLD
+    BOLD_s <- data[[ss]]$BOLD
 
     #scale data to represent % signal change (or just center if scale=FALSE)
     if(!is_pw) BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
     if(scale_design) {
-      design_s <- scale_design_mat(data[[s]]$design)
+      design_s <- scale_design_mat(data[[ss]]$design)
     } else {
       if(!is_pw) {
-        design_s <- scale(data[[s]]$design, scale = F)
+        design_s <- scale(data[[ss]]$design, scale = F)
       } else {
-        design_s <- data[[s]]$design # Don't scale prewhitened data or the matrix will not be sparse
+        design_s <- data[[ss]]$design # Don't scale prewhitened data or the matrix will not be sparse
       }
     }
-    design[[s]] <- design_s #after scaling but before nuisance regression
+    design[[ss]] <- design_s #after scaling but before nuisance regression
 
     #regress nuisance parameters from BOLD data and design matrix
-    if('nuisance' %in% names(data[[s]])){
-      nuisance_s <- data[[s]]$nuisance
+    if('nuisance' %in% names(data[[ss]])){
+      nuisance_s <- data[[ss]]$nuisance
       y_reg <- nuisance_regress(BOLD_s, nuisance_s)
       X_reg <- nuisance_regress(design_s, nuisance_s)
     } else {
@@ -1088,7 +1012,7 @@ BayesGLM <- function(
     }
     y_vec <- data_org$y
     X_list <- list(data_org$X)
-    names(X_list) <- session_names[s]
+    names(X_list) <- session_names[ss]
 
     y_all <- c(y_all, y_vec)
     X_all_list <- c(X_all_list, X_list)
@@ -1108,14 +1032,14 @@ BayesGLM <- function(
   hyper_initial <- rep(list(hyper_initial), K)
   hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-  formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+  formula_vec <- paste0('f(',beta_names, ', model = "spde", replicate = ', repl_names, hyper_vec, ')')
   formula_vec <- c('y ~ -1', formula_vec)
   formula_str <- paste(formula_vec, collapse=' + ')
   formula <- as.formula(formula_str, env = globalenv())
 
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
-  if(n_sess > 1 & avg_sessions) {
+  if (n_sess > 1 && avg_sessions) {
     cat("Set linear combinations for averages across sessions\n")
     diag_coefs <- Diagonal(n = V, x = 1/n_sess)
     session_coefs <- Matrix::bdiag(rep(list(diag_coefs),length(beta_names))) # Just finished this line
