@@ -300,7 +300,7 @@ prewhiten_smooth <- function(prewhiten_result,
   }
 
   return(list(
-    avg_AR=avg_AR, avg_var=avg_var, data=data, 
+    avg_AR=avg_AR, avg_var=avg_var, data=data,
     ntime=ntime, ar_order=ar_order,
     V=V, V_all=V_all, mask_use=mask_use
   ))
@@ -434,9 +434,12 @@ pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
     )
   )
   AR_xif <- ciftiTools:::make_xifti(
-    cortexL = AR,
+    cortexL = AR, 
     surfL = surf_smooth
   )
+  # below two lines are patches, will be fixed in next ciftiTools update.
+  AR_xif$meta$cifti$brainstructures <- "left"
+  AR_xif$meta$cortex$medial_wall_mask$left <- rep(TRUE, V)
   AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
   AR_smoothed <- AR_smoothed$data$cortex_left
 
@@ -444,6 +447,9 @@ pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
     cortexL = var,
     surfL = surf_smooth
   )
+  # below two lines are patches, will be fixed in next ciftiTools update.
+  var_xif$meta$cifti$brainstructures <- "left"
+  var_xif$meta$cortex$medial_wall_mask$left <- rep(TRUE, V)
   var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
   var_smoothed <- var_smoothed$data$cortex_left
 
