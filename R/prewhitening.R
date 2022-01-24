@@ -280,26 +280,30 @@ prewhiten_smooth <- function(prewhiten_result,
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
   if((ar_smooth != 0) & !is.null(cifti_data)) {
     cat("Smoothing AR coefficients and residual variance...")
-    #set up template xifti object with only one hemisphere
-    avg_xifti <- cifti_data
-    if(hemisphere=='left') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$left
-    if(hemisphere=='right') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$right
-    mask_tmp <- as.logical(mask_use[mwall_mask==TRUE])
-    #smooth AR coefficients
-    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=ar_order)
-    avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,] <- avg_AR
+    #set up template xifti object with only one brainstructure
+    to_remove <- setdiff(c("cortex_left", "cortex_right", "subcortical"), paste0("cortex_", hemisphere))
+    avg_xifti <- remove_xifti(cifti_data, to_remove)
+    mwall <- avg_xifti$meta$cortex$medial_wall_mask[[brainstructure]]
+
+    # smooth AR coefs
+    q <- matrix(NA, nrow=nrow(avg_xifti), ncol=ncol(avg_AR))
+    q[mask_use[mwall],] <- avg_AR[mwall[mask_use],]
+    avg_xifti <- newdata_xifti(select_xifti(avg_xifti, rep(1, ncol(avg_AR))), q)
     smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-    avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,]
-    #smooth variance
-    avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=1)
-    avg_xifti$data[[paste0("cortex_",hemisphere)]][as.logical(mask_tmp),] <- avg_var
+    avg_AR <- as.matrix(move_to_mwall(smooth_avg_xifti))
+    # smooth variance
+    q <- rep(NA, nrow(avg_xifti))
+    q[mask_use[mwall]] <- avg_var[mwall[mask_use]]
+    avg_xifti <- newdata_xifti(select_xifti(avg_xifti, 1), q)
     smooth_var_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-    avg_var <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,,drop=FALSE]
-    cat("done!\n")
+    avg_var <- as.matrix(move_to_mwall(smooth_var_xifti))
   }
 
-  return(list(avg_AR=avg_AR, avg_var=avg_var, data=data, ntime=ntime, ar_order=ar_order,
-              V=V, V_all=V_all, mask_use=mask_use))
+  return(list(
+    avg_AR=avg_AR, avg_var=avg_var, data=data, 
+    ntime=ntime, ar_order=ar_order,
+    V=V, V_all=V_all, mask_use=mask_use
+  ))
 }
 
 #' Apply prewhitening to BOLD and design
@@ -446,4 +450,3 @@ pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
   return(list(AR = AR_smoothed, var = var_smoothed))
 
 }
-
