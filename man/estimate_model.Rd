@@ -5,7 +5,9 @@
 \title{Estimate INLA model}
 \usage{
 estimate_model(
-  formula,
+  beta_names,
+  repl_names,
+  hyper_initial = NULL,
   data,
   A,
   spde,
@@ -18,7 +20,7 @@ estimate_model(
 )
 }
 \arguments{
-\item{formula}{Formula to put into inla}
+\item{beta_names, repl_names, hyper_initial}{Formula components}
 
 \item{data}{Dataset}
 

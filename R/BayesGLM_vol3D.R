@@ -209,13 +209,6 @@ BayesGLM_vol3D <-
     repl_names <- names(repls)
     n_beta <- length(names(betas))
     hyper_initial <- c(-2,2)
-    hyper_initial <- rep(list(hyper_initial), n_beta)
-    hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
-
-    formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-    formula_vec <- c('y ~ -1', formula_vec)
-    formula_str <- paste(formula_vec, collapse=' + ')
-    formula <- as.formula(formula_str, env = globalenv())
 
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
@@ -223,7 +216,11 @@ BayesGLM_vol3D <-
 
     # estimate model using INLA
     t0 <- Sys.time()
-    INLA_result_grp <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1, num.threads = num.threads, verbose=verbose)
+    INLA_result_grp <- estimate_model(
+      beta_names=beta_names, repl_names=repl_names, hyper_initial=hyper_initial,
+      data=model_data, A=model_data$X, spde=spde, prec_initial=1, 
+      num.threads = num.threads, verbose=verbose
+    )
     print(Sys.time() - t0)
 
     #extract beta estimates and project back to data locations for current group

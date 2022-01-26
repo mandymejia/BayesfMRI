@@ -37,7 +37,7 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-#' @param formula Formula to put into inla
+#' @param beta_names,repl_names,hyper_initial Formula components
 #' @param data Dataset
 #' @param A Large, sparse observation matrix
 #' @param spde The spatial model, an object of class inla.spde
@@ -53,23 +53,32 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @importFrom INLA inla
 #'
 #' @export
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
+estimate_model <- function(
+  beta_names, repl_names, hyper_initial=NULL, 
+  data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", 
+  verbose=FALSE, contrasts = NULL, lincomb = NULL){
 
-  result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
-                 verbose = verbose, keep = FALSE, num.threads = num.threads,
-                 inla.mode = "experimental",
-                 control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
-                 control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) #required for excursions
-  return(result)
+  formula <- make_formula(beta_names, repl_names, hyper_initial)
+  formula <- as.formula(formula, env = globalenv())
+
+  inla(
+    formula, data=data, control.predictor=list(A=A, compute = TRUE),
+    verbose = verbose, keep = FALSE, num.threads = num.threads,
+    inla.mode = "experimental",
+    control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
+    control.family=list(hyper=list(prec=list(initial=prec_initial))),
+    control.compute=list(config=TRUE), 
+    contrasts = contrasts, lincomb = lincomb # required for excursions
+  )
 }
 
 
-#' Make Formula
+#' Make Formula string
 #'
 #' @param beta_names char vector of the names of each bbeta object in the environment
 #' @param repl_names char vector of the names of each replicate object in the environment
-#' @param hyper_initial Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix
+#' @param hyper_initial Optional vector of initial values for hyperparameters of 
+#'  each latent field OR a list with each element corresponding to one column of the X matrix
 #'
 #' @return A formula representing the Bayesian GLM to be passed to `inla()`
 #'
@@ -97,10 +106,10 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
     hyper_vec <- NULL
   }
 
-  formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-  formula_vec <- c('y ~ -1', formula_vec)
-  formula_str <- paste(formula_vec, collapse=' + ')
-  return(formula_str)
+  formula <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+  formula <- c('y ~ -1', formula)
+  formula <- paste(formula, collapse=' + ')
+  return(formula)
 }
 
 #' Make data list for \code{estimate_model}

@@ -1023,19 +1023,9 @@ BayesGLM <- function(
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
-  #organize the formula and data objects
-  #formula <- make_formula(beta_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
-  #formula <- as.formula(formula)
-
+  # formula-related vars.
   repl_names <- names(repls)
   hyper_initial <- c(-2,2)
-  hyper_initial <- rep(list(hyper_initial), K)
-  hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
-
-  formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-  formula_vec <- c('y ~ -1', formula_vec)
-  formula_str <- paste(formula_vec, collapse=' + ')
-  formula <- as.formula(formula_str, env = globalenv())
 
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
@@ -1051,7 +1041,8 @@ BayesGLM <- function(
     cat('\n ...... estimating model with INLA')
     system.time(
       INLA_result <- estimate_model(
-        formula=formula, data=model_data, A=design_pred, spde, prec_initial=1,
+        beta_names=beta_names, repl_names=repl_names, hyper_initial=hyper_initial,
+        data=model_data, A=design_pred, spde, prec_initial=1,
         num.threads=num.threads, verbose=verbose, contrasts = contrasts
       )
     )
@@ -1061,7 +1052,8 @@ BayesGLM <- function(
     cat('\n ...... estimating model with INLA')
     system.time(
       INLA_result <- estimate_model(
-        formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
+        beta_names=beta_names, repl_names=repl_names, hyper_initial=hyper_initial,
+        data=model_data, A=model_data$X, spde, prec_initial=1,
         num.threads=num.threads, verbose=verbose, contrasts = contrasts
       )
     )
