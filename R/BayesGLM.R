@@ -1050,11 +1050,18 @@ BayesGLM <- function(
   } else {
     #estimate model using INLA
     cat('\n ...... estimating model with INLA')
+    formula <- make_formula(beta_names, repl_names, hyper_initial)
+    formula <- as.formula(formula, env = globalenv())
+    browser()
     system.time(
-      INLA_result <- estimate_model(
-        beta_names=beta_names, repl_names=repl_names, hyper_initial=hyper_initial,
-        data=model_data, A=model_data$X, spde, prec_initial=1,
-        num.threads=num.threads, verbose=verbose, contrasts = contrasts
+      INLA_result <- inla(
+        formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
+        verbose = verbose, keep = FALSE, num.threads = num.threads,
+        inla.mode = "experimental",
+        control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+        control.family=list(hyper=list(prec=list(initial=1))),
+        control.compute=list(config=TRUE), 
+        contrasts = contrasts, lincomb = NULL # required for excursions
       )
     )
     cat('\n ...... model estimation completed')
