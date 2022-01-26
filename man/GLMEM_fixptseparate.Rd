@@ -11,6 +11,8 @@ GLMEM_fixptseparate(
   Psi,
   K,
   A,
+  U,
+  cl,
   num.threads = 1,
   Ns = 50
 )
@@ -27,6 +29,11 @@ GLMEM_fixptseparate(
 \item{K}{number of covariates}
 
 \item{A}{The value for Matrix::crossprod(X\%*\%Psi) (saves time on computation)}
+
+\item{U}{The pre-computed Cholesky decomposition of \code{Sig_inv} to improve
+computational speed and memory efficiency}
+
+\item{cl}{Parallel cluster created by \code{parallel:makeCluster}}
 
 \item{num.threads}{(optional) allows users to specify the number of threads used
 to work in parallel across the different tasks}

@@ -525,7 +525,7 @@ BayesGLMEM <- function(data,
 #'
 #' @return A list containing...
 #'
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check
+#' @importFrom spam as.spam.dgCMatrix update.spam.chol.NgPeyton bdiag.spam crossprod.spam solve.spam
 #'
 #' @export
 BayesGLMEM_vol3D <-
@@ -546,21 +546,12 @@ BayesGLMEM_vol3D <-
            num.threads = 6,
            verbose = FALSE,
            avg_sessions = TRUE) {
-  # Check to see that the INLA package is installed
-  if (!requireNamespace("INLA", quietly = TRUE))
-    stop("This function requires the `INLA` package (see www.r-inla.org/download)")
 
+    if (!requireNamespace("spam64", quietly = TRUE)) {
+      stop("This function requires the `spam64` package. Please install it.")
+    }
 
-  # Check to see if PARDISO is installed
-  if(!exists("inla.pardiso.check", mode = "function")){
-    warning("Please update to the latest version of INLA for full functionality and PARDISO compatibility (see www.r-inla.org/download)")
-  }else{
-    if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
-      warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
-    #inla.pardiso()
-  }
-
-  if(is.null(groups_df)) {
+    if(is.null(groups_df)) {
     regions <- c('Accumbens-l','Accumbens-r', #3,4 -- 200 voxels - BASAL GANGLIA --> MODEL 1
                  'Amygdala-l','Amygdala-r',   #5,6 -- 600 voxels  IMPORTANT --> MODEL 2
                  'Brain Stem',                #7 -- 3,402 voxels  EXCLUDE
@@ -626,22 +617,14 @@ BayesGLMEM_vol3D <-
   if(nrow(locations) != V) stop('The locations argument should have V rows, the number of data locations in BOLD.')
   if(ncol(locations) != 3) stop('The locations argument should have 3 columns indicating the x,y,z coordinate of each data location.')
 
-  # Check prewhitening arguments.
-  # if(is.null(ar_order)) ar_order <- 0
-  # ar_order <- as.numeric(ar_order)
-  # prewhiten <- (ar_order > 0)
-
   ### Run SPDE object for each group of regions
-
   regions_set <- unique(labels)
   num_regions <- length(regions_set)
   if(class(groups_df) != 'data.frame') stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
   if(!all.equal(sort(names(groups_df)), sort(c('label','region','group')))) stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
   if(nrow(groups_df) != num_regions) stop('The groups_df argument should contain one row for each region represented in the labels vector.')
 
-
   # > Fit model for each group of regions ----
-
   groups_df <- groups_df[!is.na(groups_df$group),]
   group_set <- unique(groups_df$group)
 
@@ -653,25 +636,6 @@ BayesGLMEM_vol3D <-
   names(EM_result_all) <- paste0('model_group_',group_set)
   spde_all <- vector('list', length=length(group_set))
   names(spde_all) <- paste0('model_group_',group_set)
-  # pw_data <- vector("list", length = length(group_set))
-
-  # Prewhiten data
-  # if(prewhiten) {
-  #   pw_data <-
-  #     prewhiten_cifti(
-  #       data = data,
-  #       mask = NULL,
-  #       scale_BOLD = TRUE,
-  #       scale_design = TRUE,
-  #       ar_order = ar_order,
-  #       ar_smooth = ar_smooth,
-  #       cifti_data = cifti_data,
-  #       brainstructure = "subcortical",
-  #       num.threads = num.threads
-  #     )
-  #   session_data <- pw_data$data
-  #   scale_BOLD_sub <- FALSE # Done above
-  # }
 
   for(grp in group_set){
     label_set_grp <- groups_df$label[groups_df$group==grp]
@@ -682,9 +646,8 @@ BayesGLMEM_vol3D <-
 
     paste0('Estimating Model ',grp,' (', paste(name_set_grp, collapse = ', '), ')')
 
-    spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
+    spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp, EM_out = TRUE)
     spde <- spde_grp$spde
-
 
     #HERE ----
 
@@ -768,19 +731,9 @@ BayesGLMEM_vol3D <-
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
-    # beta_names <- names(betas)
-    # repl_names <- names(repls)
-    # n_beta <- length(names(betas))
-    # hyper_initial <- c(-2,2)
-    # hyper_initial <- rep(list(hyper_initial), n_beta)
-    # hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
-    #
-    # formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-    # formula_vec <- c('y ~ -1', formula_vec)
-    # formula_str <- paste(formula_vec, collapse=' + ')
-    # formula <- as.formula(formula_str, env = globalenv())
+    X_all_list <- sapply(X_all_list, spam::as.spam.dgCMatrix, simplify = F)
 
-    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls, EM_out = TRUE)
 
     # >> Model setup and initials ----
     if(is.null(tol)){
@@ -789,10 +742,12 @@ BayesGLMEM_vol3D <-
     }
 
     Psi_k <- spde_grp$Amat
-    Psi <- Matrix::bdiag(rep(list(Psi_k),K))
+    Psi <- Reduce(spam::bdiag.spam,rep(list(Psi_k),K))
+    # Psi <- Matrix::bdiag(rep(list(Psi_k),K))
     if(n_sess > 1) Psi <- Reduce(rbind,rep(list(Psi),n_sess))
     # Psi <- Matrix::Diagonal(n = ncol(model_data$X))
-    A <- Matrix::crossprod(model_data$X%*%Psi)
+    # A <- Matrix::crossprod(model_data$X%*%Psi)
+    A <- spam::crossprod.spam(model_data$X%*%Psi)
 
     # Initial values for kappa and tau
     # Using values matching BayesGLM
@@ -801,12 +756,18 @@ BayesGLMEM_vol3D <-
     phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
     # Using values based on the classical GLM
     cat("... FINDING BEST GUESS INITIAL VALUES\n")
-    XTX <- Matrix::crossprod(model_data$X)
-    XTX_inv <- Matrix::solve(XTX)
-    XTy <- Matrix::crossprod(model_data$X,model_data$y)
-    beta_hat <- (XTX_inv %*% XTy)@x
-    beta_hat_mesh <- (beta_hat %*% Psi)@x
-    res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+    # XTX <- Matrix::crossprod(model_data$X)
+    XTX <- spam::crossprod(model_data$X)
+    # XTX_inv <- Matrix::solve(XTX)
+    XTX_inv <- spam::solve(XTX)
+    # XTy <- Matrix::crossprod(model_data$X,model_data$y)
+    XTy <- spam::crossprod(model_data$X,model_data$y)
+    # beta_hat <- (XTX_inv %*% XTy)@x
+    beta_hat <- c(XTX_inv %*% XTy)
+    # beta_hat_mesh <- (beta_hat %*% Psi)@x
+    beta_hat_mesh <- c(beta_hat %*% Psi)
+    # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+    res_y <- c(model_data$y - model_data$X %*% beta_hat)
     sigma2 <- stats::var(res_y)
     if(EM_method == "joint") {
       # require(SQUAREM)
@@ -824,13 +785,10 @@ BayesGLMEM_vol3D <-
     }
     if(EM_method == "separate") {
       beta_hat <- matrix(beta_hat_mesh, ncol = K)
-      # if(n_sess > 1) {
-      #   task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
-      #   beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
-      # }
       if(use_SQUAREM) {
         cl <- parallel::makeCluster(min(num.threads,K))
         kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, tol, verbose) {
+          source("~/github/BayesfMRI/R/EM_utils.R") # for debugging
           init_output <-
             SQUAREM::squarem(
               par = c(kappa2, phi),
@@ -893,6 +851,7 @@ BayesGLMEM_vol3D <-
     }
     theta_init <- theta
     # >> Start EM algorithm ----
+    chol_Sig_inv <- GLMEM_chol_init(theta,spde,K,A)
     if(EM_method == "joint") {
       if(length(theta) != 3) stop("The length of theta should be 3 for the joint update")
       em_fn <- GLMEM_fixptjoint
@@ -905,19 +864,24 @@ BayesGLMEM_vol3D <-
       k_idx <- seq(K)
       p_idx <- seq(K) + K
       s_idx <- (2*K + 1)
+      max_num.threads <- min(parallel::detectCores() - 1, 25)
+      num.threads <- min(max_num.threads, num.threads)
+      num.threads <- min(K, num.threads)
+      cl <- parallel::makeCluster(num.threads)
     }
     if(use_SQUAREM) {
       squareem_output <-
         SQUAREM::squarem(
           par = theta,
           fixptfn = em_fn,
-          # objfn = GLMEM_objfn,
           control = list(tol = tol, trace = verbose, K = 1),
           spde = spde,
           model_data = model_data,
           Psi = Psi,
           K = K,
           A = A,
+          U = chol_Sig_inv,
+          cl = cl,
           num.threads = num.threads,
           Ns = 50
         )
@@ -940,6 +904,8 @@ BayesGLMEM_vol3D <-
             Psi = Psi,
             K = K,
             A = A,
+            U = chol_Sig_inv,
+            cl = cl,
             num.threads = num.threads
           )
         kappa2_new <- theta_new[k_idx]
@@ -982,20 +948,23 @@ BayesGLMEM_vol3D <-
         sigma2_new = sigma2_new
       )
     }
+    parallel::stopCluster(cl)
     # >> End EM algorithm ----
     cat(".... EM algorithm complete!\n")
     list2env(em_output, envir = environment())
     Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
                      MoreArgs = list(spde=spde), SIMPLIFY = F)
     if(EM_method == "joint") {
-      Q <- Matrix::bdiag(rep(Qk_new,K))
+      Q <- Reduce(spam::bdiag.spam,rep(Qk_new,K))
     } else {
-      Q <- Matrix::bdiag(Qk_new)
+      Q <- Reduce(spam::bdiag.spam,Qk_new)
     }
     # if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
     Sig_inv <- Q + A/sigma2_new
-    m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
-    mu <- INLA::inla.qsolve(Sig_inv,m)
+    m <- spam::crossprod.spam(model_data$X%*%Psi,model_data$y) / sigma2_new
+    # mu <- INLA::inla.qsolve(Sig_inv,m)
+    U <- spam::update.spam.chol.NgPeyton(chol_Sig_inv,Sig_inv)
+    mu <- spam::solve.spam(Sig_inv,m, Rstruct = U)
 
     beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K*n_sess)
     colnames(beta_estimates) <- rep(beta_names, n_sess)

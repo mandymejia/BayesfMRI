@@ -95,7 +95,6 @@
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
 #' @import ciftiTools
 #' @importFrom matrixStats rowVars rowSums2
-#' @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom parallel detectCores
 #'
 #' @export
@@ -126,7 +125,7 @@ BayesGLM_cifti <- function(cifti_fname,
   do_classical <- (GLM_method %in% c('all','classical'))
   do_EM <- (GLM_method %in% c('all','EM'))
 
-  check_BayesGLM(require_PARDISO=(do_Bayesian|do_EM))
+  check_BayesGLM(require_PARDISO=(do_Bayesian))
 
   avail_cores <- parallel::detectCores()
   if(avail_cores < 2) {
@@ -141,12 +140,6 @@ BayesGLM_cifti <- function(cifti_fname,
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-  # if(do_EM & "subcortical" %in% brainstructures)
-    # stop("The EM algorithm does not yet work with the subcortical model.")
-#   do_left <- ('left' %in% brainstructures)
-#   do_right <- ('right' %in% brainstructures)
-#   do_sub <- FALSE
-  #do_sub <- ('subcortical' %in% brainstructures)
   if(!is.null(onsets)){
     #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
     if(class(onsets[[1]]) == 'list') {
@@ -183,17 +176,11 @@ BayesGLM_cifti <- function(cifti_fname,
   ar_order <- as.numeric(ar_order)
   prewhiten <- (ar_order > 0)
 
-  # if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  # if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if('left' %in% brainstructures & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   if('right' %in% brainstructures & is.null(surfR_fname)) stop('surfR_fname must be provided if brainstructures includes "right"')
 
   if((is.null(design) + is.null(onsets)) != 1) stop('design OR onsets must be provided, but not both')
   if(!is.null(onsets) & is.null(TR)) stop('Please provide TR if onsets provided')
-  # if(do_sub){
-  #   if(length(unique(vol_regions)) != length(vol_regions)) stop('vol_regions must contain no repeated values.')
-  #   if(min(is.element(vol_regions, 3:21))==0) stop('vol_regions must include only integer values between 3 and 21.')
-  # }
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(cifti_fname)
@@ -215,57 +202,6 @@ BayesGLM_cifti <- function(cifti_fname,
   cat('\nSETTING UP DATA\n')
 
   if(class(cifti_fname) == "character") {
-
-    ### For each session, separate the CIFTI data into left/right/sub and read in files
-    # if(do_left) cifti_left <- vector('list', n_sess)
-    # if(do_right) cifti_right <- vector('list', n_sess)
-    #if(do_sub) nifti_data <- nifti_labels <- vector('list', n_sess)
-
-    # if(is.null(design)) {
-    #   make_design <- TRUE
-    #   design <- vector('list', length=n_sess)
-    # }
-
-    # for(ss in 1:n_sess){
-
-    #   cat(paste0('    Reading in data for session ', ss,'\n'))
-
-    #   if(ss==1){
-    #     cifti_ss <- read_cifti(
-    #       cifti_fname[ss],
-    #       surfL_fname=surfL_fname, surfR_fname=surfR_fname,
-    #       brainstructures=brainstructures,
-    #       resamp_res=resamp_res
-    #     )
-    #     if(do_left) surf_left <- cifti_ss$surf$cortex_left
-    #     if(do_right) surf_right <- cifti_ss$surf$cortex_right
-    #   } else {
-    #     cifti_ss <- read_cifti(
-    #       cifti_fname[ss],
-    #       brainstructures=brainstructures,
-    #       resamp_res=resamp_res
-    #     )
-    #   }
-
-    #   if(do_left) {
-    #     cifti_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
-    #     cifti_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
-    #     ntime <- ncol(cifti_left[[ss]])
-    #   }
-    #   if(do_right) {
-    #     cifti_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
-    #     cifti_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
-    #     ntime <- ncol(cifti_right[[ss]])
-    #   }
-    #   #if(do_sub) { nifti_data[[ss]] <- cifti_ss$VOL; ntime <- ncol(cifti_ss$VOL) }
-    #   #if(do_sub & ss==1) nifti_labels[[ss]] <- cifti_ss$LABELS
-
-    #   if(make_design){
-    #     cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-    #     design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
-    #   }
-
-    # }
     cat("READING IN CIFTI DATA \n")
     cifti_data <- sapply(brainstructures, function(br_str) {
       sapply(1:n_sess, function(ss){
@@ -354,14 +290,15 @@ BayesGLM_cifti <- function(cifti_fname,
     design <- mapply(make_HRFs, onsets, TR = TR, duration = ntimes[[1]], SIMPLIFY = F)
   }
 
-  # #check that labels are the same across all sessions (subcortical)
-  # if(do_sub) {
-  #   if(n_sess > 1) {
-  #     tmp <- sapply(nifti_labels, function(x) {all.equal(x,nifti_labels[[1]])})
-  #     if(min(tmp)==0) stop('Subcortical labels must match across all sessions in cifti data. Check compatibility of cifti files.')
-  #   }
-  #   nifti_labels <- nifti_labels[[1]]
-  # }
+  #check that labels are the same across all sessions (subcortical)
+  if("subcortical" %in% brainstructures) {
+    subcort_labels <- sapply(cifti_data$subcortical, function(x) x$cifti$meta$subcort$labels, simplify = F)
+    if(n_sess > 1) {
+      tmp <- sapply(subcort_labels, function(x) {all.equal(x,subcort_labels[[1]])})
+      if(min(tmp)==0) stop('Subcortical labels must match across all sessions in cifti data. Check compatibility of cifti files.')
+    }
+    # subcort_labels <- subcort_labels[[1]] # This is from old code, and may not be needed
+  }
 
   ### Check that design matrix names consistent across sessions
   if(n_sess > 1){
@@ -377,21 +314,12 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\n RUNNING MODELS \n')
 
-  # classicalGLM_left <- classicalGLM_right <- classicalGLM_vol <- NULL
-  # BayesGLM_left <- BayesGLM_right <- BayesGLM_vol <- NULL
   classicalGLM_results <- list(left=NULL,right=NULL,vol=NULL)
   BayesGLM_results <- list(left=NULL,right=NULL,vol=NULL)
   GLMEM_results <- list(left=NULL, right=NULL,vol=NULL)
   pw_data <- list(left=NULL,right=NULL,vol=NULL)
 
   ### FORMAT DESIGN MATRIX
-  # for(ss in 1:n_sess){
-  #   if(scale_design){
-  #     design[[ss]] <- scale_design_mat(design[[ss]])
-  #   } else {
-  #     design[[ss]] <- scale(design[[ss]], scale=FALSE) #center design matrix to eliminate baseline
-  #   }
-  # }
   if(scale_design) design <- sapply(design, scale_design_mat, simplify = F)
   if(!scale_design) design <- sapply(design, scale, scale=F, simplify = F)
 
@@ -407,8 +335,6 @@ BayesGLM_cifti <- function(cifti_fname,
       if(!is.null(nuisance)) nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF) else nuisance[[ss]] <- dHRF
     }
   }
-
-  #scale_design <- FALSE # This is done to prevent double-scaling in the BayesGLM function
 
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
   for(br_str in brainstructures) {
@@ -893,7 +819,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #'
 #' @return A list containing...
 #'
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check inla.setOption inla.make.lincombs
+#' @importFrom INLA inla.spde2.matern inla.make.lincombs
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #'

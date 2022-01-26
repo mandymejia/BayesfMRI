@@ -32,6 +32,8 @@ Imports:
     neuRosim,
     stats,
     sp,
+    spam,
+    spam64,
     SQUAREM,
     utils
 Suggests:

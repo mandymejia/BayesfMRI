@@ -11,23 +11,25 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
   # Check packages -------------------------------------------------------------
 
   # Check to see that the INLA package is installed
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop("This function requires the `INLA` package. See https://www.r-inla.org/download-install")
-  }
-
-  # Check to see if PARDISO is installed
-  if (!exists("inla.pardiso.check", mode = "function")) {
-    warning(paste(
-      "Please update to the latest stable version of `INLA` for full functionality",
-      "and `PARDISO` compatibility. See https://www.r-inla.org/download-install\n"
-    ))
-  } else {
-    if (grepl("FAILURE", toupper(inla.pardiso.check()))) {
-      warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
-    } else {
-      inla.setOption(smtp='pardiso')
+  if(require_PARDISO) {
+    if (!requireNamespace("INLA", quietly = TRUE)) {
+      stop("This function requires the `INLA` package. See https://www.r-inla.org/download-install")
     }
-    #inla.pardiso()
+
+    # Check to see if PARDISO is installed
+    if (!exists("inla.pardiso.check", mode = "function")) {
+      warning(paste(
+        "Please update to the latest stable version of `INLA` for full functionality",
+        "and `PARDISO` compatibility. See https://www.r-inla.org/download-install\n"
+      ))
+    } else {
+      if (grepl("FAILURE", toupper(inla.pardiso.check()))) {
+        warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
+      } else {
+        inla.setOption(smtp='pardiso')
+      }
+      #inla.pardiso()
+    }
   }
 
   invisible(NULL)
@@ -111,13 +113,15 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 #' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `organize_data()`
 #' @param betas List (length = number of tasks) of bbeta objects from organize_replicates
 #' @param repls List (length = number of tasks) of repl objects from organize_replicates
+#' @param EM_out (logical) Should the output be formatted for the EM
+#'   algorithm?
 #'
 #' @return List
 #'
 #' @importFrom Matrix bdiag
 #'
 #' @keywords internal
-make_data_list <- function(y, X, betas, repls){
+make_data_list <- function(y, X, betas, repls, EM_out = FALSE){
 
   # Check length/dimensions of y, X, elements of betas and repls all match
   n_sess <- length(X)
@@ -130,7 +134,12 @@ make_data_list <- function(y, X, betas, repls){
   model_data <- vector('list', length=numel)
   names(model_data) <- c('y', 'X', names(betas), names(repls))
   model_data$y <- y
-  model_data$X <- bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
+  if(!EM_out) {
+    model_data$X <- bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
+  }
+  if(EM_out) {
+    model_data$X <- Reduce(spam::bdiag.spam,X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
+  }
 
   nbeta <- length(betas)
   for(i in 1:nbeta){

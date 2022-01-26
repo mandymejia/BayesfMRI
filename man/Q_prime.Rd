@@ -9,10 +9,10 @@ Q_prime(kappa2, spde)
 \arguments{
 \item{kappa2}{scalar}
 
-\item{spdean}{spde object}
+\item{spde}{an spde object}
 }
 \value{
-a dgCMatrix
+a spam matrix
 }
 \description{
 Gives the portion of the Q matrix independent of phi

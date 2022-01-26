@@ -4,7 +4,7 @@
 \alias{create_spde_vol3D}
 \title{Create SPDE for 3D volumetric data}
 \usage{
-create_spde_vol3D(locs, labs, lab_set = NULL)
+create_spde_vol3D(locs, labs, lab_set = NULL, EM_out = FALSE)
 }
 \arguments{
 \item{locs}{Locations of data points (Vx3 matrix)}
@@ -12,6 +12,9 @@ create_spde_vol3D(locs, labs, lab_set = NULL)
 \item{labs}{Region labels of data points (vector of length V). If NULL, treat observations as a single region.}
 
 \item{lab_set}{Only used if labs is not NULL. Vector of region labels for which to construct spde object. If NULL, use all region labels.}
+
+\item{EM_out}{(logical) Should the output be formatted for the EM algorithm
+and thus not use INLA?}
 }
 \value{
 SPDE object representing triangular mesh structure on data locations

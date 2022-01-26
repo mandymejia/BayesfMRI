@@ -4,7 +4,7 @@
 \alias{make_data_list}
 \title{Make data list for \code{estimate_model}}
 \usage{
-make_data_list(y, X, betas, repls)
+make_data_list(y, X, betas, repls, EM_out = FALSE)
 }
 \arguments{
 \item{y}{Vectorized BOLD data (all voxels, sessions, etc.)}
@@ -14,6 +14,9 @@ make_data_list(y, X, betas, repls)
 \item{betas}{List (length = number of tasks) of bbeta objects from organize_replicates}
 
 \item{repls}{List (length = number of tasks) of repl objects from organize_replicates}
+
+\item{EM_out}{(logical) Should the output be formatted for the EM
+algorithm?}
 }
 \value{
 List
