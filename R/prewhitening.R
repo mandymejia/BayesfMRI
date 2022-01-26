@@ -223,20 +223,25 @@ prewhiten_cifti <- function(data,
   if((ar_smooth != 0) & !is.null(cifti_data)) {
     cat("Smoothing AR coefficients and residual variance...")
     #set up template xifti object with only one hemisphere
-    avg_xifti <- cifti_data
-    if(hemisphere=='left') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$left
-    if(hemisphere=='right') mwall_mask <- avg_xifti$meta$cortex$medial_wall_mask$right
+    if(hemisphere=='left') mwall_mask <- cifti_data$meta$cortex$medial_wall_mask$left
+    if(hemisphere=='right') mwall_mask <- cifti_data$meta$cortex$medial_wall_mask$right
     mask_tmp <- as.logical(mask_use[mwall_mask==TRUE])
     #smooth AR coefficients
+    avg_xifti <- cifti_data
     avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=ar_order)
     avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,] <- avg_AR
+    avg_xifti$data[[paste0("cortex_",hemisphere)]][!mask_tmp,] <- NA
+    avg_xifti <- move_to_mwall(avg_xifti)
     smooth_avg_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-    avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,]
+    avg_AR <- smooth_avg_xifti$data[[paste0("cortex_",hemisphere)]]
     #smooth variance
+    avg_xifti <- cifti_data
     avg_xifti$data[[paste0("cortex_",hemisphere)]] <- matrix(NA, nrow=sum(mwall_mask), ncol=1)
     avg_xifti$data[[paste0("cortex_",hemisphere)]][as.logical(mask_tmp),] <- avg_var
+    avg_xifti$data[[paste0("cortex_",hemisphere)]][!mask_tmp,] <- NA
+    avg_xifti <- move_to_mwall(avg_xifti)
     smooth_var_xifti <- smooth_cifti(avg_xifti, surf_FWHM = ar_smooth)
-    avg_var <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]][mask_tmp,,drop=FALSE]
+    avg_var <- smooth_var_xifti$data[[paste0("cortex_",hemisphere)]]
     cat("done!\n")
   }
   # Create the sparse pre-whitening matrix
