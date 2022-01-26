@@ -61,8 +61,6 @@ estimate_model <- function(
   formula <- make_formula(beta_names, repl_names, hyper_initial)
   formula <- as.formula(formula, env = globalenv())
 
-  browser()
-
   inla(
     formula, data=data, control.predictor=list(A=A, compute = TRUE),
     verbose = verbose, keep = FALSE, num.threads = num.threads,
