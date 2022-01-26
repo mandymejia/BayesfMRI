@@ -246,10 +246,10 @@ BayesGLM_cifti <- function(
 
     # Grab BOLD data (input NAs in medial wall locations)
     if (do_left) {
-      BOLD_list[["left"]][[ss]] <- ciftiTools:::unmask_cortex(xii_ss$data$cortex_left, mwallL)
+      BOLD_list[["left"]][[ss]] <- ciftiTools::unmask_cortex(xii_ss$data$cortex_left, mwallL)
     }
     if (do_right) {
-      BOLD_list[["right"]][[ss]] <- ciftiTools:::unmask_cortex(xii_ss$data$cortex_right, mwallR)
+      BOLD_list[["right"]][[ss]] <- ciftiTools::unmask_cortex(xii_ss$data$cortex_right, mwallR)
     }
   }
 
