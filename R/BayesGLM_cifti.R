@@ -200,8 +200,8 @@ BayesGLM_cifti <- function(cifti_fname,
   if(do_left) BOLD_left <- vector('list', n_sess) else BOLD_left <- NULL
   if(do_right) BOLD_right <- vector('list', n_sess) else BOLD_right <- NULL
 
+  ntime <- vector("numeric", n_sess)
   for(ss in 1:n_sess){
-
     if(n_sess > 1) cat(paste0(' .. reading in data for session ', ss,'\n'))
 
     if(ss==1){
@@ -231,12 +231,12 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_left) {
       BOLD_left[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$left), ncol=ncol(cifti_ss$data$cortex_left))
       BOLD_left[[ss]][cifti_ss$meta$cortex$medial_wall_mask$left,] <- cifti_ss$data$cortex_left
-      ntime <- ncol(BOLD_left[[ss]])
+      ntime[ss] <- ncol(BOLD_left[[ss]])
     }
     if(do_right) {
       BOLD_right[[ss]] <- matrix(NA, nrow=length(cifti_ss$meta$cortex$medial_wall_mask$right), ncol=ncol(cifti_ss$data$cortex_right))
       BOLD_right[[ss]][cifti_ss$meta$cortex$medial_wall_mask$right,] <- cifti_ss$data$cortex_right
-      ntime <- ncol(BOLD_right[[ss]])
+      ntime[ss] <- ncol(BOLD_right[[ss]])
     }
   }
 
@@ -250,9 +250,10 @@ BayesGLM_cifti <- function(cifti_fname,
 
   if(is.null(design)) {
     cat(" MAKING DESIGN MATRICES \n")
-    #currently assumes that all sessions have the same duration, could relax this
-    #ntimes <- sapply(cifti_data, function(h) sapply(h, `[[`, i = 3), simplify = F)
-    design <- mapply(make_HRFs, onsets, TR = TR, duration = ntime, SIMPLIFY = F)
+    design <- vector("list", n_sess)
+    for (ss in seq(n_sess)) {
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss])
+    }
   }
 
   ### Check that design matrix names consistent across sessions
@@ -276,9 +277,8 @@ BayesGLM_cifti <- function(cifti_fname,
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
   for(ss in 1:n_sess){
-    ntime <- nrow(design[[ss]])
     if('drift' %in% nuisance_include){
-      drift <- (1:ntime)/ntime
+      drift <- (1:ntime[ss])/ntime[ss]
       if(!is.null(nuisance)) nuisance[[ss]] <- cbind(nuisance[[ss]], drift, drift^2) else nuisance[[ss]] <- cbind(drift, drift^2)
     }
     if('dHRF' %in% nuisance_include){
