@@ -283,7 +283,7 @@ prewhiten_smooth <- function(prewhiten_result,
     #set up template xifti object with only one brainstructure
     to_remove <- setdiff(c("cortex_left", "cortex_right", "subcortical"), paste0("cortex_", hemisphere))
     avg_xifti <- remove_xifti(cifti_data, to_remove)
-    mwall <- avg_xifti$meta$cortex$medial_wall_mask[[brainstructure]]
+    mwall <- avg_xifti$meta$cortex$medial_wall_mask[[hemisphere]]
 
     # smooth AR coefs
     q <- matrix(NA, nrow=nrow(avg_xifti), ncol=ncol(avg_AR))
