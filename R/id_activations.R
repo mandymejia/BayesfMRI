@@ -172,7 +172,13 @@ id_activations.posterior <- function(model_obj,
                                      #area.limit=NULL,
                                      #excur_method = c("EB","QC")
 
-  if(class(model_obj) != "BayesGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
+  if (!inherits(model_obj, "BayesGLM")) {
+    stop(paste0(
+      "The model object is of class ",
+      paste0(class(model_obj), collapse=", "),
+      " but should be of class 'BayesGLM'."
+    ))
+  }
 
   #excur_method <- match.arg(excur_method, c("EB","QC"))
 
@@ -263,8 +269,14 @@ id_activations.classical <- function(model_obj,
                                      correction = c("FWER","FDR","none"),
                                      mesh = NULL) {
 
-  if(class(model_obj) != "classicalGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
-
+  if (!inherits(model_obj, "classicalGLM")) {
+    stop(paste0(
+      "The model object is of class ",
+      paste0(class(model_obj), collapse=", "),
+      " but should be of class 'classicalGLM'."
+    ))
+  }
+  
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
   if(is.null(threshold)) threshold <- 0

@@ -96,11 +96,9 @@ library(purrr)
 # library(reshape2) # replaced with BayesfMRI:::melt_mat2
 
 plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
-  if(class(X) == "matrix") X = list(single_activation_field = X)
-  if(class(X) != "list") stop("Expected a matrix or list for X.")
-  if(any(!sapply(X,function(x) {
-    "matrix" %in% class(x)
-  }, simplify = T))) {
+  if (inherits(X, "matrix")) X = list(single_activation_field = X)
+  if (inherits(X, "list")) stop("Expected a matrix or list for X.")
+  if (!all(sapply(X, inherits, "matrix" simplify = T))) {
     stop("All list images should be matrices.")
   }
   requireNamespace("ggplot2")

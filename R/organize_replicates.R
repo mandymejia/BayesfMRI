@@ -14,7 +14,9 @@
 #'
 organize_replicates <- function(n_sess, beta_names, mesh){
 
-  if(!(class(mesh) %in% c('inla.mesh','BayesfMRI.spde'))) stop('mesh must be of class inla.mesh  (for surface data, see `help(make_mesh)`) or BayesfMRI.spde (for subcortical data, see `help(create_spde_vol3D)`)')
+  if (!(inherits(mesh, "inla.mesh") || inherits(mesh, "BayesfMRI.spde"))) {
+	stop('mesh must be of class inla.mesh  (for surface data, see `help(make_mesh)`) or BayesfMRI.spde (for subcortical data, see `help(create_spde_vol3D)`)')
+  }
   spatial <- mesh$idx$loc
 
 	nvox <- length(spatial)

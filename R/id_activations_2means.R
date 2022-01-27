@@ -187,7 +187,9 @@ id_activations <- function(model_obj,
   #type_2means=c('point','sequential'),
   #nsamp_2means = NULL){
 
-  if(class(model_obj) != 'BayesGLM') stop('The model_obj argument must be of class BayesGLM, but it is not.')
+  if (!inherits(model_obj, 'BayesGLM')) {
+    stop('The model_obj argument must be of class BayesGLM, but it is not.')
+  }
 
   #if(length(method)>1) method <- method[1]
   #if(length(type_2means)>1) type_2means <- type_2means[1]

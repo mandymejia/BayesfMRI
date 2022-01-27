@@ -29,11 +29,9 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
     stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
   }
 
-  if(class(X) == "matrix") X = list(single_activation_field = X)
-  if(class(X) != "list") stop("Expected a matrix or list for X.")
-  if(any(!sapply(X,function(x) {
-    "matrix" %in% class(x)
-  }, simplify = T))) {
+  if(inherits(X, "matrix")) X = list(single_activation_field = X)
+  if(!inherits(X, "list")) stop("Expected a matrix or list for X.")
+  if (!all(sapply(X, inherits, "matrix", simplify=TRUE))) {
     stop("All list images should be matrices.")
   }
 
@@ -229,7 +227,7 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 # x <- matrix(rnorm(9),3,3)
 # melt_mat(x)
 melt_mat <- function(x) {
-  if(!"matrix" %in% class(x)) stop("x must have the matrix class.")
+  if (!inherits("matrix", x)) stop("x must have the matrix class.")
   out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
   return(out)
 }
@@ -280,7 +278,7 @@ melt_mat2 <- function(X_list){
 # tile.plot(x_df)
 tile.plot <- function(tile_df, col = NULL, ncols = NULL,
                       main = "", zlim = NULL, na.color  = "grey80") {
-  if("matrix" %in% class(tile_df)) tile_df <- melt_mat(tile_df)
+  if(inherits(tile_df, "matrix")) tile_df <- melt_mat(tile_df)
   .pardefault <- par()
   if(!is.null(col) & !is.null(ncols)) {
     warning("Defining ncols based on col.")

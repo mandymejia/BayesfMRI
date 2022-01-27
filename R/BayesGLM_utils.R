@@ -156,9 +156,7 @@ make_data_list <- function(y, X, betas, repls){
 #' @keywords internal
 extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 
-  if(class(object) != "inla"){
-    stop("Object is not of class 'inla'")
-  }
+  if (!inherits(object, "inla")) { stop("Object is not of class 'inla'") }
 
   res.beta <- object$summary.random
   nbeta <- length(res.beta)

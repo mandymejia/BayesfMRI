@@ -87,11 +87,11 @@ BayesGLM2 <- function(results,
     fnames <- results
     results <- vector('list', length=M)
     results[[1]] <- readRDS(fnames[1])
-    if(class(results[[1]]) == "BayesGLM_cifti") {
+    if(inherits(results[[1]], "BayesGLM_cifti")) {
       which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
       results[[1]] <- results[[1]]$GLMs_Bayesian[[which_BayesGLM]]
     }
-    if(class(results[[1]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
+    if (!inherits(results[[1]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
   }
 
 
@@ -173,11 +173,11 @@ BayesGLM2 <- function(results,
 
     if(use_files & (m > 1)){
       results[[m]] <- readRDS(fnames[m])
-      if(class(results[[m]]) == "BayesGLM_cifti") {
+      if(inherits(results[[m]], "BayesGLM_cifti")) {
         which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
         results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
       }
-      if(class(results[[m]]) != 'BayesGLM') stop("Each RDS file in results argument must contain an object of class BayesGLM")
+      if(!inherits(results[[m]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
       # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
       num_sessions_m <- length(results[[m]]$session_names)
       # if(use_avg & use_avg_m) num_sessions_m <- 1

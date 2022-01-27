@@ -305,7 +305,7 @@ BayesGLM <- function(
     #perform classical GLM after any prewhitening
     beta_hat_s <- SE_beta_hat_s <- matrix(NA, V_all, K)
     XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
-    if("try-error" %in% class(XTX_inv)) {
+    if (inherits(XTX_inv, "try-error")) {
       stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     }
     coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)

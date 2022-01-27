@@ -7,7 +7,7 @@
 #' 
 #' @keywords internal 
 find.connected <- function(ind,mesh){
-  if(class(mesh) != "inla.mesh"){
+  if (!inherits(mesh, "inla.mesh")) {
     stop("mesh should be of class inla.mesh")
   }
 
@@ -66,7 +66,7 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
     stop("`find.smallest.activation` requires the `grDevices` package. Please install it.", call. = FALSE)
   }
 
-  if (class(res) == "excurobj") {
+  if (inherits(res, "excurobj")) {
 
     ind.E <- which(res$E == 1)
     ind.rem <- NULL

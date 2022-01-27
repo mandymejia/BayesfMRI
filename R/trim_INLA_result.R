@@ -5,7 +5,7 @@
 #' @return a trimmed object of class 'inla'
 #' @keywords internal
 trim_INLA_result <- function(INLA_result) {
-  if(class(INLA_result) != "inla")
+  if(!inherits(INLA_result, "inla"))
     stop("This function only applies to objects with the 'inla' class.")
   out_object <- list(
     .args = list(
