@@ -731,9 +731,9 @@ BayesGLMEM_vol3D <-
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
-    X_all_list <- sapply(X_all_list, spam::as.spam.dgCMatrix, simplify = F)
+    # X_all_list <- sapply(X_all_list, spam::as.spam.dgCMatrix, simplify = F)
 
-    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls, EM_out = TRUE)
+    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls, EM_out = FALSE)
 
     # >> Model setup and initials ----
     if(is.null(tol)){
@@ -742,12 +742,13 @@ BayesGLMEM_vol3D <-
     }
 
     Psi_k <- spde_grp$Amat
-    Psi <- Reduce(spam::bdiag.spam,rep(list(Psi_k),K))
-    # Psi <- Matrix::bdiag(rep(list(Psi_k),K))
+    # Psi_k <- spam::as.spam(spde_grp$Amat)
+    # Psi <- Reduce(spam::bdiag.spam,rep(list(Psi_k),K))
+    Psi <- Matrix::bdiag(rep(list(Psi_k),K))
     if(n_sess > 1) Psi <- Reduce(rbind,rep(list(Psi),n_sess))
     # Psi <- Matrix::Diagonal(n = ncol(model_data$X))
-    # A <- Matrix::crossprod(model_data$X%*%Psi)
-    A <- spam::crossprod.spam(model_data$X%*%Psi)
+    A <- Matrix::crossprod(model_data$X%*%Psi)
+    # A <- spam::crossprod.spam(model_data$X%*%Psi)
 
     # Initial values for kappa and tau
     # Using values matching BayesGLM
@@ -756,18 +757,18 @@ BayesGLMEM_vol3D <-
     phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
     # Using values based on the classical GLM
     cat("... FINDING BEST GUESS INITIAL VALUES\n")
-    # XTX <- Matrix::crossprod(model_data$X)
-    XTX <- spam::crossprod(model_data$X)
-    # XTX_inv <- Matrix::solve(XTX)
-    XTX_inv <- spam::solve(XTX)
-    # XTy <- Matrix::crossprod(model_data$X,model_data$y)
-    XTy <- spam::crossprod(model_data$X,model_data$y)
-    # beta_hat <- (XTX_inv %*% XTy)@x
-    beta_hat <- c(XTX_inv %*% XTy)
-    # beta_hat_mesh <- (beta_hat %*% Psi)@x
-    beta_hat_mesh <- c(beta_hat %*% Psi)
-    # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
-    res_y <- c(model_data$y - model_data$X %*% beta_hat)
+    XTX <- Matrix::crossprod(model_data$X)
+    # XTX <- spam::crossprod(model_data$X)
+    XTX_inv <- Matrix::solve(XTX)
+    # XTX_inv <- spam::solve(XTX)
+    XTy <- Matrix::crossprod(model_data$X,model_data$y)
+    # XTy <- spam::crossprod(model_data$X,model_data$y)
+    beta_hat <- (XTX_inv %*% XTy)@x
+    # beta_hat <- c(XTX_inv %*% XTy)
+    beta_hat_mesh <- (beta_hat %*% Psi)@x
+    # beta_hat_mesh <- c(beta_hat %*% Psi)
+    res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+    # res_y <- c(model_data$y - model_data$X %*% beta_hat)
     sigma2 <- stats::var(res_y)
     if(EM_method == "joint") {
       # require(SQUAREM)
