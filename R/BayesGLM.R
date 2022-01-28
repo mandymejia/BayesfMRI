@@ -382,11 +382,14 @@ BayesGLM <- function(
 
     #estimate model using INLA
     cat('\n .... estimating model with INLA')
-    system.time(
-      INLA_result <- estimate_model(
-        formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
-        num.threads=num.threads, verbose=verbose#, contrasts = contrasts
-      )
+    check_INLA(require_PARDISO=FALSE)
+
+    INLA::inla(
+      formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
+      verbose = verbose, keep = FALSE, num.threads = num.threads,
+      control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+      control.family=list(hyper=list(prec=list(initial=1))),
+      control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
     )
     cat("done!\n")
 
