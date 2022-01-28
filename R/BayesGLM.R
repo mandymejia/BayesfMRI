@@ -74,88 +74,100 @@ BayesGLM <- function(
   # T = length of time series for each session (vector)
   # K = number of unique tasks in all sessions
 
+  # Rename and coerce to logical
   do_Bayesian <- as.logical(Bayes)
-  if(do_Bayesian) check_INLA(require_PARDISO=TRUE)
+  if (do_Bayesian) { check_INLA(require_PARDISO=TRUE) }
 
-  if(is.null(ar_smooth)) ar_smooth <- 0
+  # Check prewhitening arguments.
+  if (is.null(ar_order)) ar_order <- 0
+  ar_order <- as.numeric(ar_order)
+  do_pw <- (ar_order > 0)
+  if (is.null(ar_smooth)) ar_smooth <- 0
+  ar_smooth <- as.numeric(ar_smooth)
 
   #we need a mesh if doing spatial Bayesian modeling OR any AR smoothing
-  need_mesh <- (do_Bayesian | ar_smooth > 0)
+  need_mesh <- (do_Bayesian || ar_smooth > 0)
   #check that only mesh OR vertices+faces supplied
-  if(need_mesh){
+  if (need_mesh) {
     has_mesh <- !is.null(mesh)
-    has_verts_faces <- !is.null(vertices) & !is.null(faces)
-    has_howmany <- has_mesh + has_verts_faces
-    if(has_howmany != 1) stop('Must supply EITHER mesh OR vertices and faces.')
+    has_verts_faces <- !is.null(vertices) && !is.null(faces)
+    if (!xor(has_mesh, has_verts_faces)) {
+      stop('Must supply EITHER mesh OR vertices and faces.')
+    }
+    if (is.null(mesh)) mesh <- make_mesh(vertices, faces)
   } else {
-    mesh <- mesh_orig <- NULL
+    mesh <- NULL
   }
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
   n_sess <- length(session_names)
-  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
+  if (n_sess == 1 && avg_sessions) avg_sessions <- FALSE
 
-  if(!is.list(data)) stop('I expect data to be a list, but it is not')
+  if (!is.list(data)) stop('I expect data to be a list, but it is not')
   data_classes <- sapply(data, 'class')
-  if(! all.equal(unique(data_classes),'list')) stop('I expect data to be a list of lists (sessions), but it is not')
-
-  V <- ncol(data[[1]]$BOLD) #number of data locations
-  ntime <- nrow(data[[1]]$BOLD)
-  K <- ncol(data[[1]]$design) #number of tasks
-
-  if(!is.null(beta_names)){
-    if(length(beta_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of beta_names is ', length(beta_names), '.  Please fix beta_names.'))
-  }
-
-  if(is.null(beta_names)){
-    beta_names_maybe <- colnames(data[[1]]$design) #grab beta names from design (if not provided)
-    if(!is.null(beta_names_maybe)) beta_names <- beta_names_maybe
-    if(is.null(beta_names_maybe)) beta_names <- paste0('beta',1:K)
+  if (!all.equal(unique(data_classes),'list')) {
+    stop('I expect data to be a list of lists (sessions), but it is not')
   }
 
   #check dimensions
+  V <- ncol(data[[1]]$BOLD) #number of data locations
+  ntime <- vapply(data, function(x){ nrow(x$BOLD) }, 0)
+  K <- ncol(data[[1]]$design) #number of tasks
   for(s in 1:n_sess){
     if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
 
-  if(do_Bayesian){
-    if(is.null(outfile)) message('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
+  if (!is.null(beta_names)) {
+    if(length(beta_names) != K) {
+      stop(paste0(
+        'I detect ', K, 
+        ' task based on the design matrix, but the length of beta_names is ', 
+        length(beta_names), '.  Please fix beta_names.'
+      ))
+    }
+  } else {
+    # Grab beta names from design (if provided)
+    bn_maybe <- colnames(data[[1]]$design)
+    beta_names <- if (is.null(bn_maybe)) { paste0("beta", seq(K)) } else { bn_maybe }
   }
 
-  if(need_mesh){
-    if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
+  if (do_Bayesian && is.null(outfile)) {
+    message('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
   }
+
+  # `mask` and `mesh` -----------------------------
   #apply mask to mesh and data
   mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
-  if(is.null(mask)){
+  if (is.null(mask)) {
     mask2 <- mask <- rep(TRUE, V)
   } else {
-    mask <- as.logical(mask)
-    mask2 <- mask #in case need_mesh=FALSE
-    if(need_mesh) {
+    mask <- mask2 <- as.logical(mask) # `mask2` is in case `need_mesh==FALSE`
+    if (need_mesh) {
       mesh_orig <- mesh #for later plotting
       mesh <- excursions::submesh.mesh(mask, mesh)
       mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
       mesh$idx$loc <- mesh$idx$loc[mask2]
     }
     #apply (possibly updated) mask to data
-    for(s in 1:n_sess){ data[[s]]$BOLD <- data[[s]]$BOLD[,mask2==TRUE] }
+    for (ss in 1:n_sess) { 
+      data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2==TRUE,drop=FALSE]
+    }
   }
+  if (do_Bayesian) spde <- INLA::inla.spde2.matern(mesh)
+
   V <- sum(mask2)
   V_all <- length(mask2)
 
   #make sure no invalid vertices exist after masking
-  tmp <- make_mask(data)
-  if(!is.null(tmp)) stop('Flat/NA/NaN vertices exist outside the mask. Update mask to exclude these.')
-
-  if (do_Bayesian) spde <- INLA::inla.spde2.matern(mesh)
-
+  if (!is.null(make_mask(data))) {
+    stop('Flat/NA/NaN vertices exist outside the mask. Update mask to exclude these.')
+  }
+  # ---------------------------------
   #collect data and design matrices
   design <- vector('list', length=n_sess)
-
   for(s in 1:n_sess){
 
     #extract and mask BOLD data for current session
@@ -163,12 +175,15 @@ BayesGLM <- function(
 
     #scale data to represent % signal change (or just center if scale=FALSE)
     BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
-    if(scale_design) design_s <- scale_design_mat(data[[s]]$design)
-    if(!scale_design) design_s <- scale(data[[s]]$design, scale = F)
+    if (scale_design) {
+      design_s <- scale_design_mat(data[[s]]$design)
+    } else {
+      design_s <- scale(data[[s]]$design, scale = FALSE)
+    }
     design[[s]] <- design_s #after scaling but before nuisance regression
 
     #regress nuisance parameters from BOLD data and design matrix
-    if('nuisance' %in% names(data[[s]])){
+    if ('nuisance' %in% names(data[[s]])) {
       nuisance_s <- data[[s]]$nuisance
       data[[s]]$BOLD <- nuisance_regression(BOLD_s, nuisance_s)
       data[[s]]$design <- nuisance_regression(design_s, nuisance_s)
@@ -194,23 +209,19 @@ BayesGLM <- function(
     n_sess <- 1
   }
 
-
   ## ESTIMATE PREWHITENING PARAMETERS -----
 
   #compute AR coefficients and average over sessions
-  if(is.null(ar_order)) ar_order <- 0
-  ar_order <- as.numeric(ar_order)
-  do_pw <- (ar_order > 0)
   if(do_pw){
     AR_coeffs <- array(dim = c(V,ar_order,n_sess))
     AR_resid_var <- array(dim = c(V,n_sess))
 
     #estimate prewhitening parameters for each session
-    for(s in 1:n_sess){
-      resids <- nuisance_regression(data[[s]]$BOLD, data[[s]]$design)
+    for (s in 1:n_sess) {
+      resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design)
       AR_est <- pw_estimate(resids, ar_order)
-      AR_coeffs[,,s] <- AR_est$phi
-      AR_resid_var[,s] <- AR_est$sigma_sq
+      AR_coeffs[,,ss] <- AR_est$phi
+      AR_resid_var[,ss] <- AR_est$sigma_sq
     }
 
     #average prewhitening parameters across sessions
@@ -218,34 +229,34 @@ BayesGLM <- function(
     avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
 
     #smooth prewhitening parameters
-    if(ar_smooth > 0) {
-      AR_smoothed_list <- pw_smooth(vertices=mesh$loc,
-                                    faces=mesh$graph$tv,
-                                    AR=avg_AR,
-                                    var=avg_var,
-                                    FWHM=ar_smooth)
+    if (ar_smooth > 0) {
+      AR_smoothed_list <- pw_smooth(
+        vertices=mesh$loc, faces=mesh$graph$tv,
+        AR=avg_AR, var=avg_var, FWHM=ar_smooth
+      )
       avg_AR <- AR_smoothed_list$AR
       avg_var <- AR_smoothed_list$var
     }
   }
 
-  ## APPLY PREWHITENING -----
+  # [TO DO]: allow different `ntime`
+  ntime <- ntime[1]
 
-  if(do_pw){
+  ## APPLY PREWHITENING -----
+  if (do_pw) {
     # Create the sparse pre-whitening matrix
     cat(" .... prewhitening... ")
-    if(is.null(num.threads) | num.threads < 2) {
+    if (is.null(num.threads) | num.threads < 2) {
       # Initialize the block diagonal covariance matrix
-      template_pw <- Matrix::bandSparse(n = ntime,
-                                        k = 0:(ar_order + 1),
-                                        symmetric = TRUE)
-      template_pw_list <- rep(list(template_pw),V)
-      rows.rm <- numeric()
-      for(v in 1:V) {
-        if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
-        template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
+      template_pw <- Matrix::bandSparse(
+        n = ntime, k = 0:(ar_order + 1), ymmetric = TRUE
+      )
+      template_pw_list <- rep(list(template_pw), V)
+      for(vv in 1:V) {
+        if(vv %% 100 == 0) cat("\n Location",vv,"of",V,"")
+        template_pw_list[[vv]] <- prewhiten.v(AR_coeffs = avg_AR[vv,],
                                              ntime = ntime,
-                                             AR_var = avg_var[v])
+                                             AR_var = avg_var[vv])
       }
     } else {
       if (!requireNamespace("parallel", quietly = TRUE)) {
