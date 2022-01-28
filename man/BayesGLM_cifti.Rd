@@ -26,6 +26,8 @@ BayesGLM_cifti(
   return_INLA_result = FALSE,
   avg_sessions = TRUE,
   session_names = NULL,
+  meanTol = 1e-06,
+  varTol = 1e-06,
   trim_INLA = TRUE
 )
 }
@@ -106,6 +108,9 @@ sessions? Default: \code{FALSE}.}
 
 \item{session_names}{(Optional) A vector of names corresponding to each
 session. Ignored if \code{avg_sessions == TRUE}.}
+
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
+do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}

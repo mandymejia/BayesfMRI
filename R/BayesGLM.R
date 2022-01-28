@@ -30,6 +30,8 @@
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_sessions_Param
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
+#'  do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
@@ -60,6 +62,8 @@ BayesGLM <- function(
   verbose=FALSE,
   contrasts = NULL,
   avg_sessions = FALSE,
+  meanTol=1e-6,
+  varTol=1e-6,
   trim_INLA = TRUE){
 
   #TO DO:
@@ -138,22 +142,28 @@ BayesGLM <- function(
     message('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
   }
 
-  # `mask` and `mesh` -----------------------------
-  #apply mask to mesh and data
+  # `mask`  -----------------------------
+  # Get `mask` based on intersection of input mask and `make_mask` checks.
+  if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) }
+  mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol)
+  if (!any(mask)) { stop("No in-mask data locations.") }
+
+  # If any masked locations, apply to `mesh` and `data`.
   mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
-  if (is.null(mask)) {
-    mask2 <- mask <- rep(TRUE, V)
-  } else {
-    mask <- mask2 <- as.logical(mask) # `mask2` is in case `need_mesh==FALSE`
+  if (!all(mask)) {
+    # `mask2` is in case `need_mesh==FALSE`
+    mask <- mask2 <- as.logical(mask)
+
+    # `mesh`
     if (need_mesh) {
       mesh_orig <- mesh #for later plotting
       mesh <- excursions::submesh.mesh(mask, mesh)
       mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
       mesh$idx$loc <- mesh$idx$loc[mask2]
     }
-    #apply (possibly updated) mask to data
+    # `data`
     for (ss in 1:n_sess) {
-      data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2==TRUE,drop=FALSE]
+      data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
     }
   }
   if (do_Bayesian) spde <- INLA::inla.spde2.matern(mesh)
@@ -161,10 +171,6 @@ BayesGLM <- function(
   V <- sum(mask2)
   V_all <- length(mask2)
 
-  #make sure no invalid vertices exist after masking
-  if (!is.null(make_mask(data))) {
-    stop('Flat/NA/NaN vertices exist outside the mask. Update mask to exclude these.')
-  }
   # ---------------------------------
   #collect data and design matrices
   design <- vector('list', length=n_sess)
@@ -196,23 +202,32 @@ BayesGLM <- function(
 
   #concatenate sessions if avg_sessions=TRUE
   if(avg_sessions){
-
     #concatenate BOLD data across all sessions
-    data_BOLD <- do.call(rbind, lapply(data, function(sess){ sess$BOLD }))
-    data_design <- do.call(rbind, lapply(data, function(sess){ sess$design }))
-    data <- list(session_avg = list(BOLD = data_BOLD, design = data_design))
+    data <- list(
+      session_avg = list(
+        BOLD = do.call(rbind, lapply(data, function(sess){ sess$BOLD })),
+        design = do.call(rbind, lapply(data, function(sess){ sess$design }))
+      )
+    )
 
     #update ntime, n_sess, session_names
-    ntime <- nrow(data_BOLD)
+    ntime <- nrow(data$session_avg$BOLD)
     session_names <- 'session_avg'
     n_sess_orig <- n_sess
     n_sess <- 1
+  } else {
+    # [TO DO]: allow different `ntime`.
+    # Is this only problematic when `do_pw`?
+    if (length(unique(ntime)) > 1) {
+      stop("Not supported yet: different BOLD time durations while `avg_sessions=FALSE`.")
+    }
+    ntime <- ntime[1]
   }
 
   ## ESTIMATE PREWHITENING PARAMETERS -----
 
   #compute AR coefficients and average over sessions
-  if(do_pw){
+  if (do_pw) {
     AR_coeffs <- array(dim = c(V,ar_order,n_sess))
     AR_resid_var <- array(dim = c(V,n_sess))
 
@@ -238,10 +253,6 @@ BayesGLM <- function(
       avg_var <- AR_smoothed_list$var
     }
   }
-
-  browser()
-  # [TO DO]: allow different `ntime`
-  ntime <- ntime[1]
 
   ## APPLY PREWHITENING -----
   if (do_pw) {

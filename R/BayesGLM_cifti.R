@@ -86,6 +86,8 @@
 #' @inheritParams avg_sessions_Param
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session. Ignored if \code{avg_sessions == TRUE}.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
+#'  do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
@@ -119,6 +121,7 @@ BayesGLM_cifti <- function(
   return_INLA_result=FALSE,
   avg_sessions = TRUE,
   session_names=NULL,
+  meanTol=1e-6, varTol=1e-6,
   trim_INLA = TRUE){
 
   # Check args ------------------------------------------
@@ -344,14 +347,12 @@ BayesGLM_cifti <- function(
       outfile_name <- NULL
     }
 
-    mask_hem <- make_mask(session_data)
     BayesGLM_out <- BayesGLM(
       data = session_data,
       beta_names = beta_names,
       mesh = NULL,
       vertices = surf_list[[each_hem]]$vertices,
       faces = surf_list[[each_hem]]$faces,
-      mask = mask_hem,
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
@@ -362,6 +363,8 @@ BayesGLM_cifti <- function(
       outfile = outfile_name,
       verbose = verbose,
       avg_sessions = avg_sessions,
+      meanTol=meanTol, 
+      varTol=varTol,
       trim_INLA = trim_INLA
     )
 

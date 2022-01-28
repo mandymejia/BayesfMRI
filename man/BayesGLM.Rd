@@ -22,6 +22,8 @@ BayesGLM(
   verbose = FALSE,
   contrasts = NULL,
   avg_sessions = FALSE,
+  meanTol = 1e-06,
+  varTol = 1e-06,
   trim_INLA = TRUE
 )
 }
@@ -82,6 +84,9 @@ posterior quantities of group means or contrasts.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
 sessions? Default: \code{FALSE}.}
+
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
+do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}

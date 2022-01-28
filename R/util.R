@@ -325,28 +325,48 @@ match_input <- function(
 #' @param data A list of sessions, where each session is a list with elements
 #'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
 #'  for more details.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
+#'  do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.
+#' @param verbose Print messages counting how many locations are removed?
 #'
 #' @importFrom matrixStats colVars
 #' @return A logical vector indicating valid vertices, or NULL if there were no invalid vertices
 #'
 #' @export
-make_mask <- function(data){
+make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 
-  #ID any zero-variance voxels and remove from analysis
-  zero_var <- sapply(data, function(x){
-    x$BOLD[is.na(x$BOLD)] <- 0 #to detect medial wall or other locations coded as NA
-    x$BOLD[is.nan(x$BOLD)] <- 0 #to detect medial wall or other locations coded as NaN
-    vars <- matrixStats::colVars(x$BOLD)
-    return(vars < 1e-6)
-  })
-  zero_var <- (rowSums(zero_var) > 0) #check whether any vertices have zero variance in any session
-
-  #remove zero var locations
-  if(sum(zero_var) > 0){
-    mask <- !zero_var
-  } else {
-    mask <- NULL
+  # For each BOLD data matrix,
+  mask_na <- mask_mean <- mask_var <- rep(TRUE, ncol(data[[1]]$BOLD))
+  for (ss in seq(length(data))) {
+    dss <- data[[ss]]$BOLD
+    # Mark columns with any NA or NaN values for removal.
+    dss_na <- is.na(dss) | is.nan(dss)
+    mask_na[apply(dss_na, 2, any)] <- FALSE
+    # Calculate means and variances of columns, except those with any NA or NaN.
+    # Mark columns with mean/var falling under the thresholds for removal.
+    mask_mean[mask_na][colMeans(dss[,mask_na,drop=FALSE]) < meanTol] <- FALSE
+    mask_var[mask_na][matrixStats::colVars(dss[,mask_na,drop=FALSE]) < varTol] <- FALSE
   }
 
-  return(mask)
+  # Print counts of locations removed, for each reason.
+  if (verbose) {
+    warn_part1 <- if (any(!mask_na)) { "additional locations" } else { "locations" }
+    warn_part2 <- if (length(data) > 1) { "in at least one scan.\n" } else { ".\n" }
+    if (any(!mask_na)) {
+      cat("\t", sum(!mask_na), "locations removed due to NA or NaN values", warn_part2)
+    }
+    # Do not include NA locations in count.
+    mask_mean2 <- mask_mean | (!mask_na)
+    if (any(!mask_mean2)) {
+      cat("\t", sum(!mask_mean2), warn_part1, "removed due to low mean", warn_part2)
+    }
+    # Do not include NA or low-mean locations in count.
+    mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
+    if (any(!mask_var2)) {
+      cat("\t", sum(!mask_var2), warn_part1, "removed due to low variance", warn_part2)
+    }
+  }
+
+  # Return composite mask.
+  mask_na & mask_mean & mask_var
 }
