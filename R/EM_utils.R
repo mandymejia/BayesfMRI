@@ -250,7 +250,7 @@ GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL, 
 #' @keywords internal
 spde_Q_phi <- function(kappa2, phi, spde) {
   Cmat <- spde$M0
-  Gmat <- (spde$M1 + spam::t.spam(spde$M1))/2
+  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
   GtCinvG <- spde$M2
   Q <- (kappa2*Cmat + 2*Gmat + GtCinvG/kappa2) / (4*pi*phi)
   return(Q)
@@ -261,13 +261,13 @@ spde_Q_phi <- function(kappa2, phi, spde) {
 #' @param kappa2 scalar
 #' @param spde an spde object
 #'
-#' @importFrom spam t.spam
+#' @importFrom Matrix t
 #'
-#' @return a spam matrix
+#' @return a matrix
 #' @keywords internal
 Q_prime <- function(kappa2, spde) {
   Cmat <- spde$M0
-  Gmat <- (spde$M1 + spam::t.spam(spde$M1))/2
+  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
   GtCinvG <- spde$M2
   Q <- (kappa2*Cmat + 2*Gmat + GtCinvG/kappa2)
   return(Q)
@@ -478,7 +478,7 @@ init_fixpt <- function(theta, spde, beta_hat) {
   if(is.null(n_spde)) n_spde <- spde$n.spde
   num_sessions <- length(beta_hat) / n_spde
   Qp <- Q_prime(kappa2, spde)
-  if(num_sessions > 1) Qp <- Reduce(spam::bdiag.spam(rep(list(Qp), num_sessions)))
+  if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))
   phi <- as.numeric(Matrix::crossprod(beta_hat, Qp %*% beta_hat)) / (4 * pi * n_spde * num_sessions)
   kappa2 <-
     stats::optimize(
@@ -517,12 +517,14 @@ GLMEM_chol_init <- function(theta, spde, K, A) {
       MoreArgs = list(spde = spde),
       SIMPLIFY = F
     )
-  # Q_new <- Matrix::bdiag(Q_k)
-  Q_new <- Reduce(spam::bdiag.spam,Q_k)
+  Q_new <- Matrix::bdiag(Q_k)
+  # Q_new <- Reduce(spam::bdiag.spam,Q_k)
   n_sess_em <- nrow(A) / nrow(Q_new)
   if(n_sess_em > 1)
-    Q_new <- Reduce(spam::bdiag.spam,lapply(seq(n_sess_em),function(x) Q_new))
+    # Q_new <- Reduce(spam::bdiag.spam,lapply(seq(n_sess_em),function(x) Q_new))
+    Q_new <- Matrix::bdiag(lapply(seq(n_sess_em),function(x) Q_new))
   Sig_inv <- Q_new + A/theta[sigma2_ind]
-  U <- spam::chol(Sig_inv)
+  Sig_inv_spam <- spam::as.spam.dgCMatrix(Sig_inv)
+  U <- spam::chol.spam(Sig_inv_spam)
   return(U)
 }

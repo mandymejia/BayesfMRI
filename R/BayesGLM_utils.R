@@ -113,15 +113,13 @@ make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
 #' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `organize_data()`
 #' @param betas List (length = number of tasks) of bbeta objects from organize_replicates
 #' @param repls List (length = number of tasks) of repl objects from organize_replicates
-#' @param EM_out (logical) Should the output be formatted for the EM
-#'   algorithm?
 #'
 #' @return List
 #'
 #' @importFrom Matrix bdiag
 #'
 #' @keywords internal
-make_data_list <- function(y, X, betas, repls, EM_out = FALSE){
+make_data_list <- function(y, X, betas, repls){
 
   # Check length/dimensions of y, X, elements of betas and repls all match
   n_sess <- length(X)
@@ -134,12 +132,7 @@ make_data_list <- function(y, X, betas, repls, EM_out = FALSE){
   model_data <- vector('list', length=numel)
   names(model_data) <- c('y', 'X', names(betas), names(repls))
   model_data$y <- y
-  if(!EM_out) {
-    model_data$X <- bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
-  }
-  if(EM_out) {
-    model_data$X <- Reduce(spam::bdiag.spam,X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
-  }
+  model_data$X <- Matrix::bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
 
   nbeta <- length(betas)
   for(i in 1:nbeta){

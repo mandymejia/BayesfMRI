@@ -646,7 +646,7 @@ BayesGLMEM_vol3D <-
 
     paste0('Estimating Model ',grp,' (', paste(name_set_grp, collapse = ', '), ')')
 
-    spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp, EM_out = TRUE)
+    spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     spde <- spde_grp$spde
 
     #HERE ----
@@ -733,7 +733,7 @@ BayesGLMEM_vol3D <-
 
     # X_all_list <- sapply(X_all_list, spam::as.spam.dgCMatrix, simplify = F)
 
-    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls, EM_out = FALSE)
+    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     # >> Model setup and initials ----
     if(is.null(tol)){

@@ -5,16 +5,15 @@
 #' @param locs Locations of data points (Vx3 matrix)
 #' @param labs Region labels of data points (vector of length V). If NULL, treat observations as a single region.
 #' @param lab_set Only used if labs is not NULL. Vector of region labels for which to construct spde object. If NULL, use all region labels.
-#' @param EM_out (logical) Should the output be formatted for the EM algorithm
-#'   and thus not use INLA?
 #' @return SPDE object representing triangular mesh structure on data locations
 #'
 #' @importFrom geometry delaunayn
 #' @importFrom INLA inla.spde2.generic
+#' @importFrom Matrix diag bdiag
 #' @importFrom spam spam_rdist apply.spam diag bdiag.spam as.spam crossprod.spam solve.spam
 #'
 #' @export
-create_spde_vol3D <- function(locs, labs, lab_set = NULL, EM_out = FALSE){
+create_spde_vol3D <- function(locs, labs, lab_set = NULL){
   if(is.null(labs) & !is.null(lab_set)) stop('If labs is NULL, then lab_set must not be specified.')
 
   # If no labels provided, construct mesh over all regions (treat as a single region)
@@ -54,7 +53,7 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL, EM_out = FALSE){
     FV <- geometry::delaunayn(PP)
 
     # Remove locations that are far from original data locations
-    D <- spam::spam_rdist(P,PP, delta = nrow(P))
+    D <- rdist::cdist(P,PP)
     md <- apply(D, 2, min)
     ind_keep <- md < max_dist
     indices <- which(ind_keep == 1)
@@ -77,9 +76,9 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL, EM_out = FALSE){
     P_new_all[[ii]] <- P_new
 
     # Create observation matrix A (this assumes that all original data locations appear in mesh)
-    D <- spam::spam_rdist(P,P_new)
-    I_v <- spam::apply.spam(D, 1, function(x) {which(x == min(x))})
-    A_v <- spam::diag(1, nrow = nrow(P_new))
+    D <- rdist::cdist(P,P_new)
+    I_v <- apply(D, 1, function(x) {which(x == min(x))})
+    A_v <- Matrix::diag(1, nrow = nrow(P_new))
     A_all[[ii]] <- A_v[I_v,]
     I_all[[ii]] <- I_v
 
@@ -89,41 +88,36 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL, EM_out = FALSE){
     C_all[[ii]] <- gal$C
   }
 
-  G <- Reduce(spam::bdiag.spam,G_all)
-  C <- Reduce(spam::bdiag.spam,C_all)
+  G <- Matrix::bdiag(G_all)
+  C <- Matrix::bdiag(C_all)
 
   # Part 2
-  tG <- t(G)
+  tG <- Matrix::t(G)
   M0 = C
   M1 = G + tG
-  M2 = spam::as.spam(spam::crossprod.spam(G,spam::solve.spam(C,G)))
+  M2 = tG %*% Matrix::solve(C,G)
 
   # Create the spde object. Note that the priors theta.mu and theta.Q have to be set reasonably here!!!
-  if(EM_out) {
-    spde <- list(
-      M0 = M0,
-      M1 = M1,
-      M2 = M2,
-      n.spde = nrow(M0)
-    )
-    Amat_out <- Reduce(spam::bdiag.spam,A_all)
-  }
-  if(!EM_out) {
-    spde = inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
-                              B0 = matrix(c(0,1,0),1,3),
-                              B1 = matrix(c(0,0,1),1,3),
-                              B2 = 1,
-                              theta.mu = rep(0,2),
-                              theta.Q = Diagonal(2,c(1e-6,1e-6)),
-                              transform = "identity")
-    Amat_out <- bdiag(A_all)
-  }
+  # spde = inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
+  #                           B0 = matrix(c(0,1,0),1,3),
+  #                           B1 = matrix(c(0,0,1),1,3),
+  #                           B2 = 1,
+  #                           theta.mu = rep(0,2),
+  #                           theta.Q = Matrix::Diagonal(2,c(1e-6,1e-6)),
+  #                           transform = "identity")
+
+  spde <- list(
+    M0 = M0,
+    M1 = M1,
+    M2 = M2,
+    n.spde = nrow(M0)
+  )
 
   out <- list(spde = spde,
               vertices = P_new_all,
               faces = FV_new_all,
               idx = I_all,
-              Amat = Amat_out)
+              Amat = Matrix::bdiag(A_all))
   class(out) <- 'BayesfMRI.spde'
 
   return(out)
@@ -162,8 +156,8 @@ galerkin_db <- function(FV, P){
     Cz[dd,] <- ddet * (rep(1,d+1)+diag(d+1)) / prod(1:(d+2))
   }
 
-  G <- spam::as.spam.dgCMatrix(Matrix::sparseMatrix(i = as.vector(Gi), j = as.vector(Gj), x = as.vector(Gz), dims = c(nV,nV)))
-  Ce <- spam::as.spam.dgCMatrix(Matrix::sparseMatrix(i = as.vector(Ci), j = as.vector(Cj), x = as.vector(Cz), dims = c(nV,nV)))
-  C <- spam::diag.spam(spam::colSums(Ce), nrow = nV, ncol = nV)
+  G <- Matrix::sparseMatrix(i = as.vector(Gi), j = as.vector(Gj), x = as.vector(Gz), dims = c(nV,nV))
+  Ce <- Matrix::sparseMatrix(i = as.vector(Ci), j = as.vector(Cj), x = as.vector(Cz), dims = c(nV,nV))
+  C <- Matrix::diag(Matrix::colSums(Ce), nrow = nV, ncol = nV)
   return(list(G = G, Ce = Ce, C = C))
 }
