@@ -34,7 +34,7 @@
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
 #' @return A list containing...
-#' 
+#'
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
@@ -123,8 +123,8 @@ BayesGLM <- function(
   if (!is.null(beta_names)) {
     if(length(beta_names) != K) {
       stop(paste0(
-        'I detect ', K, 
-        ' task based on the design matrix, but the length of beta_names is ', 
+        'I detect ', K,
+        ' task based on the design matrix, but the length of beta_names is ',
         length(beta_names), '.  Please fix beta_names.'
       ))
     }
@@ -152,7 +152,7 @@ BayesGLM <- function(
       mesh$idx$loc <- mesh$idx$loc[mask2]
     }
     #apply (possibly updated) mask to data
-    for (ss in 1:n_sess) { 
+    for (ss in 1:n_sess) {
       data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2==TRUE,drop=FALSE]
     }
   }
@@ -217,7 +217,7 @@ BayesGLM <- function(
     AR_resid_var <- array(dim = c(V,n_sess))
 
     #estimate prewhitening parameters for each session
-    for (s in 1:n_sess) {
+    for (ss in 1:n_sess) {
       resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design)
       AR_est <- pw_estimate(resids, ar_order)
       AR_coeffs[,,ss] <- AR_est$phi
@@ -239,6 +239,7 @@ BayesGLM <- function(
     }
   }
 
+  browser()
   # [TO DO]: allow different `ntime`
   ntime <- ntime[1]
 
