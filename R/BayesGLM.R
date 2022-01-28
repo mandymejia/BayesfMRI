@@ -384,7 +384,7 @@ BayesGLM <- function(
     cat('\n .... estimating model with INLA')
     check_INLA(require_PARDISO=FALSE)
 
-    INLA::inla(
+    INLA_result <- INLA::inla(
       formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
       verbose = verbose, keep = FALSE, num.threads = num.threads,
       control.inla = list(strategy = "gaussian", int.strategy = "eb"),
