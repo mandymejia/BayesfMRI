@@ -166,7 +166,7 @@ BayesGLM <- function(
       data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
     }
   }
-  if (do_Bayesian) spde <- INLA::inla.spde2.matern(mesh)
+  if (do_Bayesian) {spde <- INLA::inla.spde2.matern(mesh)}
 
   V <- sum(mask2)
   V_all <- length(mask2)
