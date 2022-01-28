@@ -22,7 +22,7 @@ Depends:
     R (>= 3.6.0)
 Encoding: UTF-8
 Imports: 
-    ciftiTools,
+    ciftiTools (>= 0.8.0),
     excursions,
     foreach,
     MASS,
