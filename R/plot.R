@@ -227,7 +227,7 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 # x <- matrix(rnorm(9),3,3)
 # melt_mat(x)
 melt_mat <- function(x) {
-  if (!inherits("matrix", x)) stop("x must have the matrix class.")
+  if (!inherits(x, "matrix")) stop("x must have the matrix class.")
   out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
   return(out)
 }
