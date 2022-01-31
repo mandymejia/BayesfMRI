@@ -86,6 +86,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
       SIMPLIFY = F
     )
   Q_new <- Matrix::bdiag(Q_k)
+  # n_sess_em <- max(model_data$repl1, na.rm = TRUE)
   n_sess_em <- nrow(A) / nrow(Q_new)
   if(n_sess_em > 1) Q_new <- Matrix::bdiag(lapply(seq(n_sess_em),function(x) Q_new))
   Sig_inv <- Q_new + A/theta[sigma2_ind]
@@ -100,7 +101,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
 
   ## The excursions function is also supposed to work with the spam matrices
 
-  mu <- INLA::inla.qsolve(Q = Sig_inv,B = m, method = "solve") # This would be replaced by the above code
+  # mu <- INLA::inla.qsolve(Q = Sig_inv,B = m, method = "solve") # This would be replaced by the above code
+  mu <- Matrix::solve(Sig_inv, m)
   X_Psi_mu <- model_data$X%*%Psi%*%mu
   cp_X_Psi_mu <- Matrix::crossprod(X_Psi_mu)
   # >> Update sigma2 ----
@@ -114,7 +116,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
   if(Ns > 0) {
     Vh <- matrix(sample(x = c(-1,1), size = Ns * nrow(A), replace = TRUE),
                  nrow(A), Ns)
-    P <- INLA::inla.qsolve(Sig_inv, Vh)
+    # P <- INLA::inla.qsolve(Sig_inv, Vh)
+    P <- Matrix::solve(Sig_inv, Vh)
     traceAEww <-
       as.numeric(Matrix::crossprod(mu,A %*% mu)) +
       TrSigB(P,A,Vh)
@@ -139,7 +142,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    mu,
                    Vh
     ) {
-      # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
+      source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
       big_K <- length(kappa2_inds)
       big_N <- spde$n.spde
       n_sess_em <- length(mu) / (big_K * big_N)
@@ -254,9 +257,9 @@ GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL, 
 #' @return The SPDE prior matrix
 #' @keywords internal
 spde_Q_phi <- function(kappa2, phi, spde) {
-  Cmat <- spde$param.inla$M0
-  Gmat <- (spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))/2
-  GtCinvG <- spde$param.inla$M2
+  Cmat <- spde$M0
+  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
+  GtCinvG <- spde$M2
   Q <- (kappa2*Cmat + 2*Gmat + GtCinvG/kappa2) / (4*pi*phi)
   return(Q)
 }
@@ -269,9 +272,9 @@ spde_Q_phi <- function(kappa2, phi, spde) {
 #' @return a dgCMatrix
 #' @keywords internal
 Q_prime <- function(kappa2, spde) {
-  Cmat <- spde$param.inla$M0
-  Gmat <- (spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))/2
-  GtCinvG <- spde$param.inla$M2
+  Cmat <- spde$M0
+  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
+  GtCinvG <- spde$M2
   Q <- (kappa2*Cmat + 2*Gmat + GtCinvG/kappa2)
   return(Q)
 }
@@ -340,10 +343,10 @@ neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
 #' @return a scalar
 #' @keywords internal
 TrQEww <- function(kappa2, spde, P, mu, Vh){
-  Cmat <- spde$param.inla$M0
-  Gmat <- (spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))/2
+  Cmat <- spde$M0
+  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
   # Gmat <- (spde$param.inla$M1 + spam::t(spde$param.inla$M1))/2
-  GtCinvG <- spde$param.inla$M2
+  GtCinvG <- spde$M2
   n_spde <- spde$mesh$n
   if(is.null(n_spde)) n_spde <- spde$n.spde
   n_sess_em <- nrow(P) / n_spde

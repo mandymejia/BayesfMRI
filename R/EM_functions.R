@@ -790,7 +790,8 @@ BayesGLMEM_vol3D <-
 
     Psi_k <- spde_grp$Amat
     Psi <- Matrix::bdiag(rep(list(Psi_k),K))
-    if(n_sess > 1) Psi <- Reduce(rbind,rep(list(Psi),n_sess))
+    # if(n_sess > 1) Psi <- Reduce(rbind,rep(list(Psi),n_sess))
+    if(n_sess > 1) Psi <- Matrix::bdiag(rep(list(Psi),n_sess))
     # Psi <- Matrix::Diagonal(n = ncol(model_data$X))
     A <- Matrix::crossprod(model_data$X%*%Psi)
 
@@ -831,6 +832,7 @@ BayesGLMEM_vol3D <-
       if(use_SQUAREM) {
         cl <- parallel::makeCluster(min(num.threads,K))
         kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, tol, verbose) {
+          source("~/github/BayesfMRI/R/EM_utils.R")
           init_output <-
             SQUAREM::squarem(
               par = c(kappa2, phi),

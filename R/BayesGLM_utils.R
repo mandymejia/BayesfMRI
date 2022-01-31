@@ -130,7 +130,7 @@ make_data_list <- function(y, X, betas, repls){
   model_data <- vector('list', length=numel)
   names(model_data) <- c('y', 'X', names(betas), names(repls))
   model_data$y <- y
-  model_data$X <- bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
+  model_data$X <- Matrix::bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
 
   nbeta <- length(betas)
   for(i in 1:nbeta){
