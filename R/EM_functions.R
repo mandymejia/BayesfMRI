@@ -832,7 +832,7 @@ BayesGLMEM_vol3D <-
       if(use_SQUAREM) {
         cl <- parallel::makeCluster(min(num.threads,K))
         kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, tol, verbose) {
-          source("~/github/BayesfMRI/R/EM_utils.R")
+          # source("~/github/BayesfMRI/R/EM_utils.R")
           init_output <-
             SQUAREM::squarem(
               par = c(kappa2, phi),
