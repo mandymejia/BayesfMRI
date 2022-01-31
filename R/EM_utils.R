@@ -139,7 +139,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, num.threads 
                    mu,
                    Vh
     ) {
-      source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
+      # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
       big_K <- length(kappa2_inds)
       big_N <- spde$n.spde
       n_sess_em <- length(mu) / (big_K * big_N)
