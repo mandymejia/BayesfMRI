@@ -994,10 +994,11 @@ BayesGLMEM_vol3D <-
     } else {
       Q <- Matrix::bdiag(Qk_new)
     }
-    # if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
+    if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
     Sig_inv <- Q + A/sigma2_new
     m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
-    mu <- INLA::inla.qsolve(Sig_inv,m)
+    # mu <- INLA::inla.qsolve(Sig_inv,m)
+    mu <- Matrix::solve(Sig_inv, m)
 
     beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K*n_sess)
     colnames(beta_estimates) <- rep(beta_names, n_sess)
