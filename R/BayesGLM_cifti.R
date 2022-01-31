@@ -125,8 +125,21 @@ BayesGLM_cifti <- function(
   trim_INLA = TRUE){
 
   # Check args ------------------------------------------
-  # allows for list input
-  cifti_fname <- as.character(cifti_fname)
+  is_xifti <- FALSE
+  if (is.character(cifti_fname)) {
+    NULL
+  } else if (is.xifti(cifti_fname, messages=FALSE)) {
+    is_xifti <- TRUE
+    cifti_fname <- list(cifti_fname)
+  } else if (is.list(cifti_fname)) {
+    if (all(vapply(cifti_fname, is.character, FALSE)) && all(vapply(cifti_fname, length, 0)==1)) {
+      cifti_fname <- as.character(cifti_fname)
+    } else if (all(vapply(cifti_fname, is.xifti, messages=FALSE, FALSE))) {
+      is_xifti <- TRUE
+    }
+  } else {
+    stop('`cifti_fname` should be a character vector or list of `"xifti"` objects.')
+  }
 
   # Rename and coerce to logical
   do_Bayesian <- as.logical(Bayes)
@@ -233,10 +246,15 @@ BayesGLM_cifti <- function(
   for (ss in 1:n_sess) {
     if(n_sess > 1) cat(paste0(' .. reading in data for session ', ss,'\n'))
 
-    xii_ss <- read_cifti(cifti_fname[ss],
-      brainstructures=brainstructures,
-      resamp_res=resamp_res
-    )
+    if (is_xifti) {
+      xii_ss <- cifti_fname[[ss]]
+    } else {
+      xii_ss <- read_cifti(
+        cifti_fname[ss], brainstructures=brainstructures,
+        resamp_res=resamp_res
+      )
+    }
+
     mwallL_ss <- xii_ss$meta$cortex$medial_wall_mask$left
     mwallR_ss <- xii_ss$meta$cortex$medial_wall_mask$right
     ntime[ss] <- ncol(xii_ss)
@@ -278,7 +296,7 @@ BayesGLM_cifti <- function(
     }
   }
 
-  ### Check that design matrix names consistent across sessions
+  ### Check that design matrix names are consistent across sessions
   if (n_sess > 1) {
     tmp <- sapply(design, colnames)
     if(length(beta_names) == 1) {

@@ -350,6 +350,7 @@ BayesGLM <- function(
 
     result_classical[[s]] <- list(estimates = beta_hat_s,
                                   SE_estimates = SE_beta_hat_s,
+                                  resids = resid_s,
                                   DOF = DOF_true,
                                   mask = mask2)
   }
