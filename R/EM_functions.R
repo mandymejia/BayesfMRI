@@ -992,7 +992,7 @@ BayesGLMEM_vol3D <-
     } else {
       Q <- Matrix::bdiag(Qk_new)
     }
-    # if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
+    if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
     Sig_inv <- Q + A/sigma2_new
     m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
     mu <- INLA::inla.qsolve(Sig_inv,m)
