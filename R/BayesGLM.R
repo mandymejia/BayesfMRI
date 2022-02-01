@@ -90,7 +90,7 @@ BayesGLM <- function(
   ar_smooth <- as.numeric(ar_smooth)
 
   #we need a mesh if doing spatial Bayesian modeling OR any AR smoothing
-  need_mesh <- (do_Bayesian || ar_smooth > 0)
+  need_mesh <- (do_Bayesian || (do_pw && ar_smooth > 0))
   #check that only mesh OR vertices+faces supplied
   if (need_mesh) {
     has_mesh <- !is.null(mesh)
@@ -175,28 +175,21 @@ BayesGLM <- function(
   #collect data and design matrices
   design <- vector('list', length=n_sess)
   for(s in 1:n_sess){
-
-    #extract and mask BOLD data for current session
-    BOLD_s <- data[[s]]$BOLD
-
     #scale data to represent % signal change (or just center if scale=FALSE)
-    BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD)
+    data[[s]]$BOLD <- scale_timeseries(t(data[[s]]$BOLD), scale=scale_BOLD)
     if (scale_design) {
-      design_s <- scale_design_mat(data[[s]]$design)
+      data[[s]]$design <- scale_design_mat(data[[s]]$design)
     } else {
-      design_s <- scale(data[[s]]$design, scale = FALSE)
+      data[[s]]$design <- scale(data[[s]]$design, scale = FALSE)
     }
-    design[[s]] <- design_s #after scaling but before nuisance regression
+    design[[s]] <- data[[s]]$design #after scaling but before nuisance regression
 
     #regress nuisance parameters from BOLD data and design matrix
     if ('nuisance' %in% names(data[[s]])) {
-      nuisance_s <- data[[s]]$nuisance
-      data[[s]]$BOLD <- nuisance_regression(BOLD_s, nuisance_s)
-      data[[s]]$design <- nuisance_regression(design_s, nuisance_s)
+      nuisance_s <- scale(data[[s]]$nuisance, scale=FALSE)
+      data[[s]]$BOLD <- nuisance_regression(data[[s]]$BOLD, nuisance_s)
+      data[[s]]$design <- nuisance_regression(data[[s]]$design, nuisance_s)
       data[[s]]$nuisance <- NULL
-    } else {
-      data[[s]]$BOLD <- BOLD_s
-      data[[s]]$design <- design_s
     }
   }
 
@@ -304,6 +297,8 @@ BayesGLM <- function(
     }, simplify = F)
   }
 
+  print("updated.")
+
   ## ESTIMATE CLASSICAL GLM -----
 
   #organize data
@@ -334,7 +329,7 @@ BayesGLM <- function(
     coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
     coef_s_mat <- matrix(coef_s, nrow = V, ncol = K)
     beta_hat_s[mask2==TRUE,] <- coef_s_mat
-    resid_s <- matrix(y_reg - X_reg %*% coef_s, nrow = V)
+    resid_s <- t(matrix(y_reg - X_reg %*% coef_s, nrow = ntime))
 
     # ESTIMATE STANDARD ERRORS OF ESTIIMATES
     #compute residual SD
@@ -355,7 +350,6 @@ BayesGLM <- function(
                                   mask = mask2)
   }
   names(result_classical) <- classical_session_names
-
 
   ## ESTIMATE BAYESIAN GLM -----
 

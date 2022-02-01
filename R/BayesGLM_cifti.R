@@ -141,6 +141,10 @@ BayesGLM_cifti <- function(
     stop('`cifti_fname` should be a character vector or list of `"xifti"` objects.')
   }
 
+  # [TO DO]: If input is a `"xifti"`, infer `resamp_res`
+  # or maybe just add surfaces to the `"xifti"` using `add_surf` and that will handle the
+  # difference in resolution.
+
   # Rename and coerce to logical
   do_Bayesian <- as.logical(Bayes)
   if (do_Bayesian) { check_INLA(require_PARDISO=TRUE) }
