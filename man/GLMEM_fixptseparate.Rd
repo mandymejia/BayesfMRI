@@ -4,16 +4,7 @@
 \alias{GLMEM_fixptseparate}
 \title{Fixed point function for the joint BayesGLMEM update algorithm}
 \usage{
-GLMEM_fixptseparate(
-  theta,
-  spde,
-  model_data,
-  Psi,
-  K,
-  A,
-  num.threads = 1,
-  Ns = 50
-)
+GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
 }
 \arguments{
 \item{theta}{a list containing kappa2, phi, and sigma2, in that order}
@@ -28,8 +19,7 @@ GLMEM_fixptseparate(
 
 \item{A}{The value for Matrix::crossprod(X\%*\%Psi) (saves time on computation)}
 
-\item{num.threads}{(optional) allows users to specify the number of threads used
-to work in parallel across the different tasks}
+\item{cl}{parallelization cluster}
 
 \item{Ns}{The number of samples used to approximate traces using the Hutchinson
 estimator. If set to 0, the exact trace is found.}

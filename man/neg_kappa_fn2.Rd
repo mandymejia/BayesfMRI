@@ -13,7 +13,7 @@ neg_kappa_fn2(kappa2, spde, phi, P, mu, Vh)
 
 \item{phi}{scalar}
 
-\item{P}{Matrix of dimension nk by N_s found by \code{inla.qsolve(Sig_inv,Vh)}}
+\item{P}{Matrix of dimension nk by N_s found by \code{solve(Sig_inv,Vh)}}
 
 \item{mu}{dgeMatrix}
 }

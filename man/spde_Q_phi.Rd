@@ -11,7 +11,7 @@ spde_Q_phi(kappa2, phi, spde)
 
 \item{phi}{A scalar}
 
-\item{spde}{An \code{inla.spde2} object containing the information about the
+\item{spde}{An object containing the information about the
 mesh structure for the SPDE prior}
 }
 \value{
