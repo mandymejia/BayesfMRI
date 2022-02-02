@@ -351,19 +351,19 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
   # Print counts of locations removed, for each reason.
   if (verbose) {
     warn_part1 <- if (any(!mask_na)) { "additional locations" } else { "locations" }
-    warn_part2 <- if (length(data) > 1) { "in at least one scan.\n" } else { ".\n" }
+    warn_part2 <- if (length(data) > 1) { " in at least one scan.\n" } else { ".\n" }
     if (any(!mask_na)) {
-      cat("\t", sum(!mask_na), "locations removed due to NA or NaN values", warn_part2)
+      cat("\t", sum(!mask_na), paste0("locations removed due to NA or NaN values", warn_part2))
     }
     # Do not include NA locations in count.
     mask_mean2 <- mask_mean | (!mask_na)
     if (any(!mask_mean2)) {
-      cat("\t", sum(!mask_mean2), warn_part1, "removed due to low mean", warn_part2)
+      cat("\t", sum(!mask_mean2), warn_part1, paste0("removed due to low mean", warn_part2))
     }
     # Do not include NA or low-mean locations in count.
     mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
     if (any(!mask_var2)) {
-      cat("\t", sum(!mask_var2), warn_part1, "removed due to low variance", warn_part2)
+      cat("\t", sum(!mask_var2), warn_part1, paste0("removed due to low variance", warn_part2))
     }
   }
 
