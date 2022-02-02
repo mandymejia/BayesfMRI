@@ -149,6 +149,13 @@ BayesGLM_cifti <- function(
   do_Bayesian <- as.logical(Bayes)
   if (do_Bayesian) { check_INLA(require_PARDISO=TRUE) }
 
+  # Check prewhitening arguments.
+  if (is.null(ar_order)) ar_order <- 0
+  ar_order <- as.numeric(ar_order)
+  do_pw <- (ar_order > 0)
+  if (is.null(ar_smooth)) ar_smooth <- 0
+  ar_smooth <- as.numeric(ar_smooth)
+
   avail_cores <- parallel::detectCores()
   num.threads <- min(num.threads, avail_cores)
   # if(avail_cores < 2) num.threads <- 1
@@ -164,23 +171,32 @@ BayesGLM_cifti <- function(
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
 
+  need_mesh <- (do_Bayesian || (do_pw && ar_smooth > 0))
+
   # Surfaces ---------------------------------------
   # if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   # if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
   surf_list <- list(left=NULL, right=NULL)
-  if (do_left) {
-    if (is.null(surfL_fname)) {
-      cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
-      surfL_fname <- ciftiTools.files()$surf["left"]
+  if (need_mesh) {
+    if (do_left) {
+      if (is.null(surfL_fname)) {
+        cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
+        surfL_fname <- ciftiTools.files()$surf["left"]
+      }
+      surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
     }
-    surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
-  }
-  if (do_right) {
-    if (is.null(surfR_fname)) {
-      cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
-      surfR_fname <- ciftiTools.files()$surf["right"]
+    if (do_right) {
+      if (is.null(surfR_fname)) {
+        cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
+        surfR_fname <- ciftiTools.files()$surf["right"]
+      }
+      surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
     }
-    surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
+  } else {
+    surf_list <- list(
+      left = list(vertices=NULL, faces=NULL),
+      right = list(vertices=NULL, faces=NULL)
+    )
   }
 
   # Sessions ---------------------------------------
@@ -289,7 +305,7 @@ BayesGLM_cifti <- function(
   }
 
   BOLD_list <- BOLD_list[!vapply(BOLD_list, is.null, FALSE)]
-  surf_list <- surf_list[!vapply(surf_list, is.null, FALSE)]
+  if (need_mesh) { surf_list <- surf_list[!vapply(surf_list, is.null, FALSE)] }
 
   # Design and nuisance matrices -----------------------------------------------
   if (is.null(design)) {
