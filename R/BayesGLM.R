@@ -297,8 +297,6 @@ BayesGLM <- function(
     }, simplify = F)
   }
 
-  print("updated.")
-
   ## ESTIMATE CLASSICAL GLM -----
 
   #organize data
