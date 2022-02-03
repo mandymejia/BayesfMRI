@@ -85,6 +85,8 @@
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param keep FALSE
+#' @param twostage Not used
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -113,7 +115,7 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE,
                      keep = FALSE,
-                     twostage = FALSE)
+                     twostage=FALSE)
 {
   GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
 
@@ -210,6 +212,8 @@ BayesGLM_cifti <- function(cifti_fname,
   if(is.null(design)) {
     make_design <- TRUE
     design <- vector('list', length=n_sess)
+  } else {
+    make_design <- FALSE
   }
 
   for(ss in 1:n_sess){
@@ -638,6 +642,8 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param keep FALSE
+#' @param twostage Not used
 #'
 #' @return A list containing...
 #'
@@ -859,6 +865,7 @@ BayesGLM <- function(
   hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
   formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+  # formula_vec <- paste0('f(',beta_names, ', model = "spde", replicate = ', repl_names, hyper_vec, ')')
   formula_vec <- c('y ~ -1', formula_vec)
   formula_str <- paste(formula_vec, collapse=' + ')
   formula <- as.formula(formula_str, env = globalenv())

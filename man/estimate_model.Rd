@@ -14,7 +14,9 @@ estimate_model(
   int.strategy = "eb",
   verbose = FALSE,
   contrasts = NULL,
-  lincomb = NULL
+  lincomb = NULL,
+  keep = FALSE,
+  twostage = FALSE
 )
 }
 \arguments{
@@ -38,6 +40,10 @@ for model estimation. Default: \code{4}.}
 \item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
 
 \item{lincomb}{A linear combinations object created with \code{inla.make.lincomb}}
+
+\item{keep}{FALSE}
+
+\item{twostage}{Not used}
 }
 \value{
 Results from INLA

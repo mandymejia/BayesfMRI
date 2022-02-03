@@ -47,6 +47,8 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
+#' @param keep FALSE
+#' @param twostage Not used
 #'
 #' @return Results from INLA
 #'
@@ -70,8 +72,8 @@ estimate_model <- function(formula,
                  verbose = verbose, keep = keep, num.threads = num.threads,
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb,
-                 twostage = twostage) #required for excursions
+                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) 
+                 # twostage=twostage #required for excursions
   return(result)
 }
 
