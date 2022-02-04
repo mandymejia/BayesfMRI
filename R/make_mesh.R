@@ -44,35 +44,8 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
 #' @return a mesh object with fewer vertices than the original input mesh
 #' @export
 submesh <- function(mask, mesh) {
-
-  # excursions::submesh.mesh
-  # > submesh.mesh.tri(outlinetri.on.mesh(z, mesh), mesh)
-  # outline.tri.on.mesh
-  # > t.count <- rowSums(matrix((z >= 0.5)[mesh$graph$tv], nrow(mesh$graph$tv),
-  # >                           3))
-  # > if (complement) {
-  # >   t.keep <- which(t.count < 3)
-  # > }
-  # > else {
-  # >   t.keep <- which(t.count == 3)
-  # > }
-  # > t.keep
-  t.count <- Matrix::rowSums(matrix((mask >= 0.5)[mesh$graph$tv], nrow(mesh$graph$tv),
-                            3))
+  t.count <- Matrix::rowSums(matrix((mask >= 0.5)[mesh$graph$tv], nrow(mesh$graph$tv),3))
   tri <- which(t.count == 3)
-  # submesh.mesh.tri
-  # > tv <- mesh$graph$tv[tri, , drop = FALSE]
-  # > v <- sort(unique(as.vector(tv)))
-  # > idx <- rep(as.integer(NA), nrow(mesh$loc))
-  # > idx[v] <- seq_len(length(v))
-  # > tv <- matrix(idx[tv], nrow(tv), 3)
-  # > loc <- mesh$loc[v, , drop = FALSE]
-  # > mesh <- INLA::inla.mesh.create(loc = loc, tv = tv, refine = FALSE)
-  # > idx <- rep(as.integer(NA), length(idx))
-  # > idx[v] <- mesh$idx$loc
-  # > mesh$idx$loc <- idx
-  # > mesh
-
   tv <- mesh$graph$tv[tri, , drop = FALSE]
   v <- sort(unique(as.vector(tv)))
   idx <- rep(as.integer(NA), nrow(mesh$loc))
