@@ -114,7 +114,8 @@ BayesGLMEM <- function(data,
     message('No value supplied for `outfile`, which is required for post-hoc group modeling.')
   }
 
-  if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
+  if(is.null(mesh)) mesh <- make_mesh(vertices, faces,use_INLA = FALSE)
+  # if(is.null(mesh)) mesh_new <- galerkin_db(faces, vertices, surface = TRUE)
 
   #ID any zero-variance voxels and remove from analysis
   zero_var <- sapply(data, function(x){
@@ -137,7 +138,8 @@ BayesGLMEM <- function(data,
 
     if(!is.null(mask) & sum(mask) != V) {
       mask <- as.logical(mask)
-      mesh <- excursions::submesh.mesh(mask, mesh)
+      # mesh <- excursions::submesh.mesh(mask, mesh)
+      mesh <- submesh(mask, mesh)
       mesh$idx$loc <- mesh$idx$loc[!is.na(mesh$idx$loc)]
       for(s in 1:n_sess){
         data[[s]]$BOLD <- data[[s]]$BOLD[,mask]
@@ -150,7 +152,9 @@ BayesGLMEM <- function(data,
     in_mask <- which(mask == 1, arr.ind = T)
     in_mask <- in_mask[,2:1]
   }
-  spde <- INLA::inla.spde2.matern(mesh)
+  # spde <- INLA::inla.spde2.matern(mesh)
+  spde <- create_spde_surf(mesh)
+  spde <- spde$spde
 
   #collect data and design matrices
   y_all <- c()
@@ -374,7 +378,8 @@ BayesGLMEM <- function(data,
   if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
   Sig_inv <- Q + A/sigma2_new
   m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
-  mu <- INLA::inla.qsolve(Sig_inv,m)
+  # mu <- INLA::inla.qsolve(Sig_inv,m)
+  mu <- Matrix::solve(Sig_inv, m)
   # We don't actually need this very expensive function here
   # Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
 

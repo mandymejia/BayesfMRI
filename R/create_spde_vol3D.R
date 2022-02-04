@@ -172,8 +172,8 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
 galerkin_db <- function(FV, P, surface=FALSE){
   d <- ncol(FV)-1
   if(surface){
-    if(ncol(P) != d){P <- t(P)}
-    if(ncol(P) != d+1){stop("Wrong dimension of P")}
+    if(ncol(P) != (d + 1)){P <- t(P)}
+    if(ncol(P) != (d + 1)){stop("Wrong dimension of P")}
   } else {
     if(ncol(P) != d){P <- t(P)}
     if(ncol(P) != d){stop("Wrong dimension of P")}
@@ -183,7 +183,6 @@ galerkin_db <- function(FV, P, surface=FALSE){
   nF <- nrow(FV)
   Gi <- matrix(0, nrow = nF*(d+1), ncol = d+1)
   Gj = Gi; Gz = Gi; Ci = Gi; Cj = Gi; Cz = Gi;
-
 
   for( f in 1:nF){
     dd <- (d+1)*(f-1)+(1:(d+1))
@@ -206,10 +205,10 @@ galerkin_db <- function(FV, P, surface=FALSE){
     }
   }
 
-
-  G <- sparseMatrix(i = as.vector(Gi), j = as.vector(Gj), x = as.vector(Gz), dims = c(nV,nV))
-  Ce <- sparseMatrix(i = as.vector(Ci), j = as.vector(Cj), x = as.vector(Cz), dims = c(nV,nV))
-  C <- diag(colSums(Ce), nrow = nV, ncol = nV)
+  G <- Matrix::sparseMatrix(i = as.vector(Gi), j = as.vector(Gj), x = as.vector(Gz), dims = c(nV,nV))
+  Ce <- Matrix::sparseMatrix(i = as.vector(Ci), j = as.vector(Cj), x = as.vector(Cz), dims = c(nV,nV))
+  # C <- Matrix::diag(Matrix::colSums(Ce), nrow = nV, ncol = nV)
+  C <- Matrix::Diagonal(n = nV, x = Matrix::colSums(Ce))
   return(list(G = G, Ce = Ce, C = C))
 }
 

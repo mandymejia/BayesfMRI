@@ -167,10 +167,10 @@ GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL, 
 #' @return The SPDE prior matrix
 #' @keywords internal
 spde_Q_phi <- function(kappa2, phi, spde) {
-  Cmat <- spde$M0
-  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
-  GtCinvG <- spde$M2
-  Q <- (kappa2*Cmat + 2*Gmat + GtCinvG/kappa2) / (4*pi*phi)
+  # Cmat <- spde$M0
+  # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
+  # GtCinvG <- spde$M2
+  Q <- (kappa2*spde$M0 + (spde$M1 + Matrix::t(spde$M1)) + spde$M2/kappa2) / (4*pi*phi)
   return(Q)
 }
 

@@ -4,7 +4,7 @@
 \alias{galerkin_db}
 \title{Create FEM matrices}
 \usage{
-galerkin_db(FV, P)
+galerkin_db(FV, P, surface = FALSE)
 }
 \arguments{
 \item{FV}{Matrix of faces in triangularization}

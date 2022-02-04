@@ -4,7 +4,7 @@
 \alias{make_mesh}
 \title{Make Mesh}
 \usage{
-make_mesh(vertices, faces)
+make_mesh(vertices, faces, use_INLA = FALSE)
 }
 \arguments{
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
