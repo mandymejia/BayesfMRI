@@ -990,7 +990,7 @@ BayesGLM <- function(
     message('No value supplied for `outfile`, which is required for post-hoc group modeling.')
   }
 
-  if(is.null(mesh)) mesh <- make_mesh(vertices, faces)
+  if(is.null(mesh)) mesh <- make_mesh(vertices, faces, use_INLA = TRUE)
 
   #ID any zero-variance voxels and remove from analysis
   zero_var <- sapply(data, function(x){
