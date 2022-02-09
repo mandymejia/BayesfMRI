@@ -22,9 +22,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// logDetQ
+double logDetQ(double kappa2, Rcpp::List in_list, int n_sess);
+RcppExport SEXP _BayesfMRI_logDetQ(SEXP kappa2SEXP, SEXP in_listSEXP, SEXP n_sessSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type kappa2(kappa2SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type in_list(in_listSEXP);
+    Rcpp::traits::input_parameter< int >::type n_sess(n_sessSEXP);
+    rcpp_result_gen = Rcpp::wrap(logDetQ(kappa2, in_list, n_sess));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_BayesfMRI_timesTwo", (DL_FUNC) &_BayesfMRI_timesTwo, 1},
+    {"_BayesfMRI_logDetQ", (DL_FUNC) &_BayesfMRI_logDetQ, 3},
     {NULL, NULL, 0}
 };
 

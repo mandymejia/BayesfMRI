@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_utils.R
 \name{neg_kappa_fn2}
 \alias{neg_kappa_fn2}
-\title{The negative of the objective function for kappa - Sig_inv}
+\title{The negative of the objective function for kappa without Sig_inv}
 \usage{
 neg_kappa_fn2(kappa2, spde, phi, P, mu, Vh)
 }
@@ -16,11 +16,13 @@ neg_kappa_fn2(kappa2, spde, phi, P, mu, Vh)
 \item{P}{Matrix of dimension nk by N_s found by \code{solve(Sig_inv,Vh)}}
 
 \item{mu}{dgeMatrix}
+
+\item{Vh}{random matrix of -1 and 1 of dim \code{dim(P)}}
 }
 \value{
 a scalar
 }
 \description{
-The negative of the objective function for kappa - Sig_inv
+The negative of the objective function for kappa without Sig_inv
 }
 \keyword{internal}

@@ -70,33 +70,65 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
                    phi_inds,
                    P,
                    mu,
-                   Vh
+                   Vh,
+                   n_sess
     ) {
       # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
       big_K <- length(kappa2_inds)
-      big_N <- spde$n.spde
+      # big_N <- spde$n.spde
+      big_N <- nrow(spde$Cmat)
       n_sess_em <- length(mu) / (big_K * big_N)
       k_inds <- c(sapply(seq(n_sess_em), function(ns) {
         seq( big_N * (big_K * (ns - 1) + k - 1) + 1, big_N * (big_K * (ns - 1) + k))
       }))
       # >> Update kappa2 ----
+      # Move all of this to C
+      prep_optim <-
+        prep_kappa2_optim(
+          spde = spde,
+          mu = mu[k_inds, ],
+          phi = theta[phi_inds][k],
+          P = P[k_inds, ],
+          vh = Vh[k_inds, ]
+        )
+      # rcpp_list <- create_listRcpp(spde = spde)
       optim_output_k <-
         stats::optimize(
-          f = neg_kappa_fn2,
+          f = neg_kappa_fn4,
           spde = spde,
-          phi = theta[phi_inds][k],
-          P = P[k_inds,],
-          mu = mu[k_inds, ],
-          Vh = Vh[k_inds,], # Comment this out if using neg_kappa_fn
+          a_star = prep_optim$a_star,
+          b_star = prep_optim$b_star,
+          n_sess = n_sess,
           lower = 0,
           upper = 50
         )
+      # optim_output_k <-
+      #   stats::optimize(
+      #     f = neg_kappa_fn3,
+      #     spde = spde,
+      #     a_star = prep_optim$a_star,
+      #     b_star = prep_optim$b_star,
+      #     n_sess = n_sess,
+      #     lower = 0,
+      #     upper = 50
+      #   )
+      # optim_output_k <-
+      #   stats::optimize(
+      #     f = neg_kappa_fn2,
+      #     spde = spde,
+      #     phi = theta[phi_inds][k],
+      #     P = P[k_inds,],
+      #     mu = mu[k_inds, ],
+      #     Vh = Vh[k_inds,], # Comment this out if using neg_kappa_fn
+      #     lower = 0,
+      #     upper = 50
+      #   )
       kappa2_new <- optim_output_k$minimum
       # >> Update phi ----
       Tr_QEww <-
         TrQEww(kappa2 = kappa2_new, spde = spde, P = P[k_inds,], mu = mu[k_inds,],Vh = Vh[k_inds,])
       phi_new <-
-        Tr_QEww / (4 * pi * spde$n.spde * n_sess_em)
+        Tr_QEww / (4 * pi * big_N * n_sess_em)
       return(c(kappa2_new, phi_new))
     },
     spde = spde,
@@ -105,7 +137,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
     phi_inds = phi_inds,
     P = P,
     mu = mu,
-    Vh = Vh
+    Vh = Vh,
+    n_sess = n_sess_em
   )
   # parallel::stopCluster(cl)
   return(c(kp[1,],kp[2,],sigma2_new))
@@ -170,7 +203,7 @@ spde_Q_phi <- function(kappa2, phi, spde) {
   # Cmat <- spde$M0
   # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
   # GtCinvG <- spde$M2
-  Q <- (kappa2*spde$M0 + (spde$M1 + Matrix::t(spde$M1)) + spde$M2/kappa2) / (4*pi*phi)
+  Q <- (kappa2*spde$Cmat + 2*Gmat + spde$GtCinvG/kappa2) / (4*pi*phi)
   return(Q)
 }
 
@@ -182,9 +215,11 @@ spde_Q_phi <- function(kappa2, phi, spde) {
 #' @return a dgCMatrix
 #' @keywords internal
 Q_prime <- function(kappa2, spde) {
-  Cmat <- spde$M0
-  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
-  GtCinvG <- spde$M2
+  # Cmat <- spde$M0
+  # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
+  # GtCinvG <- spde$M2
+  Cmat <- Gmat <- GtCinvG <- NULL
+  list2env(spde, envir = environment())
   Q <- (kappa2*Cmat + 2*Gmat + GtCinvG/kappa2)
   return(Q)
 }
@@ -210,13 +245,14 @@ neg_kappa_fn <- function(kappa2, spde, phi, Sigma, mu) {
   return(out)
 }
 
-#' The negative of the objective function for kappa - Sig_inv
+#' The negative of the objective function for kappa without Sig_inv
 #'
 #' @param kappa2 scalar
 #' @param spde an spde object
 #' @param phi scalar
 #' @param P Matrix of dimension nk by N_s found by \code{solve(Sig_inv,Vh)}
 #' @param mu dgeMatrix
+#' @param Vh random matrix of -1 and 1 of dim \code{dim(P)}
 #' @importFrom Matrix diag chol bdiag
 #'
 #' @return a scalar
@@ -227,6 +263,7 @@ neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
   if(is.null(n_spde)) n_spde <- spde$n.spde
   KK <- nrow(P) / n_spde
   if(nrow(P) != n_spde & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  # In RcppEigen, there are two functions: symbolic Cholesky (analyzePattern) and the numeric cholesky (factorize)
   log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T)))) # compare direct determinant here
   trace_QEww <-
     TrQEww(
@@ -237,6 +274,91 @@ neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
       Vh = Vh
     )
   out <- trace_QEww / (4*pi*phi) - log_det_Q
+  return(out)
+}
+
+#' Streamlined negative objective function for kappa2 using precompiled values
+#'
+#' @param kappa2 scalar
+#' @param spde an spde object
+#' @param a_star precomputed coefficient (scalar)
+#' @param b_star precomputed coefficient (scalar)
+#' @param n_sess number of sessions (scalar)
+#'
+#' @return scalar output of the negative objective function
+#' @keywords internal
+neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
+  Qt <- Q_prime(kappa2, spde)
+  Rt <- Matrix::chol(Qt, pivot = T)
+  if(n_sess > 1) Rt <- Matrix::bdiag(rep(list(Rt),n_sess))
+  log_det_Q <- sum(2*log(Matrix::diag(Rt)))
+  out <- kappa2*a_star + b_star / kappa2 - log_det_Q
+  return(out)
+}
+
+#' Streamlined negative objective function for kappa2 using precompiled values
+#'
+#' @param kappa2 scalar
+#' @param spde_mats a list of SPDE prior matrices from
+#' @param a_star precomputed coefficient (scalar)
+#' @param b_star precomputed coefficient (scalar)
+#' @param n_sess number of sessions (scalar)
+#'
+#' @return scalar output of the negative objective function
+#' @keywords internal
+neg_kappa_fn4 <- function(kappa2, spde, a_star, b_star, n_sess) {
+  log_det_Q <- logDetQ(kappa2, spde, n_sess)
+  out <- kappa2*a_star + b_star / kappa2 - log_det_Q
+  return(out)
+}
+
+#' Find values for coefficients used in objective function for kappa2
+#'
+#' @param spde an spde object
+#' @param mu the mean
+#' @param phi scale parameter
+#' @param P Matrix of dimension nk by N_s found by \code{solve(Sig_inv,Vh)}
+#' @param vh random matrix of -1 and 1 of dim \code{dim(P)}
+#'
+#' @return a list with two elements, which are precomputed coefficients for the
+#'   optimaization function
+#' @keywords internal
+prep_kappa2_optim <- function(spde, mu, phi, P, vh) {
+  Cmat <- spde$Cmat
+  Gmat <- spde$Gmat
+  GtCinvG <- spde$GtCinvG
+  n_spde <- nrow(Cmat)
+  n_sess_em <- nrow(P) / n_spde
+  if(n_sess_em > 1) {
+    Cmat <- Matrix::bdiag(rep(list(Cmat),n_sess_em))
+    Gmat <- Matrix::bdiag(rep(list(Gmat),n_sess_em))
+    GtCinvG <- Matrix::bdiag(rep(list(GtCinvG),n_sess_em))
+  }
+  a_star <- (Matrix::crossprod(mu,Cmat%*%mu) +
+               sum(Matrix::diag(Matrix::crossprod(P,Cmat%*%vh))) / ncol(vh)) /
+    (4*pi*phi)
+  b_star <- (Matrix::crossprod(mu, GtCinvG %*% mu) +
+               sum(Matrix::diag(Matrix::crossprod(P, GtCinvG %*% vh))) / ncol(vh)) /
+    (4*pi*phi)
+  return(
+    list(a_star = as.numeric(a_star),
+         b_star = as.numeric(b_star))
+  )
+}
+
+#' Function to prepare objects for use in Rcpp functions
+#'
+#' @param spde an spde object
+#'
+#' @return
+#' @keywords internal
+create_listRcpp <- function(spde) {
+  Cmat <- as(spde$M0,"dgCMatrix")
+  Gmat <- as((spde$M1 + Matrix::t(spde$M1)) / 2,"CsparseMatrix")
+  GtCinvG <- as(spde$M2,"CsparseMatrix")
+  out <- list(Cmat = Cmat,
+              Gmat = Gmat,
+              GtCinvG = GtCinvG)
   return(out)
 }
 
@@ -253,11 +375,14 @@ neg_kappa_fn2 <- function(kappa2, spde, phi, P, mu, Vh) {
 #' @return a scalar
 #' @keywords internal
 TrQEww <- function(kappa2, spde, P, mu, Vh){
-  Cmat <- spde$M0
-  Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
-  GtCinvG <- spde$M2
-  n_spde <- spde$mesh$n
-  if(is.null(n_spde)) n_spde <- spde$n.spde
+  # Cmat <- spde$M0
+  # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
+  # GtCinvG <- spde$M2
+  # n_spde <- spde$mesh$n
+  # if(is.null(n_spde)) n_spde <- spde$n.spde
+  Cmat <- Gmat <- GtCinvG <- NULL
+  list2env(spde, envir = environment())
+  n_spde <- nrow(Cmat)
   n_sess_em <- nrow(P) / n_spde
   if(n_sess_em > 1) {
     Cmat <- Matrix::bdiag(rep(list(Cmat),n_sess_em))
@@ -355,11 +480,15 @@ TrQbb <- function(kappa2, beta_hat, spde) {
 #' @keywords internal
 kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
   Qt <- Q_prime(kappa2, spde)
-  n_spde <- spde$mesh$n
-  if(is.null(n_spde)) n_spde <- spde$n.spde
+  # Rt <- Matrix::chol(Qt, pivot = T)
+  n_spde <- nrow(spde$Cmat)
   KK <- length(beta_hat) / n_spde
-  if(length(beta_hat) != n_spde & KK %% 1 == 0) Qt <- Matrix::bdiag(rep(list(Qt),KK))
-  log_det_Q <- sum(2*log(Matrix::diag(Matrix::chol(Qt,pivot = T))))
+  if(length(beta_hat) != n_spde & KK %% 1 == 0) {
+    # Rt <- Matrix::bdiag(rep(list(Rt),KK))
+    Qt <- Matrix::bdiag(rep(list(Qt),KK))
+  }
+  # log_det_Q <- sum(2*log(Matrix::diag(Rt)))
+  log_det_Q <- logDetQ(kappa2,in_list = spde,n_sess = KK)
   # out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
   out <- log_det_Q / 2 - as.numeric(Matrix::crossprod(beta_hat, Qt %*% beta_hat)) / (8*pi*phi)
   return(-out)
@@ -394,8 +523,9 @@ init_objfn <- function(theta, spde, beta_hat) {
 #' @keywords internal
 init_fixpt <- function(theta, spde, beta_hat) {
   kappa2 <- theta[1]
-  n_spde <- spde$mesh$n
-  if(is.null(n_spde)) n_spde <- spde$n.spde
+  # n_spde <- spde$mesh$n
+  # if(is.null(n_spde)) n_spde <- spde$n.spde
+  n_spde <- nrow(spde$Cmat)
   num_sessions <- length(beta_hat) / n_spde
   Qp <- Q_prime(kappa2, spde)
   if(num_sessions > 1) Qp <- Matrix::bdiag(rep(list(Qp), num_sessions))

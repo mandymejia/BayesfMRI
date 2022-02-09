@@ -9,3 +9,13 @@ timesTwo <- function(x) {
     .Call(`_BayesfMRI_timesTwo`, x)
 }
 
+#' Find the log of the determinant of Q
+#'
+#' @param kappa2 a scalar
+#' @param in_list a list with elements Cmat, Gmat, and GtCinvG
+#' @param n_sess the integer number of sessions
+#' @export
+logDetQ <- function(kappa2, in_list, n_sess) {
+    .Call(`_BayesfMRI_logDetQ`, kappa2, in_list, n_sess)
+}
+

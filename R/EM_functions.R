@@ -241,6 +241,7 @@ BayesGLMEM <- function(data,
   res_y <- (model_data$y - model_data$X %*% beta_hat)@x
   sigma2 <- stats::var(res_y)
   beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+  rcpp_spde <- create_listRcpp(spde)
   if(n_sess > 1) {
     task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
     beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
@@ -258,7 +259,7 @@ BayesGLMEM <- function(data,
           control = list(tol = 1e-3, trace = verbose, K = 1)
         )
       return(init_output)
-    },kappa2 = kappa2, phi = phi, spde = spde, verbose = verbose)
+    },kappa2 = kappa2, phi = phi, spde = rcpp_spde, verbose = verbose)
     kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
     theta <- c(t(kappa2_phi),sigma2)
     cat("...... DONE!\n")
@@ -273,6 +274,7 @@ BayesGLMEM <- function(data,
         theta_new <-
           init_fixpt(
             theta = theta,
+            # spde = spde,
             spde = spde,
             beta_hat = bh
           )
@@ -282,7 +284,7 @@ BayesGLMEM <- function(data,
         step <- step+1
       }
       return(theta)
-    }, kappa2 = kappa2, phi = phi, spde = spde)
+    }, kappa2 = kappa2, phi = phi, spde = rcpp_spde)
     theta <- c(t(theta_init), sigma2)
   }
   theta_init <- theta
@@ -300,7 +302,7 @@ BayesGLMEM <- function(data,
         par = theta,
         fixptfn = GLMEM_fixptseparate,
         control = list(tol = tol, trace = verbose),
-        spde = spde,
+        spde = rcpp_spde,
         model_data = model_data,
         Psi = Psi,
         K = K,
@@ -322,7 +324,7 @@ BayesGLMEM <- function(data,
       theta_new <-
         GLMEM_fixptseparate(
           theta = theta,
-          spde = spde,
+          spde = rcpp_spde,
           model_data = model_data,
           Psi = Psi,
           K = K,
