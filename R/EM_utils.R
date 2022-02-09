@@ -203,6 +203,7 @@ spde_Q_phi <- function(kappa2, phi, spde) {
   # Cmat <- spde$M0
   # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
   # GtCinvG <- spde$M2
+  list2env(spde, envir = environment())
   Q <- (kappa2*spde$Cmat + 2*Gmat + spde$GtCinvG/kappa2) / (4*pi*phi)
   return(Q)
 }

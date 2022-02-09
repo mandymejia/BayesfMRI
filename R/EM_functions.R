@@ -375,7 +375,7 @@ BayesGLMEM <- function(data,
   cat(".... EM algorithm complete!\n")
   list2env(em_output, envir = environment())
   Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
-                   MoreArgs = list(spde=spde), SIMPLIFY = F)
+                   MoreArgs = list(spde=rcpp_spde), SIMPLIFY = F)
   Q <- Matrix::bdiag(Qk_new)
   if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
   Sig_inv <- Q + A/sigma2_new
