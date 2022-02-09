@@ -92,6 +92,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
           vh = Vh[k_inds, ]
         )
       # rcpp_list <- create_listRcpp(spde = spde)
+      # kappa2_new <- updateKappa2(phi = theta[phi_inds][k], in_list = spde, n_sess = n_sess_em,a_star = prep_optim$a_star, b_star = prep_optim$b_star, tol=tol)
+
       optim_output_k <-
         stats::optimize(
           f = neg_kappa_fn4,

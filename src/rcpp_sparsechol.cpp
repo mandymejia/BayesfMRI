@@ -7,6 +7,76 @@ using namespace Eigen;
 typedef Eigen::SparseMatrix<double> SpMat; // declares a column-major sparse matrix type of double
 // typedef Eigen::Triplet<double> T;
 
+//' Update the value of kappa2
+//'
+//' @param phi a scalar
+//' @param in_list a list with elements Cmat, Gmat, and GtCinvG
+//' @param n_sess the integer number of sessions
+//' @param a_star pre-computed coefficient
+//' @param b_star pre-computed coefficient
+//' @param tol the numeric tolerance for finding the optimal value of kappa2
+//' @export
+// [[Rcpp::export]]
+double updateKappa2(double phi, Rcpp::List in_list, int n_sess, double a_star, double b_star, double tol) {
+  // Read in the SPDE matrices
+  SpMat Cmat     = SpMat (in_list["Cmat"]);
+  SpMat Gmat     = SpMat (in_list["Gmat"]);
+  SpMat GtCinvG     = SpMat (in_list["GtCinvG"]);
+
+  // Initialize the Q matrix
+  SpMat Q = Cmat + 2 * Gmat + GtCinvG;
+  int p = Q.rows();
+
+  // Find the symbolic Cholesky factorization of Q
+  SimplicialLLT<SpMat> cholQ(Q);
+  cholQ.analyzePattern(Q);
+  SpMat L = cholQ.matrixL();
+  // Initialize objects to find the log determinant of Q
+  VectorXd diagL(p);
+  VectorXd lnDiagL(p);
+  // Grab diagonals from the Cholesky decomposition and take their log
+  for (int i = 0; i < p; ++i) {
+    if(L.coeff(i,i) != 0) diagL(i) = L.coeff(i,i);
+    lnDiagL(i) = log(diagL(i));
+  }
+  // Find the log of the determinant of Q
+  double lDQ = n_sess * 2 * lnDiagL.sum();
+
+  // Evaluate objective function on a grid from 0 to 50
+  int length_grid = 50 / tol;
+  // Initialize the k_out and objFn values
+  double objFn_old = a_star + b_star - lDQ;
+  double objFn = 0;
+  double k_star = 0;
+  double k_out = 0;
+  // Work through the grid and find the value of kappa2 that minimizes the objFn
+  for(int l = 0; l < length_grid; ++l) {
+    // Increment k_star
+    k_star += tol;
+    // Calculate Q
+    Q = k_star * Cmat + 2 * Gmat + GtCinvG / k_star;
+    // Use the symbolic Cholesky to update the Cholesky of Q
+    cholQ.factorize(Q);
+    // Take the lower triangular Cholesky matrix
+    L = cholQ.matrixL();
+    // Grab diagonals from the Cholesky decomposition and take their log
+    for (int i = 0; i < p; ++i) {
+      if(L.coeff(i,i) != 0) diagL(i) = L.coeff(i,i);
+      lnDiagL(i) = log(diagL(i));
+    }
+    // Sum the logged values, then multiply by 2 and the number of sessions
+    lDQ = n_sess * 2 * lnDiagL.sum();
+    // Find the value of the objective function
+    objFn = k_star * a_star + b_star / k_star - lDQ;
+    // If the objective function is less than any previous value, update k_out
+    if(objFn < objFn_old) {
+      k_out = k_star;
+      objFn_old = objFn;
+    }
+  }
+  return k_out;
+}
+
 //' Find the log of the determinant of Q
 //'
 //' @param kappa2 a scalar
