@@ -34,7 +34,8 @@ Imports:
     sp,
     SQUAREM,
     utils,
-    Rcpp
+    Rcpp,
+    RcppEigen
 Suggests:
     abind,
     dplyr,

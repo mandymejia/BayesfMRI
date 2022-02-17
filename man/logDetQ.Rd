@@ -4,12 +4,14 @@
 \alias{logDetQ}
 \title{Find the log of the determinant of Q}
 \usage{
-logDetQ(kappa2, in_list, n_sess)
+logDetQ(kappa2, phi, spde_list, n_sess)
 }
 \arguments{
 \item{kappa2}{a scalar}
 
-\item{in_list}{a list with elements Cmat, Gmat, and GtCinvG}
+\item{phi}{a scalar}
+
+\item{spde_list}{a list with elements Cmat, Gmat, and GtCinvG}
 
 \item{n_sess}{the integer number of sessions}
 }

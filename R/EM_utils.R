@@ -104,16 +104,16 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
           lower = 0,
           upper = 50
         )
-      # optim_output_k <-
-      #   stats::optimize(
-      #     f = neg_kappa_fn3,
-      #     spde = spde,
-      #     a_star = prep_optim$a_star,
-      #     b_star = prep_optim$b_star,
-      #     n_sess = n_sess,
-      #     lower = 0,
-      #     upper = 50
-      #   )
+      optim_output_k <-
+        stats::optimize(
+          f = neg_kappa_fn3,
+          spde = spde,
+          a_star = prep_optim$a_star,
+          b_star = prep_optim$b_star,
+          n_sess = n_sess,
+          lower = 0,
+          upper = 50
+        )
       # optim_output_k <-
       #   stats::optimize(
       #     f = neg_kappa_fn2,
@@ -207,6 +207,27 @@ spde_Q_phi <- function(kappa2, phi, spde) {
   # GtCinvG <- spde$M2
   list2env(spde, envir = environment())
   Q <- (kappa2*spde$Cmat + 2*Gmat + spde$GtCinvG/kappa2) / (4*pi*phi)
+  return(Q)
+}
+
+#' Make the full SPDE precision based on theta, the spde, and the number of sessions
+#'
+#' @param theta the hyperparameter theta vector of length K * 2 + 1, where the
+#'   first K elements are the kappas, the next K elements are the phis, and the
+#'   last element (unused here) corresponds to sigma2
+#' @param spde a list containing three spde elements: Cmat, Gmat, and GtCinvG
+#' @param n_sess The integer number of sessions
+#'
+#' @return
+#' @keywords internal
+make_Q <- function(theta, spde, n_sess) {
+  list2env(spde, envir = environment())
+  K <- (length(theta) - 1) / 2
+  Q_k <- sapply(seq(K), function(k) {
+    out <- (theta[k]*spde$Cmat + 2*Gmat + spde$GtCinvG/theta[k]) / (4*pi*theta[k + K])
+  }, simplify = F)
+  Q <- Matrix::bdiag(Q_k)
+  if(n_sess > 1) Q <- Matrix::bdiag(rep(list(Q),n_sess))
   return(Q)
 }
 
@@ -310,8 +331,8 @@ neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' @return scalar output of the negative objective function
 #' @keywords internal
 neg_kappa_fn4 <- function(kappa2, spde, a_star, b_star, n_sess) {
-  log_det_Q <- logDetQ(kappa2, spde, n_sess)
-  out <- kappa2*a_star + b_star / kappa2 - log_det_Q
+  log_det_Qt <- logDetQt(kappa2, spde, n_sess)
+  out <- kappa2*a_star + b_star / kappa2 - log_det_Qt
   return(out)
 }
 
@@ -491,7 +512,7 @@ kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
     Qt <- Matrix::bdiag(rep(list(Qt),KK))
   }
   # log_det_Q <- sum(2*log(Matrix::diag(Rt)))
-  log_det_Q <- logDetQ(kappa2,in_list = spde,n_sess = KK)
+  log_det_Q <- logDetQt(kappa2,in_list = spde,n_sess = KK)
   # out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
   out <- log_det_Q / 2 - as.numeric(Matrix::crossprod(beta_hat, Qt %*% beta_hat)) / (8*pi*phi)
   return(-out)

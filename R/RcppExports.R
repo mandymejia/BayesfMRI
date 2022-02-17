@@ -9,13 +9,66 @@ timesTwo <- function(x) {
     .Call(`_BayesfMRI_timesTwo`, x)
 }
 
+#' Update the value of kappa2
+#'
+#' @param phi a scalar
+#' @param in_list a list with elements Cmat, Gmat, and GtCinvG
+#' @param n_sess the integer number of sessions
+#' @param a_star pre-computed coefficient
+#' @param b_star pre-computed coefficient
+#' @param tol the numeric tolerance for finding the optimal value of kappa2
+#' @export
+updateKappa2 <- function(phi, in_list, n_sess, a_star, b_star, tol) {
+    .Call(`_BayesfMRI_updateKappa2`, phi, in_list, n_sess, a_star, b_star, tol)
+}
+
 #' Find the log of the determinant of Q
+#'
+#' @param kappa2 a scalar
+#' @param phi a scalar
+#' @param spde_list a list with elements Cmat, Gmat, and GtCinvG
+#' @param n_sess the integer number of sessions
+#' @export
+logDetQ <- function(kappa2, phi, spde_list, n_sess) {
+    .Call(`_BayesfMRI_logDetQ`, kappa2, phi, spde_list, n_sess)
+}
+
+#' Find the log of the determinant of Q_tilde
 #'
 #' @param kappa2 a scalar
 #' @param in_list a list with elements Cmat, Gmat, and GtCinvG
 #' @param n_sess the integer number of sessions
 #' @export
-logDetQ <- function(kappa2, in_list, n_sess) {
-    .Call(`_BayesfMRI_logDetQ`, kappa2, in_list, n_sess)
+logDetQt <- function(kappa2, in_list, n_sess) {
+    .Call(`_BayesfMRI_logDetQt`, kappa2, in_list, n_sess)
+}
+
+logDetQtLDLT <- function(kappa2, in_list, n_sess) {
+    .Call(`_BayesfMRI_logDetQtLDLT`, kappa2, in_list, n_sess)
+}
+
+initK <- function(kappa2, phi, in_list, w, n_sess) {
+    .Call(`_BayesfMRI_initK`, kappa2, phi, in_list, w, n_sess)
+}
+
+updateK <- function(kappa2, spde, a_star, b_star, n_sess) {
+    .Call(`_BayesfMRI_updateK`, kappa2, spde, a_star, b_star, n_sess)
+}
+
+#' Find the initial values of kappa2 and phi
+#'
+#' @param kappa2 a scalar scale parameter
+#' @param phi a scalar range parameter
+#' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
+#' @param w the beta_hat estimates for a single task
+#' @param n_sess the number of sessions
+#' @param tol the stopping rule tolerance
+#' @export
+initialKP <- function(kappa2, phi, spde, w, n_sess, tol) {
+    .Call(`_BayesfMRI_initialKP`, kappa2, phi, spde, w, n_sess, tol)
+}
+
+findTheta <- function(theta, spde, y, X, QK, Psi, A, Vh) {
+    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Vh)
 }
 

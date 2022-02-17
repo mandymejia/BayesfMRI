@@ -234,59 +234,67 @@ BayesGLMEM <- function(data,
   # theta <- c(kappa2, phi, sigma2)
   # Using values based on the classical GLM
   cat("... FINDING BEST GUESS INITIAL VALUES\n")
-  XTX <- Matrix::crossprod(model_data$X)
-  XTX_inv <- Matrix::solve(XTX)
-  XTy <- Matrix::crossprod(model_data$X,model_data$y)
-  beta_hat <- (XTX_inv %*% XTy)@x
+  # XTX <- Matrix::crossprod(model_data$X)
+  # XTX_inv <- Matrix::solve(XTX)
+  # XTy <- Matrix::crossprod(model_data$X,model_data$y)
+  # beta_hat <- (XTX_inv %*% XTy)@x
+  beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
   res_y <- (model_data$y - model_data$X %*% beta_hat)@x
   sigma2 <- stats::var(res_y)
   beta_hat <- matrix(beta_hat, ncol = K*n_sess)
   rcpp_spde <- create_listRcpp(spde)
+  spde <- rcpp_spde
   if(n_sess > 1) {
     task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
     beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
   }
-  if(use_SQUAREM) {
-    cl <- parallel::makeCluster(min(num.threads,K))
-    kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
-      # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
-      init_output <-
-        SQUAREM::squarem(
-          par = c(kappa2, phi),
-          fixptfn = init_fixpt,
-          spde = spde,
-          beta_hat = bh,
-          control = list(tol = 1e-3, trace = verbose, K = 1)
-        )
-      return(init_output)
-    },kappa2 = kappa2, phi = phi, spde = rcpp_spde, verbose = verbose)
-    kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
-    theta <- c(t(kappa2_phi),sigma2)
-    cat("...... DONE!\n")
-    parallel::stopCluster(cl)
-  }
-  if(!use_SQUAREM) {
-    theta_init <- apply(beta_hat,2,function(bh, kappa2, phi, spde) {
-      step <- 1
-      max_pct_change <- Inf
-      theta <- c(kappa2, phi)
-      while(max_pct_change > tol | step <= 5) {
-        theta_new <-
-          init_fixpt(
-            theta = theta,
-            # spde = spde,
-            spde = spde,
-            beta_hat = bh
-          )
-        theta_pct_change <- 100 * abs((theta_new - theta) / theta)
-        max_pct_change <- max(theta_pct_change)
-        theta <- theta_new
-        step <- step+1
-      }
-      return(theta)
-    }, kappa2 = kappa2, phi = phi, spde = rcpp_spde)
-    theta <- c(t(theta_init), sigma2)
-  }
+  # cl <- parallel::makeCluster(min(num.threads,K))
+  #
+  # kappa2_phi_rcpp <- parallel::parApply(cl,beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-3)
+  # parallel::stopCluster(cl)
+  kappa2_phi_rcpp <- apply(beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-3)
+  theta <- c(t(kappa2_phi_rcpp), sigma2)
+  # if(use_SQUAREM) {
+  #   cl <- parallel::makeCluster(min(num.threads,K))
+  #   kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
+  #     source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
+  #     init_output <-
+  #       SQUAREM::squarem(
+  #         par = c(kappa2, phi),
+  #         fixptfn = init_fixpt,
+  #         spde = spde,
+  #         beta_hat = bh,
+  #         control = list(tol = 1e-3, trace = verbose, K = 1)
+  #       )
+  #     return(init_output)
+  #   },kappa2 = kappa2, phi = phi, spde = rcpp_spde, verbose = verbose)
+  #   kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
+  #   theta <- c(t(kappa2_phi),sigma2)
+  #   cat("...... DONE!\n")
+  #   parallel::stopCluster(cl)
+  # }
+  # if(!use_SQUAREM) {
+  #   theta_init <- apply(beta_hat,2,function(bh, kappa2, phi, spde) {
+  #     step <- 1
+  #     max_pct_change <- Inf
+  #     theta <- c(kappa2, phi)
+  #     while(max_pct_change > tol | step <= 5) {
+  #       theta_new <-
+  #         init_fixpt(
+  #           theta = theta,
+  #           # spde = spde,
+  #           spde = spde,
+  #           beta_hat = bh
+  #         )
+  #       theta_pct_change <- 100 * abs((theta_new - theta) / theta)
+  #       max_pct_change <- max(theta_pct_change)
+  #       theta <- theta_new
+  #       step <- step+1
+  #     }
+  #     return(theta)
+  #   }, kappa2 = kappa2, phi = phi, spde = rcpp_spde)
+  #   theta <- c(t(theta_init), sigma2)
+  # }
   theta_init <- theta
   # > Start EM algorithm ----
   k_idx <- seq(K)
