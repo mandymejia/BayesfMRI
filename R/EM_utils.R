@@ -276,7 +276,7 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
   k2TrCSig <- kappa2 * TrSigB(P,Cmat,Vh)
   twoTrGSig <- 2 * TrSigB(P,Gmat,Vh)
   kneg2GCGSig <- TrSigB(P,GtCinvG,Vh) / kappa2
-  trace_QEww <- as.numeric(k2uCu + kneg2uGCGu + k2TrCSig + twoTrGSig + kneg2GCGSig)
+  trace_QEww <- as.numeric(k2uCu + k2TrCSig + twoTrGSig + two_uGu + kneg2GCGSig + kneg2uGCGu)
   return(trace_QEww)
 }
 
