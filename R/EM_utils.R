@@ -73,7 +73,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
                    Vh,
                    n_sess
     ) {
-      # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
+      source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
+      Rcpp::sourceCpp("src/rcpp_sparsechol.cpp")
       big_K <- length(kappa2_inds)
       # big_N <- spde$n.spde
       big_N <- nrow(spde$Cmat)
@@ -104,16 +105,16 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
           lower = 0,
           upper = 50
         )
-      optim_output_k <-
-        stats::optimize(
-          f = neg_kappa_fn3,
-          spde = spde,
-          a_star = prep_optim$a_star,
-          b_star = prep_optim$b_star,
-          n_sess = n_sess,
-          lower = 0,
-          upper = 50
-        )
+      # optim_output_k <-
+      #   stats::optimize(
+      #     f = neg_kappa_fn3,
+      #     spde = spde,
+      #     a_star = prep_optim$a_star,
+      #     b_star = prep_optim$b_star,
+      #     n_sess = n_sess,
+      #     lower = 0,
+      #     upper = 50
+      #   )
       # optim_output_k <-
       #   stats::optimize(
       #     f = neg_kappa_fn2,
@@ -399,11 +400,6 @@ create_listRcpp <- function(spde) {
 #' @return a scalar
 #' @keywords internal
 TrQEww <- function(kappa2, spde, P, mu, Vh){
-  # Cmat <- spde$M0
-  # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
-  # GtCinvG <- spde$M2
-  # n_spde <- spde$mesh$n
-  # if(is.null(n_spde)) n_spde <- spde$n.spde
   Cmat <- Gmat <- GtCinvG <- NULL
   list2env(spde, envir = environment())
   n_spde <- nrow(Cmat)
@@ -412,20 +408,14 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
     Cmat <- Matrix::bdiag(rep(list(Cmat),n_sess_em))
     Gmat <- Matrix::bdiag(rep(list(Gmat),n_sess_em))
     GtCinvG <- Matrix::bdiag(rep(list(GtCinvG),n_sess_em))
-    # Cmat <- spam::bdiag(rep(list(Cmat),n_sess_em))
-    # Gmat <- spam::bdiag(rep(list(Gmat),n_sess_em))
-    # GtCinvG <- spam::bdiag(rep(list(GtCinvG),n_sess_em))
   }
+  k2TrCSig <- kappa2 * TrSigB(P,Cmat,Vh)
   k2uCu <- kappa2*Matrix::crossprod(mu,Cmat%*%mu)
   two_uGu <- 2*Matrix::crossprod(mu,Gmat)%*%mu # This does not depend on kappa2, but needed for phi
-  kneg2uGCGu <- (1/kappa2)*Matrix::crossprod(mu,GtCinvG%*%mu)
-  # k2uCu <- kappa2*spam::crossprod(mu,Cmat%*%mu)
-  # two_uGu <- 2*spam::crossprod(mu,Gmat)%*%mu # This does not depend on kappa2, but needed for phi
-  # kneg2uGCGu <- (1/kappa2)*spam::crossprod(mu,GtCinvG%*%mu)
-  k2TrCSig <- kappa2 * TrSigB(P,Cmat,Vh)
   twoTrGSig <- 2 * TrSigB(P,Gmat,Vh)
+  kneg2uGCGu <- (1/kappa2)*Matrix::crossprod(mu,GtCinvG%*%mu)
   kneg2GCGSig <- TrSigB(P,GtCinvG,Vh) / kappa2
-  trace_QEww <- as.numeric(k2uCu + kneg2uGCGu + k2TrCSig + twoTrGSig + kneg2GCGSig)
+  trace_QEww <- as.numeric(k2uCu + k2TrCSig + two_uGu + twoTrGSig + kneg2uGCGu + kneg2GCGSig)
   return(trace_QEww)
 }
 
@@ -443,7 +433,6 @@ TrQEww <- function(kappa2, spde, P, mu, Vh){
 TrSigB <- function(P,B,vh) {
   Ns <- ncol(P)
   out <- sum(Matrix::diag(Matrix::crossprod(P,B %*% vh))) / Ns
-  # out <- sum(spam::diag(spam::crossprod(P,B %*% vh))) / Ns
   return(out)
 }
 

@@ -297,88 +297,101 @@ BayesGLMEM <- function(data,
   # }
   theta_init <- theta
   # > Start EM algorithm ----
-  k_idx <- seq(K)
-  p_idx <- seq(K) + K
-  s_idx <- (2*K + 1)
-  max_num.threads <- min(parallel::detectCores() - 1, 25)
-  num.threads <- min(max_num.threads, num.threads)
-  num.threads <- min(K, num.threads)
-  cl <- parallel::makeCluster(num.threads)
-  if(use_SQUAREM) {
-    squareem_output <-
-      SQUAREM::squarem(
-        par = theta,
-        fixptfn = GLMEM_fixptseparate,
-        control = list(tol = tol, trace = verbose),
-        spde = rcpp_spde,
-        model_data = model_data,
-        Psi = Psi,
-        K = K,
-        A = A,
-        cl = cl,
-        Ns = 50
-      )
-    theta_new <- squareem_output$par
-    em_output <- list(
-      theta_new = theta_new,
-      kappa2_new = theta_new[k_idx],
-      phi_new = theta_new[p_idx],
-      sigma2_new = theta_new[s_idx]
+  em_output <-
+    findTheta(
+      theta = theta,
+      spde = spde,
+      y = model_data$y,
+      X = model_data$X,
+      QK = make_Q(theta, spde, n_sess),
+      Psi = as(Psi, "dgCMatrix"),
+      A = as(A, "dgCMatrix"),
+      Vh = Vh,
+      tol = 1e-6
     )
-  } else {
-    step <- 1
-    max_pct_change <- Inf
-    while(max_pct_change > tol | step <= 5) {
-      theta_new <-
-        GLMEM_fixptseparate(
-          theta = theta,
-          spde = rcpp_spde,
-          model_data = model_data,
-          Psi = Psi,
-          K = K,
-          A = A,
-          cl = cl
-        )
-      kappa2_new <- theta_new[k_idx]
-      phi_new <- theta_new[p_idx]
-      sigma2_new <- theta_new[s_idx]
-      sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
-      phi_pct_change <- 100*abs((phi_new - phi) / phi)
-      kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
-      max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
-      if(verbose) {
-        cat(
-          "Step",
-          step,
-          "kappa^2 (%change) =",
-          kappa2_new,
-          "(",
-          kappa2_pct_change,
-          ") phi (%change) =",
-          phi_new,
-          "(",
-          phi_pct_change,
-          ") sigma^2 (%change) =",
-          sigma2_new,
-          "(",
-          sigma2_pct_change,
-          ")",
-          "\n"
-        )
-      }
-      kappa2 <- kappa2_new
-      phi <- phi_new
-      sigma2 <- sigma2_new
-      theta <- theta_new
-      step <- step+1
-    }
-    em_output <- list(
-      theta_new = theta_new,
-      kappa2_new = kappa2_new,
-      phi_new = phi_new,
-      sigma2_new = sigma2_new
-    )
-  }
+  # k_idx <- seq(K)
+  # p_idx <- seq(K) + K
+  # s_idx <- (2*K + 1)
+  # max_num.threads <- min(parallel::detectCores() - 1, 25)
+  # num.threads <- min(max_num.threads, num.threads)
+  # num.threads <- min(K, num.threads)
+  # cl <- parallel::makeCluster(num.threads)
+  # if(use_SQUAREM) {
+  #   squareem_output <-
+  #     SQUAREM::squarem(
+  #       par = theta,
+  #       fixptfn = GLMEM_fixptseparate,
+  #       control = list(tol = tol, trace = verbose),
+  #       spde = rcpp_spde,
+  #       model_data = model_data,
+  #       Psi = Psi,
+  #       K = K,
+  #       A = A,
+  #       cl = cl,
+  #       Ns = 50
+  #     )
+  #   theta_new <- squareem_output$par
+  #   em_output <- list(
+  #     theta_new = theta_new,
+  #     kappa2_new = theta_new[k_idx],
+  #     phi_new = theta_new[p_idx],
+  #     sigma2_new = theta_new[s_idx]
+  #   )
+  # } else {
+  #   step <- 1
+  #   max_pct_change <- Inf
+  #   while(max_pct_change > tol | step <= 5) {
+  #     theta_new <-
+  #       GLMEM_fixptseparate(
+  #         theta = theta,
+  #         spde = rcpp_spde,
+  #         model_data = model_data,
+  #         Psi = Psi,
+  #         K = K,
+  #         A = A,
+  #         cl = cl
+  #       )
+  #     kappa2_new <- theta_new[k_idx]
+  #     phi_new <- theta_new[p_idx]
+  #     sigma2_new <- theta_new[s_idx]
+  #     sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
+  #     phi_pct_change <- 100*abs((phi_new - phi) / phi)
+  #     kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
+  #     max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
+  #     if(verbose) {
+  #       cat(
+  #         "Step",
+  #         step,
+  #         "kappa^2 (%change) =",
+  #         kappa2_new,
+  #         "(",
+  #         kappa2_pct_change,
+  #         ") phi (%change) =",
+  #         phi_new,
+  #         "(",
+  #         phi_pct_change,
+  #         ") sigma^2 (%change) =",
+  #         sigma2_new,
+  #         "(",
+  #         sigma2_pct_change,
+  #         ")",
+  #         "\n"
+  #       )
+  #     }
+  #     kappa2 <- kappa2_new
+  #     phi <- phi_new
+  #     sigma2 <- sigma2_new
+  #     theta <- theta_new
+  #     step <- step+1
+  #   }
+  #   parallel::stopCluster(cl)
+  #   em_output <- list(
+  #     theta_new = theta_new,
+  #     kappa2_new = kappa2_new,
+  #     phi_new = phi_new,
+  #     sigma2_new = sigma2_new
+  #   )
+  # }
   # > End EM algorithm ----
   cat(".... EM algorithm complete!\n")
   list2env(em_output, envir = environment())
@@ -387,13 +400,13 @@ BayesGLMEM <- function(data,
   Q <- Matrix::bdiag(Qk_new)
   if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
   Sig_inv <- Q + A/sigma2_new
-  m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
+  # m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
   # mu <- INLA::inla.qsolve(Sig_inv,m)
-  mu <- Matrix::solve(Sig_inv, m)
+  # mu <- Matrix::solve(Sig_inv, m)
   # We don't actually need this very expensive function here
   # Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
 
-  beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K*n_sess)
+  beta_estimates <- matrix(mu,nrow = V_nm, ncol = K*n_sess)
   colnames(beta_estimates) <- rep(beta_names, n_sess)
   beta_estimates <- lapply(seq(n_sess), function(ns) beta_estimates[,(seq(K) + K * (ns - 1))])
   names(beta_estimates) <- session_names
