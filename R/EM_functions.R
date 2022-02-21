@@ -252,7 +252,8 @@ BayesGLMEM <- function(data,
   #
   # kappa2_phi_rcpp <- parallel::parApply(cl,beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-3)
   # parallel::stopCluster(cl)
-  kappa2_phi_rcpp <- apply(beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-3)
+  kappa2_phi_rcpp <- apply(beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-6)
+  cat("...... DONE!\n")
   theta <- c(t(kappa2_phi_rcpp), sigma2)
   # if(use_SQUAREM) {
   #   cl <- parallel::makeCluster(min(num.threads,K))
@@ -296,14 +297,18 @@ BayesGLMEM <- function(data,
   #   theta <- c(t(theta_init), sigma2)
   # }
   theta_init <- theta
+  Ns <- 50
+  Vh <- matrix(sample(x = c(-1,1), size = Ns * nrow(A), replace = TRUE),
+               nrow(A), Ns)
   # > Start EM algorithm ----
+  cat("... STARTING EM ALGORITHM\n")
   em_output <-
     findTheta(
       theta = theta,
-      spde = spde,
+      spde = rcpp_spde,
       y = model_data$y,
       X = model_data$X,
-      QK = make_Q(theta, spde, n_sess),
+      QK = make_Q(theta, rcpp_spde, n_sess),
       Psi = as(Psi, "dgCMatrix"),
       A = as(A, "dgCMatrix"),
       Vh = Vh,
