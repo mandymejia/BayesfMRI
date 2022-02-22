@@ -330,7 +330,7 @@ match_input <- function(
 #' @param verbose Print messages counting how many locations are removed?
 #'
 #' @importFrom matrixStats colVars
-#' @return A logical vector indicating valid vertices, or NULL if there were no invalid vertices
+#' @return A logical vector indicating valid vertices
 #'
 #' @export
 make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){

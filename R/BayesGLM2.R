@@ -88,7 +88,7 @@ BayesGLM2 <- function(results,
     results <- vector('list', length=M)
     results[[1]] <- readRDS(fnames[1])
     if(inherits(results[[1]], "BayesGLM_cifti")) {
-      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
+      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")[1]
       results[[1]] <- results[[1]]$GLMs_Bayesian[[which_BayesGLM]]
     }
     if (!inherits(results[[1]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
@@ -151,6 +151,24 @@ BayesGLM2 <- function(results,
     excursion_type <- 'none'
   }
 
+  for(m in 1:M){
+
+    if(use_files & (m > 1)){
+      results[[m]] <- readRDS(fnames[m])
+      if(inherits(results[[m]], "BayesGLM_cifti")) {
+        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")[1]
+        results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
+      }
+      if(!inherits(results[[m]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
+      # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
+      num_sessions_m <- length(results[[m]]$session_names)
+      # if(use_avg & use_avg_m) num_sessions_m <- 1
+      if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
+    }
+    if(m == 1) num_sessions_m <- num_sessions
+  }
+  browser()
+
   # Mesh and SPDE object
   mesh <- results[[1]]$mesh
   spde <- INLA::inla.spde2.matern(mesh)
@@ -174,7 +192,7 @@ BayesGLM2 <- function(results,
     if(use_files & (m > 1)){
       results[[m]] <- readRDS(fnames[m])
       if(inherits(results[[m]], "BayesGLM_cifti")) {
-        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
+        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")[1]
         results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
       }
       if(!inherits(results[[m]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
@@ -217,7 +235,7 @@ BayesGLM2 <- function(results,
       X_list <- X_list[[1]]
       Amat.final <- Amat.tot
     }
-    Xmat <- X_list%*%Amat.final
+    Xmat <- X_list %*% Amat.final
     Xcros.all[[m]] <- Matrix::crossprod(Xmat)
     Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
 
@@ -357,7 +375,7 @@ BayesGLM2 <- function(results,
 #'
 #' @keywords internal
 beta.posterior.thetasamp <- function(
-  theta, spde, Xcros, Xycros, contrasts, 
+  theta, spde, Xcros, Xycros, contrasts,
   quantiles, excursion_type, gamma, alpha, nsamp_beta=100){
 
   n.mesh <- spde$n.spde
