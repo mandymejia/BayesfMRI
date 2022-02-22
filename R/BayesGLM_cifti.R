@@ -109,7 +109,7 @@ BayesGLM_cifti <- function(
   TR=NULL,
   nuisance=NULL,
   nuisance_include=c('drift','dHRF'),
-  scale_BOLD=TRUE,
+  scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design=TRUE,
   Bayes=TRUE,
   ar_order = 6,
@@ -255,6 +255,11 @@ BayesGLM_cifti <- function(
     beta_names <- if (is.null(colnames(d1))) { paste0("beta", seq(ncol(d1))) } else { names(d1) }
     rm(d1)
   }
+
+  # Scale
+  if (isTRUE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'auto'`"); scale_BOLD <- "auto" }
+  if (isFALSE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'none'`"); scale_BOLD <- "none" }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
 
   # Data setup ----------------------------------------------------------
   cat('\n SETTING UP DATA \n')

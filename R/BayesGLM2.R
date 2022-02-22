@@ -167,7 +167,6 @@ BayesGLM2 <- function(results,
     }
     if(m == 1) num_sessions_m <- num_sessions
   }
-  browser()
 
   # Mesh and SPDE object
   mesh <- results[[1]]$mesh

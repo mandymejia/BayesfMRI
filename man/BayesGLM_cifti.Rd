@@ -14,7 +14,7 @@ BayesGLM_cifti(
   TR = NULL,
   nuisance = NULL,
   nuisance_include = c("drift", "dHRF"),
-  scale_BOLD = TRUE,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
   ar_order = 6,
@@ -67,9 +67,15 @@ Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
 derivative of each column of design matrix). Set to \code{NULL} to not do any
 nuisance regressors, or just one of these to use only one.}
 
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+is detected, in which case sd scaling will be used instead.
+
+\code{"mean"} scaling will scale the data to percent local signal change.
+
+\code{"sd"} scaling will scale the data by local standard deviation.
+
+\code{"none"} will only center the data, not scale it.
+}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}

@@ -4,9 +4,15 @@
 \alias{scale_BOLD_Param}
 \title{scale_BOLD}
 \arguments{
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+is detected, in which case sd scaling will be used instead.
+
+\code{"mean"} scaling will scale the data to percent local signal change.
+
+\code{"sd"} scaling will scale the data by local standard deviation.
+
+\code{"none"} will only center the data, not scale it.
+}}
 }
 \description{
 scale_BOLD

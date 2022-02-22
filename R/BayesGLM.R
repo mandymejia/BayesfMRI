@@ -51,7 +51,7 @@ BayesGLM <- function(
   faces = NULL,
   mesh = NULL,
   mask = NULL,
-  scale_BOLD=TRUE,
+  scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes=TRUE,
   ar_order = 6,
@@ -123,6 +123,9 @@ BayesGLM <- function(
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
   }
+  if (need_mesh) {
+    if (mesh$n != V) { stop("Mesh has ", mesh$n, " locations, but the data has ", V, " locations.") }
+  }
 
   if (!is.null(beta_names)) {
     if(length(beta_names) != K) {
@@ -141,6 +144,11 @@ BayesGLM <- function(
   if (do_Bayesian && is.null(outfile)) {
     message('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
   }
+
+  # Scale
+  if (isTRUE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'auto'`"); scale_BOLD <- "auto" }
+  if (isFALSE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'none'`"); scale_BOLD <- "none" }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
 
   # `mask`  -----------------------------
   # Get `mask` based on intersection of input mask and `make_mask` checks.

@@ -11,7 +11,7 @@ BayesGLM(
   faces = NULL,
   mesh = NULL,
   mask = NULL,
-  scale_BOLD = TRUE,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
   ar_order = 6,
@@ -49,9 +49,15 @@ surface data).}
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
 vertex is to be included.}
 
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+is detected, in which case sd scaling will be used instead.
+
+\code{"mean"} scaling will scale the data to percent local signal change.
+
+\code{"sd"} scaling will scale the data by local standard deviation.
+
+\code{"none"} will only center the data, not scale it.
+}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}

@@ -91,7 +91,16 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @param data List of sessions (see \code{is.session} and \code{is.session_pw})
 #' @param mask (Optional) A length \eqn{V} logical vector indicating if each
 #'  vertex is to be included.
-#' @param scale_BOLD (logical) Should the BOLD response be scaled? (Default is TRUE)
+#' @param scale_BOLD Option for scaling the BOLD response.
+#' 
+#' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
+#' 	is detected, in which case sd scaling will be used instead.
+#' 
+#' 	\code{"mean"} scaling will scale the data to percent local signal change.
+#' 
+#' 	\code{"sd"} scaling will scale the data by local standard deviation.
+#' 
+#' 	\code{"none"} will only center the data, not scale it. 
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @param ar_smooth FWHM parameter for smoothing. Remember that
@@ -109,7 +118,7 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @export
 prewhiten_cifti <- function(data,
                             mask = NULL,
-                            scale_BOLD = TRUE,
+                            scale_BOLD = c("auto", "mean", "sd", "none"),
                             scale_design = TRUE,
                             ar_order = 6,
                             ar_smooth = 5,
@@ -148,7 +157,16 @@ prewhiten_cifti <- function(data,
 #' @param data List of sessions (see \code{is.session} and \code{is.session_pw})
 #' @param mask (Optional) A length \eqn{V} logical vector indicating if each
 #'  vertex is to be included.
-#' @param scale_BOLD (logical) Should the BOLD response be scaled? (Default is TRUE)
+#' @param scale_BOLD Option for scaling the BOLD response.
+#' 
+#' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
+#' 	is detected, in which case sd scaling will be used instead.
+#' 
+#' 	\code{"mean"} scaling will scale the data to percent local signal change.
+#' 
+#' 	\code{"sd"} scaling will scale the data by local standard deviation.
+#' 
+#' 	\code{"none"} will only center the data, not scale it. 
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @importFrom stats ar.yw
@@ -158,7 +176,7 @@ prewhiten_cifti <- function(data,
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
 prewhiten_prep <- function(data,
                             mask = NULL,
-                            scale_BOLD = TRUE,
+                            scale_BOLD = c("auto", "mean", "sd", "none"),
                             scale_design = TRUE,
                             ar_order = 6) {
 

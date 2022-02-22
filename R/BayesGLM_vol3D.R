@@ -21,7 +21,16 @@
 #' @param locations Vx3 matrix of x,y,z coordinates of each voxel
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
-#' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  If FALSE, just center the data and design to exclude the baseline field.
+#' @param scale Option for scaling the BOLD response.
+#' 
+#' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
+#' 	is detected, in which case sd scaling will be used instead.
+#' 
+#' 	\code{"mean"} scaling will scale the data to percent local signal change.
+#' 
+#' 	\code{"sd"} scaling will scale the data by local standard deviation.
+#' 
+#' 	\code{"none"} will only center the data, not scale it. 
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @param GLM If TRUE, classical GLM estimates will also be returned
@@ -32,7 +41,8 @@
 #' @importFrom stats as.formula
 #'
 #' @export
-BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
+BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),
+  return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
 
   check_INLA(FALSE)
 
@@ -111,7 +121,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
       #extract and mask BOLD data for current session
       BOLD_s <- data[[s]]$BOLD[,inds_grp]
 
-      #scale data to represent % signal change (or just center if scale=FALSE)
+      #scale data to represent % signal change (or just center if scale=="none")
       BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose = FALSE)
       design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
 
@@ -325,7 +335,7 @@ BayesGLM_slice <- function(
   nuisance=NULL,
   nuisance_include=c('drift','dHRF'),
   binary_mask = NULL,
-  scale_BOLD = TRUE,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   num.threads = 4,
   GLM_method = 'both',

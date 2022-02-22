@@ -4,13 +4,24 @@
 \alias{scale_timeseries}
 \title{Scale the BOLD timeseries}
 \usage{
-scale_timeseries(BOLD, scale = TRUE, transpose = TRUE)
+scale_timeseries(
+  BOLD,
+  scale = c("auto", "mean", "sd", "none"),
+  transpose = TRUE
+)
 }
 \arguments{
 \item{BOLD}{Input fMRI data (V x T)}
 
-\item{scale}{Option for scaling units to percent local signal change AND
-centering. If false, only centers.}
+\item{scale}{Option for scaling units.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+is detected, in which case sd scaling will be used instead.
+
+\code{"mean"} scaling will scale the data to percent local signal change.
+
+\code{"sd"} scaling will scale the data by local standard deviation.
+
+\code{"none"} will only center the data, not scale it.
+}}
 
 \item{transpose}{Check orientation of data, which, if TRUE, will transpose
 the data when the number of time points is greater than the number of voxels.

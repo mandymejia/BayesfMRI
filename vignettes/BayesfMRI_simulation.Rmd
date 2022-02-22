@@ -228,7 +228,7 @@ With the data created and in the correct format, the analysis can begin!
 We can fit a classical GLM to the data using the `classicalGLM()` function. Note that by default, the BOLD data and the design are scaled so that the estimated coefficients for each task represent the percent signal change associated with each task. For simulated data, we do not scale to avoid inducing changes to the true beta coefficient maps. The resulting images of the point estimates for the coefficients can be seen below.
 
 ```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
-single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = FALSE, scale_design = FALSE)
+single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = "none", scale_design = FALSE)
 classical_estimates <- vec2image(single_session_classical$session_1, template_image = binary_template)
 plot_slice(classical_estimates, zlim = c(-1.5,1.5))
 ```
@@ -248,7 +248,7 @@ plot(mesh, main = "")
 Next, the spatial Bayesian GLM can be estimated using the `BayesGLM()` function. As in the classical GLM, we do not scale the timeseries or the design matrix to avoid inducing changes in the true beta coefficients. **Note: Model is pre-computed. Set `eval=TRUE` to compute. For this dataset, the expected computation time is approximately 5 minutes with PARDISO enabled.**
 
 ```{r Bayes GLM, eval=F}
-single_session_result <- BayesGLM(data = simulated_data$data, mesh = mesh, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=FALSE)
+single_session_result <- BayesGLM(data = simulated_data$data, mesh = mesh, scale_BOLD = "none", scale_design = FALSE, verbose = FALSE, return_INLA_result=FALSE)
 saveRDS(single_session_result, "single_session_BayesGLM_results.rds")
 ```
 
@@ -302,7 +302,7 @@ The function `simulate_slice_data()` formats the data into a list of "session" o
 
 ```{r, eval = F}
 # Run the model in INLA
-multi_session_result <- BayesGLM_slice(BOLD=multi_data$BOLD, design = multi_data$design, binary_mask = binary_template, scale_BOLD = FALSE, scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, trim_INLA = T, num.threads = 12, avg_sessions = T)
+multi_session_result <- BayesGLM_slice(BOLD=multi_data$BOLD, design = multi_data$design, binary_mask = binary_template, scale_BOLD = "none", scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, trim_INLA = T, num.threads = 12, avg_sessions = T)
 saveRDS(multi_session_result, "~/Desktop/multi_session_BayesGLM_results_20201119.rds")
 ```
 

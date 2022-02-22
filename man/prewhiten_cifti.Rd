@@ -7,7 +7,7 @@
 prewhiten_cifti(
   data,
   mask = NULL,
-  scale_BOLD = TRUE,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   ar_order = 6,
   ar_smooth = 5,
@@ -22,7 +22,15 @@ prewhiten_cifti(
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
 vertex is to be included.}
 
-\item{scale_BOLD}{(logical) Should the BOLD response be scaled? (Default is TRUE)}
+\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+is detected, in which case sd scaling will be used instead.
+
+\code{"mean"} scaling will scale the data to percent local signal change.
+
+\code{"sd"} scaling will scale the data by local standard deviation.
+
+\code{"none"} will only center the data, not scale it.
+}}
 
 \item{scale_design}{(logical) Should the design matrix be scaled? (Default is TRUE)}
 

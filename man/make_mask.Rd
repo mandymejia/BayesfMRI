@@ -17,7 +17,7 @@ do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-
 \item{verbose}{Print messages counting how many locations are removed?}
 }
 \value{
-A logical vector indicating valid vertices, or NULL if there were no invalid vertices
+A logical vector indicating valid vertices
 }
 \description{
 Create a mask based on vertices that are invalid
