@@ -4,13 +4,9 @@
 \alias{initialKP}
 \title{Find the initial values of kappa2 and phi}
 \usage{
-initialKP(kappa2, phi, spde, w, n_sess, tol)
+initialKP(theta, spde, w, n_sess, tol)
 }
 \arguments{
-\item{kappa2}{a scalar scale parameter}
-
-\item{phi}{a scalar range parameter}
-
 \item{spde}{a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG}
 
 \item{w}{the beta_hat estimates for a single task}
@@ -18,6 +14,10 @@ initialKP(kappa2, phi, spde, w, n_sess, tol)
 \item{n_sess}{the number of sessions}
 
 \item{tol}{the stopping rule tolerance}
+
+\item{kappa2}{a scalar scale parameter}
+
+\item{phi}{a scalar range parameter}
 }
 \description{
 Find the initial values of kappa2 and phi

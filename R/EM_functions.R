@@ -252,7 +252,7 @@ BayesGLMEM <- function(data,
   #
   # kappa2_phi_rcpp <- parallel::parApply(cl,beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-3)
   # parallel::stopCluster(cl)
-  kappa2_phi_rcpp <- apply(beta_hat,2,initialKP, kappa2 = kappa2, phi = phi, spde = rcpp_spde, n_sess = n_sess, tol = 1e-6)
+  kappa2_phi_rcpp <- apply(beta_hat,2,initialKP, theta = c(kappa2, phi), spde = rcpp_spde, n_sess = n_sess, tol = 1e-6)
   cat("...... DONE!\n")
   theta <- c(t(kappa2_phi_rcpp), sigma2)
   # if(use_SQUAREM) {
@@ -312,7 +312,7 @@ BayesGLMEM <- function(data,
       Psi = as(Psi, "dgCMatrix"),
       A = as(A, "dgCMatrix"),
       Vh = Vh,
-      tol = 1e-6
+      tol = tol
     )
   # k_idx <- seq(K)
   # p_idx <- seq(K) + K
