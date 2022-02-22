@@ -326,170 +326,8 @@ void setSparseBlock_update(SparseMatrix<double,0,int>* A,int i, int j, SparseMat
   }
 }
 
-//' Perform the EM algorithm of the Bayesian GLM fitting
-//'
-//' @param theta the vector of initial values for theta
-//' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
-//' @param y the vector of response values
-//' @param X the sparse matrix of the data values
-//' @param QK a sparse matrix of the prior precision found using the initial values of the hyperparameters
-//' @param Psi a sparse matrix representation of the basis function mapping the data locations to the mesh vertices
-//' @param A a precomputed matrix crossprod(X%*%Psi)
-//' @param Vh A random matrix with elements -1 and 1 used in the Hutchinson estimator of a trace
-//' @param tol a value for the tolerance used for a stopping rule (compared to
-//'   the squared norm of the differences between theta[s] and theta[s-1])
-//' @export
-// [[Rcpp::export(rng = false)]]
-Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
-                     Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
-                     Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,
-                     Eigen::MatrixXd Vh, double tol) {
-  // Bring in the spde matrices
-  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
-  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
-  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
-  int Ns = Vh.cols(); // For the Hutchinson estimator involving the trace of matrix products with Sigma
-  int n_spde = Cmat.rows();
-  int nKs = A.rows();
-  int K = theta.size();
-  K = (K - 1) / 2;
-  int n_sess = nKs / (n_spde * K);
-  int sig2_ind = 2*K;
-  Eigen::SparseMatrix<double> AdivS2 = A / theta[sig2_ind];
-  Eigen::SparseMatrix<double> Sig_inv = QK + AdivS2;
-  SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
-  cholSigInv.compute(Sig_inv);
-  cholSigInv.analyzePattern(Sig_inv);
-  Eigen::VectorXd theta_old = theta;
-  int Step = 0;
-  Rcout << "Step 0 theta: " << theta_old.transpose() << std::endl;
-  double eps = tol + 1;
-  // Initialize everything
-  Eigen::SparseMatrix<double> Xpsi = X * Psi;
-  Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
-  Eigen::VectorXd XpsiY = Xpsi.transpose() * y;
-  Eigen::MatrixXd Avh = A * Vh;
-  double yy = y.transpose() * y;
-  int ySize = y.size();
-  double a_star, b_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
-  double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
-  double phi_denom = 4.0 * M_PI * n_spde * n_sess;
-  double TrSigA, muAmu, TrAEww, yXpsiMu;
-  int idx_start;
-  Eigen::VectorXd muKns(n_spde), Cmu(n_spde), Gmu(n_spde), diagPCVkn(Ns);
-  Eigen::VectorXd diagPGVkn(Ns), GCGmu(n_spde), diagPGCGVkn(Ns), thetaDiff((2*K + 1));
-  Eigen::VectorXd m(nKs), mu(nKs), XpsiMu(ySize), diagPaVh(Ns), Amu(nKs);
-  Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
-  Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
-  Eigen::MatrixXd P(nKs, Ns), PaVh(Ns,Ns);
-  while(eps > tol) {
-  // while(Step < 1) {
-    AdivS2 = A / theta[sig2_ind];
-    Sig_inv = QK + AdivS2;
-    cholSigInv.factorize(Sig_inv);
-    m = XpsiY / theta(sig2_ind);
-    mu = cholSigInv.solve(m);
-    // Solve for sigma_2
-    XpsiMu = Xpsi * mu;
-    P = cholSigInv.solve(Vh);
-    PaVh = P.transpose() * Avh;
-    diagPaVh = PaVh.diagonal();
-    TrSigA = diagPaVh.sum() / Ns;
-    Amu = A * mu;
-    muAmu = mu.transpose() * Amu;
-    TrAEww = muAmu + TrSigA;
-    yXpsiMu = y.transpose() * XpsiMu;
-    theta[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
-    // Update kappa2 and phi by task
-    for(int k = 0; k < K; k++) {
-      a_star = 0.0;
-      b_star = 0.0;
-      muCmu = 0.0;
-      muGmu = 0.0;
-      muGCGmu = 0.0;
-      sumDiagPCVkn = 0.0;
-      sumDiagPGVkn = 0.0;
-      sumDiagPGCGVkn = 0.0;
-      for(int ns = 0; ns < n_sess; ns++) {
-        idx_start = k * n_spde + ns * K * n_spde;
-        // idx_stop = idx_start + n_spde;
-        muKns = mu.segment(idx_start,n_spde);
-        // muCmu
-        Cmu = Cmat * muKns;
-        muCmu += muKns.transpose() * Cmu;
-        // muGmu
-        Gmu = Gmat * muKns;
-        muGmu += muKns.transpose() * Gmu;
-        // muGCGmu
-        GCGmu = GtCinvG * muKns;
-        muGCGmu += muKns.transpose() * GCGmu;
-        // Trace approximations w/ Sigma
-        Pkn = P.block(idx_start, 0, n_spde, Ns);
-        Vkn = Vh.block(idx_start, 0, n_spde, Ns);
-        // Trace of C*Sigma
-        CVkn = Cmat * Vkn;
-        PCVkn = Pkn.transpose() * CVkn;
-        diagPCVkn = PCVkn.diagonal();
-        sumDiagPCVkn += diagPCVkn.sum();
-        // Trace of G*Sigma
-        GVkn = Gmat * Vkn;
-        PGVkn = Pkn.transpose() * GVkn;
-        diagPGVkn = PGVkn.diagonal();
-        sumDiagPGVkn += diagPGVkn.sum();
-        // Trace of GCG*Sigma
-        GCGVkn = GtCinvG * Vkn;
-        PGCGVkn = Pkn.transpose() * GCGVkn;
-        diagPGCGVkn = PGCGVkn.diagonal();
-        sumDiagPGCGVkn += diagPGCGVkn.sum();
-      }
-      sumDiagPCVkn = sumDiagPCVkn / Ns;
-      sumDiagPGVkn = sumDiagPGVkn / Ns;
-      sumDiagPGCGVkn = sumDiagPGCGVkn / Ns;
-      // Update kappa2
-      a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
-      b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
-      new_kappa2 = kappa2Brent(0, 50, spde, a_star, b_star, 2, 1e-4);
-      theta[k] = new_kappa2;
-      // Update phi
-      phi_partA = sumDiagPCVkn + muCmu;
-      phi_partA = phi_partA * new_kappa2;
-      phi_partB = sumDiagPGVkn + muGmu;
-      phi_partB = 2 * phi_partB;
-      phi_partC = sumDiagPGCGVkn + muGCGmu;
-      phi_partC = phi_partC / new_kappa2;
-      double TrQEww = phi_partA + phi_partB + phi_partC;
-      phi_new = TrQEww / phi_denom;
-      theta[k + K] = phi_new;
-      makeQt(&Qk, theta(k), spde);
-      // Qk = theta(k) * Cmat + 2.0 * Gmat + GtCinvG / theta(k);
-      Qk = Qk / (4.0 * M_PI * theta(k + K));
-      for(int ns = 0; ns < n_sess; ns++) {
-        int start_i = k * n_spde + ns * K * n_spde;
-        setSparseBlock_update(&QK, start_i, start_i, Qk);
-      }
-    }
-    Step += 1;
-    Rcout << "Step " << Step << " theta: " << theta.transpose() << std::endl;
-    thetaDiff = theta - theta_old;
-    eps = thetaDiff.squaredNorm();
-    theta_old = theta;
-  }
-
-  AdivS2 = A / theta[sig2_ind];
-  Sig_inv = QK + AdivS2;
-  cholSigInv.factorize(Sig_inv);
-  m = XpsiY / theta(sig2_ind);
-  mu = cholSigInv.solve(m);
-  List out = List::create(Named("theta_new") = theta,
-                          Named("kappa2_new") = theta.segment(0,K),
-                          Named("phi_new") = theta.segment(K,K),
-                          Named("sigma2_new") = theta(2*K),
-                          Named("mu") = mu);
-  return out;
-}
-
 Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
-                            Eigen::SparseMatrix<double> QK, Eigen::SimplicialLLT<double> cholSigInv,
+                            Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                             const Eigen::MatrixXd Vh, const Eigen::MatrixXd Avh,
                             const Eigen::VectorXd y, const double yy, const List spde) {
@@ -605,3 +443,169 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   }
   return(theta_new);
 }
+
+
+//' Perform the EM algorithm of the Bayesian GLM fitting
+//'
+//' @param theta the vector of initial values for theta
+//' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
+//' @param y the vector of response values
+//' @param X the sparse matrix of the data values
+//' @param QK a sparse matrix of the prior precision found using the initial values of the hyperparameters
+//' @param Psi a sparse matrix representation of the basis function mapping the data locations to the mesh vertices
+//' @param A a precomputed matrix crossprod(X%*%Psi)
+//' @param Vh A random matrix with elements -1 and 1 used in the Hutchinson estimator of a trace
+//' @param tol a value for the tolerance used for a stopping rule (compared to
+//'   the squared norm of the differences between theta[s] and theta[s-1])
+//' @export
+// [[Rcpp::export(rng = false)]]
+Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
+                     Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
+                     Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,
+                     Eigen::MatrixXd Vh, double tol) {
+  // Bring in the spde matrices
+  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+  // int Ns = Vh.cols(); // For the Hutchinson estimator involving the trace of matrix products with Sigma
+  int n_spde = Cmat.rows();
+  // int nKs = A.rows();
+  int K = theta.size();
+  K = (K - 1) / 2;
+  // int n_sess = nKs / (n_spde * K);
+  int sig2_ind = 2*K;
+  Eigen::SparseMatrix<double> AdivS2 = A / theta[sig2_ind];
+  Eigen::SparseMatrix<double> Sig_inv = QK + AdivS2;
+  SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
+  cholSigInv.compute(Sig_inv);
+  cholSigInv.analyzePattern(Sig_inv);
+  // Eigen::VectorXd theta_old = theta;
+  int Step = 0;
+  Rcout << "Step 0 theta: " << theta.transpose() << std::endl;
+  double eps = tol + 1;
+  // Initialize everything
+  Eigen::SparseMatrix<double> Xpsi = X * Psi;
+  Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
+  Eigen::VectorXd XpsiY = Xpsi.transpose() * y;
+  Eigen::MatrixXd Avh = A * Vh;
+  double yy = y.transpose() * y;
+  Eigen::VectorXd theta_new;
+  // int ySize = y.size();
+  // double a_star, b_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
+  // double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
+  // double phi_denom = 4.0 * M_PI * n_spde * n_sess;
+  // double TrSigA, muAmu, TrAEww, yXpsiMu;
+  // int idx_start;
+  // Eigen::VectorXd muKns(n_spde), Cmu(n_spde), Gmu(n_spde), diagPCVkn(Ns);
+  // Eigen::VectorXd diagPGVkn(Ns), GCGmu(n_spde), diagPGCGVkn(Ns), thetaDiff((2*K + 1));
+  // Eigen::VectorXd m(nKs), mu(nKs), XpsiMu(ySize), diagPaVh(Ns), Amu(nKs);
+  // Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
+  // Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
+  // Eigen::MatrixXd P(nKs, Ns), PaVh(Ns,Ns);
+  Eigen::VectorXd thetaDiff(2 * K + 1);
+  while(eps > tol) {
+    theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
+  // // while(Step < 1) {
+  //   AdivS2 = A / theta[sig2_ind];
+  //   Sig_inv = QK + AdivS2;
+  //   cholSigInv.factorize(Sig_inv);
+  //   m = XpsiY / theta(sig2_ind);
+  //   mu = cholSigInv.solve(m);
+  //   // Solve for sigma_2
+  //   XpsiMu = Xpsi * mu;
+  //   P = cholSigInv.solve(Vh);
+  //   PaVh = P.transpose() * Avh;
+  //   diagPaVh = PaVh.diagonal();
+  //   TrSigA = diagPaVh.sum() / Ns;
+  //   Amu = A * mu;
+  //   muAmu = mu.transpose() * Amu;
+  //   TrAEww = muAmu + TrSigA;
+  //   yXpsiMu = y.transpose() * XpsiMu;
+  //   theta[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
+  //   // Update kappa2 and phi by task
+  //   for(int k = 0; k < K; k++) {
+  //     a_star = 0.0;
+  //     b_star = 0.0;
+  //     muCmu = 0.0;
+  //     muGmu = 0.0;
+  //     muGCGmu = 0.0;
+  //     sumDiagPCVkn = 0.0;
+  //     sumDiagPGVkn = 0.0;
+  //     sumDiagPGCGVkn = 0.0;
+  //     for(int ns = 0; ns < n_sess; ns++) {
+  //       idx_start = k * n_spde + ns * K * n_spde;
+  //       // idx_stop = idx_start + n_spde;
+  //       muKns = mu.segment(idx_start,n_spde);
+  //       // muCmu
+  //       Cmu = Cmat * muKns;
+  //       muCmu += muKns.transpose() * Cmu;
+  //       // muGmu
+  //       Gmu = Gmat * muKns;
+  //       muGmu += muKns.transpose() * Gmu;
+  //       // muGCGmu
+  //       GCGmu = GtCinvG * muKns;
+  //       muGCGmu += muKns.transpose() * GCGmu;
+  //       // Trace approximations w/ Sigma
+  //       Pkn = P.block(idx_start, 0, n_spde, Ns);
+  //       Vkn = Vh.block(idx_start, 0, n_spde, Ns);
+  //       // Trace of C*Sigma
+  //       CVkn = Cmat * Vkn;
+  //       PCVkn = Pkn.transpose() * CVkn;
+  //       diagPCVkn = PCVkn.diagonal();
+  //       sumDiagPCVkn += diagPCVkn.sum();
+  //       // Trace of G*Sigma
+  //       GVkn = Gmat * Vkn;
+  //       PGVkn = Pkn.transpose() * GVkn;
+  //       diagPGVkn = PGVkn.diagonal();
+  //       sumDiagPGVkn += diagPGVkn.sum();
+  //       // Trace of GCG*Sigma
+  //       GCGVkn = GtCinvG * Vkn;
+  //       PGCGVkn = Pkn.transpose() * GCGVkn;
+  //       diagPGCGVkn = PGCGVkn.diagonal();
+  //       sumDiagPGCGVkn += diagPGCGVkn.sum();
+  //     }
+  //     sumDiagPCVkn = sumDiagPCVkn / Ns;
+  //     sumDiagPGVkn = sumDiagPGVkn / Ns;
+  //     sumDiagPGCGVkn = sumDiagPGCGVkn / Ns;
+  //     // Update kappa2
+  //     a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
+  //     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
+  //     new_kappa2 = kappa2Brent(0, 50, spde, a_star, b_star, 2, 1e-4);
+  //     theta[k] = new_kappa2;
+  //     // Update phi
+  //     phi_partA = sumDiagPCVkn + muCmu;
+  //     phi_partA = phi_partA * new_kappa2;
+  //     phi_partB = sumDiagPGVkn + muGmu;
+  //     phi_partB = 2 * phi_partB;
+  //     phi_partC = sumDiagPGCGVkn + muGCGmu;
+  //     phi_partC = phi_partC / new_kappa2;
+  //     double TrQEww = phi_partA + phi_partB + phi_partC;
+  //     phi_new = TrQEww / phi_denom;
+  //     theta[k + K] = phi_new;
+  //     makeQt(&Qk, theta(k), spde);
+  //     // Qk = theta(k) * Cmat + 2.0 * Gmat + GtCinvG / theta(k);
+  //     Qk = Qk / (4.0 * M_PI * theta(k + K));
+  //     for(int ns = 0; ns < n_sess; ns++) {
+  //       int start_i = k * n_spde + ns * K * n_spde;
+  //       setSparseBlock_update(&QK, start_i, start_i, Qk);
+  //     }
+  //   }
+    Step += 1;
+    Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
+    thetaDiff = theta_new - theta;
+    eps = thetaDiff.squaredNorm();
+    theta = theta_new;
+  }
+  AdivS2 = A / theta[sig2_ind];
+  Sig_inv = QK + AdivS2;
+  cholSigInv.factorize(Sig_inv);
+  Eigen::VectorXd m = XpsiY / theta(sig2_ind);
+  Eigen::VectorXd mu = cholSigInv.solve(m);
+  List out = List::create(Named("theta_new") = theta,
+                          Named("kappa2_new") = theta.segment(0,K),
+                          Named("phi_new") = theta.segment(K,K),
+                          Named("sigma2_new") = theta(2*K),
+                          Named("mu") = mu);
+  return out;
+}
+

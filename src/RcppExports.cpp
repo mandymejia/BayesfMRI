@@ -16,7 +16,6 @@ double logDetQt(double kappa2, const Rcpp::List& in_list, int n_sess);
 RcppExport SEXP _BayesfMRI_logDetQt(SEXP kappa2SEXP, SEXP in_listSEXP, SEXP n_sessSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type kappa2(kappa2SEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type in_list(in_listSEXP);
     Rcpp::traits::input_parameter< int >::type n_sess(n_sessSEXP);
@@ -29,7 +28,6 @@ Eigen::VectorXd initialKP(double kappa2, double phi, List spde, Eigen::VectorXd 
 RcppExport SEXP _BayesfMRI_initialKP(SEXP kappa2SEXP, SEXP phiSEXP, SEXP spdeSEXP, SEXP wSEXP, SEXP n_sessSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type kappa2(kappa2SEXP);
     Rcpp::traits::input_parameter< double >::type phi(phiSEXP);
     Rcpp::traits::input_parameter< List >::type spde(spdeSEXP);
@@ -45,7 +43,6 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y, Eigen:
 RcppExport SEXP _BayesfMRI_findTheta(SEXP thetaSEXP, SEXP spdeSEXP, SEXP ySEXP, SEXP XSEXP, SEXP QKSEXP, SEXP PsiSEXP, SEXP ASEXP, SEXP VhSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type theta(thetaSEXP);
     Rcpp::traits::input_parameter< List >::type spde(spdeSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type y(ySEXP);
