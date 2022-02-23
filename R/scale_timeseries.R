@@ -41,7 +41,7 @@ scale_timeseries <- function(BOLD, scale=c("auto", "mean", "sd", "none"), transp
 	# Determine `"auto"` scaling.
 	if (scale == "auto") {
 		scale <- if (v_means_min > 1) { "mean" } else { "sd" }
-		cat("Using ", scale, " scaling.\n")
+		# cat("Using", scale, "scaling.\n")
 	}
 
 	# Center and scale.
