@@ -24,8 +24,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // initialKP
-Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, int n_sess, double tol);
-RcppExport SEXP _BayesfMRI_initialKP(SEXP thetaSEXP, SEXP spdeSEXP, SEXP wSEXP, SEXP n_sessSEXP, SEXP tolSEXP) {
+Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, int n_sess, double tol, bool verbose);
+RcppExport SEXP _BayesfMRI_initialKP(SEXP thetaSEXP, SEXP spdeSEXP, SEXP wSEXP, SEXP n_sessSEXP, SEXP tolSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type theta(thetaSEXP);
@@ -33,7 +33,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type w(wSEXP);
     Rcpp::traits::input_parameter< int >::type n_sess(n_sessSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(initialKP(theta, spde, w, n_sess, tol));
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(initialKP(theta, spde, w, n_sess, tol, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -58,7 +59,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_BayesfMRI_logDetQt", (DL_FUNC) &_BayesfMRI_logDetQt, 3},
-    {"_BayesfMRI_initialKP", (DL_FUNC) &_BayesfMRI_initialKP, 5},
+    {"_BayesfMRI_initialKP", (DL_FUNC) &_BayesfMRI_initialKP, 6},
     {"_BayesfMRI_findTheta", (DL_FUNC) &_BayesfMRI_findTheta, 9},
     {NULL, NULL, 0}
 };

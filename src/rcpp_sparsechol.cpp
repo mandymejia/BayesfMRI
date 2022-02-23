@@ -422,7 +422,7 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, i
 //' @param tol the stopping rule tolerance
 //' @export
 // [[Rcpp::export(rng = false)]]
-Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, int n_sess, double tol) {
+Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, int n_sess, double tol, bool verbose) {
   int n_spde = w.size();
   n_spde = n_spde / n_sess;
   // Set up implementation without EM
@@ -438,7 +438,7 @@ Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, i
   // Implementation with in EM
   SquaremOutput SQ_out;
   SquaremDefault.tol = tol;
-  SquaremDefault.trace = false;
+  SquaremDefault.trace = verbose;
   SQ_out = init_squarem2(theta, w, spde, n_sess);
   theta= SQ_out.par;
   return theta;
@@ -558,6 +558,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     // Update kappa2
     a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
+    Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star << std::endl;
     new_kappa2 = kappa2Brent(0, 50, spde, a_star, b_star, 2, 1e-4);
     theta_new[k] = new_kappa2;
     // Update phi
@@ -744,23 +745,25 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   Eigen::MatrixXd Avh = A * Vh;
   double yy = y.transpose() * y;
   // Regular fixed point updates
-  // Eigen::VectorXd theta_new;
-  // Eigen::VectorXd thetaDiff(2 * K + 1);
+  Eigen::VectorXd theta_new;
+  Eigen::VectorXd thetaDiff(2 * K + 1);
   // while(eps > tol) {
-  //   theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
-  //   Step += 1;
-  //   Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
-  //   thetaDiff = theta_new - theta;
-  //   eps = thetaDiff.squaredNorm();
-  //   theta = theta_new;
-  // }
+  while(Step < 1) {
+    theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
+    Step += 1;
+    Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
+    thetaDiff = theta_new - theta;
+    eps = thetaDiff.squaredNorm();
+    eps = sqrt(eps);
+    theta = theta_new;
+  }
   // Using SQUAREM
-  SquaremOutput SQ_result;
-  SquaremDefault.tol = tol;
-  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
-  theta= SQ_result.par;
-  Rcout << "Final theta: " << theta.transpose() << std::endl;
+  // SquaremOutput SQ_result;
+  // SquaremDefault.tol = tol;
+  // SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
+  // theta= SQ_result.par;
   // Bring results together for output
+  Rcout << "Final theta: " << theta.transpose() << std::endl;
   AdivS2 = A / theta[sig2_ind];
   Sig_inv = QK + AdivS2;
   cholSigInv.factorize(Sig_inv);

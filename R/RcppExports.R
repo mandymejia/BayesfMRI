@@ -20,8 +20,8 @@ logDetQt <- function(kappa2, in_list, n_sess) {
 #' @param n_sess the number of sessions
 #' @param tol the stopping rule tolerance
 #' @export
-initialKP <- function(theta, spde, w, n_sess, tol) {
-    .Call(`_BayesfMRI_initialKP`, theta, spde, w, n_sess, tol)
+initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
+    .Call(`_BayesfMRI_initialKP`, theta, spde, w, n_sess, tol, verbose)
 }
 
 #' Perform the EM algorithm of the Bayesian GLM fitting

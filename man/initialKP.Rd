@@ -4,7 +4,7 @@
 \alias{initialKP}
 \title{Find the initial values of kappa2 and phi}
 \usage{
-initialKP(theta, spde, w, n_sess, tol)
+initialKP(theta, spde, w, n_sess, tol, verbose)
 }
 \arguments{
 \item{spde}{a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG}

@@ -73,8 +73,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
                    Vh,
                    n_sess
     ) {
-      source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
-      Rcpp::sourceCpp("src/rcpp_sparsechol.cpp")
+      # source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
+      # Rcpp::sourceCpp("src/rcpp_sparsechol.cpp")
       big_K <- length(kappa2_inds)
       # big_N <- spde$n.spde
       big_N <- nrow(spde$Cmat)
