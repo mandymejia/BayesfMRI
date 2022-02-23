@@ -37,15 +37,15 @@
 #'
 #' @export
 BayesGLM2 <- function(results,
-                           contrasts = NULL,
-                           quantiles = NULL,
-                           excursion_type=NULL,
-                           gamma = 0,
-                           alpha = 0.05,
-                           nsamp_theta = 50,
-                           nsamp_beta = 100,
-                           no_cores = NULL,
-                           verbose = TRUE){
+                      contrasts = NULL,
+                      quantiles = NULL,
+                      excursion_type=NULL,
+                      gamma = 0,
+                      alpha = 0.05,
+                      nsamp_theta = 50,
+                      nsamp_beta = 100,
+                      no_cores = NULL,
+                      verbose = TRUE){
 
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
@@ -55,7 +55,6 @@ BayesGLM2 <- function(results,
   check_INLA(require_PARDISO=TRUE)
 
   #Check if results are model objects or file paths
-
   result_class <- sapply(results, class)
   names(result_class) <- NULL
   problem <- FALSE
@@ -88,265 +87,275 @@ BayesGLM2 <- function(results,
     results <- vector('list', length=M)
     results[[1]] <- readRDS(fnames[1])
     if(inherits(results[[1]], "BayesGLM_cifti")) {
-      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")[1]
-      results[[1]] <- results[[1]]$GLMs_Bayesian[[which_BayesGLM]]
-    }
-    if (!inherits(results[[1]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
-  }
-
-
-  #Check that subject-level models are single-session models
-  num_sessions <- length(results[[1]]$session_names)
-  # if(num_sessions>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
-  # We actually can't really use the averages here because we don't have a
-  # corresponding design matrix and response to calculate the posteriors for beta.
-  # Instead, we can get this working for multi-session data. To begin, we will
-  # assume the same number of sessions for each subject, but this can be changed
-  # later.
-  # if(num_sessions > 1) {
-  #   message("Currently, multi-session analysis is only possible using the averages across sessions.")
-  #   use_avg <- "matrix" %in% class(results[[1]]$avg_beta_estimates)
-  #   if(!use_avg) stop("This function does not currently support group analysis on multiple sessions unless the analysis is done on subject-level averages across sessions.")
-  #   num_sessions <- 1
-  # }
-  # use_avg <- FALSE
-
-  #### SET UP OR CHECK CONTRAST VECTOR(S)
-
-  #TO DO: Generalize to multi-session models (just need to expand the contrasts vector to summarize across sessions as well as subjects)
-
-  # If contrasts is null, by default set up a contrast vector that will compute the average across subjects for each task
-  K <- length(results[[1]]$beta_names) #number of tasks
-  beta_names <- results[[1]]$beta_names
-  if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
-  if(is.null(contrasts)) {
-    if(verbose) cat('Setting up contrast vectors to compute the average across subjects for each task. If other contrasts are desired, provide a contrasts argument.\n')
-    contrasts <- vector('list', length=K)
-    names(contrasts) <- paste0(beta_names,'_avg')
-    for(k in 1:K){
-      # Old, broken, fixed?
-      contrast_onesubj_k <- rep(c(rep(0, k-1), 1/(num_sessions*M), rep(0, K-k)),num_sessions) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K, for each session
-      contrast_allsubj_k <- rep(contrast_onesubj_k, M)
-      contrasts[[k]] <- contrast_allsubj_k
+      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
+      results[[1]] <- results[[1]]$GLMs_Bayesian[which_BayesGLM]
     }
   }
 
-  #Check that each contrast vector is numeric and length J*K
-  num_contrasts <- length(contrasts)
-  length_each_contrast <- sapply(contrasts, length)
-  class_each_contrast <- sapply(contrasts, is.numeric)
-  if(any(length_each_contrast != M*K*num_sessions)) stop('each contrast vector must be of length M*K*num_sessions')
-  if(any(!class_each_contrast)) stop('each contrast vector must be numeric, but at least one is not')
+  nR <- length(results[[1]])
+  multi_result <- nR > 1
+  out <- vector("list", nR)
+  results_names <- names(results[[1]])
+  names(out) <- results_names
 
-  #Check excursions settings
-  if(is.null(excursion_type)) do_excur <- FALSE else do_excur <- TRUE
-  if(do_excur) {
-    if(length(excursion_type) == 1) excursion_type <- rep(excursion_type, num_contrasts)
-    if(length(gamma) == 1) gamma <- rep(gamma, num_contrasts)
-    if(length(alpha) == 1) alpha <- rep(alpha, num_contrasts)
-    if(length(gamma) != num_contrasts) stop('Length of gamma must match number of contrasts or be equal to one.')
-    if(length(alpha) != num_contrasts) stop('Length of alpha must match number of contrasts or be equal to one.')
-    if(length(excursion_type) != num_contrasts) stop('Length of excursion_type must match number of contrasts or be equal to one.')
-  } else {
-    excursion_type <- 'none'
-  }
+  for (rr in seq(nR)) {
+    result <- results[[1]][[rr]]
+    if (!inherits(result, 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
 
-  for(m in 1:M){
+    #Check that subject-level models are single-session models
+    num_sessions <- length(result$session_names)
+    # if(num_sessions>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
+    # We actually can't really use the averages here because we don't have a
+    # corresponding design matrix and response to calculate the posteriors for beta.
+    # Instead, we can get this working for multi-session data. To begin, we will
+    # assume the same number of sessions for each subject, but this can be changed
+    # later.
+    # if(num_sessions > 1) {
+    #   message("Currently, multi-session analysis is only possible using the averages across sessions.")
+    #   use_avg <- "matrix" %in% class(result$avg_beta_estimates)
+    #   if(!use_avg) stop("This function does not currently support group analysis on multiple sessions unless the analysis is done on subject-level averages across sessions.")
+    #   num_sessions <- 1
+    # }
+    # use_avg <- FALSE
 
-    if(use_files & (m > 1)){
-      results[[m]] <- readRDS(fnames[m])
-      if(inherits(results[[m]], "BayesGLM_cifti")) {
-        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")[1]
-        results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
+    #### SET UP OR CHECK CONTRAST VECTOR(S)
+
+    #TO DO: Generalize to multi-session models (just need to expand the contrasts vector to summarize across sessions as well as subjects)
+
+    # If contrasts is null, by default set up a contrast vector that will compute the average across subjects for each task
+    K <- length(result$beta_names) #number of tasks
+    beta_names <- result$beta_names
+    if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
+    if(is.null(contrasts)) {
+      if(verbose) cat('Setting up contrast vectors to compute the average across subjects for each task. If other contrasts are desired, provide a contrasts argument.\n')
+      contrasts <- vector('list', length=K)
+      names(contrasts) <- paste0(beta_names,'_avg')
+      for(k in 1:K){
+        # Old, broken, fixed?
+        contrast_onesubj_k <- rep(c(rep(0, k-1), 1/(num_sessions*M), rep(0, K-k)),num_sessions) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K, for each session
+        contrast_allsubj_k <- rep(contrast_onesubj_k, M)
+        contrasts[[k]] <- contrast_allsubj_k
       }
-      if(!inherits(results[[m]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
-      # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
-      num_sessions_m <- length(results[[m]]$session_names)
-      # if(use_avg & use_avg_m) num_sessions_m <- 1
-      if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
     }
-    if(m == 1) num_sessions_m <- num_sessions
-  }
 
-  # Mesh and SPDE object
-  mesh <- results[[1]]$mesh
-  spde <- INLA::inla.spde2.matern(mesh)
-  Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
-  Amat <- Amat[mesh$idx$loc,]
-  Amat.tot <- bdiag(rep(list(Amat), K)) #Psi_m from paper (VKxNK)
+    #Check that each contrast vector is numeric and length J*K
+    num_contrasts <- length(contrasts)
+    length_each_contrast <- sapply(contrasts, length)
+    class_each_contrast <- sapply(contrasts, is.numeric)
+    if(any(length_each_contrast != M*K*num_sessions)) stop('each contrast vector must be of length M*K*num_sessions')
+    if(any(!class_each_contrast)) stop('each contrast vector must be numeric, but at least one is not')
 
-  #Check quantiles argument
-  if(!is.null(quantiles)){
-    if(any(quantiles > 1 | quantiles < 0)) stop('All elements of quantiles argument must be between 0 and 1.')
-  }
-
-  # Collecting theta posteriors from subject models
-  Qmu_theta <- Q_theta <- 0
-
-  # Collecting X and y cross-products from subject models (for posterior distribution of beta)
-  Xcros.all <- Xycros.all <- vector("list", M)
-
-  for(m in 1:M){
-
-    if(use_files & (m > 1)){
-      results[[m]] <- readRDS(fnames[m])
-      if(inherits(results[[m]], "BayesGLM_cifti")) {
-        which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")[1]
-        results[[m]] <- results[[m]]$GLMs_Bayesian[[which_BayesGLM]]
-      }
-      if(!inherits(results[[m]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
-      # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
-      num_sessions_m <- length(results[[m]]$session_names)
-      # if(use_avg & use_avg_m) num_sessions_m <- 1
-      if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
-    }
-    if(m == 1) num_sessions_m <- num_sessions
-    # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
-
-    #Check match of beta names
-    beta_names_m <- results[[m]]$beta_names
-    if(!all.equal(beta_names_m, beta_names, check.attributes=FALSE)) stop('All subjects must have the same tasks in the same order.')
-
-    #Check that mesh has same neighborhood structure
-    faces_m <- results[[m]]$mesh$faces
-    if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
-
-    #Check that model is single session or average
-    # if(num_sessions_m>1 & !use_avg_m)
-    # stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
-
-    #Collect posterior mean and precision of hyperparameters
-    mu_theta_m <- results[[m]]$mu.theta
-    Q_theta_m <- results[[m]]$Q.theta
-    #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
-    Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
-    Q_theta <- Q_theta + Q_theta_m
-    rm(mu_theta_m, Q_theta_m)
-
-    #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
-    y_vec <- results[[m]]$y
-    X_list <- results[[m]]$X
-    if(length(X_list) > 1) {
-      n_sess <- length(X_list)
-      X_list <- Matrix::bdiag(X_list)
-      Amat.final <- Matrix::bdiag(rep(list(Amat.tot),n_sess))
+    #Check excursions settings
+    do_excur <- !is.null(excursion_type) && (excursion_type != "none")
+    if(do_excur) {
+      if(length(excursion_type) == 1) excursion_type <- rep(excursion_type, num_contrasts)
+      if(length(gamma) == 1) gamma <- rep(gamma, num_contrasts)
+      if(length(alpha) == 1) alpha <- rep(alpha, num_contrasts)
+      if(length(gamma) != num_contrasts) stop('Length of gamma must match number of contrasts or be equal to one.')
+      if(length(alpha) != num_contrasts) stop('Length of alpha must match number of contrasts or be equal to one.')
+      if(length(excursion_type) != num_contrasts) stop('Length of excursion_type must match number of contrasts or be equal to one.')
     } else {
-      X_list <- X_list[[1]]
-      Amat.final <- Amat.tot
-    }
-    Xmat <- X_list %*% Amat.final
-    Xcros.all[[m]] <- Matrix::crossprod(Xmat)
-    Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
-
-    if(m > 1) results[[m]] <- c(0) #to save memory
-  }
-  mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
-
-  #### DRAW SAMPLES FROM q(theta|y)
-
-  #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
-  if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
-  theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
-
-  #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
-
-  if(verbose) cat('Computing weights for each theta sample \n')
-  logwt <- rep(NA, nsamp_theta)
-  for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
-  #weights to apply to each posterior sample of theta
-  wt.tmp <- exp(logwt - max(logwt))
-  wt <- wt.tmp/(sum(wt.tmp))
-
-  #get posterior quantities of beta, conditional on a value of theta
-  if(verbose) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
-  if(is.null(no_cores)){
-    #6 minutes in simuation
-    beta.posteriors <- apply(theta.samp,
-                             MARGIN=2,
-                             FUN=beta.posterior.thetasamp,
-                             spde=spde,
-                             Xcros = Xcros.all,
-                             Xycros = Xycros.all,
-                             contrasts=contrasts,
-                             quantiles=quantiles,
-                             excursion_type=excursion_type,
-                             gamma=gamma,
-                             alpha=alpha,
-                             nsamp_beta=nsamp_beta)
-  } else {
-    if (!requireNamespace("parallel", quietly = TRUE)) {
-      stop("`BayesGLM2` requires the `parallel` package. Please install it.", call. = FALSE)
+      excursion_type <- 'none'
     }
 
-    #2 minutes in simulation (4 cores)
-    max_no_cores <- min(parallel::detectCores() - 1, 25)
-    no_cores <- min(max_no_cores, no_cores)
-    cl <- parallel::makeCluster(no_cores)
-    beta.posteriors <- parallel::parApply(cl, theta.samp,
-                                          MARGIN=2,
-                                          FUN=beta.posterior.thetasamp,
-                                          spde=spde,
-                                          Xcros = Xcros.all,
-                                          Xycros = Xycros.all,
-                                          contrasts=contrasts,
-                                          quantiles=quantiles,
-                                          excursion_type=excursion_type,
-                                          gamma=gamma,
-                                          alpha=alpha,
-                                          nsamp_beta=nsamp_beta)
-    parallel::stopCluster(cl)
-  }
-
-  ## Sum over samples using weights
-
-  if(verbose) cat('Computing weighted summaries over beta samples \n')
-
-  ## Posterior mean of each contrast
-  betas.all <- lapply(beta.posteriors, function(x) return(x$mu))
-  betas.wt <- mapply(function(x, a){return(x*a)}, betas.all, wt, SIMPLIFY=FALSE) #apply weight to each element of betas.all (one for each theta sample)
-  betas.summ <- apply(abind::abind(betas.wt, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
-
-  ## Posterior quantiles of each contrast
-  num_quantiles <- length(quantiles)
-  if(num_quantiles > 0){
-    quantiles.summ <- vector('list', num_quantiles)
-    names(quantiles.summ) <- quantiles
-    for(iq in 1:num_quantiles){
-      quantiles.all_iq <- lapply(beta.posteriors, function(x) return(x$quantiles[[iq]]))
-      betas.wt_iq <- mapply(function(x, a){return(x*a)}, quantiles.all_iq, wt, SIMPLIFY=FALSE) #apply weight to each element of quantiles.all_iq (one for each theta sample)
-      quantiles.summ[[iq]] <- apply(abind::abind(betas.wt_iq, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+    for(m in 1:M){
+      if(use_files & (m > 1)){
+        results[[m]] <- readRDS(fnames[m])
+        if(inherits(results[[m]], "BayesGLM_cifti")) {
+          which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
+          results[[m]] <- results[[m]]$GLMs_Bayesian[which_BayesGLM]
+        }
+        if(!inherits(results[[m]][[rr]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
+        # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
+        num_sessions_m <- length(results[[m]][[rr]]$session_names)
+        # if(use_avg & use_avg_m) num_sessions_m <- 1
+        if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
+      }
+      if(m == 1) num_sessions_m <- num_sessions
     }
-  } else {
-    quantiles.summ <- NULL
-  }
 
-  ## Posterior probabilities and activations
-  if(do_excur){
-    ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
-    ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
-    ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
-    active <- array(0, dim=dim(ppm.summ))
-    for(l in 1:num_contrasts){
-      active[ppm.summ[,l] > (1-alpha[l]),l] <- 1
+    # Mesh and SPDE object
+    mesh <- result$mesh
+    spde <- INLA::inla.spde2.matern(mesh)
+    Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
+    Amat <- Amat[mesh$idx$loc,]
+    Amat.tot <- bdiag(rep(list(Amat), K)) #Psi_m from paper (VKxNK)
+
+    #Check quantiles argument
+    if(!is.null(quantiles)){
+      if(any(quantiles > 1 | quantiles < 0)) stop('All elements of quantiles argument must be between 0 and 1.')
     }
-  } else {
-    ppm.summ <- active <- NULL
+
+    # Collecting theta posteriors from subject models
+    Qmu_theta <- Q_theta <- 0
+
+    # Collecting X and y cross-products from subject models (for posterior distribution of beta)
+    Xcros.all <- Xycros.all <- vector("list", M)
+
+    for(m in 1:M){
+
+      if(use_files & (m > 1)){
+        results[[m]] <- readRDS(fnames[m])
+        if(inherits(results[[m]], "BayesGLM_cifti")) {
+          which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
+          results[[m]] <- results[[m]]$GLMs_Bayesian[which_BayesGLM]
+        }
+        if(!inherits(results[[m]][[rr]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
+        # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
+        num_sessions_m <- length(results[[m]][[rr]]$session_names)
+        # if(use_avg & use_avg_m) num_sessions_m <- 1
+        if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]][[rr]]$session_names),".")))
+      }
+      if(m == 1) num_sessions_m <- num_sessions
+      # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
+
+      #Check match of beta names
+      beta_names_m <- results[[m]][[rr]]$beta_names
+      if(!all.equal(beta_names_m, beta_names, check.attributes=FALSE)) stop('All subjects must have the same tasks in the same order.')
+
+      #Check that mesh has same neighborhood structure
+      faces_m <- results[[m]][[rr]]$mesh$faces
+      if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
+
+      #Check that model is single session or average
+      # if(num_sessions_m>1 & !use_avg_m)
+      # stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
+
+      #Collect posterior mean and precision of hyperparameters
+      mu_theta_m <- results[[m]][[rr]]$mu.theta
+      Q_theta_m <- results[[m]][[rr]]$Q.theta
+      #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
+      Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
+      Q_theta <- Q_theta + Q_theta_m
+      rm(mu_theta_m, Q_theta_m)
+
+      #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
+      y_vec <- results[[m]][[rr]]$y
+      X_list <- results[[m]][[rr]]$X
+      if(length(X_list) > 1) {
+        n_sess <- length(X_list)
+        X_list <- Matrix::bdiag(X_list)
+        Amat.final <- Matrix::bdiag(rep(list(Amat.tot),n_sess))
+      } else {
+        X_list <- X_list[[1]]
+        Amat.final <- Amat.tot
+      }
+      Xmat <- X_list %*% Amat.final
+      Xcros.all[[m]] <- Matrix::crossprod(Xmat)
+      Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
+
+      if(m > 1) results[[m]][[rr]] <- c(0) #to save memory
+    }
+    mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+
+    #### DRAW SAMPLES FROM q(theta|y)
+
+    #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
+    if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+    theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+
+    #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
+
+    if(verbose) cat('Computing weights for each theta sample \n')
+    logwt <- rep(NA, nsamp_theta)
+    for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
+    #weights to apply to each posterior sample of theta
+    wt.tmp <- exp(logwt - max(logwt))
+    wt <- wt.tmp/(sum(wt.tmp))
+
+    #get posterior quantities of beta, conditional on a value of theta
+    if(verbose) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
+    if(is.null(no_cores)){
+      #6 minutes in simuation
+      beta.posteriors <- apply(theta.samp,
+                              MARGIN=2,
+                              FUN=beta.posterior.thetasamp,
+                              spde=spde,
+                              Xcros = Xcros.all,
+                              Xycros = Xycros.all,
+                              contrasts=contrasts,
+                              quantiles=quantiles,
+                              excursion_type=excursion_type,
+                              gamma=gamma,
+                              alpha=alpha,
+                              nsamp_beta=nsamp_beta)
+    } else {
+      if (!requireNamespace("parallel", quietly = TRUE)) {
+        stop("`BayesGLM2` requires the `parallel` package. Please install it.", call. = FALSE)
+      }
+
+      #2 minutes in simulation (4 cores)
+      max_no_cores <- min(parallel::detectCores() - 1, 25)
+      no_cores <- min(max_no_cores, no_cores)
+      cl <- parallel::makeCluster(no_cores)
+      beta.posteriors <- parallel::parApply(cl, theta.samp,
+                                            MARGIN=2,
+                                            FUN=beta.posterior.thetasamp,
+                                            spde=spde,
+                                            Xcros = Xcros.all,
+                                            Xycros = Xycros.all,
+                                            contrasts=contrasts,
+                                            quantiles=quantiles,
+                                            excursion_type=excursion_type,
+                                            gamma=gamma,
+                                            alpha=alpha,
+                                            nsamp_beta=nsamp_beta)
+      parallel::stopCluster(cl)
+    }
+
+    ## Sum over samples using weights
+
+    if(verbose) cat('Computing weighted summaries over beta samples \n')
+
+    ## Posterior mean of each contrast
+    betas.all <- lapply(beta.posteriors, function(x) return(x$mu))
+    betas.wt <- mapply(function(x, a){return(x*a)}, betas.all, wt, SIMPLIFY=FALSE) #apply weight to each element of betas.all (one for each theta sample)
+    betas.summ <- apply(abind::abind(betas.wt, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+
+    ## Posterior quantiles of each contrast
+    num_quantiles <- length(quantiles)
+    if(num_quantiles > 0){
+      quantiles.summ <- vector('list', num_quantiles)
+      names(quantiles.summ) <- quantiles
+      for(iq in 1:num_quantiles){
+        quantiles.all_iq <- lapply(beta.posteriors, function(x) return(x$quantiles[[iq]]))
+        betas.wt_iq <- mapply(function(x, a){return(x*a)}, quantiles.all_iq, wt, SIMPLIFY=FALSE) #apply weight to each element of quantiles.all_iq (one for each theta sample)
+        quantiles.summ[[iq]] <- apply(abind::abind(betas.wt_iq, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+      }
+    } else {
+      quantiles.summ <- NULL
+    }
+
+    ## Posterior probabilities and activations
+    if(do_excur){
+      ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
+      ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
+      ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
+      active <- array(0, dim=dim(ppm.summ))
+      for(l in 1:num_contrasts){
+        active[ppm.summ[,l] > (1-alpha[l]),l] <- 1
+      }
+    } else {
+      ppm.summ <- active <- NULL
+    }
+
+    ### Save all results
+    out[[rr]] <- list(
+      estimates = betas.summ,
+      quantiles = quantiles.summ,
+      ppm = ppm.summ,
+      active = active,
+      contrasts = contrasts,
+      gamma = gamma,
+      alpha = alpha,
+      nsamp_theta = nsamp_theta,
+      nsamp_beta = nsamp_beta,
+      Amat = Amat
+    )
   }
 
-  ### Save all results
-  result <- list(estimates = betas.summ,
-                 quantiles = quantiles.summ,
-                 ppm = ppm.summ,
-                 active = active,
-                 contrasts = contrasts,
-                 gamma = gamma,
-                 alpha = alpha,
-                 nsamp_theta = nsamp_theta,
-                 nsamp_beta = nsamp_beta,
-                 Amat = Amat)
-
-  return(result)
-
+  if (nR == 1) { out <- out[[1]] }
+  out
 }
 
 
