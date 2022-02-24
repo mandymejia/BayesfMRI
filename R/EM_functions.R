@@ -275,26 +275,26 @@ BayesGLMEM <- function(data,
   #   parallel::stopCluster(cl)
   # }
   # if(!use_SQUAREM) {
-  #   theta_init <- apply(beta_hat,2,function(bh, kappa2, phi, spde) {
-  #     step <- 1
-  #     max_pct_change <- Inf
-  #     theta <- c(kappa2, phi)
-  #     while(max_pct_change > tol | step <= 5) {
-  #       theta_new <-
-  #         init_fixpt(
-  #           theta = theta,
-  #           # spde = spde,
-  #           spde = spde,
-  #           beta_hat = bh
-  #         )
-  #       theta_pct_change <- 100 * abs((theta_new - theta) / theta)
-  #       max_pct_change <- max(theta_pct_change)
-  #       theta <- theta_new
-  #       step <- step+1
-  #     }
-  #     return(theta)
-  #   }, kappa2 = kappa2, phi = phi, spde = rcpp_spde)
-  #   theta <- c(t(theta_init), sigma2)
+    # theta_init <- apply(beta_hat,2,function(bh, kappa2, phi, spde) {
+    #   step <- 1
+    #   max_pct_change <- Inf
+    #   theta <- c(kappa2, phi)
+    #   while(max_pct_change > tol | step <= 5) {
+    #     theta_new <-
+    #       init_fixpt(
+    #         theta = theta,
+    #         # spde = spde,
+    #         spde = spde,
+    #         beta_hat = bh
+    #       )
+    #     theta_pct_change <- 100 * abs((theta_new - theta) / theta)
+    #     max_pct_change <- max(theta_pct_change)
+    #     theta <- theta_new
+    #     step <- step+1
+    #   }
+    #   return(theta)
+    # }, kappa2 = kappa2, phi = phi, spde = rcpp_spde)
+    # theta <- c(t(theta_init), sigma2)
   # }
   theta_init <- theta
   Ns <- 50

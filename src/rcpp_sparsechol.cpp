@@ -278,14 +278,14 @@ struct SquaremOutput{
   bool convergence=false;
 } sqobj,sqobjnull;
 
-Eigen::VectorXd init_fixpt(Eigen::VectorXd theta, Eigen::VectorXd w, List spde, int n_sess) {
+Eigen::VectorXd init_fixptC(Eigen::VectorXd theta, Eigen::VectorXd w, List spde, int n_sess, double tol) {
   int n_spde = w.size();
   int start_idx;
   Eigen::VectorXd wNs(n_spde);
   n_spde = n_spde / n_sess;
   Eigen::VectorXd Qw(n_spde);
   double wQw = 0.;
-  theta(0) = kappa2BrentInit(0., 50., theta(1), spde, w, n_sess, 1e-3);
+  theta(0) = kappa2BrentInit(0., 50., theta(1), spde, w, n_sess, tol);
   Eigen::SparseMatrix<double> Q(n_spde,n_spde);
   makeQt(&Q, theta(0), spde);
   for (int ns = 0; ns < n_sess; ns++) {
@@ -298,7 +298,7 @@ Eigen::VectorXd init_fixpt(Eigen::VectorXd theta, Eigen::VectorXd w, List spde, 
   return theta;
 }
 
-SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, int n_sess){
+SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, int n_sess, double tol){
   double res,parnorm,kres;
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
@@ -318,7 +318,7 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, i
     //Step 1
     extrap = true;
     // try{p1cpp=fixptfn(pcpp);feval++;}
-    try{p1cpp=init_fixpt(pcpp, w, spde, n_sess);feval++;}
+    try{p1cpp=init_fixptC(pcpp, w, spde, n_sess, tol);feval++;}
     catch(...){
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
@@ -329,7 +329,7 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, i
     if(sqrt(sr2_scalar)<SquaremDefault.tol){break;}
 
     //Step 2
-    try{p2cpp=init_fixpt(p1cpp,  w, spde, n_sess);feval++;}
+    try{p2cpp=init_fixptC(p1cpp,  w, spde, n_sess, tol);feval++;}
     catch(...){
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
@@ -360,7 +360,7 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, i
 
     //Step 4 stabilization
     if(std::abs(alpha-1)>0.01){
-      try{ptmp=init_fixpt(pnew,  w, spde, n_sess);feval++;}
+      try{ptmp=init_fixptC(pnew,  w, spde, n_sess, tol);feval++;}
       catch(...){
         pnew=p2cpp;
         if(alpha==stepmax){
@@ -429,7 +429,7 @@ Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, i
   // double eps = tol + 1;
   // Eigen::VectorXd new_theta(theta.size()), diffTheta(theta.size());
   // while(eps > tol) {
-  //   new_theta = init_fixpt(theta, w, spde, n_sess);
+  //   new_theta = init_fixptC(theta, w, spde, n_sess);
   //   diffTheta = new_theta - theta;
   //   eps = diffTheta.squaredNorm();
   //   eps = sqrt(eps);
@@ -439,7 +439,7 @@ Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, i
   SquaremOutput SQ_out;
   SquaremDefault.tol = tol;
   SquaremDefault.trace = verbose;
-  SQ_out = init_squarem2(theta, w, spde, n_sess);
+  SQ_out = init_squarem2(theta, w, spde, n_sess, tol);
   theta= SQ_out.par;
   return theta;
 }
@@ -461,7 +461,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
                             Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                             const Eigen::MatrixXd Vh, const Eigen::MatrixXd Avh,
-                            const Eigen::VectorXd y, const double yy, const List spde) {
+                            const Eigen::VectorXd y, const double yy, const List spde, double tol) {
   // Bring in the spde matrices
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
@@ -558,8 +558,9 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     // Update kappa2
     a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
-    Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star << std::endl;
-    new_kappa2 = kappa2Brent(0, 50, spde, a_star, b_star, 2, 1e-4);
+    // Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star;
+    new_kappa2 = kappa2Brent(0, 50, spde, a_star, b_star, n_sess, tol);
+    // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
     theta_new[k] = new_kappa2;
     // Update phi
     phi_partA = sumDiagPCVkn + muCmu;
@@ -590,7 +591,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
                        Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
                        const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                        const Eigen::MatrixXd Vh, const Eigen::MatrixXd Avh,
-                       const Eigen::VectorXd y, const double yy, const List spde){
+                       const Eigen::VectorXd y, const double yy, const List spde, double tol){
   double res,parnorm,kres;
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
@@ -610,7 +611,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
     //Step 1
     extrap = true;
     // try{p1cpp=fixptfn(pcpp);feval++;}
-    try{p1cpp=theta_fixpt(pcpp, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);feval++;}
+    try{p1cpp=theta_fixpt(pcpp, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde, tol);feval++;}
     catch(...){
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
@@ -621,7 +622,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
     if(sqrt(sr2_scalar)<SquaremDefault.tol){break;}
 
     //Step 2
-    try{p2cpp=theta_fixpt(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);feval++;}
+    try{p2cpp=theta_fixpt(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde, tol);feval++;}
     catch(...){
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
@@ -652,7 +653,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 
     //Step 4 stabilization
     if(std::abs(alpha-1)>0.01){
-      try{ptmp=theta_fixpt(pnew, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);feval++;}
+      try{ptmp=theta_fixpt(pnew, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde, tol);feval++;}
       catch(...){
         pnew=p2cpp;
         if(alpha==stepmax){
@@ -748,20 +749,20 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   Eigen::VectorXd theta_new;
   Eigen::VectorXd thetaDiff(2 * K + 1);
   // while(eps > tol) {
-  while(Step < 1) {
-    theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
-    Step += 1;
-    Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
-    thetaDiff = theta_new - theta;
-    eps = thetaDiff.squaredNorm();
-    eps = sqrt(eps);
-    theta = theta_new;
-  }
+  // // while(Step < 1) {
+  //   theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
+  //   Step += 1;
+  //   Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
+  //   thetaDiff = theta_new - theta;
+  //   eps = thetaDiff.squaredNorm();
+  //   eps = sqrt(eps);
+  //   theta = theta_new;
+  // }
   // Using SQUAREM
-  // SquaremOutput SQ_result;
-  // SquaremDefault.tol = tol;
-  // SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
-  // theta= SQ_result.par;
+  SquaremOutput SQ_result;
+  SquaremDefault.tol = tol;
+  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde, tol);
+  theta= SQ_result.par;
   // Bring results together for output
   Rcout << "Final theta: " << theta.transpose() << std::endl;
   AdivS2 = A / theta[sig2_ind];
