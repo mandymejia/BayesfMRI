@@ -89,6 +89,8 @@ BayesGLM2 <- function(results,
     if(inherits(results[[1]], "BayesGLM_cifti")) {
       which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
       results[[1]] <- results[[1]]$GLMs_Bayesian[which_BayesGLM]
+    } else {
+      results[[1]] <- list(BayesGLM=results[[1]])
     }
   }
 
@@ -164,6 +166,8 @@ BayesGLM2 <- function(results,
         if(inherits(results[[m]], "BayesGLM_cifti")) {
           which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
           results[[m]] <- results[[m]]$GLMs_Bayesian[which_BayesGLM]
+        } else {
+          results[[m]] <- list(BayesGLM=results[[m]])
         }
         if(!inherits(results[[m]][[rr]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
         # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
@@ -199,6 +203,8 @@ BayesGLM2 <- function(results,
         if(inherits(results[[m]], "BayesGLM_cifti")) {
           which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
           results[[m]] <- results[[m]]$GLMs_Bayesian[which_BayesGLM]
+        } else {
+          results[[m]] <- list(BayesGLM=results[[m]])
         }
         if(!inherits(results[[m]][[rr]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
         # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
@@ -355,6 +361,7 @@ BayesGLM2 <- function(results,
   }
 
   if (nR == 1) { out <- out[[1]] }
+  # class(out) <- "BayesGLM2"
   out
 }
 
