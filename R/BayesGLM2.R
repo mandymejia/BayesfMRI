@@ -78,34 +78,46 @@ BayesGLM2 <- function(results,
   }
   if(problem) stop('All elements of results argument must be BayesGLM or a character file path to an RDS object.')
 
-  #if using files, grab the first model result for checks
+  #if using files, grab the first model result for checks. read all in.
   M <- length(results)
   use_files <- (result_class[1]=='character')
   use_objects <- (result_class[1]=='BayesGLM')
   if(use_files) {
     fnames <- results
-    results <- vector('list', length=M)
-    results[[1]] <- readRDS(fnames[1])
-    if(inherits(results[[1]], "BayesGLM_cifti")) {
-      which_BayesGLM <- which(sapply(results[[1]]$GLMs_Bayesian,class) == "BayesGLM")
-      results[[1]] <- results[[1]]$GLMs_Bayesian[which_BayesGLM]
-    } else {
-      results[[1]] <- list(BayesGLM=results[[1]])
-    }
+    results <- lapply(fnames, readRDS)
   }
 
-  nR <- length(results[[1]])
+  result1 <- results[[1]]
+  if(inherits(result1, "BayesGLM_cifti")) {
+    which_BayesGLM <- which(sapply(result1$GLMs_Bayesian,class) == "BayesGLM")
+    nR <- length(which_BayesGLM)
+    results_names <- names(result1$GLMs_Bayesian[which_BayesGLM])
+  } else {
+    nR <- 1
+    results_names <- "BayesGLM"
+  }
   multi_result <- nR > 1
   out <- vector("list", nR)
-  results_names <- names(results[[1]])
   names(out) <- results_names
 
   for (rr in seq(nR)) {
-    result <- results[[1]][[rr]]
-    if (!inherits(result, 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
+    results2 <- vector("list", length(results))
+
+    if (multi_result) { cat(names(out)[rr], " ~~~~~~~~~~~\n") }
+
+    # `result`: results for this particular rr, for the first file.
+    if(inherits(result1, "BayesGLM_cifti")) {
+      which_BayesGLM <- which(sapply(result1$GLMs_Bayesian,class) == "BayesGLM")
+      stopifnot(length(which_BayesGLM)==nR)
+      result1_rr <- result1$GLMs_Bayesian[[which_BayesGLM[rr]]]
+    } else {
+      result1_rr <- result1
+    }
+
+    if (!inherits(result1_rr, 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
 
     #Check that subject-level models are single-session models
-    num_sessions <- length(result$session_names)
+    num_sessions <- length(result1_rr$session_names)
     # if(num_sessions>1) stop('This function is currently only applicable to results of single-session modeling at subject level.')
     # We actually can't really use the averages here because we don't have a
     # corresponding design matrix and response to calculate the posteriors for beta.
@@ -125,8 +137,8 @@ BayesGLM2 <- function(results,
     #TO DO: Generalize to multi-session models (just need to expand the contrasts vector to summarize across sessions as well as subjects)
 
     # If contrasts is null, by default set up a contrast vector that will compute the average across subjects for each task
-    K <- length(result$beta_names) #number of tasks
-    beta_names <- result$beta_names
+    K <- length(result1_rr$beta_names) #number of tasks
+    beta_names <- result1_rr$beta_names
     if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
     if(is.null(contrasts)) {
       if(verbose) cat('Setting up contrast vectors to compute the average across subjects for each task. If other contrasts are desired, provide a contrasts argument.\n')
@@ -160,26 +172,37 @@ BayesGLM2 <- function(results,
       excursion_type <- 'none'
     }
 
+    # First pass: check scans; get intersection mask & mesh --------------------
+    # Intersection mask over the "M" scans
+    Mask <- vector("list", M)
+
     for(m in 1:M){
-      if(use_files & (m > 1)){
-        results[[m]] <- readRDS(fnames[m])
-        if(inherits(results[[m]], "BayesGLM_cifti")) {
-          which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
-          results[[m]] <- results[[m]]$GLMs_Bayesian[which_BayesGLM]
-        } else {
-          results[[m]] <- list(BayesGLM=results[[m]])
-        }
-        if(!inherits(results[[m]][[rr]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
-        # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
-        num_sessions_m <- length(results[[m]][[rr]]$session_names)
-        # if(use_avg & use_avg_m) num_sessions_m <- 1
-        if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]]$session_names),".")))
+      results2[[m]] <- results[[m]]
+      if(inherits(results2[[m]], "BayesGLM_cifti")) {
+        which_BayesGLM <- which(sapply(results2[[m]]$GLMs_Bayesian,class) == "BayesGLM")
+        stopifnot(length(which_BayesGLM)==nR)
+        results2[[m]] <- results2[[m]]$GLMs_Bayesian[[which_BayesGLM[rr]]]
       }
-      if(m == 1) num_sessions_m <- num_sessions
+      # [TO DO]: more checks?
+      if(!inherits(results2[[m]], 'BayesGLM')) stop("Each RDS file in results2 argument must contain an object of class BayesGLM")
+      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_beta_estimates)
+      num_sessions_m <- length(results2[[m]]$session_names)
+      # if(use_avg & use_avg_m) num_sessions_m <- 1
+      if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results2[[m]]$session_names),".")))
+      Mask[[m]] <- results2[[m]]$mask
     }
 
+    if (length(unique(vapply(Mask, length, 0))) != 1) { stop("Unequal mask lengths--check that the input files are in the same resolution.") }
+    Mask <- do.call(rbind, Mask)
+    Mask_sums <- colSums(Mask)
+    need_Mask <- !all(Mask_sums %in% c(0, nrow(Mask)))
+
     # Mesh and SPDE object
-    mesh <- result$mesh
+    mesh <- result1_rr$mesh
+    if (need_Mask) {
+      Mask <- apply(Mask, 2, all)
+      mesh <- retro_mask_mesh(mesh, Mask[result1_rr$mask])
+    }
     spde <- INLA::inla.spde2.matern(mesh)
     Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
     Amat <- Amat[mesh$idx$loc,]
@@ -196,48 +219,37 @@ BayesGLM2 <- function(results,
     # Collecting X and y cross-products from subject models (for posterior distribution of beta)
     Xcros.all <- Xycros.all <- vector("list", M)
 
-    for(m in 1:M){
+    # Second pass: compute result. ---------------------------------------------
 
-      if(use_files & (m > 1)){
-        results[[m]] <- readRDS(fnames[m])
-        if(inherits(results[[m]], "BayesGLM_cifti")) {
-          which_BayesGLM <- which(sapply(results[[m]]$GLMs_Bayesian,class) == "BayesGLM")
-          results[[m]] <- results[[m]]$GLMs_Bayesian[which_BayesGLM]
-        } else {
-          results[[m]] <- list(BayesGLM=results[[m]])
-        }
-        if(!inherits(results[[m]][[rr]], 'BayesGLM')) stop("Each RDS file in results argument must contain an object of class BayesGLM")
-        # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
-        num_sessions_m <- length(results[[m]][[rr]]$session_names)
-        # if(use_avg & use_avg_m) num_sessions_m <- 1
-        if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results[[m]][[rr]]$session_names),".")))
-      }
-      if(m == 1) num_sessions_m <- num_sessions
-      # use_avg_m <- "matrix" %in% class(results[[m]][[rr]]$avg_beta_estimates)
+    for(m in 1:M){
+      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_beta_estimates)
+      # if(use_avg & use_avg_m) num_sessions_m <- 1
+      if (need_Mask) { results2[[m]] <- retro_mask_BGLM(results2[[m]], Mask[results2[[m]]$mask]) }
+      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_beta_estimates)
 
       #Check match of beta names
-      beta_names_m <- results[[m]][[rr]]$beta_names
+      beta_names_m <- results2[[m]]$beta_names
       if(!all.equal(beta_names_m, beta_names, check.attributes=FALSE)) stop('All subjects must have the same tasks in the same order.')
 
       #Check that mesh has same neighborhood structure
-      faces_m <- results[[m]][[rr]]$mesh$faces
+      faces_m <- results2[[m]]$mesh$faces
       if(!all.equal(faces_m, mesh$faces, check.attribute=FALSE)) stop(paste0('Subject ',m,' does not have the same mesh neighborhood structure as subject 1. Check meshes for discrepancies.'))
 
       #Check that model is single session or average
       # if(num_sessions_m>1 & !use_avg_m)
-      # stop('This function is currently only applicable to results of single-session or average modeling at subject level.')
+      # stop('This function is currently only applicable to results2 of single-session or average modeling at subject level.')
 
       #Collect posterior mean and precision of hyperparameters
-      mu_theta_m <- results[[m]][[rr]]$mu.theta
-      Q_theta_m <- results[[m]][[rr]]$Q.theta
+      mu_theta_m <- results2[[m]]$mu.theta
+      Q_theta_m <- results2[[m]]$Q.theta
       #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
       Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
       Q_theta <- Q_theta + Q_theta_m
       rm(mu_theta_m, Q_theta_m)
 
       #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
-      y_vec <- results[[m]][[rr]]$y
-      X_list <- results[[m]][[rr]]$X
+      y_vec <- results2[[m]]$y
+      X_list <- results2[[m]]$X
       if(length(X_list) > 1) {
         n_sess <- length(X_list)
         X_list <- Matrix::bdiag(X_list)
@@ -249,9 +261,8 @@ BayesGLM2 <- function(results,
       Xmat <- X_list %*% Amat.final
       Xcros.all[[m]] <- Matrix::crossprod(Xmat)
       Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
-
-      if(m > 1) results[[m]][[rr]] <- c(0) #to save memory
     }
+    results2 <- NULL # save memory
     mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
 
     #### DRAW SAMPLES FROM q(theta|y)
@@ -356,8 +367,11 @@ BayesGLM2 <- function(results,
       alpha = alpha,
       nsamp_theta = nsamp_theta,
       nsamp_beta = nsamp_beta,
-      Amat = Amat
+      Amat = Amat,
+      mask=Mask
     )
+
+    if (multi_result) { cat("~~~~~~~~~~~~~~~~~~~~\n\n") }
   }
 
   if (nR == 1) { out <- out[[1]] }
