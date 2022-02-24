@@ -6,6 +6,7 @@
 #'
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
+#' @param use_INLA (logical) should INLA be used to make the mesh or not?
 #'
 #' @return Triangular mesh from matrices and vertices
 #'

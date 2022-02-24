@@ -414,12 +414,13 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, i
 
 //' Find the initial values of kappa2 and phi
 //'
-//' @param kappa2 a scalar scale parameter
-//' @param phi a scalar range parameter
+//' @param theta a vector of length two containing the range and scale parameters
+//'   kappa2 and phi, in that order
 //' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
 //' @param w the beta_hat estimates for a single task
 //' @param n_sess the number of sessions
 //' @param tol the stopping rule tolerance
+//' @param verbose (logical) Should intermediate output be displayed?
 //' @export
 // [[Rcpp::export(rng = false)]]
 Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, int n_sess, double tol, bool verbose) {
@@ -716,7 +717,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 //' @param A a precomputed matrix crossprod(X%*%Psi)
 //' @param Vh A random matrix with elements -1 and 1 used in the Hutchinson estimator of a trace
 //' @param tol a value for the tolerance used for a stopping rule (compared to
-//'   the squared norm of the differences between theta[s] and theta[s-1])
+//'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
 //' @export
 // [[Rcpp::export(rng = false)]]
 Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,

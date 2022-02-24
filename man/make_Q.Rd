@@ -16,7 +16,7 @@ last element (unused here) corresponds to sigma2}
 \item{n_sess}{The integer number of sessions}
 }
 \value{
-
+An SPDE prior matrix
 }
 \description{
 Make the full SPDE precision based on theta, the spde, and the number of sessions

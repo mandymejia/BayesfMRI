@@ -165,6 +165,8 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
 #'
 #' @param FV Matrix of faces in triangularization
 #' @param P Matrix of vertex locations in triangularization
+#' @param surface (logical) Will this create the SPDE matrices for a surface
+#'   or not?
 #'
 #' @return A list of matrices C and G appearing in sparse SPDE precision
 #'

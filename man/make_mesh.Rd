@@ -14,6 +14,8 @@ number of vertices in the mesh}
 \item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
 indices for a given triangular face in the mesh. \eqn{F} is the number of
 faces in the mesh.}
+
+\item{use_INLA}{(logical) should INLA be used to make the mesh or not?}
 }
 \value{
 Triangular mesh from matrices and vertices

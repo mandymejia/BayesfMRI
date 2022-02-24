@@ -10,7 +10,7 @@ create_listRcpp(spde)
 \item{spde}{an spde object}
 }
 \value{
-
+The SPDE matrices with the correct data formats
 }
 \description{
 Function to prepare objects for use in Rcpp functions

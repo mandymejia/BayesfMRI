@@ -207,7 +207,7 @@ spde_Q_phi <- function(kappa2, phi, spde) {
   # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
   # GtCinvG <- spde$M2
   list2env(spde, envir = environment())
-  Q <- (kappa2*spde$Cmat + 2*Gmat + spde$GtCinvG/kappa2) / (4*pi*phi)
+  Q <- (kappa2*spde$Cmat + 2*spde$Gmat + spde$GtCinvG/kappa2) / (4*pi*phi)
   return(Q)
 }
 
@@ -219,13 +219,13 @@ spde_Q_phi <- function(kappa2, phi, spde) {
 #' @param spde a list containing three spde elements: Cmat, Gmat, and GtCinvG
 #' @param n_sess The integer number of sessions
 #'
-#' @return
+#' @return An SPDE prior matrix
 #' @keywords internal
 make_Q <- function(theta, spde, n_sess) {
   list2env(spde, envir = environment())
   K <- (length(theta) - 1) / 2
   Q_k <- sapply(seq(K), function(k) {
-    out <- (theta[k]*spde$Cmat + 2*Gmat + spde$GtCinvG/theta[k]) / (4*pi*theta[k + K])
+    out <- (theta[k]*spde$Cmat + 2*spde$Gmat + spde$GtCinvG/theta[k]) / (4*pi*theta[k + K])
   }, simplify = F)
   Q <- Matrix::bdiag(Q_k)
   if(n_sess > 1) Q <- Matrix::bdiag(rep(list(Q),n_sess))
@@ -375,7 +375,9 @@ prep_kappa2_optim <- function(spde, mu, phi, P, vh) {
 #'
 #' @param spde an spde object
 #'
-#' @return
+#' @return The SPDE matrices with the correct data formats
+#'
+#' @importFrom methods as
 #' @keywords internal
 create_listRcpp <- function(spde) {
   Cmat <- as(spde$M0,"dgCMatrix")

@@ -31,9 +31,11 @@
 #'
 #' @return A list containing...
 #'
+#' @import MatrixModels
 #' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
+#' @importFrom methods as
 #' @importFrom SQUAREM squarem
 #' @importFrom parallel makeCluster parApply
 #' @importFrom utils tail
@@ -399,6 +401,7 @@ BayesGLMEM <- function(data,
   # }
   # > End EM algorithm ----
   cat(".... EM algorithm complete!\n")
+  kappa2_new <- phi_new <- sigma2_new <- mu <- NULL
   list2env(em_output, envir = environment())
   Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
                    MoreArgs = list(spde=rcpp_spde), SIMPLIFY = F)

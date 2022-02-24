@@ -7,6 +7,9 @@
 initialKP(theta, spde, w, n_sess, tol, verbose)
 }
 \arguments{
+\item{theta}{a vector of length two containing the range and scale parameters
+kappa2 and phi, in that order}
+
 \item{spde}{a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG}
 
 \item{w}{the beta_hat estimates for a single task}
@@ -15,9 +18,7 @@ initialKP(theta, spde, w, n_sess, tol, verbose)
 
 \item{tol}{the stopping rule tolerance}
 
-\item{kappa2}{a scalar scale parameter}
-
-\item{phi}{a scalar range parameter}
+\item{verbose}{(logical) Should intermediate output be displayed?}
 }
 \description{
 Find the initial values of kappa2 and phi

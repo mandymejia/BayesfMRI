@@ -24,7 +24,7 @@ findTheta(theta, spde, y, X, QK, Psi, A, Vh, tol)
 \item{Vh}{A random matrix with elements -1 and 1 used in the Hutchinson estimator of a trace}
 
 \item{tol}{a value for the tolerance used for a stopping rule (compared to
-the squared norm of the differences between theta\link{s} and theta\link{s-1})}
+the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})}
 }
 \description{
 Perform the EM algorithm of the Bayesian GLM fitting
