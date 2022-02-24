@@ -737,9 +737,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
   cholSigInv.compute(Sig_inv);
   cholSigInv.analyzePattern(Sig_inv);
-  int Step = 0;
   Rcout << "Initial theta: " << theta.transpose() << std::endl;
-  double eps = tol + 1;
   // Initialize everything
   Eigen::SparseMatrix<double> Xpsi = X * Psi;
   Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
@@ -747,8 +745,10 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   Eigen::MatrixXd Avh = A * Vh;
   double yy = y.transpose() * y;
   // Regular fixed point updates
-  Eigen::VectorXd theta_new;
-  Eigen::VectorXd thetaDiff(2 * K + 1);
+  // Eigen::VectorXd theta_new;
+  // Eigen::VectorXd thetaDiff(2 * K + 1);
+  // int Step = 0;
+  // double eps = tol + 1;
   // while(eps > tol) {
   // // while(Step < 1) {
   //   theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde);
