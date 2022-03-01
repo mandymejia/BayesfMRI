@@ -300,6 +300,7 @@ BayesGLMEM <- function(data,
   # }
   theta_init <- theta
   Ns <- 50
+  # set.seed(1) # COMMENT THIS OUT WHEN NOT DEBUGGING
   Vh <- matrix(sample(x = c(-1,1), size = Ns * nrow(A), replace = TRUE),
                nrow(A), Ns)
   # > Start EM algorithm ----
