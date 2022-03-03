@@ -34,11 +34,11 @@ initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
 #' @param QK a sparse matrix of the prior precision found using the initial values of the hyperparameters
 #' @param Psi a sparse matrix representation of the basis function mapping the data locations to the mesh vertices
 #' @param A a precomputed matrix crossprod(X%*%Psi)
-#' @param Vh A random matrix with elements -1 and 1 used in the Hutchinson estimator of a trace
+#' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 #' @param tol a value for the tolerance used for a stopping rule (compared to
 #'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
 #' @export
-findTheta <- function(theta, spde, y, X, QK, Psi, A, Vh, tol) {
-    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Vh, tol)
+findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol) {
+    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol)
 }
 

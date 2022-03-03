@@ -4,7 +4,7 @@
 \alias{findTheta}
 \title{Perform the EM algorithm of the Bayesian GLM fitting}
 \usage{
-findTheta(theta, spde, y, X, QK, Psi, A, Vh, tol)
+findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol)
 }
 \arguments{
 \item{theta}{the vector of initial values for theta}
@@ -21,7 +21,7 @@ findTheta(theta, spde, y, X, QK, Psi, A, Vh, tol)
 
 \item{A}{a precomputed matrix crossprod(X\%*\%Psi)}
 
-\item{Vh}{A random matrix with elements -1 and 1 used in the Hutchinson estimator of a trace}
+\item{Ns}{the number of columns for the random matrix used in the Hutchinson estimator}
 
 \item{tol}{a value for the tolerance used for a stopping rule (compared to
 the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})}
