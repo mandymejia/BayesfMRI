@@ -232,14 +232,8 @@ BayesGLMEM <- function(data,
   # Using values matching BayesGLM
   kappa2 <- 4
   phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
-  # sigma2 <- var(model_data$y)
-  # theta <- c(kappa2, phi, sigma2)
   # Using values based on the classical GLM
   cat("... FINDING BEST GUESS INITIAL VALUES\n")
-  # XTX <- Matrix::crossprod(model_data$X)
-  # XTX_inv <- Matrix::solve(XTX)
-  # XTy <- Matrix::crossprod(model_data$X,model_data$y)
-  # beta_hat <- (XTX_inv %*% XTy)@x
   beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
   res_y <- (model_data$y - model_data$X %*% beta_hat)@x
   sigma2 <- stats::var(res_y)
@@ -250,139 +244,38 @@ BayesGLMEM <- function(data,
     task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
     beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
   }
-  ## WHAT'S THE DIFFERENCE??? ----
-  # # R
-  # init_fixpt(c(4,0.0049),spde,beta_hat[,1])
-  # # [1] 0.09887381 0.01980047
-  # kappa_init_fn(4,0.0049,spde,beta_hat[,1])
-  # # log_det_Q = 4865.518 , bQb = 2123.092
-  # # [1] 14807.06
-  # stats::optimize(
-  #   f = kappa_init_fn,
-  #   phi = 0.0049,
-  #   spde = spde,
-  #   beta_hat = beta_hat[,1],
-  #   lower = 0,
-  #   upper = 50,
-  #   maximum = FALSE
-  # )
-  # # $minimum
-  # # [1] 0.09887381
-  # #
-  # # $objective
-  # # [1] 457.6152
-  # SQUAREM::squarem(
-  #   par = c(4,0.0049),
-  #   fixptfn = init_fixpt,
-  #   spde = spde,
-  #   beta_hat = beta_hat[,1],
-  #   control = list(tol = 1e-3, trace = verbose, K = 1)
-  # )
-  # # Squarem-2
-  # # Residual:  0.06454579   Extrapolation:  TRUE   Steplength:  1
-  # # Residual:  0.0009898922   Extrapolation:  TRUE   Steplength:  1.827177
-  # # $par
-  # # [1] 0.19531704 0.02197059
-  # # C++
-  # init_fixptC(c(4,0.0049),beta_hat[,1],spde, 1, 1e-3)
-  # # [1] 0.09899317 0.01980090
-  # kappa2InitObj(4,0.0049,spde,beta_hat[,1],1)
-  # # log_det_Q = 4865.52, bQb = 2123.09
-  # # [1] 14807.06
-  # kappa2BrentInit(lower = 0,upper = 50,phi = 0.0049,spde = spde,beta_hat = beta_hat[,1],n_sess = 1)
-  # # objective = 457.615
-  # # [1] 0.09887672
-  # initialKP(theta = c(4,0.0049),spde = spde,w = beta_hat[,1],n_sess = 1,tol = 1e-3,verbose = TRUE)
-  # # Squarem-2
-  # # Residual: 0.0644804  Extrapolation: 1  Steplength: 1
-  # # Residual: 0.0011669  Extrapolation: 1  Steplength: 1.78003
-  # # [1] 0.19470580 0.02195097
-  # # valueobjfn = nan, iter = 3, fpevals = 6, objevals = 0, convergence = 1
-  ## END OF CONFUSION ----
-  kappa2_phi_rcpp <- apply(beta_hat,2,initialKP, theta = c(kappa2, phi), spde = rcpp_spde, n_sess = n_sess, tol = tol, verbose = verbose)
+  # kappa2_phi_rcpp <-
+  #   apply(
+  #     beta_hat,
+  #     2,
+  #     initialKP,
+  #     theta = c(kappa2, phi),
+  #     spde = rcpp_spde,
+  #     n_sess = n_sess,
+  #     tol = tol,
+  #     verbose = verbose
+  #   )
+  n_threads <- parallel::detectCores()
+  n_threads <- min(n_threads,K,num.threads)
+  cl <- parallel::makeCluster(n_threads)
+  kappa2_phi_rcpp <-
+    parallel::parApply(
+      cl = cl,
+      beta_hat,
+      2,
+      initialKP,
+      theta = c(kappa2, phi),
+      spde = rcpp_spde,
+      n_sess = n_sess,
+      tol = tol,
+      verbose = verbose
+    )
+  parallel::stopCluster(cl)
   cat("...... DONE!\n")
   theta <- c(t(kappa2_phi_rcpp), sigma2)
-  # if(use_SQUAREM) {
-  #   cl <- parallel::makeCluster(min(num.threads,K))
-  #   kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, verbose) {
-  #     source("~/github/BayesfMRI/R/EM_utils.R") # For debugging
-  #     Rcpp::sourceCpp("~/github/BayesfMRI/src/rcpp_sparsechol.cpp")
-  #     init_output <-
-  #       SQUAREM::squarem(
-  #         par = c(kappa2, phi),
-  #         fixptfn = init_fixpt,
-  #         spde = spde,
-  #         beta_hat = bh,
-  #         control = list(tol = 1e-3, trace = verbose, K = 1)
-  #       )
-  #     return(init_output)
-  #   },kappa2 = kappa2, phi = phi, spde = rcpp_spde, verbose = verbose)
-  #   kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
-  #   theta <- c(t(kappa2_phi),sigma2)
-  #   cat("...... DONE!\n")
-  #   parallel::stopCluster(cl)
-  # }
-  # if(!use_SQUAREM) {
-    # theta_init <- apply(beta_hat,2,function(bh, kappa2, phi, spde) {
-    #   step <- 1
-    #   max_pct_change <- Inf
-    #   theta <- c(kappa2, phi)
-    #   while(max_pct_change > tol | step <= 5) {
-    #     theta_new <-
-    #       init_fixpt(
-    #         theta = theta,
-    #         # spde = spde,
-    #         spde = spde,
-    #         beta_hat = bh
-    #       )
-    #     theta_pct_change <- 100 * abs((theta_new - theta) / theta)
-    #     max_pct_change <- max(theta_pct_change)
-    #     theta <- theta_new
-    #     step <- step+1
-    #   }
-    #   return(theta)
-    # }, kappa2 = kappa2, phi = phi, spde = rcpp_spde)
-    # theta <- c(t(theta_init), sigma2)
-  # }
   theta_init <- theta
   Ns <- 50
-  # set.seed(1) # COMMENT THIS OUT WHEN NOT DEBUGGING
-  # Vh <- matrix(sample(x = c(-1,1), size = Ns * nrow(A), replace = TRUE),
-  #              nrow(A), Ns)
-  # > Start EM algorithm ----
-  ## CONFUSION 2: THE CONFUSIONING ----
-  # R
-
-  # GLMEM_fixptseparate(theta = theta_init,spde = spde,model_data = model_data,Psi = Psi,K = K,A = A,cl = cl,Ns = 50)
-  # k = 1 a_star = 1385.882 b_star = 10.87629
-  # objective = -2683.242 , new_kappa2 = 0.3168493
-  # k = 2 a_star = 1484.528 b_star = 11.10148
-  # objective = -2653.501 , new_kappa2 = 0.2714924
-  # [1] 0.31684935 0.27149242 0.01986320 0.01596102 0.15887771
-  # C++
-
-  # step_one <- findTheta(
-  #   theta = theta_init,
-  #   spde = spde,
-  #   y = model_data$y,
-  #   X = model_data$X,
-  #   QK = make_Q(theta, rcpp_spde, n_sess),
-  #   Psi = as(Psi, "dgCMatrix"),
-  #   A = as(A, "dgCMatrix"),
-  #   # Vh = Vh,
-  #   Ns = 50,
-  #   tol = tol
-  # )
-  # Initial theta:  0.195011  0.160349 0.0219608 0.0178483  0.158064
-  # k = 0 a_star = 1385.77 b_star = 10.8637
-  # objective = -2683.32, new_kappa2 = 0.316848
-  # k = 1 a_star = 1482.61 b_star = 11.188
-  # objective = -2653.7, new_kappa2 = 0.272857
-  # Step 1 theta:  0.316848  0.272857 0.0198621 0.0160096  0.158877
-  # Final theta:  0.316848  0.272857 0.0198621 0.0160096  0.158877
-  ## END OF SEQUEL ----
   cat("... STARTING EM ALGORITHM\n")
-  # >> C++
   em_output <-
     findTheta(
       theta = theta,
@@ -394,109 +287,7 @@ BayesGLMEM <- function(data,
       A = as(A, "dgCMatrix"),
       Ns = 50,
       tol = tol
-      # tol = 1
     )
-  #  >> R
-  # k_idx <- seq(K)
-  # p_idx <- seq(K) + K
-  # s_idx <- (2*K + 1)
-  # max_num.threads <- min(parallel::detectCores() - 1, 25)
-  # num.threads <- min(max_num.threads, num.threads)
-  # num.threads <- min(K, num.threads)
-  # cl <- parallel::makeCluster(num.threads)
-  # if(use_SQUAREM) {
-  #   squareem_output <-
-  #     SQUAREM::squarem(
-  #       par = theta,
-  #       fixptfn = GLMEM_fixptseparate,
-  #       control = list(tol = tol, trace = verbose),
-  #       spde = rcpp_spde,
-  #       model_data = model_data,
-  #       Psi = Psi,
-  #       K = K,
-  #       A = A,
-  #       cl = cl,
-  #       Ns = 50
-  #     )
-  #   theta_new <- squareem_output$par
-  #   em_output <- list(
-  #     theta_new = theta_new,
-  #     kappa2_new = theta_new[k_idx],
-  #     phi_new = theta_new[p_idx],
-  #     sigma2_new = theta_new[s_idx]
-  #   )
-  # } else {
-  # step <- 1
-  # # max_pct_change <- Inf
-  # eps <- tol + 1
-  # cat("Initial theta: ", theta_init,"\n")
-  # k_idx <- seq(K)
-  # p_idx <- seq(K) + K
-  # s_idx <- (2*K + 1)
-  # # while(max_pct_change > tol | step <= 5) {
-  # while(eps > tol | step <= 5) {
-  #   theta_new <-
-  #     GLMEM_fixptseparate(
-  #       theta = theta,
-  #       spde = rcpp_spde,
-  #       model_data = model_data,
-  #       Psi = Psi,
-  #       K = K,
-  #       A = A,
-  #       cl = cl
-  #     )
-  #   kappa2_new <- theta_new[k_idx]
-  #   phi_new <- theta_new[p_idx]
-  #   sigma2_new <- theta_new[s_idx]
-  #   thetaDiff <- theta_new - theta
-  #   eps <- sqrt(crossprod(thetaDiff))
-  #   # sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
-  #   # phi_pct_change <- 100*abs((phi_new - phi) / phi)
-  #   # kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
-  #   # max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
-  #   if(verbose) {
-  #     # cat(
-  #     #   "Step",
-  #     #   step,
-  #     #   "kappa^2 (%change) =",
-  #     #   kappa2_new,
-  #     #   "(",
-  #     #   kappa2_pct_change,
-  #     #   ") phi (%change) =",
-  #     #   phi_new,
-  #     #   "(",
-  #     #   phi_pct_change,
-  #     #   ") sigma^2 (%change) =",
-  #     #   sigma2_new,
-  #     #   "(",
-  #     #   sigma2_pct_change,
-  #     #   ")",
-  #     #   "\n"
-  #     # )
-  #     cat(
-  #       "Step",
-  #       step,
-  #       "theta =",
-  #       theta_new,
-  #       "epsilon =",
-  #       eps,
-  #       "\n"
-  #     )
-  #   }
-  #   kappa2 <- kappa2_new
-  #   phi <- phi_new
-  #   sigma2 <- sigma2_new
-  #   theta <- theta_new
-  #   step <- step+1
-  # }
-  # parallel::stopCluster(cl)
-  #   em_output <- list(
-  #     theta_new = theta_new,
-  #     kappa2_new = kappa2_new,
-  #     phi_new = phi_new,
-  #     sigma2_new = sigma2_new
-  #   )
-  # }
   # > End EM algorithm ----
   cat(".... EM algorithm complete!\n")
   kappa2_new <- phi_new <- sigma2_new <- mu <- NULL
@@ -507,10 +298,7 @@ BayesGLMEM <- function(data,
   if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
   Sig_inv <- Q + A/sigma2_new
   m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
-  # mu <- INLA::inla.qsolve(Sig_inv,m)
   mu <- Matrix::solve(Sig_inv, m)
-  # We don't actually need this very expensive function here
-  # Sigma_new <- INLA::inla.qsolve(Sig_inv, Matrix::Diagonal(n = nrow(Sig_inv)), method = "solve")
 
   beta_estimates <- matrix(mu,nrow = V_nm, ncol = K*n_sess)
   colnames(beta_estimates) <- rep(beta_names, n_sess)
@@ -524,11 +312,7 @@ BayesGLMEM <- function(data,
   tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
   mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
   tau2 <- 1 / (4*pi*kappa2_new*phi_new)
-  mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new))))) # This is a guess about the order and might be wrong
-
-  # Q.theta <- Q # This is not right. This is supposed to be the covariance between
-  # the hyperparameters (kappa,phi,sigma2) This might need to be examined. Perhaps
-  # an estimate can be made using the iteration values for the parameters?
+  mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
 
   # Construct object to be returned
   result <- list(mesh = mesh,
@@ -737,46 +521,24 @@ BayesGLMEM_vol3D <-
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     spde <- spde_grp$spde
 
-
-    #HERE ----
-
-    if(is_pw) {
-      nK_inds <- K*which(inds_grp)
-      nK_inds <- c(sapply(nK_inds, function(x) return(seq(x - (K-1), x))))
-      nT_inds <- ntime*which(inds_grp)
-      nT_inds <- c(sapply(nT_inds, function(x) return(seq(x - (ntime - 1),x))))
-      grp_data <- sapply(data, function(data_session){
-        BOLD <- data_session$BOLD[,inds_grp]
-        design <- data_session$design[nT_inds,nK_inds]
-        nuisance <- data_session$nuisance
-        return(list(
-          BOLD = BOLD,
-          design = design,
-          nuisance = nuisance
-        ))
-      }, simplify = F)
+    is_pw <- FALSE
+    if(ar_order > 0) {
+      pw_data <-
+        prewhiten_cifti(
+          data = data,
+          mask = inds_grp,
+          scale_BOLD = scale_BOLD,
+          scale_design = scale_design,
+          ar_order = ar_order,
+          ar_smooth = ar_smooth,
+          cifti_data = cifti_data,
+          brainstructure = "subcortical",
+          num.threads = num.threads
+        )
+      scale_BOLD <- scale_design <- FALSE # These have beend done
+      is_pw <- TRUE
+      data <- pw_data$data
     }
-
-    # grp_cifti <- cifti_data
-    # grp_cifti$data$subcort <- cifti_data$data$subcort[inds_grp,]
-    # grp_cifti$meta$subcort$mask[grp_cifti$meta$subcort$mask] <- inds_grp
-
-    # if(prewhiten) {
-    #   pw_data[[grp]] <-
-    #     prewhiten_cifti(
-    #       data = grp_data,
-    #       mask = NULL,
-    #       scale_BOLD = TRUE,
-    #       scale_design = TRUE,
-    #       ar_order = ar_order,
-    #       ar_smooth = ar_smooth,
-    #       cifti_data = grp_cifti,
-    #       brainstructure = br_str,
-    #       num.threads = num.threads
-    #     )
-    #   session_data <- pw_data[[br_str]]$data
-    #   scale_BOLD_sub <- FALSE # Done above
-    # }
 
     #collect data and design matrices
     y_all <- c()
@@ -806,7 +568,12 @@ BayesGLMEM_vol3D <-
       }
 
       #set up data and design matrix
-      data_org <- organize_data(y_reg, X_reg, transpose = FALSE)
+      if(!is_pw) {
+        data_org <- organize_data(y_reg, X_reg, transpose = FALSE)
+      }
+      if(is_pw) {
+        data_org <- organize_data_pw(y_reg, X_reg, transpose = FALSE)
+      }
       y_vec <- data_org$y
       X_list <- list(data_org$X)
       names(X_list) <- session_names[s]
@@ -820,18 +587,6 @@ BayesGLMEM_vol3D <-
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
-    # beta_names <- names(betas)
-    # repl_names <- names(repls)
-    # n_beta <- length(names(betas))
-    # hyper_initial <- c(-2,2)
-    # hyper_initial <- rep(list(hyper_initial), n_beta)
-    # hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
-    #
-    # formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-    # formula_vec <- c('y ~ -1', formula_vec)
-    # formula_str <- paste(formula_vec, collapse=' + ')
-    # formula <- as.formula(formula_str, env = globalenv())
-
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     # >> Model setup and initials ----
@@ -839,177 +594,72 @@ BayesGLMEM_vol3D <-
       if(use_SQUAREM) tol <- 1e-3
       if(!use_SQUAREM) tol <- 1
     }
-
     Psi_k <- spde_grp$Amat
     Psi <- Matrix::bdiag(rep(list(Psi_k),K))
-    # if(n_sess > 1) Psi <- Reduce(rbind,rep(list(Psi),n_sess))
     if(n_sess > 1) Psi <- Matrix::bdiag(rep(list(Psi),n_sess))
-    # Psi <- Matrix::Diagonal(n = ncol(model_data$X))
     A <- Matrix::crossprod(model_data$X%*%Psi)
-
     # Initial values for kappa and tau
     # Using values matching BayesGLM
     kappa2 <- 4
     phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
     # Using values based on the classical GLM
     cat("... FINDING BEST GUESS INITIAL VALUES\n")
-    XTX <- Matrix::crossprod(model_data$X)
-    XTX_inv <- Matrix::solve(XTX)
-    XTy <- Matrix::crossprod(model_data$X,model_data$y)
-    beta_hat <- (XTX_inv %*% XTy)@x
-    beta_hat_mesh <- (beta_hat %*% Psi)@x
+    beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
     res_y <- (model_data$y - model_data$X %*% beta_hat)@x
     sigma2 <- stats::var(res_y)
-    beta_hat <- matrix(beta_hat_mesh, ncol = K)
-    if(use_SQUAREM) {
-      cl <- parallel::makeCluster(min(num.threads,K))
-      kappa2_phi <- parallel::parApply(cl,beta_hat,2, function(bh, kappa2, phi, spde, tol, verbose) {
-        # source("~/github/BayesfMRI/R/EM_utils.R")
-        init_output <-
-          SQUAREM::squarem(
-            par = c(kappa2, phi),
-            fixptfn = init_fixpt,
-            spde = spde,
-            beta_hat = bh,
-            # num_sessions = n_sess,
-            control = list(tol = tol, trace = verbose, K = 1)
-          )
-        return(init_output)
-      },kappa2 = kappa2, phi = phi, spde = spde,tol = tol, verbose = verbose)
-      kappa2_phi <- sapply(kappa2_phi,function(x) x$par)
-      theta <- c(t(kappa2_phi),sigma2)
-      cat("...... DONE!\n")
-      parallel::stopCluster(cl)
+    beta_hat <- (beta_hat %*% Psi)@x
+    beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+    rcpp_spde <- create_listRcpp(spde)
+    spde <- rcpp_spde
+    if(n_sess > 1) {
+      task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+      beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
     }
-    if(!use_SQUAREM) {
-      theta <- vector("numeric", length = 2*K + 1)
-      k_idx <- seq(K)
-      p_idx <- seq(K) + K
-      s_idx <- 2*K + 1
-      theta[s_idx] <- sigma2
-      for(k in 1:K) {
-        step <- 1
-        max_pct_change <- Inf
-        while(max_pct_change > tol | step <= 5) {
-          theta_new <-
-            init_fixpt(
-              theta = c(kappa2, phi),
-              spde = spde,
-              beta_hat = beta_hat[,k]
-            )
-          kappa2_new <- theta_new[1]
-          phi_new <- theta_new[2]
-          phi_pct_change <- 100*abs((phi_new - phi) / phi)
-          kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
-          max_pct_change <- max(phi_pct_change,kappa2_pct_change)
-          if(verbose) {
-            cat(
-              "Step",
-              step,
-              "kappa^2 (%change) =",
-              kappa2_new,
-              "(",
-              kappa2_pct_change,
-              ") phi (%change) =",
-              phi_new,
-              "(",
-              phi_pct_change,
-              ")\n"
-            )
-          }
-          kappa2 <- kappa2_new
-          phi <- phi_new
-          theta[c(k_idx[k],p_idx[k])] <- theta_new
-          step <- step+1
-        }
-      }
-    }
+    # kappa2_phi_rcpp <-
+    #   apply(
+    #     beta_hat,
+    #     2,
+    #     initialKP,
+    #     theta = c(kappa2, phi),
+    #     spde = rcpp_spde,
+    #     n_sess = n_sess,
+    #     tol = tol,
+    #     verbose = verbose
+    #   )
+    n_threads <- parallel::detectCores()
+    n_threads <- min(n_threads,K,num.threads)
+    cl <- parallel::makeCluster(n_threads)
+    kappa2_phi_rcpp <-
+      parallel::parApply(
+        cl = cl,
+        beta_hat,
+        2,
+        initialKP,
+        theta = c(kappa2, phi),
+        spde = rcpp_spde,
+        n_sess = n_sess,
+        tol = tol,
+        verbose = verbose
+      )
+    parallel::stopCluster(cl)
+    cat("...... DONE!\n")
+    theta <- c(t(kappa2_phi_rcpp), sigma2)
     theta_init <- theta
-    # >> Start EM algorithm ----
-    k_idx <- seq(K)
-    p_idx <- seq(K) + K
-    s_idx <- (2*K + 1)
-    max_num.threads <- min(parallel::detectCores() - 1, 25)
-    num.threads <- min(max_num.threads, num.threads)
-    num.threads <- min(K, num.threads)
-    cl <- parallel::makeCluster(num.threads)
-    if(use_SQUAREM) {
-      squareem_output <-
-        SQUAREM::squarem(
-          par = theta,
-          fixptfn = GLMEM_fixptseparate,
-          control = list(tol = tol, trace = verbose, K = 1),
-          spde = spde,
-          model_data = model_data,
-          Psi = Psi,
-          K = K,
-          A = A,
-          cl = cl,
-          Ns = 50
-        )
-      parallel::stopCluster(cl)
-      theta_new <- squareem_output$par
-      em_output <- list(
-        theta_new = theta_new,
-        kappa2_new = theta_new[k_idx],
-        phi_new = theta_new[p_idx],
-        sigma2_new = theta_new[s_idx]
+    Ns <- 50
+    cat("... STARTING EM ALGORITHM\n")
+    em_output <-
+      findTheta(
+        theta = theta,
+        spde = rcpp_spde,
+        y = model_data$y,
+        X = model_data$X,
+        QK = make_Q(theta, rcpp_spde, n_sess),
+        Psi = as(Psi, "dgCMatrix"),
+        A = as(A, "dgCMatrix"),
+        Ns = 50,
+        tol = tol
       )
-    } else {
-      step <- 1
-      max_pct_change <- Inf
-      while(max_pct_change > tol | step <= 5) {
-        theta_new <-
-          GLMEM_fixptseparate(
-            theta = theta,
-            spde = spde,
-            model_data = model_data,
-            Psi = Psi,
-            K = K,
-            A = A,
-            cl = cl
-          )
-        kappa2_new <- theta_new[k_idx]
-        phi_new <- theta_new[p_idx]
-        sigma2_new <- theta_new[s_idx]
-        sigma2_pct_change <- 100*abs((sigma2_new - sigma2) / sigma2)
-        phi_pct_change <- 100*abs((phi_new - phi) / phi)
-        kappa2_pct_change <- 100*abs((kappa2_new - kappa2) / kappa2)
-        max_pct_change <- max(sigma2_pct_change,phi_pct_change,kappa2_pct_change)
-        if(verbose) {
-          cat(
-            "Step",
-            step,
-            "kappa^2 (%change) =",
-            kappa2_new,
-            "(",
-            kappa2_pct_change,
-            ") phi (%change) =",
-            phi_new,
-            "(",
-            phi_pct_change,
-            ") sigma^2 (%change) =",
-            sigma2_new,
-            "(",
-            sigma2_pct_change,
-            ")",
-            "\n"
-          )
-        }
-        kappa2 <- kappa2_new
-        phi <- phi_new
-        sigma2 <- sigma2_new
-        theta <- theta_new
-        step <- step+1
-      }
-      em_output <- list(
-        theta_new = theta_new,
-        kappa2_new = kappa2_new,
-        phi_new = phi_new,
-        sigma2_new = sigma2_new
-      )
-    }
-    # >> End EM algorithm ----
+    # > End EM algorithm ----
     cat(".... EM algorithm complete!\n")
     list2env(em_output, envir = environment())
     Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
@@ -1020,9 +670,9 @@ BayesGLMEM_vol3D <-
     m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
     # mu <- INLA::inla.qsolve(Sig_inv,m)
     mu <- Matrix::solve(Sig_inv, m)
-
-    beta_estimates <- matrix(mu,nrow = spde$n.spde, ncol = K*n_sess)
+    beta_estimates <- matrix(mu,nrow = nrow(spde$Cmat), ncol = K*n_sess)
     colnames(beta_estimates) <- rep(beta_names, n_sess)
+    beta_estimates <- as.matrix(Psi_k %*% beta_estimates)
     beta_estimates <- lapply(seq(n_sess), function(ns) beta_estimates[,(seq(K) + K * (ns - 1))])
     names(beta_estimates) <- session_names
     avg_beta_estimates <- NULL
@@ -1037,10 +687,10 @@ BayesGLMEM_vol3D <-
 
     #extract beta estimates and project back to data locations for current group
     for(s in 1:n_sess){
-      beta_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% beta_estimates[[s]])
+      beta_estimates_all[[s]][inds_grp,] <- beta_estimates[[s]]
     }
     if(avg_sessions)
-      avg_beta_estimates_all[inds_grp,] <- as.matrix(spde_grp$Amat %*% avg_beta_estimates)
+      avg_beta_estimates_all[inds_grp,] <- avg_beta_estimates
     #extract theta estimates and project back to data locations for current group
     theta_estimates_all[grp,] <- mu.theta
 

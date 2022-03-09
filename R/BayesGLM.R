@@ -522,22 +522,22 @@ BayesGLM_cifti <- function(cifti_fname,
       # For subcortical structures, it may make more sense to perform the
       # prewhitening separately for each model group, in order to reduce
       # computation time.
-      if(prewhiten) {
-        pw_data[[br_str]] <-
-          prewhiten_cifti(
-            data = session_data,
-            mask = NULL,
-            scale_BOLD = scale_BOLD_sub,
-            scale_design = TRUE,
-            ar_order = ar_order,
-            ar_smooth = ar_smooth,
-            cifti_data = cifti_data[[br_str]][[1]]$cifti,
-            brainstructure = br_str,
-            num.threads = num.threads
-          )
-        session_data <- pw_data[[br_str]]$data
-        scale_BOLD_sub <- FALSE # Done above
-      }
+      # if(prewhiten) {
+      #   pw_data[[br_str]] <-
+      #     prewhiten_cifti(
+      #       data = session_data,
+      #       mask = NULL,
+      #       scale_BOLD = scale_BOLD_sub,
+      #       scale_design = TRUE,
+      #       ar_order = ar_order,
+      #       ar_smooth = ar_smooth,
+      #       cifti_data = cifti_data[[br_str]][[1]]$cifti,
+      #       brainstructure = br_str,
+      #       num.threads = num.threads
+      #     )
+      #   session_data <- pw_data[[br_str]]$data
+      #   scale_BOLD_sub <- FALSE # Done above
+      # }
 
       if(!is.null(outfile)) {
         if (endsWith(outfile, ".rds")) {
