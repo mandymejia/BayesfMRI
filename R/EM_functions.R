@@ -268,7 +268,7 @@ BayesGLMEM <- function(data,
       spde = rcpp_spde,
       n_sess = n_sess,
       tol = tol,
-      verbose = verbose
+      verbose = FALSE
     )
   parallel::stopCluster(cl)
   cat("...... DONE!\n")
