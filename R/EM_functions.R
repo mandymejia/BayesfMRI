@@ -661,6 +661,7 @@ BayesGLMEM_vol3D <-
       )
     # > End EM algorithm ----
     cat(".... EM algorithm complete!\n")
+    kappa2_new <- phi_new <- sigma2_new <- NULL
     list2env(em_output, envir = environment())
     Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
                      MoreArgs = list(spde=spde), SIMPLIFY = F)
