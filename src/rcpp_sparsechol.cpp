@@ -467,11 +467,12 @@ Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, d
 
 Eigen::MatrixXd makeV(int n_spde, int Ns) {
   Eigen::MatrixXd V(n_spde,Ns);
-  double x;
+  Rcpp::NumericVector x(1);
   for(int i = 0; i < n_spde; i++) {
     for(int j = 0; j < Ns; j++) {
-      x = std::rand() / ((RAND_MAX + 1u) / 2);
-      if(x == 0) {
+      // x = std::rand() / ((RAND_MAX + 1u) / 2);
+      x = Rcpp::runif(1);
+      if(x[0] <= 0.5) {
         V(i,j) = -1;
       } else {
         V(i,j) = 1;
