@@ -271,11 +271,11 @@ BayesGLM <- function(
   ## APPLY PREWHITENING -----
   if (do_pw) {
     # Create the sparse pre-whitening matrix
-    cat(" .... prewhitening... ")
+    cat(".... prewhitening... ")
     if (is.null(num.threads) | num.threads < 2) {
       # Initialize the block diagonal covariance matrix
       template_pw <- Matrix::bandSparse(
-        n = ntime, k = 0:(ar_order + 1), ymmetric = TRUE
+        n = ntime, k = 0:(ar_order + 1), symmetric = TRUE
       )
       template_pw_list <- rep(list(template_pw), V)
       for(vv in 1:V) {
@@ -383,7 +383,7 @@ BayesGLM <- function(
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     if(do_EM) {
-      cat('\n.... estimating model with EM\n')
+      cat('\n.... estimating model with EM')
       Psi_k <- spde$Amat
       Psi <- Matrix::bdiag(rep(list(Psi_k),K))
       A <- Matrix::crossprod(model_data$X %*% Psi)
@@ -391,7 +391,7 @@ BayesGLM <- function(
       kappa2 <- 4
       phi <- 1 / (4*pi*kappa2*4)
       # Using values based on the classical GLM
-      cat("... FINDING BEST GUESS INITIAL VALUES\n")
+      if(verbose) cat("... FINDING BEST GUESS INITIAL VALUES\n")
       beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
       res_y <- (model_data$y - model_data$X %*% beta_hat)@x
       sigma2 <- stats::var(res_y)
@@ -417,11 +417,11 @@ BayesGLM <- function(
           verbose = FALSE
         )
       parallel::stopCluster(cl)
-      cat("...... DONE!\n")
+      if(verbose) cat("...... DONE!\n")
       theta <- c(t(kappa2_phi_rcpp), sigma2)
       theta_init <- theta
       Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
-      cat("... STARTING EM ALGORITHM\n")
+      if(verbose) cat("... STARTING EM ALGORITHM\n")
       em_output <-
         findTheta(
           theta = theta,
@@ -432,9 +432,10 @@ BayesGLM <- function(
           Psi = as(Psi, "dgCMatrix"),
           A = as(A, "dgCMatrix"),
           Ns = 50,
-          tol = emTol
+          tol = emTol,
+          verbose = verbose
         )
-      cat(".... EM algorithm complete!\n")
+      if(verbose) cat(".... EM algorithm complete!\n")
       kappa2_new <- phi_new <- sigma2_new <- mu <- NULL
       list2env(em_output, envir = environment())
       Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
@@ -459,6 +460,7 @@ BayesGLM <- function(
       mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
       tau2 <- 1 / (4*pi*kappa2_new*phi_new)
       mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
+      cat("... done!\n")
     }
 
     if(!do_EM) {
@@ -483,7 +485,7 @@ BayesGLM <- function(
         control.family=list(hyper=list(prec=list(initial=1))),
         control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
       )
-      cat("done!\n")
+      if(verbose) cat("done!\n")
 
       #extract useful stuff from INLA model result
       beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
