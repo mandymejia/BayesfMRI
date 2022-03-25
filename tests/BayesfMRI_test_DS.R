@@ -3,18 +3,14 @@
 
 # Original ----------------------------
 wb_path <- "/Applications/workbench"
-pardiso_path <- "~/licenses/pardiso.lic"
 
 # For Damon ---------------------------
 # wb_path <- "~/Desktop/workbench"
-# pardiso_path <- "~/Desktop/pardiso.lic"
 
 library(brainSim)
 library(ciftiTools)
 ciftiTools.setOption("wb_path", wb_path)
 library(BayesfMRI)
-library(INLA)
-inla.setOption(pardiso.license = pardiso_path)
 save_path <- "~/Desktop"
 set.seed(47408)
 num_errs <- 0
