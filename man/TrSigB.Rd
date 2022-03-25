@@ -7,7 +7,7 @@
 TrSigB(P, B, vh)
 }
 \arguments{
-\item{P}{Matrix of dimension nk by N_s found by \code{inla.qsolve(Sig_inv,Vh)}}
+\item{P}{Matrix of dimension nk by N_s found by \code{solve(Sig_inv,Vh)}}
 
 \item{B}{Matrix of dimension nk by nk inside the desired trace product}
 

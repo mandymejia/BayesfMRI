@@ -9,7 +9,6 @@ BayesGLMEM_vol3D(
   beta_names = NULL,
   locations,
   labels,
-  EM_method = "separate",
   use_SQUAREM = TRUE,
   ar_order = 0,
   ar_smooth = 0,
@@ -34,9 +33,6 @@ List element names represent session names.}
 \item{locations}{Vx3 matrix of x,y,z coordinates of each voxel}
 
 \item{labels}{Vector of length V of region labels}
-
-\item{EM_method}{Either "joint" or "separate" for choosing whether covariates
-should share hyperparameter values.}
 
 \item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
 convergence?}
@@ -94,9 +90,3 @@ column contains the region names, and the group column contains the model
 group assignments (e.g. 1,2,3). Regions to be excluded
 from analysis are indicated by NA in the group assignment.
 }
-\section{INLA Requirement}{
-
-This function requires the \code{INLA} package, which is not a CRAN package.
-See \url{https://www.r-inla.org/download-install} for easy installation instructions.
-}
-

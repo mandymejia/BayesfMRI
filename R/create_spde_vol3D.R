@@ -51,7 +51,10 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
     # tetramesh(FV_orig, P, alpha=0.7)
 
     # Determine grid spacing (assumes isotropic voxels)
-    max_dist = get_spacing(P[,1])
+    # max_dist = get_spacing(P[,1])
+    x = sort(unique(P[,1]))
+    dx = diff(x)
+    max_dist <- min(dx)
 
     # Create grid to get reasonable delaunay triangulations. Reasonable being triangles with similar size.
     x = unique(P[,1])
@@ -128,86 +131,89 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
     C_all[[ii]] <- gal$C
   }
 
-  G <- bdiag(G_all)
-  C <- bdiag(C_all)
+  G <- Matrix::bdiag(G_all)
+  C <- Matrix::bdiag(C_all)
 
   # Part 2
-  tG <- t(G)
+  tG <- Matrix::t(G)
   M0 = C
   M1 = G + tG
-  M2 = tG %*% solve(C,G)
+  M2 = tG %*% Matrix::solve(C,G)
 
   # Create the spde object. Note that the priors theta.mu and theta.Q have to be set reasonably here!!!
-  spde = inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
-                            B0 = matrix(c(0,1,0),1,3),
-                            B1 = matrix(c(0,0,1),1,3),
-                            B2 = 1,
-                            theta.mu = rep(0,2),
-                            theta.Q = Diagonal(2,c(1e-6,1e-6)),
-                            transform = "identity")
+  # spde = inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
+  #                           B0 = matrix(c(0,1,0),1,3),
+  #                           B1 = matrix(c(0,0,1),1,3),
+  #                           B2 = 1,
+  #                           theta.mu = rep(0,2),
+  #                           theta.Q = Diagonal(2,c(1e-6,1e-6)),
+  #                           transform = "identity")
 
-
+  spde = list(M0 = M0, M1 = M1, M2 = M2,n.spde = nrow(M0))
 
   out <- list(spde = spde,
               vertices = P_new_all,
               faces = FV_new_all,
               idx = I_all,
-              Amat = bdiag(A_all))
+              Amat = Matrix::bdiag(A_all))
   class(out) <- 'BayesfMRI.spde'
 
   return(out)
 }
 
-#' Determine grid spacing
-#'
-#' @param locations Vector of vertex locations in one dimension
-#'
-#' @return Value of minimum spacing between two locations
-#' @export
-get_spacing <- function(locations){
-  #locations is a vector of locations along one dimension
-  x = sort(unique(locations))
-  dx = diff(x)
-  return(min(dx))
-}
-
-
 #' Create FEM matrices
 #'
 #' @param FV Matrix of faces in triangularization
 #' @param P Matrix of vertex locations in triangularization
+#' @param surface (logical) Will this create the SPDE matrices for a surface
+#'   or not?
 #'
 #' @return A list of matrices C and G appearing in sparse SPDE precision
 #'
 #' @export
-galerkin_db <- function(FV, P){
+galerkin_db <- function(FV, P, surface=FALSE){
   d <- ncol(FV)-1
-  if(ncol(P) != d){P <- t(P)}
+  if(surface){
+    if(ncol(P) != (d + 1)){P <- t(P)}
+    if(ncol(P) != (d + 1)){stop("Wrong dimension of P")}
+  } else {
+    if(ncol(P) != d){P <- t(P)}
+    if(ncol(P) != d){stop("Wrong dimension of P")}
+  }
+
   nV <- nrow(P)
   nF <- nrow(FV)
   Gi <- matrix(0, nrow = nF*(d+1), ncol = d+1)
   Gj = Gi; Gz = Gi; Ci = Gi; Cj = Gi; Cz = Gi;
 
   for( f in 1:nF){
-    m1 <- rbind(rep(1, d+1), t(P[FV[f,],]))
-    m2 <- rbind(rep(0, d), diag(1, d))
-    m <- solve(m1, m2)
-    ddet <- abs(det(m1))
-
     dd <- (d+1)*(f-1)+(1:(d+1))
-    Gi[dd,] <- FV[f,] %*% t(rep(1,d+1))
-    Gj[dd,] <- t(Gi[dd,])
-    Gz[dd,] <- ddet * (m %*% t(m)) / prod(1:d)
-    Ci[dd,] <- Gi[dd,]
-    Cj[dd,] <- Gj[dd,]
-    Cz[dd,] <- ddet * (rep(1,d+1)+diag(d+1)) / prod(1:(d+2))
+    Gi[dd,] <- Ci[dd,] <- FV[f,] %*% t(rep(1,d+1))
+    Gj[dd,] <- Cj[dd,] <- t(Gi[dd,])
+    if(surface){
+      r = t(P[FV[f,c(3,1,2)],]-P[FV[f,c(2,3,1)],])
+      r1 = r[,1,drop=FALSE]
+      r2 = r[,2,drop=FALSE]
+      f_area <- as.double(sqrt((t(r1)%*%r1)*(t(r2)%*%r2)-(t(r1)%*%r2)^2)/2)
+      Gz[dd,] = (t(r)%*%r)/(4*f_area)
+      Cz[dd,] = (f_area/12)*(matrix(1,3,3)+diag(3))
+    } else {
+      m1 <- rbind(rep(1, d+1), t(P[FV[f,],]))
+      m2 <- rbind(rep(0, d), diag(1, d))
+      m <- solve(m1, m2)
+      ddet <- abs(det(m1))
+      Gz[dd,] <- ddet * (m %*% t(m)) / prod(1:d)
+      Cz[dd,] <- ddet * (rep(1,d+1)+diag(d+1)) / prod(1:(d+2))
+    }
   }
 
-  G <- sparseMatrix(i = as.vector(Gi), j = as.vector(Gj), x = as.vector(Gz), dims = c(nV,nV))
-  Ce <- sparseMatrix(i = as.vector(Ci), j = as.vector(Cj), x = as.vector(Cz), dims = c(nV,nV))
-  C <- diag(colSums(Ce), nrow = nV, ncol = nV)
+  G <- Matrix::sparseMatrix(i = as.vector(Gi), j = as.vector(Gj), x = as.vector(Gz), dims = c(nV,nV))
+  Ce <- Matrix::sparseMatrix(i = as.vector(Ci), j = as.vector(Cj), x = as.vector(Cz), dims = c(nV,nV))
+  # C <- Matrix::diag(Matrix::colSums(Ce), nrow = nV, ncol = nV)
+  C <- Matrix::Diagonal(n = nV, x = Matrix::colSums(Ce))
   return(list(G = G, Ce = Ce, C = C))
 }
+
 
 
 

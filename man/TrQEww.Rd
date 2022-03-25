@@ -11,11 +11,11 @@ TrQEww(kappa2, spde, P, mu, Vh)
 
 \item{spde}{spde object}
 
-\item{P}{Matrix of dimension nk by N_s found by \code{inla.qsolve(Sig_inv,Vh)}}
+\item{P}{Matrix of dimension nk by N_s found by \code{solve(Sig_inv,Vh)}}
 
 \item{mu}{posterior mean}
 
-\item{Vh}{matrix of random vriables with \code{nrow(Sig_inv)} rows and Ns
+\item{Vh}{matrix of random variables with \code{nrow(Sig_inv)} rows and Ns
 columns}
 }
 \value{

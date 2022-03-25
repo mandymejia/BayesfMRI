@@ -13,7 +13,6 @@ BayesGLMEM(
   mask = NULL,
   scale_BOLD = TRUE,
   scale_design = TRUE,
-  EM_method = "separate",
   use_SQUAREM = TRUE,
   tol = NULL,
   num.threads = 1,
@@ -50,9 +49,6 @@ centered.}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
-
-\item{EM_method}{Either "joint" or "separate" for choosing whether covariates
-should share hyperparameter values.}
 
 \item{use_SQUAREM}{(logical) Should the SQUAREM package be used to speed up
 convergence?}

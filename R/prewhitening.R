@@ -241,6 +241,11 @@ prewhiten_cifti <- function(data,
     }
     if(brainstructure == 'subcortical') {
       sub_mask <- avg_xifti$meta$subcort$mask
+      if(!is.null(mask)){
+        sub_mask[sub_mask] <- mask
+        avg_xifti$meta$subcort$mask <- sub_mask
+        avg_xifti$meta$subcort$labels <- avg_xifti$meta$subcort$labels[mask]
+      }
       #smooth AR coefficients
       avg_xifti$data$subcort <- as.matrix(avg_AR)
       smooth_avg_xifti <- smooth_cifti(avg_xifti, vol_FWHM = ar_smooth)
