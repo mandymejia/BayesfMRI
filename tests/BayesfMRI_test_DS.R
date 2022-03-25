@@ -1,11 +1,20 @@
 # This is a test script for the BayesfMRI package. If this runs successfully,
 # that means that the package is working as intended.
+
+# Original ----------------------------
+wb_path <- "/Applications/workbench"
+pardiso_path <- "~/licenses/pardiso.lic"
+
+# For Damon ---------------------------
+# wb_path <- "~/Desktop/workbench"
+# pardiso_path <- "~/Desktop/pardiso.lic"
+
 library(brainSim)
 library(ciftiTools)
-ciftiTools.setOption("wb_path","/Applications/workbench")
-library(INLA)
-inla.setOption(pardiso.license = "~/licenses/pardiso.lic")
+ciftiTools.setOption("wb_path", wb_path)
 library(BayesfMRI)
+library(INLA)
+inla.setOption(pardiso.license = pardiso_path)
 save_path <- "~/Desktop"
 set.seed(47408)
 num_errs <- 0
@@ -13,7 +22,7 @@ for(num_runs in 1:2){
   cat("SIMULATING DATA FOR",num_runs,"RUN(S)\n")
   sim_data <-
     simulate_cifti_multiple(
-      wb_path = "/Applications/workbench/",
+      wb_path = wb_path,
       brainstructure = "both",
       n_subjects = 1,
       n_sessions = 1,
