@@ -23,3 +23,4 @@
 ^vignettes/BayesfMRI_simulation_files$
 ^vignettes/BayesfMRI_HCP\.Rmd$
 
+^tests/BayesfMRI_test_DS\.R$
