@@ -299,7 +299,7 @@ BayesGLM <- function(
       #bold_out <- matrix(NA, ntime, V)
       bold_out <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
       #bold_out[,mask] <- pw_BOLD
-      all_design <- Matrix::bdiag(rep(list(data_s$design),V)) #is this equivalent to organize_data?
+      all_design <- organize_data(data_s$BOLD, data_s$design)$design
       pw_design <- sqrtInv_all %*% all_design
       return(list(BOLD = bold_out, design = pw_design))
     }, simplify = F)
