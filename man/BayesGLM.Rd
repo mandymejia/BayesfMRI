@@ -14,8 +14,9 @@ BayesGLM(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
+  EM = TRUE,
   ar_order = 6,
-  ar_smooth = 5,
+  ar_smooth = 6,
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
@@ -24,6 +25,7 @@ BayesGLM(
   avg_sessions = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06,
+  emTol = 0.001,
   trim_INLA = TRUE
 )
 }
@@ -65,6 +67,9 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 \item{Bayes}{If TRUE, will fit a spatial Bayesian GLM in addition to the
 classical GLM. Classical GLM results are always returned.}
 
+\item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
+Default: \code{TRUE}.}
+
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
 for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
@@ -92,7 +97,9 @@ posterior quantities of group means or contrasts.}
 sessions? Default: \code{FALSE}.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
-do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.}
+do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.}
+
+\item{emTol}{The stopping tolerance for the EM algorithm. Default: \code{1e-3}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
 result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}

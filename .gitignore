@@ -8,8 +8,6 @@
 *.Rout
 R/summarize_sessions.R
 inst/doc
-R/EM_functions.R
-R/EM_utils.R
 vignettes/simulated-EM.Rmd
 vignettes/.DS_Store
 BayesfMRI 1.9 test.R

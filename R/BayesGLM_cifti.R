@@ -68,6 +68,8 @@
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
+#' @param EM (logical) Should the EM implementation of the Bayesian GLM be used?
+#'  Default: \code{TRUE}.
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
 #'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
@@ -87,7 +89,8 @@
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session. Ignored if \code{avg_sessions == TRUE}.
 #' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
-#'  do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.
+#'  do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.
+#' @param emTol The stopping tolerance for the EM algorithm. Default: \code{1e-3}.
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
@@ -112,6 +115,7 @@ BayesGLM_cifti <- function(
   scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design=TRUE,
   Bayes=TRUE,
+  EM=TRUE,
   ar_order = 6,
   ar_smooth = 5,
   resamp_res=10000,
@@ -122,6 +126,7 @@ BayesGLM_cifti <- function(
   avg_sessions = TRUE,
   session_names=NULL,
   meanTol=1e-6, varTol=1e-6,
+  emTol = 1e-3,
   trim_INLA = TRUE){
 
   # Check args ------------------------------------------
@@ -147,7 +152,13 @@ BayesGLM_cifti <- function(
 
   # Rename and coerce to logical
   do_Bayesian <- as.logical(Bayes)
-  if (do_Bayesian) { check_INLA(require_PARDISO=TRUE) }
+  do_EM <- as.logical(EM)
+  if (do_Bayesian & !do_EM) { check_INLA(require_PARDISO=TRUE) }
+  if(do_EM & !do_Bayesian) {
+    warning("You have EM = TRUE and Bayes = FALSE. As the EM implementation is a Bayesian method, it will not be performed unless both EM = TRUE and Bayes = TRUE. Setting Bayes = TRUE.")
+    Bayes <- TRUE
+    do_Bayesian <- TRUE
+  }
 
   # Check prewhitening arguments.
   if (is.null(ar_order)) ar_order <- 0
@@ -236,6 +247,7 @@ BayesGLM_cifti <- function(
   if (length(session_names) != n_sess) {
     stop('If `session_names` is provided, it must be of the same length as `cifti_fname`')
   }
+  if(is.null(nuisance) & length(nuisance_include) > 0) nuisance <- vector("list",length = n_sess)
 
   # `design`, `onsets`, `beta_names` ---------------------------------------
   # Check `design` and `onsets`. Get `beta_names`.
@@ -349,8 +361,8 @@ BayesGLM_cifti <- function(
     if ('dHRF' %in% nuisance_include) {
       dHRF <- gradient(design[[ss]])
       if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF) 
-      } else { 
+        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF)
+      } else {
         nuisance[[ss]] <- dHRF
       }
     }
@@ -371,7 +383,7 @@ BayesGLM_cifti <- function(
     names(session_data) <- session_names
     for (ss in 1:n_sess) {
       session_data[[ss]] <- list(
-        BOLD = t(BOLD_list[[each_hem]][[ss]]), 
+        BOLD = t(BOLD_list[[each_hem]][[ss]]),
         design=design[[ss]]
       )
       if (!is.null(nuisance)) {
@@ -399,6 +411,7 @@ BayesGLM_cifti <- function(
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
+      EM = do_EM,
       ar_order = ar_order,
       ar_smooth = ar_smooth,
       num.threads = num.threads,
@@ -406,8 +419,9 @@ BayesGLM_cifti <- function(
       outfile = outfile_name,
       verbose = verbose,
       avg_sessions = avg_sessions,
-      meanTol=meanTol, 
+      meanTol=meanTol,
       varTol=varTol,
+      emTol=emTol,
       trim_INLA = trim_INLA
     )
 

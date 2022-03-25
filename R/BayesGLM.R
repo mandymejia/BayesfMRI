@@ -17,6 +17,8 @@
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
+#' @param EM (logical) Should the EM implementation of the Bayesian GLM be used?
+#'  Default: \code{TRUE}.
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
 #'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
@@ -31,7 +33,8 @@
 #' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
-#'  do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.
+#'  do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.
+#' @param emTol The stopping tolerance for the EM algorithm. Default: \code{1e-3}.
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
@@ -54,8 +57,9 @@ BayesGLM <- function(
   scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes=TRUE,
+  EM=TRUE,
   ar_order = 6,
-  ar_smooth = 5,
+  ar_smooth = 6,
   num.threads=4,
   return_INLA_result=TRUE,
   outfile = NULL,
@@ -64,6 +68,7 @@ BayesGLM <- function(
   avg_sessions = FALSE,
   meanTol=1e-6,
   varTol=1e-6,
+  emTol=1e-3,
   trim_INLA = TRUE){
 
   #TO DO:
@@ -80,7 +85,13 @@ BayesGLM <- function(
 
   # Rename and coerce to logical
   do_Bayesian <- as.logical(Bayes)
-  if (do_Bayesian) { check_INLA(require_PARDISO=TRUE) }
+  do_EM <- as.logical(EM)
+  if (do_Bayesian & !do_EM) { check_INLA(require_PARDISO=TRUE) }
+  if(do_EM & !do_Bayesian) {
+    warning("You have EM = TRUE and Bayes = FALSE. As the EM implementation is a Bayesian method, it will not be performed unless both EM = TRUE and Bayes = TRUE. Setting Bayes = TRUE.")
+    Bayes <- TRUE
+    do_Bayesian <- TRUE
+  }
 
   # Check prewhitening arguments.
   if (is.null(ar_order)) ar_order <- 0
@@ -90,7 +101,7 @@ BayesGLM <- function(
   ar_smooth <- as.numeric(ar_smooth)
 
   #we need a mesh if doing spatial Bayesian modeling OR any AR smoothing
-  need_mesh <- (do_Bayesian || (do_pw && ar_smooth > 0))
+  need_mesh <- (do_EM | do_Bayesian | (do_pw && ar_smooth > 0))
   #check that only mesh OR vertices+faces supplied
   if (need_mesh) {
     has_mesh <- !is.null(mesh)
@@ -98,7 +109,7 @@ BayesGLM <- function(
     if (!xor(has_mesh, has_verts_faces)) {
       stop('Must supply EITHER mesh OR vertices and faces.')
     }
-    if (is.null(mesh)) mesh <- make_mesh(vertices, faces)
+    if (is.null(mesh)) mesh <- make_mesh(vertices, faces) # This function has been modified to no longer require INLA (2022-03-24)
   } else {
     mesh <- NULL
   }
@@ -165,7 +176,8 @@ BayesGLM <- function(
     # `mesh`
     if (need_mesh) {
       mesh_orig <- mesh #for later plotting
-      mesh <- excursions::submesh.mesh(mask, mesh)
+      # mesh <- excursions::submesh.mesh(mask, mesh) # This is commented out because we now have our own submesh function!
+      mesh <- submesh(mask, mesh)
       mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
       mesh$idx$loc <- mesh$idx$loc[mask2]
     }
@@ -174,7 +186,8 @@ BayesGLM <- function(
       data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
     }
   }
-  if (do_Bayesian) {spde <- INLA::inla.spde2.matern(mesh)}
+  if (do_Bayesian & ! do_EM) {spde <- INLA::inla.spde2.matern(mesh)}
+  if (do_EM) {spde <- create_spde_surf(mesh)}
 
   V <- sum(mask2)
   V_all <- length(mask2)
@@ -367,48 +380,126 @@ BayesGLM <- function(
     replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
-
-    #organize the formula and data objects
-    repl_names <- names(repls)
-    hyper_initial <- c(-2,2)
-    hyper_initial <- rep(list(hyper_initial), K)
-    hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
-
-    formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-    formula_vec <- c('y ~ -1', formula_vec)
-    formula_str <- paste(formula_vec, collapse=' + ')
-    formula <- as.formula(formula_str, env = globalenv())
-
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
-    #estimate model using INLA
-    cat('\n .... estimating model with INLA')
-    check_INLA(require_PARDISO=FALSE)
-
-    INLA_result <- INLA::inla(
-      formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
-      verbose = verbose, keep = FALSE, num.threads = num.threads,
-      control.inla = list(strategy = "gaussian", int.strategy = "eb"),
-      control.family=list(hyper=list(prec=list(initial=1))),
-      control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
-    )
-    cat("done!\n")
-
-    #extract useful stuff from INLA model result
-    beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
-    theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
-
-    #extract stuff needed for group analysis
-    mu.theta <- INLA_result$misc$theta.mode
-    Q.theta <- solve(INLA_result$misc$cov.intern) #not needed for EM version
-
-    #construct object to be returned
-    if(!return_INLA_result){
-      INLA_result <- NULL
-    } else {
-      if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
+    if(do_EM) {
+      cat('\n.... estimating model with EM\n')
+      Psi_k <- spde$Amat
+      Psi <- Matrix::bdiag(rep(list(Psi_k),K))
+      A <- Matrix::crossprod(model_data$X %*% Psi)
+      # Initial values for kappa and tau
+      kappa2 <- 4
+      phi <- 1 / (4*pi*kappa2*4)
+      # Using values based on the classical GLM
+      cat("... FINDING BEST GUESS INITIAL VALUES\n")
+      beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
+      res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+      sigma2 <- stats::var(res_y)
+      beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+      rcpp_spde <- create_listRcpp(spde$spde)
+      if(n_sess > 1) {
+        task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+        beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
+      }
+      n_threads <- parallel::detectCores()
+      n_threads <- min(n_threads,K,num.threads)
+      cl <- parallel::makeCluster(n_threads)
+      kappa2_phi_rcpp <-
+        parallel::parApply(
+          cl = cl,
+          beta_hat,
+          2,
+          initialKP,
+          theta = c(kappa2, phi),
+          spde = rcpp_spde,
+          n_sess = n_sess,
+          tol = emTol,
+          verbose = FALSE
+        )
+      parallel::stopCluster(cl)
+      cat("...... DONE!\n")
+      theta <- c(t(kappa2_phi_rcpp), sigma2)
+      theta_init <- theta
+      Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
+      cat("... STARTING EM ALGORITHM\n")
+      em_output <-
+        findTheta(
+          theta = theta,
+          spde = rcpp_spde,
+          y = model_data$y,
+          X = model_data$X,
+          QK = make_Q(theta, rcpp_spde, n_sess),
+          Psi = as(Psi, "dgCMatrix"),
+          A = as(A, "dgCMatrix"),
+          Ns = 50,
+          tol = emTol
+        )
+      cat(".... EM algorithm complete!\n")
+      kappa2_new <- phi_new <- sigma2_new <- mu <- NULL
+      list2env(em_output, envir = environment())
+      Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
+                       MoreArgs = list(spde=rcpp_spde), SIMPLIFY = F)
+      Q <- Matrix::bdiag(Qk_new)
+      if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
+      Sig_inv <- Q + A/sigma2_new
+      m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
+      mu <- Matrix::solve(Sig_inv, m)
+      # Prepare results
+      beta_estimates <- matrix(NA, nrow = length(mask2), ncol = K*n_sess)
+      beta_estimates[mask2 == 1,] <- matrix(mu,nrow = V, ncol = K*n_sess)
+      colnames(beta_estimates) <- rep(beta_names, n_sess)
+      beta_estimates <- lapply(seq(n_sess), function(ns) beta_estimates[,(seq(K) + K * (ns - 1))])
+      names(beta_estimates) <- session_names
+      avg_beta_estimates <- NULL
+      if(avg_sessions) avg_beta_estimates <- Reduce(`+`,beta_estimates) / n_sess
+      theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
+      names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
+      #extract stuff needed for group analysis
+      tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
+      mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
+      tau2 <- 1 / (4*pi*kappa2_new*phi_new)
+      mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
     }
 
+    if(!do_EM) {
+      #estimate model using INLA
+      cat('\n .... estimating model with INLA')
+      check_INLA(require_PARDISO=FALSE)
+      #organize the formula and data objects
+      repl_names <- names(repls)
+      hyper_initial <- c(-2,2)
+      hyper_initial <- rep(list(hyper_initial), K)
+      hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
+
+      formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+      formula_vec <- c('y ~ -1', formula_vec)
+      formula_str <- paste(formula_vec, collapse=' + ')
+      formula <- as.formula(formula_str, env = globalenv())
+
+      INLA_result <- INLA::inla(
+        formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
+        verbose = verbose, keep = FALSE, num.threads = num.threads,
+        control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+        control.family=list(hyper=list(prec=list(initial=1))),
+        control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
+      )
+      cat("done!\n")
+
+      #extract useful stuff from INLA model result
+      beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
+      theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+
+      #extract stuff needed for group analysis
+      mu.theta <- INLA_result$misc$theta.mode
+      Q.theta <- solve(INLA_result$misc$cov.intern) #not needed for EM version
+
+      #construct object to be returned
+      if(!return_INLA_result){
+        INLA_result <- NULL
+      } else {
+        if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
+      }
+    }
     ### END OF PART THAT WILL CHANGE WITH EM VERSION
 
   }
@@ -416,6 +507,8 @@ BayesGLM <- function(
   if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var)
   if(!do_pw) prewhiten_info <- NULL
   if(!do_Bayesian) INLA_result <- beta_estimates <- theta_posteriors <- mu.theta <- Q.theta <- y_all <- X_all_list <- NULL
+  if(do_Bayesian & !do_EM) theta_estimates <- Sig_inv <- NULL
+  if(do_EM) INLA_result <- theta_posteriors <- Q.theta <- NULL
 
   result <- list(INLA_result = INLA_result,
                  beta_estimates = beta_estimates,
@@ -427,6 +520,8 @@ BayesGLM <- function(
                  session_names = session_names,
                  beta_names = beta_names,
                  theta_posteriors = theta_posteriors,
+                 theta_estimates = theta_estimates,
+                 posterior_Sig_inv = Sig_inv, # for joint group model
                  mu.theta = mu.theta, #for joint group model
                  Q.theta = Q.theta, #for joint group model
                  y = y_all, #for joint group model

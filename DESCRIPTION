@@ -15,7 +15,20 @@ Authors@R: c(
            family = "Spencer",
            email = "danieladamspencer@gmail.com",
            role = "ctb",
-           comment = c(ORCID = "0000-0002-9705-3605")))
+           comment = c(ORCID = "0000-0002-9705-3605")),
+    person(given = "David",
+           family = "Bolin",
+           email = "david.bolin@kaust.edu.sa",
+           role = c("ctb")),
+    person(given = "Sarah",
+           family = "Ryan",
+           email = "sarahryan320@gmail.com",
+           role = c("ctb")),
+    person(given = "Yu (Ryan)",
+           family = "Yue",
+           email = "yybaruch@gmail.com",
+           role = c("ctb"))
+           )
 Description: The main function is BayesGLM, which performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
 License: GPL (>= 3)
 Depends: 
@@ -29,8 +42,11 @@ Imports:
     Matrix,
     matrixStats,
     neuRosim,
+    Rcpp,
+    RcppEigen,
     stats,
     sp,
+    SQUAREM,
     utils
 Suggests:
     covr,
@@ -51,3 +67,6 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/BayesfMRI
 BugReports: https://github.com/mandymejia/BayesfMRI/issues
+LinkingTo:
+    RcppEigen,
+    Rcpp
