@@ -1,4 +1,5 @@
 Package: BayesfMRI
+Type: Package
 Title: Bayesian Methods for Functional MRI
 Version: 0.1.9
 Authors@R: c(
@@ -6,16 +7,16 @@ Authors@R: c(
            family = "Mejia",
            email = "mandy.mejia@gmail.com",
            role = c("aut", "cre")),
+    person(given = "Daniel",
+           family = "Spencer",
+           email = "danieladamspencer@gmail.com",
+           role = c("aut"),
+           comment = c(ORCID = "0000-0002-9705-3605")),
     person(given = "Damon",
            family = "Pham",
            email = "damondpham@gmail.com",
            role = c("ctb"),
            comment = c(ORCID = "0000-0001-7563-4727")),
-    person(given = "Daniel",
-           family = "Spencer",
-           email = "danieladamspencer@gmail.com",
-           role = "ctb",
-           comment = c(ORCID = "0000-0002-9705-3605")),
     person(given = "David",
            family = "Bolin",
            email = "david.bolin@kaust.edu.sa",
@@ -28,11 +29,14 @@ Authors@R: c(
            family = "Yue",
            email = "yybaruch@gmail.com",
            role = c("ctb"))
-           )
-Description: The main function is BayesGLM, which performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
-License: GPL (>= 3)
-Depends: 
-    R (>= 3.6.0)
+    )
+Description: Performs a spatial Bayesian general linear model (GLM) for task 
+    fMRI data on the cortical surface. The INLA package is required, which, due
+    to a CRAN policy, will not be installed automatically. You can obtain the 
+    two packages by running `install.packages("INLA", repos=c(getOption("repos"), 
+    INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
+Depends: R (>= 3.6.0)
+License: GPL-3
 Encoding: UTF-8
 Imports: 
     ciftiTools (>= 0.8.0),
@@ -41,6 +45,7 @@ Imports:
     MASS,
     Matrix,
     matrixStats,
+    methods,
     neuRosim,
     Rcpp,
     RcppEigen,
@@ -49,6 +54,7 @@ Imports:
     SQUAREM,
     utils
 Suggests:
+    brainSim,
     covr,
     abind,
     dplyr,
@@ -57,11 +63,12 @@ Suggests:
     grDevices,
     INLA (>= 0.0-1468840039),
     knitr,
+    MatrixModels,
     parallel,
     purrr,
     rdist,
     rmarkdown,
-    testthat (>= 2.1.0)
+    testthat (>= 3.0.0)
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2

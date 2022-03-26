@@ -46,6 +46,8 @@
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #' @importFrom stats as.formula
 #'
+#' @importFrom utils tail 
+#'
 #' @export
 BayesGLM <- function(
   data,
@@ -384,6 +386,11 @@ BayesGLM <- function(
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     if(do_EM) {
+
+      if (!requireNamespace("MatrixModels", quietly = TRUE)) {
+        stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
+      }
+
       cat('\n.... estimating model with EM')
       Psi_k <- spde$Amat
       Psi <- Matrix::bdiag(rep(list(Psi_k),K))

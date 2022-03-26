@@ -10,10 +10,13 @@
 #'
 #' @return Triangular mesh from matrices and vertices
 #'
-#' @importFrom INLA inla.mesh.create
-#'
 #' @export
 make_mesh <- function(vertices, faces, use_INLA = FALSE){
+
+  if (!requireNamespace("INLA", quietly = TRUE)) {
+    stop("`make_mesh` requires the `INLA` package. Please install it.", call. = FALSE)
+  }
+
 
   # Check index of faces
   if(min(faces) == 0){
@@ -22,7 +25,7 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
 
   # Construct mesh
   if(use_INLA) {
-    mesh <- inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces))
+    mesh <- INLA::inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces))
   } else {
     gal_mesh <- galerkin_db(faces, vertices, surface = TRUE)
     mesh <- list(

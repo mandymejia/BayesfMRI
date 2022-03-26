@@ -22,5 +22,5 @@
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
 ^vignettes/BayesfMRI_HCP\.Rmd$
-
+^codecov\.yml$
 ^tests/BayesfMRI_test_DS\.R$
