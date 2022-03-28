@@ -14,5 +14,5 @@ if (!endsWith(getwd(), "tests")) { tests_dir <- file.path("tests", tests_dir) }
 # source(file.path(tests_dir, "test-Bayes.R"))
 # source(file.path(tests_dir, "test-classical.R"))
 # source(file.path(tests_dir, "test-misc.R"))
-source(file.path(tests_dir, "test-single.R")) # won't require interactive
-source(file.path(tests_dir, "test-new.R")) # will require interactive
+source(file.path(tests_dir, "test-auto.R")) # won't require interactive
+source(file.path(tests_dir, "test-manual.R")) # will require interactive
