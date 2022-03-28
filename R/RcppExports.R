@@ -37,8 +37,9 @@ initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
 #' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 #' @param tol a value for the tolerance used for a stopping rule (compared to
 #'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
+#' @param verbose (logical) should intermediate results and messages be shown?
 #' @export
-findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol) {
-    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol)
+findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
+    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol, verbose)
 }
 

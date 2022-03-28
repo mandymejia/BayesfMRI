@@ -39,8 +39,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // findTheta
-Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y, Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK, Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A, int Ns, double tol);
-RcppExport SEXP _BayesfMRI_findTheta(SEXP thetaSEXP, SEXP spdeSEXP, SEXP ySEXP, SEXP XSEXP, SEXP QKSEXP, SEXP PsiSEXP, SEXP ASEXP, SEXP NsSEXP, SEXP tolSEXP) {
+Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y, Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK, Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A, int Ns, double tol, bool verbose);
+RcppExport SEXP _BayesfMRI_findTheta(SEXP thetaSEXP, SEXP spdeSEXP, SEXP ySEXP, SEXP XSEXP, SEXP QKSEXP, SEXP PsiSEXP, SEXP ASEXP, SEXP NsSEXP, SEXP tolSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type theta(thetaSEXP);
@@ -52,7 +52,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::SparseMatrix<double> >::type A(ASEXP);
     Rcpp::traits::input_parameter< int >::type Ns(NsSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol));
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -60,7 +61,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_BayesfMRI_logDetQt", (DL_FUNC) &_BayesfMRI_logDetQt, 3},
     {"_BayesfMRI_initialKP", (DL_FUNC) &_BayesfMRI_initialKP, 6},
-    {"_BayesfMRI_findTheta", (DL_FUNC) &_BayesfMRI_findTheta, 9},
+    {"_BayesfMRI_findTheta", (DL_FUNC) &_BayesfMRI_findTheta, 10},
     {NULL, NULL, 0}
 };
 
