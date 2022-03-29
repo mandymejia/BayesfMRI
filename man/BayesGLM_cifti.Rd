@@ -19,6 +19,7 @@ BayesGLM_cifti(
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
+  aic = FALSE,
   resamp_res = 10000,
   num.threads = 4,
   verbose = FALSE,
@@ -90,6 +91,8 @@ for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 \item{ar_smooth}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
+
+\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
 
 \item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
 
