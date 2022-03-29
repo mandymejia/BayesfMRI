@@ -23,6 +23,7 @@
 #' @param ar_smooth FWHM parameter for smoothing. Remember that
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 #'  to not do any smoothing. Default: \code{5}.
+#' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_result_Param_TRUE
 #' @param outfile File name where results will be written (for use by
@@ -56,6 +57,7 @@ BayesGLM <- function(
   Bayes=TRUE,
   ar_order = 6,
   ar_smooth = 5,
+  aic = FALSE,
   num.threads=4,
   return_INLA_result=TRUE,
   outfile = NULL,
@@ -235,7 +237,7 @@ BayesGLM <- function(
     #estimate prewhitening parameters for each session
     for (ss in 1:n_sess) {
       resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design)
-      AR_est <- pw_estimate(resids, ar_order)
+      AR_est <- pw_estimate(resids, ar_order, aic=aic)
       AR_coeffs[,,ss] <- AR_est$phi
       AR_resid_var[,ss] <- AR_est$sigma_sq
     }

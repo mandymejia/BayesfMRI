@@ -16,6 +16,7 @@ BayesGLM(
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
+  aic = FALSE,
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
@@ -72,6 +73,8 @@ for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 \item{ar_smooth}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
+
+\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
 
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}
