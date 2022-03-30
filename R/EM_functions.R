@@ -286,7 +286,8 @@ BayesGLMEM <- function(data,
       Psi = as(Psi, "dgCMatrix"),
       A = as(A, "dgCMatrix"),
       Ns = 50,
-      tol = tol
+      tol = tol,
+      verbose = verbose
     )
   # > End EM algorithm ----
   cat(".... EM algorithm complete!\n")
@@ -312,7 +313,7 @@ BayesGLMEM <- function(data,
   tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
   mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
   tau2 <- 1 / (4*pi*kappa2_new*phi_new)
-  mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
+  mu.theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
 
   # Construct object to be returned
   result <- list(mesh = mesh,

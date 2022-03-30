@@ -4,7 +4,7 @@
 \alias{findTheta}
 \title{Perform the EM algorithm of the Bayesian GLM fitting}
 \usage{
-findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol)
+findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE)
 }
 \arguments{
 \item{theta}{the vector of initial values for theta}
@@ -25,6 +25,8 @@ findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol)
 
 \item{tol}{a value for the tolerance used for a stopping rule (compared to
 the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})}
+
+\item{verbose}{(logical) Should intermediate output be displayed?}
 }
 \description{
 Perform the EM algorithm of the Bayesian GLM fitting

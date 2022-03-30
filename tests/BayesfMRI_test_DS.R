@@ -40,7 +40,7 @@ for(num_runs in 1:2){
   for(hem in c("left","right")) {
     cat("....",toupper(hem),"HEMISPHERE\n")
     for(PW in rev(c("not prewhitened","prewhitened"))) {
-      # stop break for testing ----
+      # stop break for testing (top)----
       # stop()
       cat(".... DATA",toupper(PW),"\n")
       if (PW == "prewhitened") {
@@ -83,6 +83,8 @@ for(num_runs in 1:2){
             trim_INLA = TRUE
           )
         )
+      # stop break for testing (bottom)----
+      # stop()
       if(class(result_obj) =="try-error") {
         cat(num_runs,"Run data",hem,"hemisphere","data",PW,"FAILED with message:\n",result_obj,"/n")
         num_errs <- num_errs + 1
@@ -114,6 +116,10 @@ for(num_runs in 1:2){
         cat(num_runs,"Run data",hem,"hemisphere","data",PW,"SUCCEEDED\n")
         cat("....Correlation w/ true:",class_corr,"(Classical)",
             bayes_corr,"(Bayesian)", em_corr,"(EM)\n")
+        cat("....Time taken (seconds):",
+            result_obj$GLMs_classical[[paste0("cortex",toupper(substring(hem,1,1)))]]$total_time, "(classical)",
+            result_obj$GLMs_Bayesian[[paste0("cortex",toupper(substring(hem,1,1)))]]$total_time, "(INLA)",
+            result_obj$GLMs_EM[[paste0("cortex",toupper(substring(hem,1,1)))]]$total_time, "(EM)\n")
       }
     }
   }

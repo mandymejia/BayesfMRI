@@ -440,7 +440,8 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, d
 //' @param verbose (logical) Should intermediate output be displayed?
 //' @export
 // [[Rcpp::export(rng = false)]]
-Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, double n_sess, double tol, bool verbose) {
+Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w,
+                          double n_sess, double tol, bool verbose) {
   int n_spde = w.size();
   n_spde = n_spde / n_sess;
   // Set up implementation without EM
@@ -638,7 +639,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
                        Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
                        const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                        const int Ns, const Eigen::VectorXd y, const double yy,
-                       const List spde, double tol){
+                       const List spde, double tol, bool verbose){
   double res,parnorm,kres;
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
@@ -647,7 +648,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
   bool conv,extrap;
   stepmin=SquaremDefault.stepmin0;
   stepmax=SquaremDefault.stepmax0;
-  if(SquaremDefault.trace){Rcout<<"Squarem-2"<<std::endl;}
+  if(verbose){Rcout<<"Squarem-2"<<std::endl;}
 
   iter=1;pcpp=par;pnew=par;
   feval=0;conv=true;
@@ -711,7 +712,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
         if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
         if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
         pcpp=pnew;
-        if(SquaremDefault.trace){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+        if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
         iter++;
         continue;//next round in while loop
       }
@@ -736,7 +737,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
     if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
 
     pcpp=pnew;
-    if(SquaremDefault.trace){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+    if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
     iter++;
   }
 
@@ -764,12 +765,13 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 //' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 //' @param tol a value for the tolerance used for a stopping rule (compared to
 //'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
+//' @param verbose (logical) Should intermediate output be displayed?
 //' @export
 // [[Rcpp::export(rng = false)]]
 Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
                      Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
                      Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,
-                     int Ns, double tol) {
+                     int Ns, double tol, bool verbose = false) {
   // Bring in the spde matrices
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
@@ -783,7 +785,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
   cholSigInv.compute(Sig_inv);
   cholSigInv.analyzePattern(Sig_inv);
-  Rcout << "Initial theta: " << theta.transpose() << std::endl;
+  if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
   // Initialize everything
   Eigen::SparseMatrix<double> Xpsi = X * Psi;
   Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
@@ -813,10 +815,10 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   // Using SQUAREM
   SquaremOutput SQ_result;
   SquaremDefault.tol = tol;
-  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);
+  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol, verbose);
   theta= SQ_result.par;
   // Bring results together for output
-  Rcout << "Final theta: " << theta.transpose() << std::endl;
+  if(verbose) {Rcout << "Final theta: " << theta.transpose() << std::endl;}
   AdivS2 = A / theta[sig2_ind];
   Sig_inv = QK + AdivS2;
   cholSigInv.factorize(Sig_inv);
