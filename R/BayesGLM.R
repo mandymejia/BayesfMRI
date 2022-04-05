@@ -46,7 +46,7 @@
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #' @importFrom stats as.formula
 #'
-#' @importFrom utils tail 
+#' @importFrom utils tail
 #'
 #' @export
 BayesGLM <- function(
@@ -465,9 +465,9 @@ BayesGLM <- function(
       names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
       #extract stuff needed for group analysis
       tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
-      mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
+      mu.theta_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
       tau2 <- 1 / (4*pi*kappa2_new*phi_new)
-      mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
+      mu.theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
       cat("... done!\n")
     }
 
