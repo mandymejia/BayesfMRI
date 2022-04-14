@@ -16,3 +16,4 @@
 ^vignettes/BayesfMRI_simulation_files$
 ^LICENSE\.md$
 ^tests/BayesfMRI_test_DS\.R$
+^src/prewhiten\.cpp$
