@@ -268,9 +268,12 @@ prewhiten_cifti <- function(data,
     rows.rm <- numeric()
     for(v in 1:V) {
       if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
-      template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
-                                           ntime = ntime,
-                                           AR_var = avg_var[v])
+      # template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
+      #                                      ntime = ntime,
+      #                                      AR_var = avg_var[v])
+      template_pw_list[[v]] <- getSqrtInvCpp(AR_coeffs = avg_AR[v,],
+                                           nTime = ntime,
+                                           avg_var = avg_var[v])
     }
   } else {
     if (!requireNamespace("parallel", quietly = TRUE)) {
@@ -282,10 +285,13 @@ prewhiten_cifti <- function(data,
     template_pw_list <-
       parallel::clusterMap(
         cl,
-        prewhiten.v,
+        # prewhiten.v,
+        getSqrtInvCpp,
         AR_coeffs = split(avg_AR, row(avg_AR)),
-        ntime = ntime,
-        AR_var = avg_var,
+        # ntime = ntime,
+        nTime = ntime,
+        # AR_var = avg_var,
+        avg_var = avg_var,
         SIMPLIFY = FALSE
       )
     parallel::stopCluster(cl)

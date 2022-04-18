@@ -692,7 +692,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
                        const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                        const int Ns, const Eigen::VectorXd y, const double yy,
                        const List spde, double tol, bool verbose){
-  double res,parnorm,kres;
+  double res,parnorm,kres, theta_length=par.size();
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
   double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
@@ -705,7 +705,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 
   iter=1;pcpp=par;pnew=par;
   feval=0;conv=true;
-  ob_pcpp = emObj(pcpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+  // ob_pcpp = emObj(pcpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
 
   const long int parvectorlength=pcpp.size();
 
@@ -718,13 +718,18 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
     }
-    ob_p1cpp = emObj(p1cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-    rel_llik_pp1 = std::abs(ob_p1cpp - ob_pcpp) / std::abs(ob_pcpp);
+    // ob_p1cpp = emObj(p1cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_pp1 = std::abs(ob_p1cpp - ob_pcpp) / std::abs(ob_pcpp);
 
     sr2_scalar=0;
     for (int i=0;i<parvectorlength;i++){sr2_scalar+=std::pow(p1cpp[i]-pcpp[i],2.0);}
-    // if(std::sqrt(sr2_scalar)<SquaremDefault.tol){break;}
-    if(rel_llik_pp1<tol){break;}
+    // sr2_scalar = std::sqrt(sr2_scalar);
+    double pcpp_norm = pcpp.squaredNorm();
+    pcpp_norm = std::sqrt(pcpp_norm);
+    // if(sr2_scalar / pcpp_norm < tol){break;}
+    // if(std::sqrt(sr2_scalar)<tol){break;}
+    if(std::sqrt(sr2_scalar) / pcpp_norm <tol){break;}
+    // if(rel_llik_pp1<tol){break;}
 
     //Step 2
     try{p2cpp=theta_fixpt(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
@@ -732,15 +737,18 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
     }
-    ob_p2cpp = emObj(p2cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-    rel_llik_p1p2 = std::abs(ob_p2cpp - ob_p1cpp) / std::abs(ob_p1cpp);
+    // ob_p2cpp = emObj(p2cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_p1p2 = std::abs(ob_p2cpp - ob_p1cpp) / std::abs(ob_p1cpp);
     sq2_scalar=0;
     for (int i=0;i<parvectorlength;i++){sq2_scalar+=std::pow(p2cpp[i]-p1cpp[i],2.0);}
     sq2_scalar=std::sqrt(sq2_scalar);
-    // if (sq2_scalar<SquaremDefault.tol){break;}
-    if (rel_llik_p1p2<tol){break;}
-    // res=sq2_scalar;
-    res=rel_llik_p1p2;
+    double p1cpp_norm = p1cpp.squaredNorm();
+    p1cpp_norm = std::sqrt(p1cpp_norm);
+    if (sq2_scalar / p1cpp_norm <tol){break;}
+    // if (rel_llik_p1p2<tol){break;}
+    // if (sq2_scalar<tol){break;}
+    res=sq2_scalar;
+    // res=rel_llik_p1p2;
 
     sv2_scalar=0;
     for (int i=0;i<parvectorlength;i++){sv2_scalar+=std::pow(p2cpp[i]-2.0*p1cpp[i]+pcpp[i],2.0);}
@@ -759,7 +767,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
     //std::cout<<"alpha="<<alpha<<std::endl;//debugging
     for (int i=0;i<parvectorlength;i++){pnew[i]=pcpp[i]+2.0*alpha*(p1cpp[i]-pcpp[i])+alpha*alpha*(p2cpp[i]-2.0*p1cpp[i]+pcpp[i]);}
     // pnew = pcpp + 2.0*alpha*q1 + alpha*alpha*(q2-q1);
-    ob_pnew = emObj(pnew,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // ob_pnew = emObj(pnew,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
 
     //Step 4 stabilization
     if(std::abs(alpha-1)>0.01){
@@ -778,11 +786,14 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
         iter++;
         continue;//next round in while loop
       }
-      ob_ptmp = emObj(ptmp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+      // ob_ptmp = emObj(ptmp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
       res=0;
       for (int i=0;i<parvectorlength;i++){res+=std::pow(ptmp[i]-pnew[i],2.0);}
       res=std::sqrt(res);
-      rel_llik_tmpNew = std::abs(ob_ptmp - ob_pnew)/ std::abs(ob_pnew);
+      // double pnew_norm = pnew.squaredNorm();
+      // pnew_norm = std::sqrt(pnew_norm);
+      // res = res/ pnew_norm;
+      // rel_llik_tmpNew = std::abs(ob_ptmp - ob_pnew)/ std::abs(ob_pnew);
       parnorm=0;
       for (int i=0;i<parvectorlength;i++){parnorm+=std::pow(p2cpp[i],2.0);}
       parnorm=std::sqrt(parnorm/parvectorlength);
@@ -795,7 +806,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
         alpha=1;
         extrap=false;
       }
-      res = rel_llik_tmpNew;
+      // res = rel_llik_tmpNew;
     }
 
     if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}

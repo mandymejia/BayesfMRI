@@ -6,10 +6,7 @@ using namespace Rcpp;
 using namespace Eigen;
 using namespace std;
 
-/*
- B of size n1 x n2
- Set A(i:i+n1,j:j+n2) = B (update)
- */
+// Initialize this function (for debugging only)
 // void setSparseBlock_update(SparseMatrix<double,0,int>* A,int i, int j, SparseMatrix<double,0,int>& B)
 // {
 //   for (int k=0; k<B.outerSize(); ++k) {
@@ -19,92 +16,76 @@ using namespace std;
 //   }
 // }
 
-//' Get the prewhitening matrix using the AR coefficients and variance
+
+//' Get the prewhitening matrix for a single data location
 //'
-//' @param avg_AR a matrix with dimensions V by p, where V is the number of data
-//'   locations and p is the AR order
+//' @param AR_coeffs a length-p vector where p is the AR order
 //' @param nTime (integer) the length of the time series that is being prewhitened
-//' @param avg_var a vector of length V containing the residual variances of the
-//'   AR model
-Eigen::SparseMatrix<double> getPWmatrix(Eigen::MatrixXd avg_AR, int nTime, Eigen::VectorXd avg_var) {
-  int nVox = avg_AR.rows();
-  int p = avg_AR.cols(), diffIJ;
-  int NT = nVox * nTime;
-  double sqrt_var, sqrt_prec;
-  Eigen::SparseMatrix<double> PWmatrix(NT,NT), spSqrtInv(nTime,nTime);
-  Eigen::SparseMatrix<double> spInv_v(nTime,nTime);
-  Eigen::internal::BandMatrix<double> halfInv_v(nTime,nTime,p,p);
-  Eigen::MatrixXd final_Inv_v(nTime,nTime), sqrtInv(nTime,nTime), eDinv_v(nTime,nTime);
-  Eigen::MatrixXd Inv_v(nTime,nTime), hInv_v(nTime,nTime), thInv_v(nTime,nTime), Dinv_v(nTime,nTime);
-  // Eigen::MatrixXd lowerInv_v(nTime, nTime), upperInv_v(nTime,nTime);
-  // Eigen::DiagonalMatrix<double, Eigen::Dynamic> Dinv_v(nTime), eDinv(nTime);
-  nVox = 1;
-  for(int v=0; v<nVox; v++) {
-    sqrt_var = sqrt(avg_var(v));
-    sqrt_prec = 1/sqrt_var;
-    //// Using BandMatrix
-    Dinv_v.diagonal().setConstant(sqrt_prec);
-    halfInv_v.diagonal().setConstant(1);
-    for(int k=1; k<=p; k++) {
-      // Inv_v.diagonal(k).setConstant(-avg_AR(v,k-1)); //superdiagonals
-      halfInv_v.diagonal(-k).setConstant(-avg_AR(v,k-1)); //subdiagonals
+//' @param avg_var a scalar value of the residual variances of the AR model
+// [[Rcpp::export]]
+Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var) {
+  double sqrt_var = sqrt(avg_var);
+  int p = AR_coeffs.size();
+  double sqrt_prec = 1/sqrt_var;
+  Eigen::VectorXd Dinv_v(nTime);
+  for(int i=0; i<nTime;i++){Dinv_v(i) = sqrt_prec;}
+  Eigen::MatrixXd matDinv_v = Dinv_v.asDiagonal();
+  Eigen::MatrixXd halfInv_v(nTime,nTime);
+  halfInv_v = MatrixXd::Zero(nTime,nTime);
+  halfInv_v.diagonal().setConstant(1);
+  for(int j=0;j<nTime;j++){
+    for(int k=1;k<=p;k++) {
+      if(j+k >nTime - 1){break;}
+      halfInv_v(j+k,j) = -1 * AR_coeffs(k-1);
     }
-    hInv_v = halfInv_v.toDenseMatrix();
-    thInv_v = hInv_v.transpose();
-    Inv_v =  hInv_v * thInv_v;
-    // Rcout << Inv_v.block(0,0,10,10) << std::endl;
-    //// End using BandMatrix
-    //// Without using BandMatrix
-    // Now fill the off-diagonals with the negative coefficient values
-    // for(int i; i<nTime; i++) {
-    //   lowerInv_v(i,i) = 1;
-    //   Dinv_v.diagonal()[i] = sqrt_prec;
-    //   for(int j; j<i; j++) {
-    //     diffIJ = i - j;
-    //     for(int k; k<p; k++) {
-    //       if(diffIJ == k) {
-    //         lowerInv_v(i,j) = -avg_AR(v,k);
-    //       }
-    //     }
-    //   }
-    // }
-    // upperInv_v = lowerInv_v.transpose();
-    // Inv_v = lowerInv_v * upperInv_v;
-    //// End not using BandMatrix
-    final_Inv_v = Dinv_v * Inv_v * Dinv_v;
-    // spInv_v = final_Inv_v.sparseView();
-    // Rcout << spInv_v.block(0,0,10,10) << std::endl;
-    // Eigen::EigenSolver<SparseMatrix<double>> ei;
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> ei(final_Inv_v);
-    // if (ei.info() != Eigen::Success) {
-      // Rcout << "Negative eigenvalues!" << std::endl;
-    // }
-    Eigen::VectorXd d2inv = ei.eigenvalues().real();
-    Eigen::MatrixXd eVec = ei.eigenvectors().real();
-    // std::vector<std::tuple<double, Eigen::VectorXd>> ei_vec_and_vals;
-    // for(int i=0;i<d2inv.size();i++) {
-    //   std::tuple<double,Eigen::VectorXd> vec_and_val(d2inv(i),eVec.col(i));
-    //   ei_vec_and_vals.push_back(vec_and_val);
-    // }
-    // std::sort(ei_vec_and_vals.begin(),ei_vec_and_vals.end(),
-    //           [&](const std::tuple<double, Eigen::VectorXd>& a, const std::tuple<double, Eigen::VectorXd>& b) -> bool{
-    //             return std::get<0>(a) < std::get<0>(b);
-    //           });
-    // Rcout << "Unsorted eigenvalues: " << d2inv.transpose().reverse() << std::endl;
-    // Rcout << "The first three eigenvectors are " << eVec.block(0,0,nTime,3) << std::endl;
-    // Rcout << "The first eigenvector is " << eVec.transpose() << std::endl;
-    // Rcout << d2inv << std::endl;
-    // Eigen::VectorXd dinv = d2inv.sqrt();
-    // Rcout << "d2inv.array().pow(.5) :" << d2inv.array().pow(.5) << std::endl;
-    eDinv_v.diagonal() = d2inv.reverse();
-    // for(int i;i<nTime;i++){
-    //   eDinv_v(i,i) = sqrt(d2inv.reverse()(i));
-    // }
-    // Rcout << eDinv_v.block(0,0,10,10) << std::endl;
-    // sqrtInv = eVec * eDinv_v.array().sqrt() * eVec.transpose();
-    // Rcout << sqrtInv.block(0,0,10,10) << std::endl;
-    // spSqrtInv = sqrtInv.sparseView();
-    // setSparseBlock_update(&PWmatrix, v*nTime, v*nTime, spSqrtInv);
   }
-  return PWmatrix;
+  Eigen::MatrixXd Inv_v = halfInv_v * halfInv_v.transpose();
+  Eigen::MatrixXd final_Inv_v = matDinv_v * Inv_v * matDinv_v;
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> ei(final_Inv_v);
+  Eigen::VectorXd d2inv = ei.eigenvalues().real();
+  Eigen::MatrixXd eVec = ei.eigenvectors().real();
+  Eigen::MatrixXd eDinv_v(nTime,nTime);
+  eDinv_v = MatrixXd::Zero(nTime,nTime);
+  for(int i=0;i<nTime;i++){
+    eDinv_v(i,i) = sqrt(d2inv.reverse()(i));
+  }
+  Eigen::MatrixXd revEvec = eVec.rowwise().reverse();
+  Eigen::MatrixXd sqrtInv = revEvec * eDinv_v * revEvec.transpose();
+  Eigen::MatrixXd out(nTime,nTime);
+  out = Eigen::MatrixXd::Zero(nTime,nTime);
+  for(int j=0; j<nTime;j++){
+    for(int k=-1*(p+1);k<=p+1;k++) {
+      if(j + k < 0){continue;}
+      if(j + k > nTime - 1){continue;}
+      out(j+k,j) = sqrtInv(j+k,j);
+    }
+  }
+  Eigen::SparseMatrix<double> final_out = out.sparseView(1e-8,1);
+  return final_out;
 }
+
+
+// Eigen::SparseMatrix<double> getPWmatrix(Eigen::MatrixXd avg_AR,
+//                                         int nTime, Eigen::VectorXd avg_var,
+//                                         int num_threads) {
+//   #if defined(_OPENMP)
+//     #pragma omp parallel num_threads(num.threads)
+//     #pragma omp for
+//   #endif
+//
+//   int nVox = avg_AR.rows();
+//   int NT = nVox * nTime;
+//   Eigen::SparseMatrix<double> PWmatrix(NT,NT), spSqrtInv(nTime,nTime);
+//   for(int v=0; v<nVox; v++) {
+//     spSqrtInv = getSqrtInvCpp(avg_AR.row(v),nTime,avg_var(v));
+//     setSparseBlock_update(&PWmatrix, v*nTime, v*nTime, spSqrtInv);
+//   }
+//   return PWmatrix;
+// }
+
+// Eigen::MatrixXd eiTest(Eigen::MatrixXd A) {
+//   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> ei(A);
+//   Eigen::MatrixXd eVec = ei.eigenvectors().real();
+//   Eigen::MatrixXd out = eVec.rowwise().reverse();
+//   return out;
+// }
