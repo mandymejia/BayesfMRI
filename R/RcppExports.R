@@ -6,6 +6,7 @@
 #' @param AR_coeffs a length-p vector where p is the AR order
 #' @param nTime (integer) the length of the time series that is being prewhitened
 #' @param avg_var a scalar value of the residual variances of the AR model
+#' @export
 getSqrtInvCpp <- function(AR_coeffs, nTime, avg_var) {
     .Call(`_BayesfMRI_getSqrtInvCpp`, AR_coeffs, nTime, avg_var)
 }

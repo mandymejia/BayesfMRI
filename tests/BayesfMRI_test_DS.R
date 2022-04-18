@@ -79,7 +79,7 @@ for(num_runs in 1:2){
             avg_sessions = TRUE,
             session_names = NULL,
             groups_df = NULL, # This is for BayesfMRI 1.8.EM
-            tol = 1e-2, # This is for BayesfMRI 1.8.EM
+            tol = 1e-3, # This is for BayesfMRI 1.8.EM
             trim_INLA = TRUE
           )
         )
