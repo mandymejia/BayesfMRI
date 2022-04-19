@@ -26,7 +26,7 @@ findTheta(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE)
 \item{tol}{a value for the tolerance used for a stopping rule (compared to
 the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})}
 
-\item{verbose}{(logical) should intermediate results and messages be displayed?}
+\item{verbose}{(logical) Should intermediate output be displayed?}
 }
 \description{
 Perform the EM algorithm of the Bayesian GLM fitting

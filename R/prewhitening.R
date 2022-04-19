@@ -92,15 +92,15 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @param mask (Optional) A length \eqn{V} logical vector indicating if each
 #'  vertex is to be included.
 #' @param scale_BOLD Option for scaling the BOLD response.
-#' 
+#'
 #' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
 #' 	is detected, in which case sd scaling will be used instead.
-#' 
+#'
 #' 	\code{"mean"} scaling will scale the data to percent local signal change.
-#' 
+#'
 #' 	\code{"sd"} scaling will scale the data by local standard deviation.
-#' 
-#' 	\code{"none"} will only center the data, not scale it. 
+#'
+#' 	\code{"none"} will only center the data, not scale it.
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @param ar_smooth FWHM parameter for smoothing. Remember that
@@ -158,15 +158,15 @@ prewhiten_cifti <- function(data,
 #' @param mask (Optional) A length \eqn{V} logical vector indicating if each
 #'  vertex is to be included.
 #' @param scale_BOLD Option for scaling the BOLD response.
-#' 
+#'
 #' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
 #' 	is detected, in which case sd scaling will be used instead.
-#' 
+#'
 #' 	\code{"mean"} scaling will scale the data to percent local signal change.
-#' 
+#'
 #' 	\code{"sd"} scaling will scale the data by local standard deviation.
-#' 
-#' 	\code{"none"} will only center the data, not scale it. 
+#'
+#' 	\code{"none"} will only center the data, not scale it.
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @importFrom stats ar.yw
@@ -353,9 +353,13 @@ prewhiten_do <- function(prewhiten_result,
     rows.rm <- numeric()
     for(v in 1:V) {
       if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
-      template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
-                                           ntime = ntime,
-                                           AR_var = avg_var[v])
+      # template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
+      #                                      ntime = ntime,
+      #                                      AR_var = avg_var[v])
+      # This is an updated, faster version of prewhiten.v written in C++
+      template_pw_list[[v]] <- getSqrtInvCpp(AR_coeffs = avg_AR[v,],
+                                             nTime = ntime,
+                                             avg_var = avg_var[v])
     }
   } else {
     if (!requireNamespace("parallel", quietly = TRUE)) {
@@ -367,10 +371,14 @@ prewhiten_do <- function(prewhiten_result,
     template_pw_list <-
       parallel::clusterMap(
         cl,
-        prewhiten.v,
+        # prewhiten.v,
+        # This is an updated, faster version of prewhiten.v written in C++
+        getSqrtInvCpp,
         AR_coeffs = split(avg_AR, row(avg_AR)),
-        ntime = ntime,
-        AR_var = avg_var,
+        # ntime = ntime,
+        nTime = ntime,
+        # AR_var = avg_var,
+        avg_var = avg_var,
         SIMPLIFY = FALSE
       )
     parallel::stopCluster(cl)
@@ -452,7 +460,7 @@ pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
     )
   )
   AR_xif <- ciftiTools:::make_xifti(
-    cortexL = AR, 
+    cortexL = AR,
     surfL = surf_smooth
   )
   # below two lines are patches, will be fixed in next ciftiTools update.

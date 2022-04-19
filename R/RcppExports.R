@@ -37,9 +37,19 @@ initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
 #' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 #' @param tol a value for the tolerance used for a stopping rule (compared to
 #'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
-#' @param verbose (logical) should intermediate results and messages be displayed?
+#' @param verbose (logical) Should intermediate output be displayed?
 #' @export
 findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
     .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol, verbose)
+}
+
+#' Get the prewhitening matrix for a single data location
+#'
+#' @param AR_coeffs a length-p vector where p is the AR order
+#' @param nTime (integer) the length of the time series that is being prewhitened
+#' @param avg_var a scalar value of the residual variances of the AR model
+#' @export
+getSqrtInvCpp <- function(AR_coeffs, nTime, avg_var) {
+    .Call(`_BayesfMRI_getSqrtInvCpp`, AR_coeffs, nTime, avg_var)
 }
 

@@ -208,12 +208,12 @@ double kappa2Brent(double lower, double upper, const List &spde, double a_star, 
     if (std::abs(p) >= std::abs(q * .5 * r) ||
         p <= q * (a - x) || p >= q * (b - x)) { /* a golden-section step */
 
-    if (x < xm) e = b - x; else e = a - x;
-    d = c * e;
+      if (x < xm) e = b - x; else e = a - x;
+      d = c * e;
     }
     else { /* a parabolic-interpolation step */
 
-    d = p / q;
+      d = p / q;
       u = x + d;
 
       /* f must not be evaluated too close to ax or bx */
@@ -440,7 +440,8 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, d
 //' @param verbose (logical) Should intermediate output be displayed?
 //' @export
 // [[Rcpp::export(rng = false)]]
-Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, double n_sess, double tol, bool verbose) {
+Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w,
+                          double n_sess, double tol, bool verbose) {
   int n_spde = w.size();
   n_spde = n_spde / n_sess;
   // Set up implementation without EM
@@ -493,6 +494,58 @@ void setSparseBlock_update(SparseMatrix<double,0,int>* A,int i, int j, SparseMat
       A->coeffRef(it.row()+i, it.col()+j) = it.value();
     }
   }
+}
+
+double emObj(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
+             Eigen::SparseMatrix<double> QK,
+             SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+             const int Ns, const Eigen::VectorXd y, const List spde) {
+  // Bring in the spde matrices
+  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+  // Grab metadata
+  int K = (theta.size() - 1) / 2;
+  int sig2_ind = theta.size() - 1;
+  int nKs = A.rows();
+  int ySize = y.size();
+  int n_spde = Cmat.rows();
+  double n_sess = nKs / (n_spde * K);
+  Eigen::MatrixXd Vh = makeV(nKs,Ns);
+  // Initialize objects
+  Eigen::SparseMatrix<double> AdivS2(nKs,nKs), Sig_inv(nKs,nKs), Qk(n_spde, n_spde);
+  for(int k = 0; k < K ; k++) {
+    makeQt(&Qk, theta(k), spde);
+    Qk = Qk / (4.0 * M_PI * theta(k + K));
+    for(int ns = 0; ns < n_sess; ns++) {
+      int start_i = k * n_spde + ns * K * n_spde;
+      setSparseBlock_update(&QK, start_i, start_i, Qk);
+    }
+  }
+  AdivS2 = A / theta[sig2_ind];
+  Sig_inv = QK + AdivS2;
+  cholSigInv.factorize(Sig_inv);
+  Eigen::MatrixXd P = cholSigInv.solve(Vh);
+  Eigen::MatrixXd PqVh = P.transpose() * QK;
+  Eigen::VectorXd diagPqVh = PqVh.diagonal();
+  double TrSigQ = diagPqVh.sum() / Ns;
+  Eigen::VectorXd m = XpsiY / theta(sig2_ind);
+  Eigen::VectorXd mu = cholSigInv.solve(m);
+  Eigen::MatrixXd muTmu = mu.transpose() * mu;
+  Eigen::MatrixXd QmuTmu = QK * muTmu;
+  double TrQmuTmu = QmuTmu.diagonal().sum();
+  SimplicialLDLT<Eigen::SparseMatrix<double>> cholQ(QK);
+  double lDQ = cholQ.vectorD().array().log().sum();
+  Eigen::VectorXd XB = Xpsi * mu;
+  Eigen::VectorXd y_til = y - XB;
+  double ytil2 = y_til.transpose() * y_til;
+  double llik = -ySize * log(theta[sig2_ind]);
+  llik = llik - ytil2 / theta[sig2_ind];
+  llik = llik - lDQ;
+  llik = llik - TrSigQ - TrQmuTmu;
+  llik = llik / 2.;
+  return llik;
 }
 
 Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
@@ -635,14 +688,15 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
 
 
 SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<double> A,
-                             Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
-                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
-                             const int Ns, const Eigen::VectorXd y, const double yy,
-                             const List spde, double tol, bool verbose){
-  double res,parnorm,kres;
+                       Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                       const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+                       const int Ns, const Eigen::VectorXd y, const double yy,
+                       const List spde, double tol, bool verbose){
+  double res,parnorm,kres, theta_length=par.size();
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
   double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
+  double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
   int iter,feval;
   bool conv,extrap;
   stepmin=SquaremDefault.stepmin0;
@@ -651,6 +705,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 
   iter=1;pcpp=par;pnew=par;
   feval=0;conv=true;
+  // ob_pcpp = emObj(pcpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
 
   const long int parvectorlength=pcpp.size();
 
@@ -663,10 +718,18 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
     }
+    // ob_p1cpp = emObj(p1cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_pp1 = std::abs(ob_p1cpp - ob_pcpp) / std::abs(ob_pcpp);
 
     sr2_scalar=0;
     for (int i=0;i<parvectorlength;i++){sr2_scalar+=std::pow(p1cpp[i]-pcpp[i],2.0);}
-    if(std::sqrt(sr2_scalar)<SquaremDefault.tol){break;}
+    // sr2_scalar = std::sqrt(sr2_scalar);
+    double pcpp_norm = pcpp.squaredNorm();
+    pcpp_norm = std::sqrt(pcpp_norm);
+    // if(sr2_scalar / pcpp_norm < tol){break;}
+    // if(std::sqrt(sr2_scalar)<tol){break;}
+    if(std::sqrt(sr2_scalar) / pcpp_norm <tol){break;}
+    // if(rel_llik_pp1<tol){break;}
 
     //Step 2
     try{p2cpp=theta_fixpt(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
@@ -674,11 +737,18 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
       Rcout<<"Error in fixptfn function evaluation";
       return sqobjnull;
     }
+    // ob_p2cpp = emObj(p2cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_p1p2 = std::abs(ob_p2cpp - ob_p1cpp) / std::abs(ob_p1cpp);
     sq2_scalar=0;
     for (int i=0;i<parvectorlength;i++){sq2_scalar+=std::pow(p2cpp[i]-p1cpp[i],2.0);}
     sq2_scalar=std::sqrt(sq2_scalar);
-    if (sq2_scalar<SquaremDefault.tol){break;}
+    double p1cpp_norm = p1cpp.squaredNorm();
+    p1cpp_norm = std::sqrt(p1cpp_norm);
+    if (sq2_scalar / p1cpp_norm <tol){break;}
+    // if (rel_llik_p1p2<tol){break;}
+    // if (sq2_scalar<tol){break;}
     res=sq2_scalar;
+    // res=rel_llik_p1p2;
 
     sv2_scalar=0;
     for (int i=0;i<parvectorlength;i++){sv2_scalar+=std::pow(p2cpp[i]-2.0*p1cpp[i]+pcpp[i],2.0);}
@@ -697,6 +767,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
     //std::cout<<"alpha="<<alpha<<std::endl;//debugging
     for (int i=0;i<parvectorlength;i++){pnew[i]=pcpp[i]+2.0*alpha*(p1cpp[i]-pcpp[i])+alpha*alpha*(p2cpp[i]-2.0*p1cpp[i]+pcpp[i]);}
     // pnew = pcpp + 2.0*alpha*q1 + alpha*alpha*(q2-q1);
+    // ob_pnew = emObj(pnew,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
 
     //Step 4 stabilization
     if(std::abs(alpha-1)>0.01){
@@ -715,9 +786,14 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
         iter++;
         continue;//next round in while loop
       }
+      // ob_ptmp = emObj(ptmp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
       res=0;
       for (int i=0;i<parvectorlength;i++){res+=std::pow(ptmp[i]-pnew[i],2.0);}
       res=std::sqrt(res);
+      // double pnew_norm = pnew.squaredNorm();
+      // pnew_norm = std::sqrt(pnew_norm);
+      // res = res/ pnew_norm;
+      // rel_llik_tmpNew = std::abs(ob_ptmp - ob_pnew)/ std::abs(ob_pnew);
       parnorm=0;
       for (int i=0;i<parvectorlength;i++){parnorm+=std::pow(p2cpp[i],2.0);}
       parnorm=std::sqrt(parnorm/parvectorlength);
@@ -730,6 +806,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
         alpha=1;
         extrap=false;
       }
+      // res = rel_llik_tmpNew;
     }
 
     if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
@@ -764,7 +841,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 //' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 //' @param tol a value for the tolerance used for a stopping rule (compared to
 //'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
-//' @param verbose (logical) should intermediate results and messages be displayed?
+//' @param verbose (logical) Should intermediate output be displayed?
 //' @export
 // [[Rcpp::export(rng = false)]]
 Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
@@ -784,9 +861,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
   cholSigInv.compute(Sig_inv);
   cholSigInv.analyzePattern(Sig_inv);
-  if (verbose) {
-    Rcout << "Initial theta: " << theta.transpose() << std::endl;
-  }
+  if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
   // Initialize everything
   Eigen::SparseMatrix<double> Xpsi = X * Psi;
   Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
@@ -819,9 +894,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol, verbose);
   theta= SQ_result.par;
   // Bring results together for output
-  if (verbose) {
-    Rcout << "Final theta: " << theta.transpose() << std::endl;
-  }
+  if(verbose) {Rcout << "Final theta: " << theta.transpose() << std::endl;}
   AdivS2 = A / theta[sig2_ind];
   Sig_inv = QK + AdivS2;
   cholSigInv.factorize(Sig_inv);
