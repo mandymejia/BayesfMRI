@@ -11,19 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// getSqrtInvCpp
-Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var);
-RcppExport SEXP _BayesfMRI_getSqrtInvCpp(SEXP AR_coeffsSEXP, SEXP nTimeSEXP, SEXP avg_varSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type AR_coeffs(AR_coeffsSEXP);
-    Rcpp::traits::input_parameter< int >::type nTime(nTimeSEXP);
-    Rcpp::traits::input_parameter< double >::type avg_var(avg_varSEXP);
-    rcpp_result_gen = Rcpp::wrap(getSqrtInvCpp(AR_coeffs, nTime, avg_var));
-    return rcpp_result_gen;
-END_RCPP
-}
 // logDetQt
 double logDetQt(double kappa2, const Rcpp::List& in_list, double n_sess);
 RcppExport SEXP _BayesfMRI_logDetQt(SEXP kappa2SEXP, SEXP in_listSEXP, SEXP n_sessSEXP) {
@@ -70,12 +57,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// getSqrtInvCpp
+Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var);
+RcppExport SEXP _BayesfMRI_getSqrtInvCpp(SEXP AR_coeffsSEXP, SEXP nTimeSEXP, SEXP avg_varSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type AR_coeffs(AR_coeffsSEXP);
+    Rcpp::traits::input_parameter< int >::type nTime(nTimeSEXP);
+    Rcpp::traits::input_parameter< double >::type avg_var(avg_varSEXP);
+    rcpp_result_gen = Rcpp::wrap(getSqrtInvCpp(AR_coeffs, nTime, avg_var));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_BayesfMRI_getSqrtInvCpp", (DL_FUNC) &_BayesfMRI_getSqrtInvCpp, 3},
     {"_BayesfMRI_logDetQt", (DL_FUNC) &_BayesfMRI_logDetQt, 3},
     {"_BayesfMRI_initialKP", (DL_FUNC) &_BayesfMRI_initialKP, 6},
     {"_BayesfMRI_findTheta", (DL_FUNC) &_BayesfMRI_findTheta, 10},
+    {"_BayesfMRI_getSqrtInvCpp", (DL_FUNC) &_BayesfMRI_getSqrtInvCpp, 3},
     {NULL, NULL, 0}
 };
 
