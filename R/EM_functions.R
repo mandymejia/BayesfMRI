@@ -517,7 +517,7 @@ BayesGLMEM_vol3D <-
     locs_grp <- locations[inds_grp,]
     labels_grp <- labels[inds_grp]
 
-    paste0('Estimating Model ',grp,' (', paste(name_set_grp, collapse = ', '), ')')
+    cat(paste0('Estimating Model ',grp,' (', paste(name_set_grp, collapse = ', '), ')'),"\n")
 
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     spde <- spde_grp$spde
@@ -647,7 +647,8 @@ BayesGLMEM_vol3D <-
         Psi = as(Psi, "dgCMatrix"),
         A = as(A, "dgCMatrix"),
         Ns = 50,
-        tol = tol
+        tol = tol,
+        verbose = verbose
       )
     # > End EM algorithm ----
     cat(".... EM algorithm complete!\n")
@@ -673,7 +674,7 @@ BayesGLMEM_vol3D <-
     tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
     mu.theta_init <- c(log(tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
     tau2 <- 1 / (4*pi*kappa2_new*phi_new)
-    mu.theta <- c(log(sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new))))) # This is a guess about the order and might be wrong
+    mu.theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new))))) # This is a guess about the order and might be wrong
 
     #extract beta estimates and project back to data locations for current group
     for(s in 1:n_sess){

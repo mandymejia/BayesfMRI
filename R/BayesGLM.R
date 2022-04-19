@@ -1122,7 +1122,7 @@ BayesGLM <- function(
     response_pred <- rep(NA,dim(full_coefs)[1])
     model_data$y <- c(model_data$y,response_pred)
     #estimate model using INLA
-    cat('\n ...... estimating model with INLA')
+    cat('\n ...... estimating model with INLA\n')
     system.time(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=design_pred, spde, prec_initial=1,
@@ -1132,7 +1132,7 @@ BayesGLM <- function(
     cat('\n ...... model estimation completed')
   } else {
     #estimate model using INLA
-    cat('\n ...... estimating model with INLA')
+    cat('\n ...... estimating model with INLA\n')
     system.time(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
