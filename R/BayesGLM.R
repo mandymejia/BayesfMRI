@@ -461,14 +461,14 @@ BayesGLM_cifti <- function(cifti_fname,
         # Adding the try() function here so that if one model fails, the others
         # can still run
         start_time <- proc.time()[3]
-        classicalGLM_results[[br_str]] <- try(classicalGLM(data=session_data,
+        classicalGLM_results[[br_str]] <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_hem,
-                                                       scale_design = FALSE)) # done above
+                                                       scale_design = FALSE) # done above
         classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
-        BayesGLM_results[[br_str]] <- try(BayesGLM(data = session_data,
+        BayesGLM_results[[br_str]] <- BayesGLM(data = session_data,
                                                beta_names = beta_names,
                                                vertices = verts,
                                                faces = faces,
@@ -479,12 +479,12 @@ BayesGLM_cifti <- function(cifti_fname,
                                                outfile = outfile_name,
                                                verbose = verbose,
                                                avg_sessions = avg_sessions,
-                                               trim_INLA = trim_INLA))
+                                               trim_INLA = trim_INLA)
         BayesGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
       if(do_EM) {
         start_time <- proc.time()[3]
-        GLMEM_results[[br_str]] <- try(BayesGLMEM(data = session_data,
+        GLMEM_results[[br_str]] <- BayesGLMEM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts,
                                               faces = faces,
@@ -497,7 +497,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                               num.threads = num.threads,
                                               outfile = outfile_name,
                                               verbose = verbose,
-                                              avg_sessions = avg_sessions))
+                                              avg_sessions = avg_sessions)
         GLMEM_results[[br_str]]$total_time <- proc.time()[3] - start_time
       }
     }
@@ -551,14 +551,14 @@ BayesGLM_cifti <- function(cifti_fname,
 
       if(do_classical) {
         start_time <- proc.time()[3]
-        classicalGLM_results$vol <- try(classicalGLM(data=session_data,
+        classicalGLM_results$vol <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_sub,
-                                                       scale_design = FALSE)) # done above
+                                                       scale_design = FALSE) # done above
         classicalGLM_results$vol$total_time <- proc.time()[3] - start_time
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
-        BayesGLM_results$vol <- try(BayesGLM_vol3D(
+        BayesGLM_results$vol <- BayesGLM_vol3D(
           data = session_data,
           locations = locs,
           labels = labs,
@@ -569,12 +569,12 @@ BayesGLM_cifti <- function(cifti_fname,
           outfile = outfile_name,
           num.threads = num.threads,
           verbose=verbose
-        ))
+        )
         BayesGLM_results$vol$total_time <- proc.time()[3] - start_time
       }
       if(do_EM) {
         start_time <- proc.time()[3]
-        GLMEM_results$vol <- try(BayesGLMEM_vol3D(
+        GLMEM_results$vol <- BayesGLMEM_vol3D(
           data = session_data,
           beta_names = NULL,
           locations = locs,
@@ -591,7 +591,7 @@ BayesGLM_cifti <- function(cifti_fname,
           num.threads = num.threads,
           verbose=verbose,
           avg_sessions = TRUE
-        ))
+        )
         GLMEM_results$vol$total_time <- proc.time()[3] - start_time
       }
     }

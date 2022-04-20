@@ -538,7 +538,9 @@ BayesGLMEM_vol3D <-
         )
       scale_BOLD <- scale_design <- FALSE # These have beend done
       is_pw <- TRUE
-      data <- pw_data$data
+      use_data <- pw_data$data
+    } else {
+      use_data <- data
     }
 
     #collect data and design matrices
@@ -548,24 +550,24 @@ BayesGLMEM_vol3D <-
     for(s in 1:n_sess){
 
       #extract and mask BOLD data for current session
-      BOLD_s <- data[[s]]$BOLD[,inds_grp]
+      BOLD_s <- use_data[[s]]$BOLD[,inds_grp]
 
       #scale data to represent % signal change (or just center if scale=FALSE)
       if(scale_BOLD) {
         BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale_BOLD, transpose = FALSE)
       }
       if(!is_pw)
-        design_s <- scale(data[[s]]$design, scale=scale_design) #center design matrix to eliminate baseline
+        design_s <- scale(use_data[[s]]$design, scale=scale_design) #center design matrix to eliminate baseline
 
       #regress nuisance parameters from BOLD data and design matrix
-      if('nuisance' %in% names(data[[s]])){
-        design_s <- data[[s]]$design
-        nuisance_s <- data[[s]]$nuisance
+      if('nuisance' %in% names(use_data[[s]])){
+        design_s <- use_data[[s]]$design
+        nuisance_s <- use_data[[s]]$nuisance
         y_reg <- nuisance_regress(BOLD_s, nuisance_s)
         X_reg <- nuisance_regress(design_s, nuisance_s)
       } else {
         y_reg <- BOLD_s
-        X_reg <- data[[s]]$design
+        X_reg <- use_data[[s]]$design
       }
 
       #set up data and design matrix

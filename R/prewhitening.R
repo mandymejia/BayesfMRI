@@ -248,10 +248,12 @@ prewhiten_cifti <- function(data,
       }
       #smooth AR coefficients
       avg_xifti$data$subcort <- as.matrix(avg_AR)
+      avg_xifti$meta$cifti$names <- avg_xifti$meta$cifti$names[seq_len(ncol(as.matrix(avg_AR)))]
       smooth_avg_xifti <- smooth_cifti(avg_xifti, vol_FWHM = ar_smooth)
       avg_AR <- smooth_avg_xifti$data$subcort
       #smooth variance
       avg_xifti$data$subcort <- as.matrix(avg_var)
+      avg_xifti$meta$cifti$names <- avg_xifti$meta$cifti$names[seq_len(ncol(as.matrix(avg_var)))]
       smooth_var_xifti <- smooth_cifti(avg_xifti, vol_FWHM = ar_smooth)
       avg_var <- smooth_var_xifti$data$subcort
     }
