@@ -282,9 +282,13 @@ BayesGLM <- function(
       template_pw_list <- rep(list(template_pw), V)
       for(vv in 1:V) {
         if(vv %% 100 == 0) cat("\n Location",vv,"of",V,"")
-        template_pw_list[[vv]] <- prewhiten.v(AR_coeffs = avg_AR[vv,],
-                                             ntime = ntime,
-                                             AR_var = avg_var[vv])
+        # template_pw_list[[vv]] <- prewhiten.v(AR_coeffs = avg_AR[vv,],
+        #                                      ntime = ntime,
+        #                                      AR_var = avg_var[vv])
+        # This is a more efficient prewhitening function written in C++
+        template_pw_list[[vv]] <- getSqrtInvCpp(AR_coeffs = avg_AR[vv,],
+                                              nTime = ntime,
+                                              avg_var = avg_var[vv])
       }
     } else {
       if (!requireNamespace("parallel", quietly = TRUE)) {
@@ -296,10 +300,13 @@ BayesGLM <- function(
       template_pw_list <-
         parallel::clusterMap(
           cl,
-          prewhiten.v,
+          # prewhiten.v,
+          getSqrtInvCpp,
           AR_coeffs = split(avg_AR, row(avg_AR)),
-          ntime = ntime,
-          AR_var = avg_var,
+          # ntime = ntime,
+          nTime = ntime,
+          # AR_var = avg_var,
+          avg_var = avg_var,
           SIMPLIFY = FALSE
         )
       parallel::stopCluster(cl)
@@ -353,7 +360,7 @@ BayesGLM <- function(
     beta_hat_s[mask2==TRUE,] <- coef_s_mat
     resid_s <- t(matrix(y_reg - X_reg %*% coef_s, nrow = ntime))
 
-    # ESTIMATE STANDARD ERRORS OF ESTIIMATES
+    # ESTIMATE STANDARD ERRORS OF ESTIMATES
     #compute residual SD
     #using length(y_reg)/V instead of ntime here because we want ntime for single session case and ntime*n_sess for multi-session case
     DOF_true <- (length(y_reg)/V) - K - 1

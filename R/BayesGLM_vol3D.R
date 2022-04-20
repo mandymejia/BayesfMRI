@@ -22,15 +22,15 @@
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
 #' @param scale Option for scaling the BOLD response.
-#' 
+#'
 #' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
 #' 	is detected, in which case sd scaling will be used instead.
-#' 
+#'
 #' 	\code{"mean"} scaling will scale the data to percent local signal change.
-#' 
+#'
 #' 	\code{"sd"} scaling will scale the data by local standard deviation.
-#' 
-#' 	\code{"none"} will only center the data, not scale it. 
+#'
+#' 	\code{"none"} will only center the data, not scale it.
 #' @inheritParams return_INLA_result_Param_FALSE
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @param GLM If TRUE, classical GLM estimates will also be returned
@@ -106,7 +106,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     locs_grp <- locations[inds_grp,]
     labels_grp <- labels[inds_grp]
 
-    paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')')
+    cat(paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')'),"\n")
 
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     #plot(spde_grp)
