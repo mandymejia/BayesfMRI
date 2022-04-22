@@ -176,11 +176,13 @@ get_spacing <- function(locations){
 #'
 #' @param FV Matrix of faces in triangularization
 #' @param P Matrix of vertex locations in triangularization
+#' @param surface Are the matrices being created for a surface (TRUE) or a
+#'   volume (FALSE)
 #'
 #' @return A list of matrices C and G appearing in sparse SPDE precision
 #'
 #' @export
-galerkin_db <- function(FV, P, surface=FALSE){
+galerkin_db <- function(FV, P, surface = FALSE){
   d <- ncol(FV)-1
   if(surface){
     if(ncol(P) != d){P <- t(P)}

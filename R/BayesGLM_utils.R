@@ -22,7 +22,7 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
       "and `PARDISO` compatibility. See www.r-inla.org/download\n"
     ))
   } else {
-    if (grepl("FAILURE", toupper(inla.pardiso.check()))) {
+    if (grepl("FAILURE", toupper(paste(inla.pardiso.check(), collapse = " ")))) {
       warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
     } else {
       inla.setOption(smtp='pardiso')
@@ -48,7 +48,7 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @inheritParams contrasts_Param_inla
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
 #' @param keep FALSE
-#' @param twostage Not used
+#' @param inla.mode specifies the INLA mode to use (defaults to experimental)
 #'
 #' @return Results from INLA
 #'
@@ -66,13 +66,14 @@ estimate_model <- function(formula,
                            contrasts = NULL,
                            lincomb = NULL,
                            keep = FALSE,
-                           twostage = FALSE){
+                           inla.mode = "experimental"){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
                  verbose = verbose, keep = keep, num.threads = num.threads,
+                 inla.mode = inla.mode, .parent.frame = parent.frame(),
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
-                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) 
+                 control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb)
                  # twostage=twostage #required for excursions
   return(result)
 }

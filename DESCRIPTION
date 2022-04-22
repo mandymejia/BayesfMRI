@@ -32,7 +32,9 @@ Imports:
     neuRosim,
     stats,
     sp,
-    utils
+    utils,
+    Rcpp,
+    RcppEigen
 Suggests:
     abind,
     dplyr,
@@ -50,3 +52,6 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/BayesfMRI
 BugReports: https://github.com/mandymejia/BayesfMRI/issues
+LinkingTo:
+    RcppEigen,
+    Rcpp

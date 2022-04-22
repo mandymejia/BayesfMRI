@@ -16,7 +16,7 @@ estimate_model(
   contrasts = NULL,
   lincomb = NULL,
   keep = FALSE,
-  twostage = FALSE
+  inla.mode = "experimental"
 )
 }
 \arguments{
@@ -43,7 +43,7 @@ for model estimation. Default: \code{4}.}
 
 \item{keep}{FALSE}
 
-\item{twostage}{Not used}
+\item{inla.mode}{specifies the INLA mode to use (defaults to experimental)}
 }
 \value{
 Results from INLA

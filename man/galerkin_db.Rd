@@ -4,12 +4,15 @@
 \alias{galerkin_db}
 \title{Create FEM matrices}
 \usage{
-galerkin_db(FV, P)
+galerkin_db(FV, P, surface = FALSE)
 }
 \arguments{
 \item{FV}{Matrix of faces in triangularization}
 
 \item{P}{Matrix of vertex locations in triangularization}
+
+\item{surface}{Are the matrices being created for a surface (TRUE) or a
+volume (FALSE)}
 }
 \value{
 A list of matrices C and G appearing in sparse SPDE precision

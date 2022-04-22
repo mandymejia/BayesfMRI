@@ -886,7 +886,7 @@ BayesGLM <- function(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=design_pred, spde, prec_initial=1,
         num.threads=num.threads, verbose=verbose, contrasts = contrasts,
-        keep = keep, twostage = twostage
+        keep = keep #twostage = twostage
       )
     )
     cat('\n ...... model estimation completed')
@@ -897,7 +897,7 @@ BayesGLM <- function(
       INLA_result <- estimate_model(
         formula=formula, data=model_data, A=model_data$X, spde, prec_initial=1,
         num.threads=num.threads, verbose=verbose, contrasts = contrasts,
-        keep = keep, twostage = twostage
+        keep = keep #twostage = twostage
       )
     )
     cat('\n ...... model estimation completed')
