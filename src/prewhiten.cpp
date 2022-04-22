@@ -20,8 +20,8 @@ Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, 
   Eigen::VectorXd Dinv_v(nTime);
   for(int i=0; i<nTime;i++){Dinv_v(i) = sqrt_prec;}
   Eigen::MatrixXd matDinv_v = Dinv_v.asDiagonal();
-  Eigen::MatrixXd halfInv_v(nTime,nTime);
-  halfInv_v = MatrixXd::Zero(nTime,nTime);
+  Eigen::MatrixXd halfInv_v = Eigen::MatrixXd::Zero(nTime,nTime);
+  // halfInv_v = MatrixXd::Zero(nTime,nTime);
   halfInv_v.diagonal().setConstant(1);
   for(int j=0;j<nTime;j++){
     for(int k=1;k<=p;k++) {
@@ -34,15 +34,15 @@ Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, 
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> ei(final_Inv_v);
   Eigen::VectorXd d2inv = ei.eigenvalues().real();
   Eigen::MatrixXd eVec = ei.eigenvectors().real();
-  Eigen::MatrixXd eDinv_v(nTime,nTime);
-  eDinv_v = MatrixXd::Zero(nTime,nTime);
+  Eigen::MatrixXd eDinv_v = Eigen::MatrixXd::Zero(nTime,nTime);
   for(int i=0;i<nTime;i++){
-    eDinv_v(i,i) = sqrt(d2inv.reverse()(i));
+    // Absolute values are taken below because sometimes C++ switches the sign
+    // if an eigenvalue is less than the machine tolerance.
+    eDinv_v(i,i) = sqrt(std::abs(d2inv.reverse()(i)));
   }
   Eigen::MatrixXd revEvec = eVec.rowwise().reverse();
   Eigen::MatrixXd sqrtInv = revEvec * eDinv_v * revEvec.transpose();
-  Eigen::MatrixXd out(nTime,nTime);
-  out = Eigen::MatrixXd::Zero(nTime,nTime);
+  Eigen::MatrixXd out = Eigen::MatrixXd::Zero(nTime,nTime);
   for(int j=0; j<nTime;j++){
     for(int k=-1*(p+1);k<=p+1;k++) {
       if(j + k < 0){continue;}
