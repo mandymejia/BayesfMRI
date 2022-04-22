@@ -47,17 +47,18 @@ check_BayesGLM <- function(require_PARDISO=TRUE){
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
+#' @param inla.mode specifies the INLA mode to use (defaults to experimental)
 #'
 #' @return Results from INLA
 #'
 #' @importFrom INLA inla
 #'
 #' @export
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
+estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL, inla.mode = "experimental"){
 
   result <- inla(formula, data=data, control.predictor=list(A=A, compute = TRUE),
                  verbose = verbose, keep = FALSE, num.threads = num.threads,
-                 inla.mode = "experimental",
+                 inla.mode = inla.mode, .parent.frame = parent.frame(),
                  control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
                  control.family=list(hyper=list(prec=list(initial=prec_initial))),
                  control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb) #required for excursions
