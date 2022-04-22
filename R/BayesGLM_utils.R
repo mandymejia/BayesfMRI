@@ -47,17 +47,19 @@ check_INLA <- function(require_PARDISO=TRUE){
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param_inla
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
+#' @param inla.mode specifies the INLA mode to use (defaults to experimental)
 #'
 #' @return Results from INLA
 #'
 #' @export
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL){
+estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL, inla.mode = "experimental"){
 
   check_INLA(require_PARDISO=FALSE)
 
   INLA::inla(
     formula, data=data, control.predictor=list(A=A, compute = TRUE),
     verbose = verbose, keep = FALSE, num.threads = num.threads,
+    inla.mode = inla.mode, .parent.frame = parent.frame(),
     control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
     control.family=list(hyper=list(prec=list(initial=prec_initial))),
     control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb #required for excursions
@@ -225,6 +227,6 @@ get_posterior_densities <- function(object, spde, beta_names){
     df.b$beta <- name_b
     if(b == 1) df <- df.b else df <- rbind(df, df.b)
   }
-  
+
   df[,c('beta','param','value','density')]
 }

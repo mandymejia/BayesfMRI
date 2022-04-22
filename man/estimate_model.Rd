@@ -14,7 +14,8 @@ estimate_model(
   int.strategy = "eb",
   verbose = FALSE,
   contrasts = NULL,
-  lincomb = NULL
+  lincomb = NULL,
+  inla.mode = "experimental"
 )
 }
 \arguments{
@@ -38,6 +39,8 @@ for model estimation. Default: \code{4}.}
 \item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{lincomb}{A linear combinations object created with \code{inla.make.lincomb}}
+
+\item{inla.mode}{specifies the INLA mode to use (defaults to experimental)}
 }
 \value{
 Results from INLA
