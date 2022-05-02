@@ -496,6 +496,58 @@ void setSparseBlock_update(SparseMatrix<double,0,int>* A,int i, int j, SparseMat
   }
 }
 
+/*
+ B of size n1 x n2
+ Set A(i:i+n1,j:j+n2) = B (update)
+ */
+void setSparseCol_update(SparseMatrix<double,0,int>* A,Rcpp::List B_list)
+{
+  int K = B_list.length();;
+  int startCol=0, stopCol=0, Bk_cols;
+  for(int k=0;k<K;k++) {
+    Rcout << "k = " << k << std::endl;
+    Eigen::SparseMatrix<double> Bk = B_list(k);
+    Bk_cols = Bk.cols();
+    stopCol = startCol + Bk_cols;
+    for(int j=startCol;j<stopCol;j++){
+      Rcout << "j = " << j << ", ";
+      A->startVec(j);
+      for(Eigen::SparseMatrix<double,0,int>::InnerIterator it(Bk,j-startCol); it; ++it) {
+        A->insertBack(it.row()+startCol,j) = it.value();
+      }
+    }
+    startCol = stopCol + 1;
+  }
+  A->finalize();
+}
+
+Eigen::SparseMatrix<double> sparseBdiag(Rcpp::List B_list)
+{
+  int K = B_list.length();
+   Eigen::VectorXi B_cols(K);
+  for(int k=0;k<K;k++) {
+    Eigen::SparseMatrix<double> Bk = B_list(k);
+    B_cols[k] = Bk.cols();
+  }
+  int sumCols = B_cols.sum();
+  Eigen::SparseMatrix<double> A(sumCols,sumCols);
+  int startCol=0, stopCol=0, Bk_cols;
+  for(int k=0;k<K;k++) {
+    Eigen::SparseMatrix<double> Bk = B_list(k);
+    Bk_cols = Bk.cols();
+    stopCol = startCol + Bk_cols;
+    for(int j=startCol;j<stopCol;j++){
+      A.startVec(j);
+      for(Eigen::SparseMatrix<double,0,int>::InnerIterator it(Bk,j-startCol); it; ++it) {
+        A.insertBack(it.row()+startCol,j) = it.value();
+      }
+    }
+    startCol = stopCol;
+  }
+  A.finalize();
+  return A;
+}
+
 double emObj(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
              Eigen::SparseMatrix<double> QK,
              SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
@@ -548,11 +600,16 @@ double emObj(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
   return llik;
 }
 
+#include <time.h>
+
 Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
                             Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                             const int Ns, const Eigen::VectorXd y,
                             const double yy, const List spde, double tol) {
+  clock_t time_start, time_setup, time_QK, time_mu, time_sigma2, time_kappa_phi;
+  Rcout << "Starting fixed-point updates" << std::endl;
+  time_start = clock();
   // Bring in the spde matrices
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
@@ -579,20 +636,44 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
   double phi_denom = 4.0 * M_PI * n_spde * n_sess;
   int idx_start;
+  time_setup = clock();
   // Begin update
-  for(int k = 0; k < K ; k++) {
-    makeQt(&Qk, theta(k), spde);
-    Qk = Qk / (4.0 * M_PI * theta(k + K));
-    for(int ns = 0; ns < n_sess; ns++) {
-      int start_i = k * n_spde + ns * K * n_spde;
-      setSparseBlock_update(&QK, start_i, start_i, Qk);
+  // for(int k = 0; k < K ; k++) {
+  //   makeQt(&Qk, theta(k), spde);
+  //   Qk = Qk / (4.0 * M_PI * theta(k + K));
+  //   for(int ns = 0; ns < n_sess; ns++) {
+  //     int start_i = k * n_spde + ns * K * n_spde;
+  //     setSparseBlock_update(&QK, start_i, start_i, Qk);
+  //   }
+  // }
+  Rcpp::List Q_list(K * n_sess);
+  int list_idx;
+  for(int ns=0;ns<n_sess;ns++) {
+    for(int k = 0; k < K ; k++) {
+      list_idx = ns*K + k;
+      makeQt(&Qk, theta(k), spde);
+      Qk = Qk / (4.0 * M_PI * theta(k + K));
+      Q_list(list_idx) =  Qk;
     }
   }
+  QK = sparseBdiag(Q_list);
+  time_QK = clock();
+  // setSparseCol_update(&QK,Q_list);
+
+  // for(int k = 0; k < K ; k++) {
+  //   makeQt(&Qk, theta(k), spde);
+  //   Qk = Qk / (4.0 * M_PI * theta(k + K));
+  //   for(int ns = 0; ns < n_sess; ns++) {
+  //     int start_i = k * n_spde + ns * K * n_spde;
+  //     setSparseCol_update(&QK, start_i, Qk);
+  //   }
+  // }
   AdivS2 = A / theta[sig2_ind];
   Sig_inv = QK + AdivS2;
   cholSigInv.factorize(Sig_inv);
   Eigen::VectorXd m = XpsiY / theta(sig2_ind);
   Eigen::VectorXd mu = cholSigInv.solve(m);
+  time_mu = clock();
   // Rcout << "First 6 values of mu: " << mu.segment(0,6).transpose() << std::endl;
   // Solve for sigma_2
   Eigen::VectorXd XpsiMu = Xpsi * mu;
@@ -606,6 +687,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   // Rcout << "TrAEww = " << TrAEww << std::endl;
   double yXpsiMu = y.transpose() * XpsiMu;
   theta_new[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
+  time_sigma2 = clock();
   // Update kappa2 and phi by task
   for(int k = 0; k < K; k++) {
     a_star = 0.0;
@@ -673,6 +755,14 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     phi_new = TrQEww / phi_denom;
     theta_new[k + K] = phi_new;
   }
+  time_kappa_phi = clock();
+  double time_dif_setup, time_dif_QK, time_dif_mu, time_dif_sigma2, time_dif_kappa_phi;
+  time_dif_setup = (double)(time_setup - time_start)/CLOCKS_PER_SEC;
+  time_dif_QK = (double)(time_QK - time_setup)/CLOCKS_PER_SEC;
+  time_dif_mu = (double)(time_mu - time_QK)/CLOCKS_PER_SEC;
+  time_dif_sigma2 = (double)(time_sigma2 - time_mu)/CLOCKS_PER_SEC;
+  time_dif_kappa_phi = (double)(time_kappa_phi - time_sigma2)/CLOCKS_PER_SEC;
+  Rcout << "Setup: " << time_dif_setup << ", QK: " << time_dif_QK << ", mu: " << time_dif_mu << ", sigma2: " << time_dif_sigma2 << ", kappa & phi: " << time_dif_kappa_phi << std::endl;
   return(theta_new);
 }
 
@@ -692,11 +782,11 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
                        const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                        const int Ns, const Eigen::VectorXd y, const double yy,
                        const List spde, double tol, bool verbose){
-  double res,parnorm,kres, theta_length=par.size();
+  double res,parnorm,kres; // theta_length=par.size();
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
   double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
-  double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
+  // double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
   int iter,feval;
   bool conv,extrap;
   stepmin=SquaremDefault.stepmin0;

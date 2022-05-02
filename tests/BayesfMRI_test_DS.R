@@ -39,7 +39,7 @@ for(num_runs in 1:2){
   })
   for(hem in c("left","right")) {
     cat("....",toupper(hem),"HEMISPHERE\n")
-    for(PW in rev(c("not prewhitened","prewhitened"))) {
+    for(PW in c("not prewhitened","prewhitened")) {
       # stop break for testing (top)----
       # stop()
       cat(".... DATA",toupper(PW),"\n")
