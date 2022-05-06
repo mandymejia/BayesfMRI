@@ -524,6 +524,7 @@ BayesGLM <- function(
   if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var)
   if(!do_pw) prewhiten_info <- NULL
   if(!do_Bayesian) INLA_result <- beta_estimates <- theta_posteriors <- mu.theta <- Q.theta <- y_all <- X_all_list <- NULL
+  if (!do_EM) theta_estimates <- Sig_inv <- NULL
   if(do_Bayesian & !do_EM) theta_estimates <- Sig_inv <- NULL
   if(do_EM) INLA_result <- theta_posteriors <- Q.theta <- NULL
 

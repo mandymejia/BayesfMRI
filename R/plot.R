@@ -189,7 +189,10 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
 
   # Method
   if (is.null(method)) {
-    method <- ifelse(is.null(x$betas_Bayesian), "classical", "Bayesian")
+    method <- ifelse(
+      is.null(x$betas_Bayesian) || is.null(x$betas_Bayesian[[1]]), 
+      "classical", "Bayesian"
+    )
   }
   method <- match.arg(method, c("classical", "Bayesian"))
   method <- paste0("betas_", method)
