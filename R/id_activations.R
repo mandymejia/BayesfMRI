@@ -49,7 +49,7 @@ id_activations_cifti <- function(model_obj,
   method <- match.arg(method, c('Bayesian','classical'))
   if(!(method %in% c('Bayesian','classical'))) stop("The method argument should only be 'Bayesian' or 'classical'.")
 
-  # [TO DO]: check that the requested method(s) actually exist in model_obj? 
+  # [TO DO]: check that the requested method(s) actually exist in model_obj?
   # what's the best way to check this? all entries in e.g. `$betas_Bayesian` are `NULL`?
 
   if(is.null(threshold)){
@@ -276,7 +276,7 @@ id_activations.classical <- function(model_obj,
       " but should be of class 'classicalGLM'."
     ))
   }
-  
+
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
   if(is.null(threshold)) threshold <- 0
@@ -337,7 +337,7 @@ id_activations.classical <- function(model_obj,
     mask <- model_obj[[sess_ind]]$mask
     if(sum(mask) != nrow(mesh$loc)) stop('Supplied mesh is not consistent with mask in model_obj.')
     areas_all <- diag(INLA::inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
-    areas_act <- apply(active[mask==1,], 2, function(x) sum(areas_all[x==1]))
+    areas_act <- apply(active[mask==1,,drop=FALSE], 2, function(x) sum(areas_all[x==1]))
   } else {
     areas_all <- areas_act <- NULL
   }
