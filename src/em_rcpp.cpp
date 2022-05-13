@@ -154,13 +154,13 @@ double kappa2BrentInit(double lower, double upper, double phi, const List &spde,
   return x;
 }
 
-double kappa2Obj(double kappa2, const List &spde, double a_star, double b_star, double n_sess) {
+double kappa2Obj(double kappa2, const Rcpp::List &spde, double a_star, double b_star, double n_sess) {
   double lDQ = logDetQt(kappa2, spde, n_sess);
   double out = a_star * kappa2 + b_star / kappa2 - lDQ;
   return out;
 }
 
-double kappa2Brent(double lower, double upper, const List &spde, double a_star, double b_star, double n_sess) {
+double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double n_sess) {
   // Define squared inverse of the golden ratio
   const double c = (3. - std::sqrt(5.)) / 2.;
   // Initialize local variables
@@ -756,13 +756,13 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     theta_new[k + K] = phi_new;
   }
   time_kappa_phi = clock();
-  double time_dif_setup, time_dif_QK, time_dif_mu, time_dif_sigma2, time_dif_kappa_phi;
-  time_dif_setup = (double)(time_setup - time_start)/CLOCKS_PER_SEC;
-  time_dif_QK = (double)(time_QK - time_setup)/CLOCKS_PER_SEC;
-  time_dif_mu = (double)(time_mu - time_QK)/CLOCKS_PER_SEC;
-  time_dif_sigma2 = (double)(time_sigma2 - time_mu)/CLOCKS_PER_SEC;
-  time_dif_kappa_phi = (double)(time_kappa_phi - time_sigma2)/CLOCKS_PER_SEC;
-  Rcout << "Setup: " << time_dif_setup << ", QK: " << time_dif_QK << ", mu: " << time_dif_mu << ", sigma2: " << time_dif_sigma2 << ", kappa & phi: " << time_dif_kappa_phi << std::endl;
+  // double time_dif_setup, time_dif_QK, time_dif_mu, time_dif_sigma2, time_dif_kappa_phi;
+  // time_dif_setup = (double)(time_setup - time_start)/CLOCKS_PER_SEC;
+  // time_dif_QK = (double)(time_QK - time_setup)/CLOCKS_PER_SEC;
+  // time_dif_mu = (double)(time_mu - time_QK)/CLOCKS_PER_SEC;
+  // time_dif_sigma2 = (double)(time_sigma2 - time_mu)/CLOCKS_PER_SEC;
+  // time_dif_kappa_phi = (double)(time_kappa_phi - time_sigma2)/CLOCKS_PER_SEC;
+  // Rcout << "Setup: " << time_dif_setup << ", QK: " << time_dif_QK << ", mu: " << time_dif_mu << ", sigma2: " << time_dif_sigma2 << ", kappa & phi: " << time_dif_kappa_phi << std::endl;
   return(theta_new);
 }
 

@@ -162,9 +162,15 @@ BayesGLM2 <- function(results,
 
   # Mesh and SPDE object
   mesh <- results[[1]]$mesh
-  spde <- inla.spde2.matern(mesh)
-  Amat <- inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
-  Amat <- Amat[mesh$idx$loc,]
+  if("Amat" %in% names(mesh) & "spde" %in% names(mesh)){
+    spde <- mesh$spde
+    Amat <- mesh$Amat
+  } else {
+    spde <- inla.spde2.matern(mesh)
+    Amat <- inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
+    Amat <- Amat[mesh$idx$loc,]
+  }
+
   Amat.tot <- bdiag(rep(list(Amat), K)) #Psi_m from paper (VKxNK)
 
   #Check quantiles argument
@@ -420,13 +426,26 @@ beta.posterior.thetasamp <- function(theta,
   K <- ncol(theta_spde)
   M <- length(Xcros)
 
+  use_EM <- all(sapply(c("M0","M1","M2"), function(x) x %in% names(spde)))
+
   #contruct prior precision matrix for beta, Q_theta for given sampled value of thetas
-  Q.beta <- list()
-  for(k in 1:K) {
-    theta_k <- theta_spde[,k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
-    Q.beta[[k]] <- inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+  # For EM
+  if(use_EM) {
+    Q.beta <- apply(theta_spde,2,function(theta_k) {
+      theta_k <- exp(theta_k)^2
+      out <- theta_k[1] * (theta_k[2]^2 * spde$M0 + theta_k[2] * spde$M1 + spde$M2)
+      return(out)
+    })
   }
-  Q <- bdiag(Q.beta) #Q_theta in the paper
+  # For INLA
+  if(!use_EM) {
+    Q.beta <- list()
+    for(k in 1:K) {
+      theta_k <- theta_spde[,k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
+      Q.beta[[k]] <- inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+    }
+  }
+  Q <- Matrix::bdiag(Q.beta) #Q_theta in the paper
 
   N <- dim(Q.beta[[1]])[1] #number of mesh locations
   if(N != n.mesh) stop('Length of betas does not match number of vertices in mesh. Inform developer.')
@@ -571,4 +590,75 @@ BayesGLM_group <- function(
     nsamp_theta=nsamp_theta, nsamp_beta=nsamp_beta,
     no_cores=no_cores, verbose=verbose
   )
+}
+
+#' Group-level Bayesian GLM for subcortical data
+#'
+#' This is a wrapper function that applies group modeling to subcortical
+#' results. This currently only works for output from the EM implementation of
+#' the Bayesian GLM.
+#'
+#' @param results A character vector of length M of file names output from the
+#'   BayesGLM_cifti function with subcortical results. M is the number of subjects.
+#' @param contrasts (Optional) A list of vectors, each length `M * K * num_sessions`, specifying the contrast(s)
+#'  of interest across subjects, where M is the number of subjects and K is the number of tasks.
+#'  See Details for more information. Default is to compute the average for each task across subjects.
+#' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
+#' @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="),
+#'  or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.
+#' @param gamma (For inference only) List of vectors of activation thresholds for the excursion set (each element corresponding to one contrast). Remember that if a contrast is not specified, the average is found.
+#' @param alpha (For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).
+#' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
+#' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
+#' @inheritParams verbose_Param_direct_TRUE
+#'
+#' @return A list with length equal to the number of subcortical models run in each of the single-subject data cases
+#' @export
+BayesGLM2_vol <- function(results,
+                          contrasts = NULL,
+                          quantiles = NULL,
+                          excursion_type=NULL,
+                          gamma = list(0),
+                          alpha = 0.05,
+                          nsamp_theta = 50,
+                          nsamp_beta = 100,
+                          verbose = TRUE) {
+  M <- length(results)
+  first_result <- readRDS(results[1])
+  which_BayesGLM <- which(sapply(first_result$GLMs_EM,class) == "BayesGLM")
+  if(!3 %in% which_BayesGLM) stop("This function only works with subcortical results.")
+  first_result <- first_result$GLMs_EM[[which_BayesGLM]]$EM_result_all
+  num_regions <- length(first_result)
+  for(reg in seq(num_regions)) {
+    first_result[[reg]]$posterior_Sig_inv <- 0 #Done to save memory
+  }
+  results_out <- vector("list", length = M)
+  names(results_out) <- names(first_result)
+
+  for(reg in seq(num_regions)){
+    cat("Evaluating group model for subcortical model",names(first_result)[reg],"\n")
+    results_in <- vector("list",length = M)
+    results_in[[1]] <- first_result[[reg]]
+    class(results_in[[1]]) <- "BayesGLM"
+    for(m in 2:M) {
+      results_in[[m]] <- readRDS(results[m])$GLMs_EM[[which_BayesGLM]]$EM_result_all[[reg]]
+      results_in[[m]]$posterior_Sig_inv <- 0 # Done to save memory
+      class(results_in[[m]]) <- "BayesGLM"
+    }
+    results_out[[reg]] <- BayesGLM2(results = results_in,
+                                    contrasts = contrasts,
+                                    quantiles = quantiles,
+                                    excursion_type=excursion_type,
+                                    gamma = gamma,
+                                    alpha = alpha,
+                                    nsamp_theta = nsamp_theta,
+                                    nsamp_beta = nsamp_beta,
+                                    no_cores = NULL,
+                                    verbose = verbose,
+                                    use_EM = TRUE)
+    results_out[[reg]]$cifti_estimate <- as.matrix(results_out[[reg]]$Amat %*% results_out[[reg]]$estimates)
+    results_out[[reg]]$cifti_active <- sapply(results_out[[reg]]$active, function(x) as.matrix(results_out[[reg]]$Amat %*% x), simplify = F)
+    results_out[[reg]]$cifti_idx <- unlist(first_result[[reg]]$mesh$idx)
+  }
+  return(results_out)
 }

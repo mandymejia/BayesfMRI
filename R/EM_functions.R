@@ -536,7 +536,7 @@ BayesGLMEM_vol3D <-
           brainstructure = "subcortical",
           num.threads = num.threads
         )
-      scale_BOLD <- scale_design <- FALSE # These have beend done
+      scale_BOLD <- scale_design <- FALSE # These have been done
       is_pw <- TRUE
       use_data <- pw_data$data
     } else {
