@@ -1,6 +1,10 @@
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
+// #define EIGEN_USE_MKL_ALL
 #include <Rcpp.h>
+// #include <unsupported/Eigen/SparseExtra>
 #include <RcppEigen.h>
+// #include <Eigen/PardisoSupport>
+// #include <Eigen/Sparse>
 
 using namespace Rcpp;
 using namespace Eigen;
@@ -998,3 +1002,166 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   return out;
 }
 
+// Eigen::VectorXd theta_fixptPARDISO(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
+//                             Eigen::SparseMatrix<double> QK, Eigen::PardisoLU<Eigen::SparseMatrix<double>> &cholSigInv,
+//                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+//                             const int Ns, const Eigen::VectorXd y,
+//                             const double yy, const List spde, double tol) {
+//   clock_t time_start, time_setup, time_QK, time_mu, time_sigma2, time_kappa_phi;
+//   Rcout << "Starting fixed-point updates" << std::endl;
+//   time_start = clock();
+//   // Bring in the spde matrices
+//   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+//   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+//   Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+//   // Grab metadata
+//   int K = (theta.size() - 1) / 2;
+//   int sig2_ind = theta.size() - 1;
+//   int nKs = A.rows();
+//   int ySize = y.size();
+//   int n_spde = Cmat.rows();
+//   double n_sess = nKs / (n_spde * K);
+//   // int Ns = Vh.cols();
+//   Eigen::MatrixXd Vh = makeV(nKs,Ns);
+//   // Rcout << "dim(A)" << A.rows() << " x " << A.cols() << ", dim(Vh) = " << Vh.rows() << " x " << Vh.cols() << std::endl;
+//   Eigen::MatrixXd Avh = A * Vh;
+//   // Initialize objects
+//   Eigen::SparseMatrix<double> AdivS2(nKs,nKs), Sig_inv(nKs,nKs), Qk(n_spde, n_spde);
+//   Eigen::VectorXd theta_new = theta;
+//   Eigen::VectorXd muKns(n_spde), Cmu(n_spde), Gmu(n_spde), diagPCVkn(Ns);
+//   Eigen::VectorXd diagPGVkn(Ns), GCGmu(n_spde), diagPGCGVkn(Ns);
+//   Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
+//   Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
+//   double a_star, b_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
+//   double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
+//   double phi_denom = 4.0 * M_PI * n_spde * n_sess;
+//   int idx_start;
+//   time_setup = clock();
+//   // Begin update
+//   // for(int k = 0; k < K ; k++) {
+//   //   makeQt(&Qk, theta(k), spde);
+//   //   Qk = Qk / (4.0 * M_PI * theta(k + K));
+//   //   for(int ns = 0; ns < n_sess; ns++) {
+//   //     int start_i = k * n_spde + ns * K * n_spde;
+//   //     setSparseBlock_update(&QK, start_i, start_i, Qk);
+//   //   }
+//   // }
+//   Rcpp::List Q_list(K * n_sess);
+//   int list_idx;
+//   for(int ns=0;ns<n_sess;ns++) {
+//     for(int k = 0; k < K ; k++) {
+//       list_idx = ns*K + k;
+//       makeQt(&Qk, theta(k), spde);
+//       Qk = Qk / (4.0 * M_PI * theta(k + K));
+//       Q_list(list_idx) =  Qk;
+//     }
+//   }
+//   QK = sparseBdiag(Q_list);
+//   time_QK = clock();
+//   // setSparseCol_update(&QK,Q_list);
+//
+//   // for(int k = 0; k < K ; k++) {
+//   //   makeQt(&Qk, theta(k), spde);
+//   //   Qk = Qk / (4.0 * M_PI * theta(k + K));
+//   //   for(int ns = 0; ns < n_sess; ns++) {
+//   //     int start_i = k * n_spde + ns * K * n_spde;
+//   //     setSparseCol_update(&QK, start_i, Qk);
+//   //   }
+//   // }
+//   AdivS2 = A / theta[sig2_ind];
+//   Sig_inv = QK + AdivS2;
+//   cholSigInv.factorize(Sig_inv);
+//   Eigen::VectorXd m = XpsiY / theta(sig2_ind);
+//   Eigen::VectorXd mu = cholSigInv.solve(m);
+//   time_mu = clock();
+//   // Rcout << "First 6 values of mu: " << mu.segment(0,6).transpose() << std::endl;
+//   // Solve for sigma_2
+//   Eigen::VectorXd XpsiMu = Xpsi * mu;
+//   Eigen::MatrixXd P = cholSigInv.solve(Vh);
+//   Eigen::MatrixXd PaVh = P.transpose() * Avh;
+//   Eigen::VectorXd diagPaVh = PaVh.diagonal();
+//   double TrSigA = diagPaVh.sum() / Ns;
+//   Eigen::VectorXd Amu = A * mu;
+//   double muAmu = mu.transpose() * Amu;
+//   double TrAEww = muAmu + TrSigA;
+//   // Rcout << "TrAEww = " << TrAEww << std::endl;
+//   double yXpsiMu = y.transpose() * XpsiMu;
+//   theta_new[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
+//   time_sigma2 = clock();
+//   // Update kappa2 and phi by task
+//   for(int k = 0; k < K; k++) {
+//     a_star = 0.0;
+//     b_star = 0.0;
+//     muCmu = 0.0;
+//     muGmu = 0.0;
+//     muGCGmu = 0.0;
+//     sumDiagPCVkn = 0.0;
+//     sumDiagPGVkn = 0.0;
+//     sumDiagPGCGVkn = 0.0;
+//     for(int ns = 0; ns < n_sess; ns++) {
+//       idx_start = k * n_spde + ns * K * n_spde;
+//       // idx_stop = idx_start + n_spde;
+//       muKns = mu.segment(idx_start,n_spde);
+//       // muCmu
+//       Cmu = Cmat * muKns;
+//       muCmu += muKns.transpose() * Cmu;
+//       // muGmu
+//       Gmu = Gmat * muKns;
+//       muGmu += muKns.transpose() * Gmu;
+//       // muGCGmu
+//       GCGmu = GtCinvG * muKns;
+//       muGCGmu += muKns.transpose() * GCGmu;
+//       // Trace approximations w/ Sigma
+//       Pkn = P.block(idx_start, 0, n_spde, Ns);
+//       Vkn = Vh.block(idx_start, 0, n_spde, Ns);
+//       // Trace of C*Sigma
+//       CVkn = Cmat * Vkn;
+//       PCVkn = Pkn.transpose() * CVkn;
+//       diagPCVkn = PCVkn.diagonal();
+//       sumDiagPCVkn += diagPCVkn.sum();
+//       // Trace of G*Sigma
+//       GVkn = Gmat * Vkn;
+//       PGVkn = Pkn.transpose() * GVkn;
+//       diagPGVkn = PGVkn.diagonal();
+//       sumDiagPGVkn += diagPGVkn.sum();
+//       // Trace of GCG*Sigma
+//       GCGVkn = GtCinvG * Vkn;
+//       PGCGVkn = Pkn.transpose() * GCGVkn;
+//       diagPGCGVkn = PGCGVkn.diagonal();
+//       sumDiagPGCGVkn += diagPGCGVkn.sum();
+//     }
+//     sumDiagPCVkn = sumDiagPCVkn / Ns;
+//     sumDiagPGVkn = sumDiagPGVkn / Ns;
+//     sumDiagPGCGVkn = sumDiagPGCGVkn / Ns;
+//     // Update kappa2
+//     // Rcout << "muCmu = " << muCmu << ", muGCGmu = " << muGCGmu;
+//     // Rcout << ", TrCSig = " << sumDiagPCVkn << ", TrGCGSig = " << sumDiagPGCGVkn << std::endl;
+//     // Rcout << "head(diagPCV) = " << diagPCVkn.segment(0,6).transpose() << ", head(diagPGCGV) = " << diagPGCGVkn.segment(0,6).transpose() << std::endl;
+//     a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
+//     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
+//     // Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star << std::endl;
+//     new_kappa2 = kappa2Brent(0., 50., spde, a_star, b_star, n_sess);
+//     // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
+//     theta_new[k] = new_kappa2;
+//     // Update phi
+//     phi_partA = sumDiagPCVkn + muCmu;
+//     phi_partA = phi_partA * new_kappa2;
+//     phi_partB = sumDiagPGVkn + muGmu;
+//     phi_partB = 2 * phi_partB;
+//     phi_partC = sumDiagPGCGVkn + muGCGmu;
+//     phi_partC = phi_partC / new_kappa2;
+//     double TrQEww = phi_partA + phi_partB + phi_partC;
+//     // Rcout << "TrQEww = " << TrQEww << std::endl;
+//     phi_new = TrQEww / phi_denom;
+//     theta_new[k + K] = phi_new;
+//   }
+//   time_kappa_phi = clock();
+//   // double time_dif_setup, time_dif_QK, time_dif_mu, time_dif_sigma2, time_dif_kappa_phi;
+//   // time_dif_setup = (double)(time_setup - time_start)/CLOCKS_PER_SEC;
+//   // time_dif_QK = (double)(time_QK - time_setup)/CLOCKS_PER_SEC;
+//   // time_dif_mu = (double)(time_mu - time_QK)/CLOCKS_PER_SEC;
+//   // time_dif_sigma2 = (double)(time_sigma2 - time_mu)/CLOCKS_PER_SEC;
+//   // time_dif_kappa_phi = (double)(time_kappa_phi - time_sigma2)/CLOCKS_PER_SEC;
+//   // Rcout << "Setup: " << time_dif_setup << ", QK: " << time_dif_QK << ", mu: " << time_dif_mu << ", sigma2: " << time_dif_sigma2 << ", kappa & phi: " << time_dif_kappa_phi << std::endl;
+//   return(theta_new);
+// }

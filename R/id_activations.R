@@ -132,12 +132,19 @@ id_activations_cifti <- function(model_obj,
     activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
   }
   if(do_sub) {
-    for(m in 1:length(activations$subcortical)){
-      datS <- 1*activations$subcortical[[m]]$active
-      activations_xifti$data$subcort[!is.na(model_obj$betas_EM[[1]]$data$subcort[,1]),] <-
+    if(method == "EM") {
+      for(m in 1:length(activations$subcortical)){
+        datS <- 1*activations$subcortical[[m]]$active
+        activations_xifti$data$subcort[!is.na(model_obj$betas_EM[[1]]$data$subcort[,1]),] <-
+          datS
+      }
+
+    }
+    if(method == "classical") {
+      datS <- 1*activations$subcortical$active
+      activations_xifti$data$subcort[!is.na(model_obj$betas_classical[[1]]$data$subcort[,1]),] <-
         datS
     }
-    #datR[datR==0] <- NA
     activations_xifti$data$subcort <- matrix(datS, ncol=length(field_names))
   }
 
