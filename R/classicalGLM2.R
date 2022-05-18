@@ -65,23 +65,32 @@ classicalGLM2 <- function(results,
     } else {
       message(
         paste0(
-          "No session specified, and avg is not present. The first available session, ",
-          sess_names[1],
-          ", will be used"
+          "No session specified, and avg is not present. All sessions will be used."
         )
       )
-      session_name <- sess_names[1]
+      session_name <- sess_names
     }
   }
   if (results_class == "character") {
     results <-
-      sapply(results, function(x)
-        readRDS(x)$GLMs_classical[[brainstructure]][[session_name]]$estimates, simplify = "array")
+      sapply(results, function(x) {
+        result <- readRDS(x)$GLMs_classical[[brainstructure]]
+        out <- sapply(session_name, function(sn) {
+          return(result[[sn]]$estimates)
+        }, simplify = F)
+        out <- Reduce(`+`,out) / length(session_name)
+        return(out)
+      }, simplify = "array")
   }
   if (results_class == "BayesGLM_cifti") {
     results <-
-      sapply(results, function(x)
-        x$GLMs_classical[[brainstructure]][[session_name]]$estimates, simplify = "array")
+      sapply(results, function(x) {
+        out <- sapply(session_name, function(sn) {
+          x$GLMs_classical[[brainstructure]][[sn]]$estimates
+        }, simplify = F)
+        out <- Reduce(`+`,out) / length(session_name)
+        return(out)
+      }, simplify = "array")
   }
   avg_estimate <- apply(results, 1:2, mean)
   in_mask <- !is.na(avg_estimate[,1])
