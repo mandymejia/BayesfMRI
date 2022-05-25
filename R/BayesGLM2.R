@@ -626,6 +626,9 @@ BayesGLM2_vol <- function(results,
   M <- length(results)
   first_result <- readRDS(results[1])
   which_BayesGLM <- which(sapply(first_result$GLMs_EM,class) == "BayesGLM")
+  cifti_output <- first_result$betas_EM[[1]]
+  # data_idx <- !is.na(cifti_output$data$subcort[,1])
+  cifti_output$data$subcort[!is.na(cifti_output$data$subcort)] <- 0
   if(!3 %in% which_BayesGLM) stop("This function only works with subcortical results.")
   first_result <- first_result$GLMs_EM[[which_BayesGLM]]$EM_result_all
   num_regions <- length(first_result)
@@ -640,10 +643,12 @@ BayesGLM2_vol <- function(results,
     results_in <- vector("list",length = M)
     results_in[[1]] <- first_result[[reg]]
     class(results_in[[1]]) <- "BayesGLM"
-    for(m in 2:M) {
-      results_in[[m]] <- readRDS(results[m])$GLMs_EM[[which_BayesGLM]]$EM_result_all[[reg]]
-      results_in[[m]]$posterior_Sig_inv <- 0 # Done to save memory
-      class(results_in[[m]]) <- "BayesGLM"
+    if(M > 1){
+      for(m in 2:M) {
+        results_in[[m]] <- readRDS(results[m])$GLMs_EM[[which_BayesGLM]]$EM_result_all[[reg]]
+        results_in[[m]]$posterior_Sig_inv <- 0 # Done to save memory
+        class(results_in[[m]]) <- "BayesGLM"
+      }
     }
     results_out[[reg]] <- BayesGLM2(results = results_in,
                                     contrasts = contrasts,
@@ -659,6 +664,9 @@ BayesGLM2_vol <- function(results,
     results_out[[reg]]$cifti_estimate <- as.matrix(results_out[[reg]]$Amat %*% results_out[[reg]]$estimates)
     results_out[[reg]]$cifti_active <- sapply(results_out[[reg]]$active, function(x) as.matrix(results_out[[reg]]$Amat %*% x), simplify = F)
     results_out[[reg]]$cifti_idx <- unlist(first_result[[reg]]$mesh$idx)
+    active_levels <- Reduce(cbind,sapply(results_out[[reg]]$cifti_active, function(x) apply(x,1,sum), simplify = F))
+    active_levels[active_levels == 0] <- NA
+    cifti_output$data$subcort[results_out[[reg]]$cifti_idx,] <- active_levels
   }
   return(results_out)
 }
