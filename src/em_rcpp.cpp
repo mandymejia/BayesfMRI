@@ -612,7 +612,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
                             const int Ns, const Eigen::VectorXd y,
                             const double yy, const List spde, double tol) {
   clock_t time_start, time_setup, time_QK, time_mu, time_sigma2, time_kappa_phi;
-  Rcout << "Starting fixed-point updates" << std::endl;
+  // Rcout << "Starting fixed-point updates" << std::endl;
   time_start = clock();
   // Bring in the spde matrices
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
