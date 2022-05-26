@@ -19,7 +19,7 @@ double logDetQt(double kappa2, const Rcpp::List &in_list, double n_sess) {
   Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (in_list["GtCinvG"]);
   // Create SparseMatrix Q
   Eigen::SparseMatrix<double> Q= kappa2 * Cmat + 2.0 * Gmat + GtCinvG / kappa2;
-  SimplicialLDLT<Eigen::SparseMatrix<double>> cholQ(Q);
+  SimplicialLDLT<Eigen::SparseMatrix<double> > cholQ(Q);
   double lDQ = n_sess * cholQ.vectorD().array().log().sum();
   return lDQ;
 }
@@ -498,7 +498,7 @@ void setSparseBlock_update(SparseMatrix<double,0,int>* A,int i, int j, SparseMat
 
 double emObj(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
              Eigen::SparseMatrix<double> QK,
-             SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+             SimplicialLLT<Eigen::SparseMatrix<double> > &cholSigInv,
              const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
              const int Ns, const Eigen::VectorXd y, const List spde) {
   // Bring in the spde matrices
@@ -535,7 +535,7 @@ double emObj(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
   Eigen::MatrixXd muTmu = mu.transpose() * mu;
   Eigen::MatrixXd QmuTmu = QK * muTmu;
   double TrQmuTmu = QmuTmu.diagonal().sum();
-  SimplicialLDLT<Eigen::SparseMatrix<double>> cholQ(QK);
+  SimplicialLDLT<Eigen::SparseMatrix<double> > cholQ(QK);
   double lDQ = cholQ.vectorD().array().log().sum();
   Eigen::VectorXd XB = Xpsi * mu;
   Eigen::VectorXd y_til = y - XB;
@@ -549,7 +549,7 @@ double emObj(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
 }
 
 Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
-                            Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                            Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double> > &cholSigInv,
                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                             const int Ns, const Eigen::VectorXd y,
                             const double yy, const List spde, double tol) {
@@ -688,7 +688,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
 
 
 SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<double> A,
-                       Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                       Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double> > &cholSigInv,
                        const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                        const int Ns, const Eigen::VectorXd y, const double yy,
                        const List spde, double tol, bool verbose){
@@ -696,7 +696,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
   double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
-  double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
+  // double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
   int iter,feval;
   bool conv,extrap;
   stepmin=SquaremDefault.stepmin0;
@@ -858,7 +858,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   int sig2_ind = 2*K;
   Eigen::SparseMatrix<double> AdivS2 = A / theta[sig2_ind];
   Eigen::SparseMatrix<double> Sig_inv = QK + AdivS2;
-  SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
+  SimplicialLLT<Eigen::SparseMatrix<double> > cholSigInv;
   cholSigInv.compute(Sig_inv);
   cholSigInv.analyzePattern(Sig_inv);
   if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
