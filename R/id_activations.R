@@ -47,7 +47,7 @@ id_activations_cifti <- function(model_obj,
 
   if(is.null(model_obj$betas_Bayesian[[1]])) method <- 'classical'
   method <- match.arg(method, c('Bayesian','classical'))
-  if(!(method %in% c('Bayesian','classical'))) stop("The method argument should only be 'Bayesian' or 'classical'.")
+  if(!(method %in% c('Bayesian','classical'))) stop("The method argument should be 'Bayesian', 'EM', or 'classical'.")
 
   # [TO DO]: check that the requested method(s) actually exist in model_obj?
   # what's the best way to check this? all entries in e.g. `$betas_Bayesian` are `NULL`?
@@ -64,10 +64,18 @@ id_activations_cifti <- function(model_obj,
   names(activations) <- names(GLM_list)
   do_left <- !is.null(GLM_list$cortexL)
   do_right <- !is.null(GLM_list$cortexR)
+  do_sub <- !is.null(GLM_list$subcortical)
 
-  if(is.null(field_names)) field_names <- model_obj$beta_names
-  if(any(!(field_names %in% model_obj$beta_names))) stop(paste0('All elements of field_names must appear in model_obj$beta_names: ', paste(model_obj$beta_names, collapse=',')))
+  if (is.null(field_names))
+    field_names <- model_obj$beta_names
+  if (any(!(field_names %in% model_obj$beta_names)))
+    stop(paste0(
+      'All elements of field_names must appear in model_obj$beta_names: ',
+      paste(model_obj$beta_names, collapse = ',')
+    ))
   field_inds <- which(model_obj$beta_names %in% field_names)
+
+  if(method == "Bayesian" & is.null(GLM_list[[which(!is.null(GLM_list))]]$INLA_result)) method <- "EM"
 
   if(method=='Bayesian'){
     #loop over hemispheres/structures
@@ -105,6 +113,22 @@ id_activations_cifti <- function(model_obj,
     }
   }
 
+  if(method=='EM'){
+    for(mm in 1:num_models){
+      if(is.null(GLM_list[[mm]])) next
+      model_m <- GLM_list[[mm]]
+      if(verbose) cat(paste0('Identifying EM GLM activations in ',names(GLM_list)[mm],'\n'))
+      act_m <- id_activations.em(model_obj=model_m,
+                                 field_names=field_names,
+                                 session_name=session_name,
+                                 threshold=threshold,
+                                 alpha=alpha,
+                                 area.limit=area.limit)
+
+      activations[[mm]] <- act_m
+    }
+  }
+
   #map results to xifti objects
   activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
   if(length(field_names) != length(model_obj$beta_names)) activations_xifti$meta$cifti$names <- field_names
@@ -119,6 +143,22 @@ id_activations_cifti <- function(model_obj,
     if(method=='classical') datR <- datR[!is.na(datR[,1]),] #remove medial wall locations
     #datR[datR==0] <- NA
     activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
+  }
+  if(do_sub) {
+    if(method == "EM") {
+      for(m in 1:length(activations$subcortical)){
+        datS <- 1*activations$subcortical[[m]]$active
+        activations_xifti$data$subcort[!is.na(model_obj$betas_EM[[1]]$data$subcort[,1]),] <-
+          datS
+      }
+
+    }
+    if(method == "classical") {
+      datS <- 1*activations$subcortical$active
+      activations_xifti$data$subcort[!is.na(model_obj$betas_classical[[1]]$data$subcort[,1]),] <-
+        datS
+    }
+    activations_xifti$data$subcort <- matrix(datS, ncol=length(field_names))
   }
 
   activations_xifti <- convert_xifti(activations_xifti, "dlabel", colors='red')
@@ -359,3 +399,176 @@ id_activations.classical <- function(model_obj,
 }
 
 
+#' Identify activations using joint posterior probabilities with EM results
+#'
+#' Identifies areas of activation given an activation threshold and significance
+#'  level using joint posterior probabilities
+#'
+#' For a given latent field, identifies locations that exceed a certain activation
+#'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
+#'  posterior distribution of the latent field.
+#'
+#' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLMEM
+#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
+#' @param session_name (character) The name of the session that should be examined.
+#' If \code{NULL} (default), the average across all sessions is used.
+#' @param alpha Significance level (e.g. 0.05)
+#' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
+#' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
+#'
+#'
+#' @return A list with two elements: \code{active}, which gives a matrix of zeros
+#' and ones of the same dimension as \code{model_obj$beta_estimates${session_name}},
+#' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+#'  more information).
+#'
+#' @importFrom excursions excursions
+#'
+#' @export
+id_activations.em <-
+  function(model_obj,
+           field_names = NULL,
+           session_name = NULL,
+           alpha = 0.05,
+           threshold,
+           area.limit = NULL) {
+    if (class(model_obj) != "BayesGLM")
+      stop(paste0(
+        "The model object is of class ",
+        class(model_obj),
+        " but should be of class 'BayesGLM'."
+      ))
+    #check session_name argument
+
+    #if only one session, analyze that one
+    all_sessions <- model_obj$session_names
+    n_sess <- length(all_sessions)
+    if (n_sess == 1) {
+      session_name <- all_sessions
+    }
+
+    #check session_name not NULL, check that a valid session name
+    if(!is.null(session_name)){
+      if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+      sess_ind <- which(all_sessions == session_name)
+    }
+
+    #if averages not available and session_name=NULL, pick first session and return a warning
+    # has_avg <- is.matrix(model_obj$avg_beta_estimates)
+    has_avg <- !is.null(model_obj$avg_beta_estimates)
+    if(is.null(session_name) & !has_avg){
+      session_name <- all_sessions[1]
+      warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+    }
+
+    if(is.null(session_name) & has_avg){
+      session_name <- 'avg'
+    }
+
+    # Make an indicator for subcortical data
+    is_subcort <- "BayesGLMEM_vol3D" %in% as.character(model_obj$call)
+
+    #if session_name is still NULL, use average and check excur_method argument
+    # if(is.null(session_name)){
+    #   if(has_avg & excur_method != "EB") {
+    #     excur_method <- 'EB'
+    #     warning("To id activations for averaged beta estimates, only the excur_method='EB' is supported. Setting excur_method to 'EB'.")
+    #   }
+    # }
+
+    #check field_names argument
+    if(is.null(field_names)) field_names <- model_obj$beta_names
+    if(!any(field_names %in% model_obj$beta_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+
+    #check alpha argument
+    if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
+
+    mesh <- model_obj$mesh
+    if(is_subcort) {
+      n_subcort_models <- length(model_obj$spde_obj)
+      result <- vector("list", length = n_subcort_models)
+      for(m in 1:n_subcort_models){
+        # mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
+        #                   model_obj$spde_obj[[m]]$faces[[1]])
+        # n_vox <- mesh$n
+        # excur <- vector('list', length=length(field_names))
+        # act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+        # colnames(act) <- field_names
+
+        if(session_name == "avg") {
+          beta_est <- c(model_obj$EM_result_all[[m]]$posterior_mu)
+        }
+        if(session_name != "avg") {
+          beta_mesh_est <- c(model_obj$beta_estimates[[which(all_sessions == session_name)]])
+          beta_est <- beta_mesh_est[!is.na(beta_mesh_est)]
+        }
+        Phi_k <- model_obj$EM_result_all[[m]]$mesh$Amat
+        # Phi <-
+        #   Matrix::bdiag(rep(
+        #     list(Phi_k),
+        #     length(field_names)
+        #   ))
+        # w <- beta_est %*% Phi
+        Sig_inv <- model_obj$EM_result_all[[m]]$posterior_Sig_inv
+        # Q_est <- Matrix::tcrossprod(Phi %*% Sig_inv, Phi)
+
+        ### use the ind argument for excursions to get the marginal posterior
+        ### excursions sets (much faster)
+
+        n_vox <- length(beta_est) / length(field_names)
+        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+
+        V <- Matrix::diag(INLA::inla.qinv(Sig_inv))
+
+        for(f in field_names) {
+          which_f <- which(field_names==f)
+          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+          res.exc <-
+            excursions(
+              alpha = alpha,
+              u = threshold,
+              mu = beta_est,
+              Q = Sig_inv,
+              vars = V,
+              ind = f_inds,
+              type = ">", method = "EB"
+            )
+
+          act[,which_f] <- res.exc$E[f_inds]
+        }
+        act <- as.matrix(Phi_k %*% act)
+        result[[m]] <- list(active = act, excursions_result=res.exc)
+      }
+    }
+
+    if(!is_subcort) {
+      n_vox <- mesh$n
+
+      #for a specific session
+      if(!is.null(session_name)){
+
+        # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
+
+        #loop over latent fields
+        excur <- vector('list', length=length(field_names))
+        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+        colnames(act) <- field_names
+        res.exc <-
+          excursions(
+            alpha = alpha,
+            u = threshold,
+            mu = na.omit(c(model_obj$beta_estimates[[session_name]])),
+            Q = model_obj$posterior_Sig_inv,
+            type = ">", method = "EB"
+          )
+        for(f in field_names) {
+          which_f <- which(field_names==f)
+          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+          act[,which_f] <- res.exc$E[f_inds]
+        }
+      }
+      result <- list(active=act, excursions_result=res.exc)
+    }
+
+    return(result)
+  }
