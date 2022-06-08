@@ -14,8 +14,8 @@ BayesGLM_cifti(
   TR = NULL,
   nuisance = NULL,
   dHRF = TRUE,
-  DCT_f = NULL,
-  DCT_n = if (is.null(DCT_f)) {
+  hpf = NULL,
+  DCT = if (is.null(hpf)) {
      4
  } else {
      NULL
@@ -73,15 +73,15 @@ multi-session modeling, a list of such lists.)
 \item{dHRF}{Logical indicating whether the temporal derivative of each column
 in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.}
 
-\item{DCT_f, DCT_n}{Add DCT bases to \code{nuisance} to apply a temporal
+\item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
 high-pass filter to the data? Only one of these arguments should be provided.
-\code{DCT_f} should be the filter frequency; if it is provided, \code{TR}
+\code{hpf} should be the filter frequency; if it is provided, \code{TR}
 must be provided too. The number of DCT bases to include will be computed
-to yield a filter with as close a frequency to \code{DCT_f} as possible.
-Alternatively, \code{DCT_n} can be provided to directly specify the number
+to yield a filter with as close a frequency to \code{hpf} as possible.
+Alternatively, \code{DCT} can be provided to directly specify the number
 of DCT bases to include.
 
-Default: \code{DCT_n=4} (use four DCT bases for high-pass filtering; for
+Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 typical \code{TR} this amounts to lower filter frequency than the
 approximately .01 Hz used in most studies.)}
 

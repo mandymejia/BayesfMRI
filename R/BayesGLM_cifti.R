@@ -64,15 +64,15 @@
 #'  (or list of such matrices, for multiple-session modeling).
 #' @param dHRF Logical indicating whether the temporal derivative of each column
 #'  in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.
-#' @param DCT_f,DCT_n Add DCT bases to \code{nuisance} to apply a temporal 
+#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal 
 #'  high-pass filter to the data? Only one of these arguments should be provided.
-#'  \code{DCT_f} should be the filter frequency; if it is provided, \code{TR}
+#'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
 #'  must be provided too. The number of DCT bases to include will be computed
-#'  to yield a filter with as close a frequency to \code{DCT_f} as possible.
-#'  Alternatively, \code{DCT_n} can be provided to directly specify the number 
+#'  to yield a filter with as close a frequency to \code{hpf} as possible.
+#'  Alternatively, \code{DCT} can be provided to directly specify the number 
 #'  of DCT bases to include.
 #'  
-#'  Default: \code{DCT_n=4} (use four DCT bases for high-pass filtering; for
+#'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 #'  typical \code{TR} this amounts to lower filter frequency than the
 #'  approximately .01 Hz used in most studies.)
 #' @inheritParams scale_BOLD_Param
@@ -120,8 +120,8 @@ BayesGLM_cifti <- function(
   TR=NULL,
   nuisance=NULL,
   dHRF=TRUE,
-  DCT_f=NULL,
-  DCT_n=if(is.null(DCT_f)) {4} else {NULL},
+  hpf=NULL,
+  DCT=if(is.null(hpf)) {4} else {NULL},
   scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design=TRUE,
   Bayes=TRUE,
@@ -165,9 +165,10 @@ BayesGLM_cifti <- function(
 
   # Check nuisance arguments.
   stopifnot(is.logical(dHRF) && length(dHRF)==1)
-  if (is.null(DCT_f)) {
-    if (is.null(DCT_n)) { DCT_n <- 0 }
-    stopifnot(is.numeric(DCT_n) && length(DCT_n)==1 && DCT_n==round(DCT_n))
+  if (is.null(hpf)) {
+    if (!is.null(DCT)) {
+      stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT==round(DCT))
+    }
   }
 
   # Check prewhitening arguments.
@@ -359,21 +360,24 @@ BayesGLM_cifti <- function(
   if (!scale_design) design <- sapply(design, scale, scale = F, simplify = F) #center but do not scale
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
+  DCTs <- vector("numeric", n_sess)
   for (ss in 1:n_sess) {
     # DCT highpass filter
-    if (!is.null(DCT_f) || !is.null(DCT_n)) {
+    if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
-      if (!is.null(DCT_f)) {
-        DCT_n_ss <- round(dct_convert(ntime[ss], TR, f=DCT_f))
+      if (!is.null(hpf)) {
+        DCT_ss <- round(dct_convert(ntime[ss], TR, f=hpf))
       } else {
-        DCT_n_ss <- DCT_n
+        DCT_ss <- DCT
       }
       # Generate the bases and add them.
-      DCT_b_ss <- dct_bases(ntime[ss], DCT_n_ss)
-      if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], DCT_b_ss)
-      } else {
-        nuisance[[ss]] <- cbind(DCT_b_ss)
+      DCTs[ss] <- dct_bases(ntime[ss], DCT_ss)
+      if (DCTs[ss] > 0) {
+        if (!is.null(nuisance)) {
+          nuisance[[ss]] <- cbind(nuisance[[ss]], DCTs[ss])
+        } else {
+          nuisance[[ss]] <- cbind(DCTs[ss])
+        }
       }
     }
     # dHRF
