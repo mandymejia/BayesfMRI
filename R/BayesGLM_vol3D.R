@@ -364,9 +364,15 @@ BayesGLM_slice <- function(
 
   # Check nuisance arguments.
   stopifnot(is.logical(dHRF) && length(dHRF)==1)
-  if (is.null(hpf)) {
-    if (is.null(DCT)) { DCT <- 0 }
-    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT==round(DCT))
+  if (!is.null(DCT)) { 
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
+    if (DCT==0) { DCT <- NULL }
+  }
+  if (is.null(hpf)) { 
+    stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
+    if (hpf==0) { hpf <- NULL }
+  }
+
   }
 
   check_INLA(require_PARDISO=do_Bayesian)
