@@ -13,7 +13,13 @@ BayesGLM_cifti(
   onsets = NULL,
   TR = NULL,
   nuisance = NULL,
-  nuisance_include = c("drift", "dHRF"),
+  dHRF = TRUE,
+  DCT_f = NULL,
+  DCT_n = if (is.null(DCT_f)) {
+     4
+ } else {
+     NULL
+ },
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -61,14 +67,27 @@ multi-session modeling, a list of such lists.)
 
 \code{TR} is the temporal resolution of the data in seconds.}
 
-\item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
+\item{nuisance}{(Optional) A TxJ matrix of nuisance signals
+(or list of such matrices, for multiple-session modeling).}
 
-\item{nuisance_include}{(Optional) Additional nuisance covariates to include.
-Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-derivative of each column of design matrix). Set to \code{NULL} to not do any
-nuisance regressors, or just one of these to use only one.}
+\item{dHRF}{Logical indicating whether the temporal derivative of each column
+in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.}
 
-\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+\item{DCT_f, DCT_n}{Add DCT bases to \code{nuisance} to apply a temporal
+high-pass filter to the data? Only one of these arguments should be provided.
+\code{DCT_f} should be the filter frequency; if it is provided, \code{TR}
+must be provided too. The number of DCT bases to include will be computed
+to yield a filter with as close a frequency to \code{DCT_f} as possible.
+Alternatively, \code{DCT_n} can be provided to directly specify the number
+of DCT bases to include.
+
+Default: \code{DCT_n=4} (use four DCT bases for high-pass filtering; for
+typical \code{TR} this amounts to lower filter frequency than the
+approximately .01 Hz used in most studies.)}
+
+\item{scale_BOLD}{Option for scaling the BOLD response.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
 is detected, in which case sd scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
@@ -76,7 +95,7 @@ is detected, in which case sd scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.
-}}
+}\if{html}{\out{</div>}}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}

@@ -107,7 +107,6 @@ for(subject in subjects) {
            onsets = list(onsets1, onsets2),
            TR = TR,
            nuisance = list(motion1, motion2),
-           nuisance_include = c('drift','dHRF'),
            GLM_method = 'both',
            session_names = c('LR','RL'),
            resamp_res = 5000,
