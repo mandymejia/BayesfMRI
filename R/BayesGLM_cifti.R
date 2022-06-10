@@ -374,12 +374,12 @@ BayesGLM_cifti <- function(
         DCTs[ss] <- DCT
       }
       # Generate the bases and add them.
-      DCTs[ss] <- dct_bases(ntime[ss], DCTs[ss])
+      DCTb_ss <- dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
         if (!is.null(nuisance)) {
-          nuisance[[ss]] <- cbind(nuisance[[ss]], DCTs[ss])
+          nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
         } else {
-          nuisance[[ss]] <- cbind(DCTs[ss])
+          nuisance[[ss]] <- cbind(DCTb_ss)
         }
       }
     }
