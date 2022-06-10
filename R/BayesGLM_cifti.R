@@ -60,18 +60,18 @@
 #'   multi-session modeling, a list of such lists.)
 #'
 #'   \code{TR} is the temporal resolution of the data in seconds.
-#' @param nuisance (Optional) A TxJ matrix of nuisance signals 
+#' @param nuisance (Optional) A TxJ matrix of nuisance signals
 #'  (or list of such matrices, for multiple-session modeling).
 #' @param dHRF Logical indicating whether the temporal derivative of each column
 #'  in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.
-#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal 
+#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
 #'  high-pass filter to the data? Only one of these arguments should be provided.
 #'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
 #'  must be provided too. The number of DCT bases to include will be computed
 #'  to yield a filter with as close a frequency to \code{hpf} as possible.
-#'  Alternatively, \code{DCT} can be provided to directly specify the number 
+#'  Alternatively, \code{DCT} can be provided to directly specify the number
 #'  of DCT bases to include.
-#'  
+#'
 #'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 #'  typical \code{TR} this amounts to lower filter frequency than the
 #'  approximately .01 Hz used in most studies.)
@@ -165,11 +165,11 @@ BayesGLM_cifti <- function(
 
   # Check nuisance arguments.
   stopifnot(is.logical(dHRF) && length(dHRF)==1)
-  if (!is.null(DCT)) { 
-    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
+  if (!is.null(DCT)) {
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
   }
-  if (is.null(hpf)) { 
+  if (!is.null(hpf)) {
     stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
     if (hpf==0) { hpf <- NULL }
   }
@@ -369,12 +369,12 @@ BayesGLM_cifti <- function(
     if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
       if (!is.null(hpf)) {
-        DCT_ss <- round(dct_convert(ntime[ss], TR, f=hpf))
+        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
       } else {
-        DCT_ss <- DCT
+        DCTs[ss] <- DCT
       }
       # Generate the bases and add them.
-      DCTs[ss] <- dct_bases(ntime[ss], DCT_ss)
+      DCTs[ss] <- dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
         if (!is.null(nuisance)) {
           nuisance[[ss]] <- cbind(nuisance[[ss]], DCTs[ss])
@@ -387,8 +387,8 @@ BayesGLM_cifti <- function(
     if (dHRF) {
       dHRF <- gradient(design[[ss]])
       if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF) 
-      } else { 
+        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF)
+      } else {
         nuisance[[ss]] <- dHRF
       }
     }
@@ -409,7 +409,7 @@ BayesGLM_cifti <- function(
     names(session_data) <- session_names
     for (ss in 1:n_sess) {
       session_data[[ss]] <- list(
-        BOLD = t(BOLD_list[[each_hem]][[ss]]), 
+        BOLD = t(BOLD_list[[each_hem]][[ss]]),
         design=design[[ss]]
       )
       if (!is.null(nuisance)) {
@@ -445,7 +445,7 @@ BayesGLM_cifti <- function(
       outfile = outfile_name,
       verbose = verbose,
       avg_sessions = avg_sessions,
-      meanTol=meanTol, 
+      meanTol=meanTol,
       varTol=varTol,
       trim_INLA = trim_INLA
     )

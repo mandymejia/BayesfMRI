@@ -368,11 +368,9 @@ BayesGLM_slice <- function(
     stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
     if (DCT==0) { DCT <- NULL }
   }
-  if (is.null(hpf)) { 
+  if (!is.null(hpf)) { 
     stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
     if (hpf==0) { hpf <- NULL }
-  }
-
   }
 
   check_INLA(require_PARDISO=do_Bayesian)
@@ -440,12 +438,12 @@ BayesGLM_slice <- function(
     if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
       if (!is.null(hpf)) {
-        DCT_ss <- round(dct_convert(ntime[ss], TR, f=hpf))
+        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
       } else {
-        DCT_ss <- DCT
+        DCTs[ss] <- DCT
       }
       # Generate the bases and add them.
-      DCTs[ss] <- dct_bases(ntime[ss], DCT_ss)
+      DCTs[ss] <- dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
         if (!is.null(nuisance)) {
           nuisance[[ss]] <- cbind(nuisance[[ss]], DCTs[ss])
