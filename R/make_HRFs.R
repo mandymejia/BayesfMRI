@@ -10,6 +10,9 @@
 #' @param duration Length of fMRI timeseries, in SCANS.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF
+#' @param deriv This can take the value of 0, 1, or 2, and will use the HRF
+#'   function, the first derivative of the HRF, or the second derivative of the
+#'   HRF, respectively.
 #'
 #' @return Design matrix containing one HRF column for each task
 #'
@@ -21,6 +24,8 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
   if (!requireNamespace("neuRosim", quietly = TRUE)) {
     stop("Package \"neuRosim\" needed to run `make_HRFs`. Please install it.", call. = FALSE)
   }
+
+  if(!deriv %in% c(0,1,2)) stop('Argument "deriv" must take the value 0, 1, or 2.')
 
   K <- length(onsets) #number of tasks
   if(is.null(names(onsets))) task_names <- paste0('task', 1:K) else task_names <- names(onsets)
