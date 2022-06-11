@@ -28,7 +28,6 @@ Imports:
     MASS,
     Matrix,
     matrixStats,
-    neuRosim,
     stats,
     sp,
     utils

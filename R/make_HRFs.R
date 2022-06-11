@@ -21,10 +21,6 @@
 #' @export
 make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
 
-  if (!requireNamespace("neuRosim", quietly = TRUE)) {
-    stop("Package \"neuRosim\" needed to run `make_HRFs`. Please install it.", call. = FALSE)
-  }
-
   if(!deriv %in% c(0,1,2)) stop('Argument "deriv" must take the value 0, 1, or 2.')
 
   K <- length(onsets) #number of tasks
