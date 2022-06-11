@@ -62,6 +62,9 @@
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals
 #'  (or list of such matrices, for multiple-session modeling).
+#' @param dHRF Set to \code{1} to add the temporal derivative of each column
+#'  in the design matrix, \code{2} to add the second derivatives too, or
+#'  \code{0} to not add any columns. Default: \code{1}.
 #' @param dHRF Logical indicating whether the temporal derivative of each column
 #'  in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
@@ -119,7 +122,7 @@ BayesGLM_cifti <- function(
   onsets=NULL,
   TR=NULL,
   nuisance=NULL,
-  dHRF=TRUE,
+  dHRF=c(0, 1, 2),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
   scale_BOLD=c("auto", "mean", "sd", "none"),
@@ -164,12 +167,14 @@ BayesGLM_cifti <- function(
   if (do_Bayesian) { check_INLA(require_PARDISO=TRUE) }
 
   # Check nuisance arguments.
-  stopifnot(is.logical(dHRF) && length(dHRF)==1)
-  if (!is.null(DCT)) {
-    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT))
+  dHRF <- as.numeric(
+    match.arg(as.character(dHRF), as.character(c(0, 1, 2)))
+  )
+  if (!is.null(DCT)) { 
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
     if (DCT==0) { DCT <- NULL }
   }
-  if (!is.null(hpf)) {
+  if (!is.null(hpf)) { 
     stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
     if (hpf==0) { hpf <- NULL }
   }
@@ -343,7 +348,7 @@ BayesGLM_cifti <- function(
     cat(" MAKING DESIGN MATRICES \n")
     design <- vector("list", n_sess)
     for (ss in seq(n_sess)) {
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss])
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime, deriv=dHRF)
     }
   }
 
@@ -381,15 +386,6 @@ BayesGLM_cifti <- function(
         } else {
           nuisance[[ss]] <- cbind(DCTb_ss)
         }
-      }
-    }
-    # dHRF
-    if (dHRF) {
-      dHRF <- gradient(design[[ss]])
-      if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF)
-      } else {
-        nuisance[[ss]] <- dHRF
       }
     }
   }

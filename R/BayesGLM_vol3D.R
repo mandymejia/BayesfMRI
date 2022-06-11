@@ -302,8 +302,9 @@ get_posterior_densities_vol3D <- function(object, spde){
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
 #'   matrices, for multiple-session modeling).
-#' @param dHRF Logical indicating whether the temporal derivative of each column
-#'  in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.
+#' @param dHRF Set to \code{1} to add the temporal derivative of each column
+#'  in the design matrix, \code{2} to add the second derivatives too, or
+#'  \code{0} to not add any columns. Default: \code{1}.
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal 
 #'  high-pass filter to the data? Only one of these arguments should be provided.
 #'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
@@ -343,7 +344,7 @@ BayesGLM_slice <- function(
   onsets=NULL,
   TR=NULL,
   nuisance=NULL,
-  dHRF=TRUE,
+  dHRF=c(0, 1, 2),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
   binary_mask = NULL,
@@ -363,7 +364,9 @@ BayesGLM_slice <- function(
   do_classical <- (GLM_method %in% c('both','classical'))
 
   # Check nuisance arguments.
-  stopifnot(is.logical(dHRF) && length(dHRF)==1)
+  dHRF <- as.numeric(
+    match.arg(as.character(dHRF), as.character(c(0, 1, 2)))
+  )
   if (!is.null(DCT)) { 
     stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
     if (DCT==0) { DCT <- NULL }
@@ -404,7 +407,7 @@ BayesGLM_slice <- function(
   for(ss in 1:n_sess){
     if(make_design){
       cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime, deriv=dHRF)
     }
   }
 
@@ -450,15 +453,6 @@ BayesGLM_slice <- function(
         } else {
           nuisance[[ss]] <- cbind(DCTb_ss)
         }
-      }
-    }
-    # dHRF
-    if (dHRF) {
-      dHRF <- gradient(design[[ss]])
-      if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF)
-      } else {
-        nuisance[[ss]] <- dHRF
       }
     }
   }
