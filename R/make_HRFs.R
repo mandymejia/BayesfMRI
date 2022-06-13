@@ -10,6 +10,9 @@
 #' @param duration Length of fMRI timeseries, in SCANS.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF
+#' @param deriv This can take the value of 0, 1, or 2, and will use the HRF
+#'   function, the first derivative of the HRF, or the second derivative of the
+#'   HRF, respectively.
 #'
 #' @return Design matrix containing one HRF column for each task
 #'

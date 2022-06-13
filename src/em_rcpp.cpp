@@ -1,10 +1,10 @@
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
 // #define EIGEN_USE_MKL_ALL
 #include <Rcpp.h>
-// #include <unsupported/Eigen/SparseExtra>
 #include <RcppEigen.h>
-// #include <Eigen/PardisoSupport>
 // #include <Eigen/Sparse>
+// #include <unsupported/Eigen/SparseExtra>
+// #include <Eigen/PardisoSupport>
 
 using namespace Rcpp;
 using namespace Eigen;
@@ -779,234 +779,11 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
 
 // using namespace std;
 
-
-
-SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<double> A,
-                       Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
-                       const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
-                       const int Ns, const Eigen::VectorXd y, const double yy,
-                       const List spde, double tol, bool verbose){
-  double res,parnorm,kres; // theta_length=par.size();
-  Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
-  Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
-  double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
-  // double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
-  int iter,feval;
-  bool conv,extrap;
-  stepmin=SquaremDefault.stepmin0;
-  stepmax=SquaremDefault.stepmax0;
-  if(verbose){Rcout<<"Squarem-2"<<std::endl;}
-
-  iter=1;pcpp=par;pnew=par;
-  feval=0;conv=true;
-  // ob_pcpp = emObj(pcpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-
-  const long int parvectorlength=pcpp.size();
-
-  while(feval<SquaremDefault.maxiter){
-    //Step 1
-    extrap = true;
-    // try{p1cpp=fixptfn(pcpp);feval++;}
-    try{p1cpp=theta_fixpt(pcpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
-    catch(...){
-      Rcout<<"Error in fixptfn function evaluation";
-      return sqobjnull;
-    }
-    // ob_p1cpp = emObj(p1cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-    // rel_llik_pp1 = std::abs(ob_p1cpp - ob_pcpp) / std::abs(ob_pcpp);
-
-    sr2_scalar=0;
-    for (int i=0;i<parvectorlength;i++){sr2_scalar+=std::pow(p1cpp[i]-pcpp[i],2.0);}
-    // sr2_scalar = std::sqrt(sr2_scalar);
-    double pcpp_norm = pcpp.squaredNorm();
-    pcpp_norm = std::sqrt(pcpp_norm);
-    // if(sr2_scalar / pcpp_norm < tol){break;}
-    // if(std::sqrt(sr2_scalar)<tol){break;}
-    if(std::sqrt(sr2_scalar) / pcpp_norm <tol){break;}
-    // if(rel_llik_pp1<tol){break;}
-
-    //Step 2
-    try{p2cpp=theta_fixpt(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
-    catch(...){
-      Rcout<<"Error in fixptfn function evaluation";
-      return sqobjnull;
-    }
-    // ob_p2cpp = emObj(p2cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-    // rel_llik_p1p2 = std::abs(ob_p2cpp - ob_p1cpp) / std::abs(ob_p1cpp);
-    sq2_scalar=0;
-    for (int i=0;i<parvectorlength;i++){sq2_scalar+=std::pow(p2cpp[i]-p1cpp[i],2.0);}
-    sq2_scalar=std::sqrt(sq2_scalar);
-    double p1cpp_norm = p1cpp.squaredNorm();
-    p1cpp_norm = std::sqrt(p1cpp_norm);
-    if (sq2_scalar / p1cpp_norm <tol){break;}
-    // if (rel_llik_p1p2<tol){break;}
-    // if (sq2_scalar<tol){break;}
-    res=sq2_scalar;
-    // res=rel_llik_p1p2;
-
-    sv2_scalar=0;
-    for (int i=0;i<parvectorlength;i++){sv2_scalar+=std::pow(p2cpp[i]-2.0*p1cpp[i]+pcpp[i],2.0);}
-    srv_scalar=0;
-    for (int i=0;i<parvectorlength;i++){srv_scalar+=(p2cpp[i]-2.0*p1cpp[i]+pcpp[i])*(p1cpp[i]-pcpp[i]);}
-    //std::cout<<"sr2,sv2,srv="<<sr2_scalar<<","<<sv2_scalar<<","<<srv_scalar<<std::endl;//debugging
-
-    //Step 3 Proposing new value
-    switch (SquaremDefault.method){
-    case 1: alpha= -srv_scalar/sv2_scalar;
-    case 2: alpha= -sr2_scalar/srv_scalar;
-    case 3: alpha= std::sqrt(sr2_scalar/sv2_scalar);
-    }
-
-    alpha=std::max(stepmin,std::min(stepmax,alpha));
-    //std::cout<<"alpha="<<alpha<<std::endl;//debugging
-    for (int i=0;i<parvectorlength;i++){pnew[i]=pcpp[i]+2.0*alpha*(p1cpp[i]-pcpp[i])+alpha*alpha*(p2cpp[i]-2.0*p1cpp[i]+pcpp[i]);}
-    // pnew = pcpp + 2.0*alpha*q1 + alpha*alpha*(q2-q1);
-    // ob_pnew = emObj(pnew,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-
-    //Step 4 stabilization
-    if(std::abs(alpha-1)>0.01){
-      try{ptmp=theta_fixpt(pnew, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
-      catch(...){
-        pnew=p2cpp;
-        if(alpha==stepmax){
-          stepmax=std::max(SquaremDefault.stepmax0,stepmax/SquaremDefault.mstep);
-        }
-        alpha=1;
-        extrap=false;
-        if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
-        if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
-        pcpp=pnew;
-        if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
-        iter++;
-        continue;//next round in while loop
-      }
-      // ob_ptmp = emObj(ptmp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
-      res=0;
-      for (int i=0;i<parvectorlength;i++){res+=std::pow(ptmp[i]-pnew[i],2.0);}
-      res=std::sqrt(res);
-      // double pnew_norm = pnew.squaredNorm();
-      // pnew_norm = std::sqrt(pnew_norm);
-      // res = res/ pnew_norm;
-      // rel_llik_tmpNew = std::abs(ob_ptmp - ob_pnew)/ std::abs(ob_pnew);
-      parnorm=0;
-      for (int i=0;i<parvectorlength;i++){parnorm+=std::pow(p2cpp[i],2.0);}
-      parnorm=std::sqrt(parnorm/parvectorlength);
-      kres=SquaremDefault.kr*(1+parnorm)+sq2_scalar;
-      if(res <= kres){
-        pnew=ptmp;
-      }else{
-        pnew=p2cpp;
-        if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
-        alpha=1;
-        extrap=false;
-      }
-      // res = rel_llik_tmpNew;
-    }
-
-    if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
-    if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
-
-    pcpp=pnew;
-    if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
-    iter++;
-  }
-
-  if (feval >= SquaremDefault.maxiter){conv=false;}
-
-  //assigning values
-  sqobj.par=pcpp;
-  sqobj.valueobjfn=NAN;
-  sqobj.iter=iter;
-  sqobj.pfevals=feval;
-  sqobj.objfevals=0;
-  sqobj.convergence=conv;
-  return(sqobj);
-}
-
-//' Perform the EM algorithm of the Bayesian GLM fitting
-//'
-//' @param theta the vector of initial values for theta
-//' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
-//' @param y the vector of response values
-//' @param X the sparse matrix of the data values
-//' @param QK a sparse matrix of the prior precision found using the initial values of the hyperparameters
-//' @param Psi a sparse matrix representation of the basis function mapping the data locations to the mesh vertices
-//' @param A a precomputed matrix crossprod(X%*%Psi)
-//' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
-//' @param tol a value for the tolerance used for a stopping rule (compared to
-//'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
-//' @param verbose (logical) Should intermediate output be displayed?
-//' @export
-// [[Rcpp::export(rng = false)]]
-Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
-                     Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
-                     Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,
-                     int Ns, double tol, bool verbose = false) {
-  // Bring in the spde matrices
-  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
-  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
-  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
-  int n_spde = Cmat.rows();
-  int K = theta.size();
-  K = (K - 1) / 2;
-  int sig2_ind = 2*K;
-  Eigen::SparseMatrix<double> AdivS2 = A / theta[sig2_ind];
-  Eigen::SparseMatrix<double> Sig_inv = QK + AdivS2;
-  SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
-  cholSigInv.compute(Sig_inv);
-  cholSigInv.analyzePattern(Sig_inv);
-  if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
-  // Initialize everything
-  Eigen::SparseMatrix<double> Xpsi = X * Psi;
-  Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
-  Eigen::VectorXd XpsiY = Xpsi.transpose() * y;
-  // Eigen::MatrixXd Avh = A * Vh;
-  double yy = y.transpose() * y;
-  // Regular fixed point updates
-  // Eigen::VectorXd theta_new;
-  // Eigen::VectorXd thetaDiff(2 * K + 1);
-  // int Step = 0;
-  // double eps = tol + 1;
-  // // while(eps > tol | Step < 5) {
-  // while(Step < 1) {
-  //   theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde, tol);
-  //   Step += 1;
-  //   Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
-  //   thetaDiff = theta_new - theta;
-  //   // This uses the percent
-  //   // thetaDiff = thetaDiff.array() / theta.array();
-  //   // eps = thetaDiff.maxCoeff();
-  //   // Rcout << "eps = " << eps << std::endl;
-  //   // The following uses the sqrt of the squared norm to determine whether to stop
-  //   eps = thetaDiff.squaredNorm();
-  //   eps = std::sqrt(eps);
-  //   theta = theta_new;
-  // }
-  // Using SQUAREM
-  SquaremOutput SQ_result;
-  SquaremDefault.tol = tol;
-  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol, verbose);
-  theta= SQ_result.par;
-  // Bring results together for output
-  if(verbose) {Rcout << "Final theta: " << theta.transpose() << std::endl;}
-  AdivS2 = A / theta[sig2_ind];
-  Sig_inv = QK + AdivS2;
-  cholSigInv.factorize(Sig_inv);
-  Eigen::VectorXd m = XpsiY / theta(sig2_ind);
-  Eigen::VectorXd mu = cholSigInv.solve(m);
-  List out = List::create(Named("theta_new") = theta,
-                          Named("kappa2_new") = theta.segment(0,K),
-                          Named("phi_new") = theta.segment(K,K),
-                          Named("sigma2_new") = theta(2*K),
-                          Named("mu") = mu);
-  return out;
-}
-
 // Eigen::VectorXd theta_fixptPARDISO(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
-//                             Eigen::SparseMatrix<double> QK, Eigen::PardisoLU<Eigen::SparseMatrix<double>> &cholSigInv,
-//                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
-//                             const int Ns, const Eigen::VectorXd y,
-//                             const double yy, const List spde, double tol) {
+//                                    Eigen::SparseMatrix<double> QK, Eigen::PardisoLLT<Eigen::SparseMatrix<double,Eigen::RowMajor>> &cholSigInv,
+//                                    const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+//                                    const int Ns, const Eigen::VectorXd y,
+//                                    const double yy, const List spde, double tol) {
 //   clock_t time_start, time_setup, time_QK, time_mu, time_sigma2, time_kappa_phi;
 //   Rcout << "Starting fixed-point updates" << std::endl;
 //   time_start = clock();
@@ -1165,3 +942,232 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
 //   // Rcout << "Setup: " << time_dif_setup << ", QK: " << time_dif_QK << ", mu: " << time_dif_mu << ", sigma2: " << time_dif_sigma2 << ", kappa & phi: " << time_dif_kappa_phi << std::endl;
 //   return(theta_new);
 // }
+
+SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<double> A,
+                       Eigen::SparseMatrix<double> QK,
+                       SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                       // Eigen::PardisoLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                       const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+                       const int Ns, const Eigen::VectorXd y, const double yy,
+                       const List spde, double tol, bool verbose){
+  double res,parnorm,kres; // theta_length=par.size();
+  Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
+  Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
+  double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
+  // double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
+  int iter,feval;
+  bool conv,extrap;
+  stepmin=SquaremDefault.stepmin0;
+  stepmax=SquaremDefault.stepmax0;
+  if(verbose){Rcout<<"Squarem-2"<<std::endl;}
+
+  iter=1;pcpp=par;pnew=par;
+  feval=0;conv=true;
+  // ob_pcpp = emObj(pcpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+
+  const long int parvectorlength=pcpp.size();
+
+  while(feval<SquaremDefault.maxiter){
+    //Step 1
+    extrap = true;
+    // try{p1cpp=fixptfn(pcpp);feval++;}
+    try{p1cpp=theta_fixpt(pcpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+    // try{p1cpp=theta_fixptPARDISO(pcpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+    catch(...){
+      Rcout<<"Error in fixptfn function evaluation";
+      return sqobjnull;
+    }
+    // ob_p1cpp = emObj(p1cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_pp1 = std::abs(ob_p1cpp - ob_pcpp) / std::abs(ob_pcpp);
+
+    sr2_scalar=0;
+    for (int i=0;i<parvectorlength;i++){sr2_scalar+=std::pow(p1cpp[i]-pcpp[i],2.0);}
+    // sr2_scalar = std::sqrt(sr2_scalar);
+    double pcpp_norm = pcpp.squaredNorm();
+    pcpp_norm = std::sqrt(pcpp_norm);
+    // if(sr2_scalar / pcpp_norm < tol){break;}
+    // if(std::sqrt(sr2_scalar)<tol){break;}
+    if(std::sqrt(sr2_scalar) / pcpp_norm <tol){break;}
+    // if(rel_llik_pp1<tol){break;}
+
+    //Step 2
+    try{p2cpp=theta_fixpt(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+    // try{p2cpp=theta_fixptPARDISO(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+    catch(...){
+      Rcout<<"Error in fixptfn function evaluation";
+      return sqobjnull;
+    }
+    // ob_p2cpp = emObj(p2cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_p1p2 = std::abs(ob_p2cpp - ob_p1cpp) / std::abs(ob_p1cpp);
+    sq2_scalar=0;
+    for (int i=0;i<parvectorlength;i++){sq2_scalar+=std::pow(p2cpp[i]-p1cpp[i],2.0);}
+    sq2_scalar=std::sqrt(sq2_scalar);
+    double p1cpp_norm = p1cpp.squaredNorm();
+    p1cpp_norm = std::sqrt(p1cpp_norm);
+    if (sq2_scalar / p1cpp_norm <tol){break;}
+    // if (rel_llik_p1p2<tol){break;}
+    // if (sq2_scalar<tol){break;}
+    res=sq2_scalar;
+    // res=rel_llik_p1p2;
+
+    sv2_scalar=0;
+    for (int i=0;i<parvectorlength;i++){sv2_scalar+=std::pow(p2cpp[i]-2.0*p1cpp[i]+pcpp[i],2.0);}
+    srv_scalar=0;
+    for (int i=0;i<parvectorlength;i++){srv_scalar+=(p2cpp[i]-2.0*p1cpp[i]+pcpp[i])*(p1cpp[i]-pcpp[i]);}
+    //std::cout<<"sr2,sv2,srv="<<sr2_scalar<<","<<sv2_scalar<<","<<srv_scalar<<std::endl;//debugging
+
+    //Step 3 Proposing new value
+    switch (SquaremDefault.method){
+    case 1: alpha= -srv_scalar/sv2_scalar;
+    case 2: alpha= -sr2_scalar/srv_scalar;
+    case 3: alpha= std::sqrt(sr2_scalar/sv2_scalar);
+    }
+
+    alpha=std::max(stepmin,std::min(stepmax,alpha));
+    //std::cout<<"alpha="<<alpha<<std::endl;//debugging
+    for (int i=0;i<parvectorlength;i++){pnew[i]=pcpp[i]+2.0*alpha*(p1cpp[i]-pcpp[i])+alpha*alpha*(p2cpp[i]-2.0*p1cpp[i]+pcpp[i]);}
+    // pnew = pcpp + 2.0*alpha*q1 + alpha*alpha*(q2-q1);
+    // ob_pnew = emObj(pnew,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+
+    //Step 4 stabilization
+    if(std::abs(alpha-1)>0.01){
+      try{ptmp=theta_fixpt(pnew, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+      // try{ptmp=theta_fixptPARDISO(pnew, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+      catch(...){
+        pnew=p2cpp;
+        if(alpha==stepmax){
+          stepmax=std::max(SquaremDefault.stepmax0,stepmax/SquaremDefault.mstep);
+        }
+        alpha=1;
+        extrap=false;
+        if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
+        if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
+        pcpp=pnew;
+        if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+        iter++;
+        continue;//next round in while loop
+      }
+      // ob_ptmp = emObj(ptmp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+      res=0;
+      for (int i=0;i<parvectorlength;i++){res+=std::pow(ptmp[i]-pnew[i],2.0);}
+      res=std::sqrt(res);
+      // double pnew_norm = pnew.squaredNorm();
+      // pnew_norm = std::sqrt(pnew_norm);
+      // res = res/ pnew_norm;
+      // rel_llik_tmpNew = std::abs(ob_ptmp - ob_pnew)/ std::abs(ob_pnew);
+      parnorm=0;
+      for (int i=0;i<parvectorlength;i++){parnorm+=std::pow(p2cpp[i],2.0);}
+      parnorm=std::sqrt(parnorm/parvectorlength);
+      kres=SquaremDefault.kr*(1+parnorm)+sq2_scalar;
+      if(res <= kres){
+        pnew=ptmp;
+      }else{
+        pnew=p2cpp;
+        if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
+        alpha=1;
+        extrap=false;
+      }
+      // res = rel_llik_tmpNew;
+    }
+
+    if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
+    if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
+
+    pcpp=pnew;
+    if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+    iter++;
+  }
+
+  if (feval >= SquaremDefault.maxiter){conv=false;}
+
+  //assigning values
+  sqobj.par=pcpp;
+  sqobj.valueobjfn=NAN;
+  sqobj.iter=iter;
+  sqobj.pfevals=feval;
+  sqobj.objfevals=0;
+  sqobj.convergence=conv;
+  return(sqobj);
+}
+
+//' Perform the EM algorithm of the Bayesian GLM fitting
+//'
+//' @param theta the vector of initial values for theta
+//' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
+//' @param y the vector of response values
+//' @param X the sparse matrix of the data values
+//' @param QK a sparse matrix of the prior precision found using the initial values of the hyperparameters
+//' @param Psi a sparse matrix representation of the basis function mapping the data locations to the mesh vertices
+//' @param A a precomputed matrix crossprod(X%*%Psi)
+//' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
+//' @param tol a value for the tolerance used for a stopping rule (compared to
+//'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
+//' @param verbose (logical) Should intermediate output be displayed?
+//' @export
+// [[Rcpp::export(rng = false)]]
+Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
+                     Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
+                     Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,
+                     int Ns, double tol, bool verbose = false) {
+  // Bring in the spde matrices
+  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+  int n_spde = Cmat.rows();
+  int K = theta.size();
+  K = (K - 1) / 2;
+  int sig2_ind = 2*K;
+  Eigen::SparseMatrix<double> AdivS2 = A / theta[sig2_ind];
+  Eigen::SparseMatrix<double> Sig_inv = QK + AdivS2;
+  SimplicialLLT<Eigen::SparseMatrix<double>> cholSigInv;
+  // Eigen::PardisoLLT<Eigen::SparseMatrix<double,Eigen::RowMajor>> cholSigInv;
+  cholSigInv.analyzePattern(Sig_inv);
+  cholSigInv.factorize(Sig_inv);
+  if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
+  // Initialize everything
+  Eigen::SparseMatrix<double> Xpsi = X * Psi;
+  Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
+  Eigen::VectorXd XpsiY = Xpsi.transpose() * y;
+  // Eigen::MatrixXd Avh = A * Vh;
+  double yy = y.transpose() * y;
+  // Regular fixed point updates
+  // Eigen::VectorXd theta_new;
+  // Eigen::VectorXd thetaDiff(2 * K + 1);
+  // int Step = 0;
+  // double eps = tol + 1;
+  // // while(eps > tol | Step < 5) {
+  // while(Step < 1) {
+  //   theta_new = theta_fixpt(theta, A, QK, cholSigInv, XpsiY, Xpsi, Vh, Avh, y, yy, spde, tol);
+  //   Step += 1;
+  //   Rcout << "Step " << Step << " theta: " << theta_new.transpose() << std::endl;
+  //   thetaDiff = theta_new - theta;
+  //   // This uses the percent
+  //   // thetaDiff = thetaDiff.array() / theta.array();
+  //   // eps = thetaDiff.maxCoeff();
+  //   // Rcout << "eps = " << eps << std::endl;
+  //   // The following uses the sqrt of the squared norm to determine whether to stop
+  //   eps = thetaDiff.squaredNorm();
+  //   eps = std::sqrt(eps);
+  //   theta = theta_new;
+  // }
+  // Using SQUAREM
+  SquaremOutput SQ_result;
+  SquaremDefault.tol = tol;
+  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol, verbose);
+  theta= SQ_result.par;
+  // Bring results together for output
+  if(verbose) {Rcout << "Final theta: " << theta.transpose() << std::endl;}
+  AdivS2 = A / theta[sig2_ind];
+  Sig_inv = QK + AdivS2;
+  cholSigInv.factorize(Sig_inv);
+  Eigen::VectorXd m = XpsiY / theta(sig2_ind);
+  Eigen::VectorXd mu = cholSigInv.solve(m);
+  List out = List::create(Named("theta_new") = theta,
+                          Named("kappa2_new") = theta.segment(0,K),
+                          Named("phi_new") = theta.segment(K,K),
+                          Named("sigma2_new") = theta(2*K),
+                          Named("mu") = mu);
+  return out;
+}
+
+
