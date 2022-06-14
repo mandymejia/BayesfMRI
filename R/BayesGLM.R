@@ -364,7 +364,8 @@ BayesGLM <- function(
     # ESTIMATE STANDARD ERRORS OF ESTIMATES
     #compute residual SD
     #using length(y_reg)/V instead of ntime here because we want ntime for single session case and ntime*n_sess for multi-session case
-    DOF_true <- (length(y_reg)/V) - K - 1
+    K2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
+    DOF_true <- (length(y_reg)/V) - K - K2 - 1
     DOF_false <- (length(y_reg)/V - 1)
     var_error <- matrixStats::rowVars(resid_s) * DOF_false / DOF_true #correct DOF
     if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
