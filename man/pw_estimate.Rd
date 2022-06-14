@@ -4,12 +4,14 @@
 \alias{pw_estimate}
 \title{Estimate residual autocorrelation for prewhitening}
 \usage{
-pw_estimate(resids, ar_order)
+pw_estimate(resids, ar_order, aic = FALSE)
 }
 \arguments{
 \item{resids}{Estimated residuals}
 
-\item{ar_order}{Order of the AR used to prewhiten the data at each location}
+\item{ar_order, aic}{Order of the AR model used to prewhiten the data at each location.
+If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
+the order will be between zero and \code{ar_order}, as determined by the AIC.}
 }
 \value{
 Estimaed AR coefficients and residual variance at every vertex

@@ -123,7 +123,7 @@ id_activations_cifti <- function(model_obj,
                                  session_name=session_name,
                                  threshold=threshold,
                                  alpha=alpha,
-                                 area.limit=area.limit)
+                                 area.limit=NULL)
 
       activations[[mm]] <- act_m
     }
@@ -423,6 +423,7 @@ id_activations.classical <- function(model_obj,
 #'  more information).
 #'
 #' @importFrom excursions excursions
+#' @importFrom stats na.omit
 #'
 #' @export
 id_activations.em <-
@@ -557,7 +558,9 @@ id_activations.em <-
           excursions(
             alpha = alpha,
             u = threshold,
-            mu = na.omit(c(model_obj$beta_estimates[[session_name]])),
+            mu = stats::na.omit(
+              c(model_obj$beta_estimates[[session_name]])
+            ),
             Q = model_obj$posterior_Sig_inv,
             type = ">", method = "EB"
           )

@@ -60,11 +60,24 @@
 #'   multi-session modeling, a list of such lists.)
 #'
 #'   \code{TR} is the temporal resolution of the data in seconds.
-#' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).
-#' @param nuisance_include (Optional) Additional nuisance covariates to include.
-#'  Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-#'  derivative of each column of design matrix). Set to \code{NULL} to not do any
-#'  nuisance regressors, or just one of these to use only one.
+#' @param nuisance (Optional) A TxJ matrix of nuisance signals
+#'  (or list of such matrices, for multiple-session modeling).
+#' @param dHRF Set to \code{1} to add the temporal derivative of each column
+#'  in the design matrix, \code{2} to add the second derivatives too, or
+#'  \code{0} to not add any columns. Default: \code{1}.
+#' @param dHRF Logical indicating whether the temporal derivative of each column
+#'  in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.
+#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
+#'  high-pass filter to the data? Only one of these arguments should be provided.
+#'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
+#'  must be provided too. The number of DCT bases to include will be computed
+#'  to yield a filter with as close a frequency to \code{hpf} as possible.
+#'  Alternatively, \code{DCT} can be provided to directly specify the number
+#'  of DCT bases to include.
+#'
+#'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
+#'  typical \code{TR} this amounts to lower filter frequency than the
+#'  approximately .01 Hz used in most studies.)
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
@@ -76,6 +89,7 @@
 #' @param ar_smooth FWHM parameter for smoothing. Remember that
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 #'  to not do any smoothing. Default: \code{5}.
+#' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.
 #' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
@@ -111,13 +125,16 @@ BayesGLM_cifti <- function(
   onsets=NULL,
   TR=NULL,
   nuisance=NULL,
-  nuisance_include=c('drift','dHRF'),
+  dHRF=c(0, 1, 2),
+  hpf=NULL,
+  DCT=if(is.null(hpf)) {4} else {NULL},
   scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design=TRUE,
   Bayes=TRUE,
   EM=TRUE,
   ar_order = 6,
   ar_smooth = 5,
+  aic = FALSE,
   resamp_res=10000,
   num.threads=4,
   verbose=FALSE,
@@ -160,12 +177,26 @@ BayesGLM_cifti <- function(
     do_Bayesian <- TRUE
   }
 
+  # Check nuisance arguments.
+  dHRF <- as.numeric(
+    match.arg(as.character(dHRF), as.character(c(0, 1, 2)))
+  )
+  if (!is.null(DCT)) { 
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
+    if (DCT==0) { DCT <- NULL }
+  }
+  if (!is.null(hpf)) { 
+    stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
+    if (hpf==0) { hpf <- NULL }
+  }
+
   # Check prewhitening arguments.
   if (is.null(ar_order)) ar_order <- 0
   ar_order <- as.numeric(ar_order)
   do_pw <- (ar_order > 0)
   if (is.null(ar_smooth)) ar_smooth <- 0
   ar_smooth <- as.numeric(ar_smooth)
+  stopifnot(is.logical(aic) && length(aic)==1)
 
   avail_cores <- parallel::detectCores()
   num.threads <- min(num.threads, avail_cores)
@@ -247,7 +278,7 @@ BayesGLM_cifti <- function(
   if (length(session_names) != n_sess) {
     stop('If `session_names` is provided, it must be of the same length as `cifti_fname`')
   }
-  if(is.null(nuisance) & length(nuisance_include) > 0) nuisance <- vector("list",length = n_sess)
+  if(is.null(nuisance)) nuisance <- vector("list",length = n_sess)
 
   # `design`, `onsets`, `beta_names` ---------------------------------------
   # Check `design` and `onsets`. Get `beta_names`.
@@ -329,7 +360,7 @@ BayesGLM_cifti <- function(
     cat(" MAKING DESIGN MATRICES \n")
     design <- vector("list", n_sess)
     for (ss in seq(n_sess)) {
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss])
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime, deriv=dHRF)
     }
   }
 
@@ -349,21 +380,24 @@ BayesGLM_cifti <- function(
   if (!scale_design) design <- sapply(design, scale, scale = F, simplify = F) #center but do not scale
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
+  DCTs <- vector("numeric", n_sess)
   for (ss in 1:n_sess) {
-    if('drift' %in% nuisance_include) {
-      drift <- (1:ntime[ss])/ntime[ss]
-      if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], drift, drift^2)
+    # DCT highpass filter
+    if (!is.null(hpf) || !is.null(DCT)) {
+      # Get the num. of bases for this session.
+      if (!is.null(hpf)) {
+        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
       } else {
-        nuisance[[ss]] <- cbind(drift, drift^2)
+        DCTs[ss] <- DCT
       }
-    }
-    if ('dHRF' %in% nuisance_include) {
-      dHRF <- gradient(design[[ss]])
-      if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF)
-      } else {
-        nuisance[[ss]] <- dHRF
+      # Generate the bases and add them.
+      DCTb_ss <- dct_bases(ntime[ss], DCTs[ss])
+      if (DCTs[ss] > 0) {
+        if (!is.null(nuisance)) {
+          nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
+        } else {
+          nuisance[[ss]] <- DCTb_ss
+        }
       }
     }
   }
@@ -414,6 +448,7 @@ BayesGLM_cifti <- function(
       EM = do_EM,
       ar_order = ar_order,
       ar_smooth = ar_smooth,
+      aic = aic,
       num.threads = num.threads,
       return_INLA_result = return_INLA_result,
       outfile = outfile_name,

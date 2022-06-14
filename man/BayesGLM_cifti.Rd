@@ -13,13 +13,20 @@ BayesGLM_cifti(
   onsets = NULL,
   TR = NULL,
   nuisance = NULL,
-  nuisance_include = c("drift", "dHRF"),
+  dHRF = c(0, 1, 2),
+  hpf = NULL,
+  DCT = if (is.null(hpf)) {
+     4
+ } else {
+     NULL
+ },
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
   EM = TRUE,
   ar_order = 6,
   ar_smooth = 5,
+  aic = FALSE,
   resamp_res = 10000,
   num.threads = 4,
   verbose = FALSE,
@@ -62,14 +69,27 @@ multi-session modeling, a list of such lists.)
 
 \code{TR} is the temporal resolution of the data in seconds.}
 
-\item{nuisance}{(Optional) A TxJ matrix of nuisance signals (or list of such matrices, for multiple-session modeling).}
+\item{nuisance}{(Optional) A TxJ matrix of nuisance signals
+(or list of such matrices, for multiple-session modeling).}
 
-\item{nuisance_include}{(Optional) Additional nuisance covariates to include.
-Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-derivative of each column of design matrix). Set to \code{NULL} to not do any
-nuisance regressors, or just one of these to use only one.}
+\item{dHRF}{Logical indicating whether the temporal derivative of each column
+in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.}
 
-\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+\item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
+high-pass filter to the data? Only one of these arguments should be provided.
+\code{hpf} should be the filter frequency; if it is provided, \code{TR}
+must be provided too. The number of DCT bases to include will be computed
+to yield a filter with as close a frequency to \code{hpf} as possible.
+Alternatively, \code{DCT} can be provided to directly specify the number
+of DCT bases to include.
+
+Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
+typical \code{TR} this amounts to lower filter frequency than the
+approximately .01 Hz used in most studies.)}
+
+\item{scale_BOLD}{Option for scaling the BOLD response.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
 is detected, in which case sd scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
@@ -77,7 +97,7 @@ is detected, in which case sd scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.
-}}
+}\if{html}{\out{</div>}}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
@@ -95,6 +115,8 @@ for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 \item{ar_smooth}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
+
+\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
 
 \item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
 

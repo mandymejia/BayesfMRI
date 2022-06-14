@@ -195,33 +195,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim
 
 ## Data Generation
 
-The function `simulate_slice_data()` generates true beta maps and simulated fMRI timeseries data using tools from the `neuRosim` package. The size, location and intensities of the centers of activation can be varied. The data format is a 2-dimensional slice of dimensions $45 \times 54$, and the brain mask is based on an FSL brain template. The response data are created by convolving an activation profile with each true beta map, plus errors, which are simulated as an autoregressive process of order 1 with AR coefficient equal to 0.3 and an error standard deviation of 2. The resulting fMRI timeseries data are then masked and vectorized into a $V \times T$ matrix, where $V$ is the number of voxels in the masked image and $T$ is the length of the time series.  For this example, we will simulate a single session of data with 2 tasks.
-
-```{r show template image activation profile and amplitude, message=F}
-set.seed(47401)
-simulated_data <-
-  simulate_slice_data(
-    num_sessions = 1,
-    num_tasks = 2,
-    num_time = 200,
-    binary_template = NULL
-  )
-```
-
-Using these data, the activation profile, the activation amplitude, and the active regions can be seen in the figure below:
-
-```{r sim data plot, message=F, warning=F, echo=F, fig.width=7,fig.height=3}
-plot_slice(simulated_data$betas$session_1, zlim=c(0,1.5))
-```
-
-For model estimation, the data for each session must be formatted into a `session` object, defined as a list with elements `BOLD` (the response), `design` (the design matrix), and (optionally) `nuisance` (a design matrix for nuisance regressors). Multiple sessions are combined into a list (in this example, there is a single session). The function `simulate_slice_data()` returns the data already in this format:
-
-```{r}
-names(simulated_data$data$session_1)
-is.session(simulated_data$data$session_1)
-```
-
-With the data created and in the correct format, the analysis can begin!
+To do.
 
 ## Classical GLM 
 
@@ -266,59 +240,7 @@ In some cases, a single subject may undergo more than one session in a task fMRI
 
 ## Data Generation
 
-Data were generated as in the single-session analysis, with a slight modification. Now the true activation fields for the different sessions were jittered in space, intensity, and smoothness. 
-
-```{r Make the multisession data, include=F}
-# Setting the seed for reproducibility
-set.seed(47401)
-multi_data <-   
-  simulate_slice_data(
-    num_sessions = 2,
-    num_tasks = 2,
-    active_centers = matrix(c(36, 28, 12, 28, 23, 16), 3, 2, byrow = T),
-    active_size = 2:4,
-    beta_weights = matrix(c(1, 1, 0, 0, 0.8, 0.8), 2, 3, byrow = T),
-    vary_active = T,
-    num_time = 200,
-    binary_template = NULL
-  )
-```
-
-This results in the true activation amplitudes:
-
-Session 1:
-
-```{r True Activation Amplitudes 1, fig.height=3, fig.width=7, echo=F}
-tile.plot(melt_mat(multi_data$beta_coefficients$session_1[[1]]), zlim = c(0,1.5))
-```
-
-Session 2: 
-
-```{r True Activation Amplitudes 2, fig.height=3, fig.width=7, echo=F}
-tile.plot(melt_mat(multi_data$beta_coefficients$session_2[[1]]), zlim=c(0,1.5))
-```
-
-The function `simulate_slice_data()` formats the data into a list of "session" objects, which we can then pass to `BayesGLM` for analysis. **Note: Model is pre-computed. Set `eval=TRUE` to compute. Expected computation time is approximately 10 minutes with PARDISO enabled.**
-
-```{r, eval = F}
-# Run the model in INLA
-multi_session_result <- BayesGLM_slice(BOLD=multi_data$BOLD, design = multi_data$design, binary_mask = binary_template, scale_BOLD = "none", scale_design = FALSE, verbose = FALSE, return_INLA_result=TRUE, trim_INLA = T, num.threads = 12, avg_sessions = T)
-saveRDS(multi_session_result, "~/Desktop/multi_session_BayesGLM_results_20201119.rds")
-```
-
-## Results
-
-```{r Bring in the multi-session results, include=F, eval=T}
-multi_session_result <- readRDS("multi_session_BayesGLM_results.rds")
-```
-
-```{r Separate sessions plot, fig.height=6, fig.width=7}
-# plot_BayesGLM_slice(multi_session_result)
-tile.plot(melt_mat(multi_session_result$betas_Bayesian$avg_over_sessions[[1]]),
-          main = "bbeta1",zlim = c(0,1))
-tile.plot(melt_mat(multi_session_result$betas_Bayesian$avg_over_sessions[[2]]),
-          main = "bbeta2", zlim = c(0,1))
-```
+To do.
 
 <!-- ## Combined Results -->
 

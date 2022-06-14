@@ -302,9 +302,20 @@ get_posterior_densities_vol3D <- function(object, spde){
 #'   \code{TR} is the temporal resolution of the data in seconds.
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
 #'   matrices, for multiple-session modeling).
-#' @param nuisance_include (Optional) Additional nuisance covariates to include.
-#'   Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-#'   derivative of each column of design matrix).
+#' @param dHRF Set to \code{1} to add the temporal derivative of each column
+#'  in the design matrix, \code{2} to add the second derivatives too, or
+#'  \code{0} to not add any columns. Default: \code{1}.
+#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal 
+#'  high-pass filter to the data? Only one of these arguments should be provided.
+#'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
+#'  must be provided too. The number of DCT bases to include will be computed
+#'  to yield a filter with as close a frequency to \code{hpf} as possible.
+#'  Alternatively, \code{DCT} can be provided to directly specify the number 
+#'  of DCT bases to include.
+#'  
+#'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
+#'  typical \code{TR} this amounts to lower filter frequency than the
+#'  approximately .01 Hz used in most studies.)
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams num.threads_Param
@@ -333,7 +344,9 @@ BayesGLM_slice <- function(
   onsets=NULL,
   TR=NULL,
   nuisance=NULL,
-  nuisance_include=c('drift','dHRF'),
+  dHRF=c(0, 1, 2),
+  hpf=NULL,
+  DCT=if(is.null(hpf)) {4} else {NULL},
   binary_mask = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
@@ -349,6 +362,19 @@ BayesGLM_slice <- function(
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
+
+  # Check nuisance arguments.
+  dHRF <- as.numeric(
+    match.arg(as.character(dHRF), as.character(c(0, 1, 2)))
+  )
+  if (!is.null(DCT)) { 
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
+    if (DCT==0) { DCT <- NULL }
+  }
+  if (!is.null(hpf)) { 
+    stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
+    if (hpf==0) { hpf <- NULL }
+  }
 
   check_INLA(require_PARDISO=do_Bayesian)
 
@@ -381,7 +407,7 @@ BayesGLM_slice <- function(
   for(ss in 1:n_sess){
     if(make_design){
       cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime, deriv=dHRF)
     }
   }
 
@@ -409,31 +435,24 @@ BayesGLM_slice <- function(
   }
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
-  if(!is.null(nuisance)) {
-    for (ss in 1:n_sess) {
-      ntime <- nrow(design[[ss]])
-      if ('drift' %in% nuisance_include) {
-        drift <- (1:ntime) / ntime
-        nuisance[[ss]] <-
-          cbind(nuisance[[ss]], drift, drift ^ 2)
+  DCTs <- vector("numeric", n_sess)
+  for (ss in 1:n_sess) {
+    # DCT highpass filter
+    if (!is.null(hpf) || !is.null(DCT)) {
+      # Get the num. of bases for this session.
+      if (!is.null(hpf)) {
+        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
+      } else {
+        DCTs[ss] <- DCT
       }
-      if ('dHRF' %in% nuisance_include) {
-        dHRF <- gradient(design[[ss]])
-        nuisance[[ss]] <-
-          cbind(nuisance[[ss]], dHRF)
-      }
-    }
-  } else {
-    nuisance <- list()
-    for (ss in 1:n_sess) {
-      ntime <- nrow(design[[ss]])
-      if ('drift' %in% nuisance_include) {
-        drift <- (1:ntime) / ntime
-        nuisance[[ss]] <- cbind(drift, drift ^ 2)
-      }
-      if ('dHRF' %in% nuisance_include) {
-        dHRF <- gradient(design[[ss]])
-        nuisance[[ss]] <- dHRF
+      # Generate the bases and add them.
+      DCTb_ss <- dct_bases(ntime[ss], DCTs[ss])
+      if (DCTs[ss] > 0) {
+        if (!is.null(nuisance)) {
+          nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
+        } else {
+          nuisance[[ss]] <- DCTb_ss
+        }
       }
     }
   }

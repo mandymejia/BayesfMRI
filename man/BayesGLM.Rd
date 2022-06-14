@@ -17,6 +17,7 @@ BayesGLM(
   EM = TRUE,
   ar_order = 6,
   ar_smooth = 6,
+  aic = FALSE,
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
@@ -51,7 +52,9 @@ surface data).}
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
 vertex is to be included.}
 
-\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+\item{scale_BOLD}{Option for scaling the BOLD response.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
 is detected, in which case sd scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
@@ -59,7 +62,7 @@ is detected, in which case sd scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.
-}}
+}\if{html}{\out{</div>}}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
@@ -77,6 +80,8 @@ for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 \item{ar_smooth}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
+
+\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
 
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}

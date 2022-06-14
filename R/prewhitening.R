@@ -409,28 +409,27 @@ prewhiten_do <- function(prewhiten_result,
 #' Estimate residual autocorrelation for prewhitening
 #'
 #' @param resids Estimated residuals
-#' @param ar_order Order of the AR used to prewhiten the data at each location
+#' @param ar_order,aic Order of the AR model used to prewhiten the data at each location.
+#'  If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
+#'  the order will be between zero and \code{ar_order}, as determined by the AIC. 
 #' @importFrom stats ar.yw
 #'
 #' @return Estimaed AR coefficients and residual variance at every vertex
-pw_estimate <- function(resids, ar_order){
+pw_estimate <- function(resids, ar_order, aic=FALSE){
 
   V <- ncol(resids)
-  AR_coeffs <- matrix(NA, V, ar_order)
+  AR_coefs <- matrix(NA, V, ar_order)
   AR_resid_var <- rep(NA, V)
-  for(v in 1:V) {
-    if (is.na(resids[1,v])) next
-    ar_v <- ar.yw(resids[,v],aic = FALSE, order.max = ar_order)
-    # aic_order <- ar.yw(resids[,v])$order # This should be the order
-    # of the time series if the AIC is used to select the best order
-    AR_coeffs[v,] <- ar_v$ar # The AR parameter estimates
+  for (v in seq(V)) {
+    if (is.na(resids[1,v])) { next }
+    ar_v <- ar.yw(resids[,v], aic = aic, order.max = ar_order)
+    aic_order <- ar_v$order # same as length(ar_v$ar)
+    AR_coefs[v,] <- c(ar_v$ar, rep(0, ar_order-aic_order)) # The AR parameter estimates
     AR_resid_var[v] <- ar_v$var.pred # Residual variance
   }
-  return(list(phi = AR_coeffs, sigma_sq = AR_resid_var))
-
+  
+  list(phi = AR_coefs, sigma_sq = AR_resid_var)
 }
-
-
 
 #' Smooth AR coefficients and white noise variance
 #'
