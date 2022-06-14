@@ -178,9 +178,7 @@ BayesGLM_cifti <- function(
   }
 
   # Check nuisance arguments.
-  dHRF <- as.numeric(
-    match.arg(as.character(dHRF), as.character(c(0, 1, 2)))
-  )
+  stopifnot(length(dHRF)==1 & dHRF %in% c(0, 1, 2))
   if (!is.null(DCT)) { 
     stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
     if (DCT==0) { DCT <- NULL }

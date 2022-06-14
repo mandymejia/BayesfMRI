@@ -199,6 +199,7 @@ BayesGLM <- function(
   # ---------------------------------
   #collect data and design matrices
   design <- vector('list', length=n_sess)
+  K2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
   for(s in 1:n_sess){
     #scale data to represent % signal change (or just center if scale=FALSE)
     data[[s]]$BOLD <- scale_timeseries(t(data[[s]]$BOLD), scale=scale_BOLD)
@@ -364,7 +365,6 @@ BayesGLM <- function(
     # ESTIMATE STANDARD ERRORS OF ESTIMATES
     #compute residual SD
     #using length(y_reg)/V instead of ntime here because we want ntime for single session case and ntime*n_sess for multi-session case
-    K2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
     DOF_true <- (length(y_reg)/V) - K - K2 - 1
     DOF_false <- (length(y_reg)/V - 1)
     var_error <- matrixStats::rowVars(resid_s) * DOF_false / DOF_true #correct DOF
