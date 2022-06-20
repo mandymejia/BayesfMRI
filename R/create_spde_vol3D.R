@@ -139,15 +139,15 @@ create_spde_vol3D <- function(locs, labs, lab_set = NULL){
   M2 <- tG %*% solve(C,G)
 
   # Create the spde object. Note that the priors theta.mu and theta.Q have to be set reasonably here!!!
-  spde <- INLA::inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
-                            B0 = matrix(c(0,1,0),1,3),
-                            B1 = matrix(c(0,0,1),1,3),
-                            B2 = 1,
-                            theta.mu = rep(0,2),
-                            theta.Q = Diagonal(2,c(1e-6,1e-6)),
-                            transform = "identity")
+  # spde <- INLA::inla.spde2.generic(M0 = M0, M1 = M1, M2 = M2,
+  #                           B0 = matrix(c(0,1,0),1,3),
+  #                           B1 = matrix(c(0,0,1),1,3),
+  #                           B2 = 1,
+  #                           theta.mu = rep(0,2),
+  #                           theta.Q = Diagonal(2,c(1e-6,1e-6)),
+  #                           transform = "identity")
 
-
+  spde = list(M0 = M0, M1 = M1, M2 = M2,n.spde = nrow(M0))
 
   out <- list(spde = spde,
               vertices = P_new_all,

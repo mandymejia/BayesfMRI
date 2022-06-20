@@ -399,7 +399,8 @@ BayesGLM <- function(
       if (!requireNamespace("MatrixModels", quietly = TRUE)) {
         stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
       }
-
+      mesh$Amat <- spde$Amat
+      mesh$spde <- spde$spde
       cat('\n.... estimating model with EM')
       Psi_k <- spde$Amat
       Psi <- Matrix::bdiag(rep(list(Psi_k),K))

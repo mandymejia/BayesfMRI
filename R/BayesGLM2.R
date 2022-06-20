@@ -52,7 +52,7 @@ BayesGLM2 <- function(results,
   }
 
   # Check to see that the INLA package is installed
-  check_INLA(require_PARDISO=TRUE)
+  # check_INLA(require_PARDISO=TRUE)
 
   #Check if results are model objects or file paths
   result_class <- sapply(results, class)
@@ -203,9 +203,17 @@ BayesGLM2 <- function(results,
       Mask <- apply(Mask, 2, all)
       mesh <- retro_mask_mesh(mesh, Mask[result1_rr$mask])
     }
-    spde <- INLA::inla.spde2.matern(mesh)
-    Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
-    Amat <- Amat[mesh$idx$loc,]
+    # From INLA use
+    # spde <- INLA::inla.spde2.matern(mesh)
+    # Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
+    # Amat <- Amat[mesh$idx$loc,]
+    # End INLA use
+    if("Amat" %in% names(mesh) & "spde" %in% names(mesh)){
+      spde <- mesh$spde
+      Amat <- mesh$Amat
+    } else {
+      stop("Your results version does not have the correct mesh format please re-run subject-level models using the current package version.")
+    }
     Amat.tot <- bdiag(rep(list(Amat), K)) #Psi_m from paper (VKxNK)
 
     #Check quantiles argument
@@ -263,22 +271,29 @@ BayesGLM2 <- function(results,
       Xycros.all[[m]] <- Matrix::crossprod(Xmat, y_vec)
     }
     results2 <- NULL # save memory
-    mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
-
-    #### DRAW SAMPLES FROM q(theta|y)
-
-    #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
-    if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
-    theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
-
-    #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
-
-    if(verbose) cat('Computing weights for each theta sample \n')
-    logwt <- rep(NA, nsamp_theta)
-    for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
-    #weights to apply to each posterior sample of theta
-    wt.tmp <- exp(logwt - max(logwt))
-    wt <- wt.tmp/(sum(wt.tmp))
+    #### THIS IS FROM WHEN WE USED INLA
+    # mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+    #
+    # #### DRAW SAMPLES FROM q(theta|y)
+    #
+    # #theta.tmp <- mvrnorm(nsamp_theta, mu.theta, solve(Q.theta))
+    # if(verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+    # # theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+    # theta.samp <- qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+    #
+    # #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
+    #
+    # if(verbose) cat('Computing weights for each theta sample \n')
+    # logwt <- rep(NA, nsamp_theta)
+    # for(i in 1:nsamp_theta){ logwt[i] <- F.logwt(theta.samp[,i], spde, mu_theta, Q_theta, M) }
+    # #weights to apply to each posterior sample of theta
+    # wt.tmp <- exp(logwt - max(logwt))
+    # wt <- wt.tmp/(sum(wt.tmp))
+    #### END INLA SECTION
+    # This is what we use now that we're on to the EM
+    mu_theta <- mu_theta / M
+    theta.samp <- as.matrix(mu_theta)
+    wt <- 1
 
     #get posterior quantities of beta, conditional on a value of theta
     if(verbose) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
@@ -415,13 +430,29 @@ beta.posterior.thetasamp <- function(
   K <- ncol(theta_spde)
   M <- length(Xcros)
 
+  use_EM <- all(sapply(c("M0","M1","M2"), function(x) x %in% names(spde)))
+
   #contruct prior precision matrix for beta, Q_theta for given sampled value of thetas
-  Q.beta <- list()
-  for(k in 1:K) {
-    theta_k <- theta_spde[,k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
-    Q.beta[[k]] <- INLA::inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+  # For EM
+  if (use_EM) {
+    Q.beta <- apply(theta_spde, 2, function(theta_k) {
+      theta_k <- exp(theta_k) ^ 2
+      out <-
+        theta_k[1] * (theta_k[2] ^ 2 * spde$M0 + theta_k[2] * spde$M1 + spde$M2)
+      return(out)
+    })
   }
-  Q <- bdiag(Q.beta) #Q_theta in the paper
+  # For INLA
+  if (!use_EM) {
+    Q.beta <- list()
+    for (k in 1:K) {
+      theta_k <-
+        theta_spde[, k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
+      Q.beta[[k]] <-
+        inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+    }
+  }
+  Q <- Matrix::bdiag(Q.beta) #Q_theta in the paper
 
   N <- dim(Q.beta[[1]])[1] #number of mesh locations
   if(N != n.mesh) stop('Length of betas does not match number of vertices in mesh. Inform developer.')
@@ -438,10 +469,13 @@ beta.posterior.thetasamp <- function(
     }
     #compute posterior mean and precision of beta|theta
     Q.m <- prec.error*Xcros[[mm]] + Q_mm #Q_m in paper
-    mu.m <- INLA::inla.qsolve(Q.m, prec.error*Xycros[[mm]]) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
+    cholQ.m <- Matrix::Cholesky(Q.m)
+    # mu.m <- INLA::inla.qsolve(Q.m, prec.error*Xycros[[mm]]) #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
+    mu.m <- Matrix::solve(cholQ.m, prec.error*Xycros[[mm]], system = "A") #NK x 1 -- 2 minutes, but only 2 sec with PARDISO!  #mu_m in paper
 
     #draw samples from pi(beta_m|theta,y)
-    beta.samp.m <- INLA::inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
+    # beta.samp.m <- INLA::inla.qsample(n = nsamp_beta, Q = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
+    beta.samp.m <- cholQsample(n = nsamp_beta, cholQ = Q.m, mu = mu.m) #NK x nsamp_beta  -- 2 minutes, but only 2 sec with PARDISO!
 
     #concatenate samples over models
     beta.samples <- rbind(beta.samples, beta.samp.m) #will be a (N*K*M*num_sessions) x nsamp_beta matrix
@@ -554,4 +588,39 @@ BayesGLM_group <- function(
     nsamp_theta=nsamp_theta, nsamp_beta=nsamp_beta,
     no_cores=no_cores, verbose=verbose
   )
+}
+
+#' Sample from a multivariate normal with mean and precision
+#'
+#' @param n number of samples
+#' @param mu mean vector (length = p)
+#' @param Q sparse p x p positive definite precision matrix (class = dgCMatrix)
+#'
+#' @return an n x p matrix of samples
+#' @export
+qsample <- function(n, mu, Q) {
+  p <- length(mu)
+  if(p != nrow(Q) | p != ncol(Q)) stop("Dimension mismatch between mu and Q.")
+  cholQ <- Matrix::Cholesky(Q)
+  Z <- matrix(rnorm(n*p), nrow = n, ncol = p)
+  out <- Matrix::solve(cholQ,Z, system = "A")
+  out <- out + mu
+  return(out)
+}
+
+#' Sample from the multivariate normal distribution with Cholesky(Q)
+#'
+#' @param n number of samples
+#' @param mu mean vector
+#' @param cholQ Cholesky decomposition of the precision (found via \code{Matrix::Cholesky(Q)})
+#'
+#' @return an n x p matrix of samples from the MVN distribution
+#' @keywords internal
+cholQsample <- function(n, mu, cholQ) {
+  p <- length(mu)
+  if(p != nrow(cholQ) | p != ncol(cholQ)) stop("Dimension mismatch between mu and Q.")
+  Z <- matrix(rnorm(n*p), nrow = n, ncol = p)
+  out <- Matrix::solve(cholQ,Z, system = "A")
+  out <- out + mu
+  return(out)
 }

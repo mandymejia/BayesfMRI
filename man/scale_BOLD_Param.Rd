@@ -4,9 +4,7 @@
 \alias{scale_BOLD_Param}
 \title{scale_BOLD}
 \arguments{
-\item{scale_BOLD}{Option for scaling the BOLD response.
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
 is detected, in which case sd scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
@@ -14,7 +12,7 @@ is detected, in which case sd scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.
-}\if{html}{\out{</div>}}}
+}}
 }
 \description{
 scale_BOLD
