@@ -20,7 +20,8 @@ trim_INLA_result <- function(INLA_result) {
         contents = INLA_result$misc$configs$contents,
         config = sapply(INLA_result$misc$configs$config, function(conf) {
           return(conf[c('mean','Q','Qinv','log.posterior','pred_idx')])
-        }, simplify = F)
+        }, simplify = F),
+        .preopt = INLA_result$misc$configs$.preopt
       )
     )
   )
