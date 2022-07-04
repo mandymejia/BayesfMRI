@@ -37,7 +37,7 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
     colnames(design[[dd]]) <- paste0(task_names, "_", dname_dd)
 
     HRF_fn <- switch((dd+1), HRF, dHRF, d2HRF)
-    HRF <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
+    HRF_dd <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
 
     for(k in 1:K){
       onsets_k <- onsets[[k]][,1] #onset times in scans
@@ -52,7 +52,7 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
       }
 
       # Convolve boxcar with canonical HRF & add to design[[ii]] matrix
-      HRF_k <- convolve(stimulus_k, rev(HRF), type='open')
+      HRF_k <- convolve(stimulus_k, rev(HRF_dd), type='open')
       design[[dd]][,k] <- HRF_k[inds]
     }
   }
