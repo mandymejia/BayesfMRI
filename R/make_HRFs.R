@@ -35,7 +35,7 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
   design <- vector("list", length=deriv+1)
 
   for (dd in seq(deriv+1)) {
-    dname_dd <- switch((deriv+1), "HRF", "dHRF", "d2HRF")
+    dname_dd <- switch(dd, "HRF", "dHRF", "d2HRF")
     design[[dd]] <- matrix(NA, nrow=duration, ncol=K)
     colnames(design[[dd]]) <- paste0(task_names, "_", dname_dd)
 

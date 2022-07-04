@@ -65,8 +65,6 @@
 #' @param dHRF Set to \code{1} to add the temporal derivative of each column
 #'  in the design matrix, \code{2} to add the second derivatives too, or
 #'  \code{0} to not add any columns. Default: \code{1}.
-#' @param dHRF Logical indicating whether the temporal derivative of each column
-#'  in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
 #'  high-pass filter to the data? Only one of these arguments should be provided.
 #'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
@@ -374,6 +372,8 @@ BayesGLM_cifti <- function(
       if (max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
     }
   }
+
+  beta_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more beta_names.
 
   if (scale_design) design <- sapply(design, scale_design_mat, simplify = F)
   if (!scale_design) design <- sapply(design, scale, scale = F, simplify = F) #center but do not scale
