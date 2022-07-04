@@ -36,7 +36,7 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
     design[[dd]] <- matrix(NA, nrow=duration, ncol=K)
     colnames(design[[dd]]) <- paste0(task_names, "_", dname_dd)
 
-    HRF_fn <- switch((dd+1), HRF, dHRF, d2HRF)
+    HRF_fn <- switch(dd, HRF, dHRF, d2HRF)
     HRF_dd <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
 
     for(k in 1:K){
