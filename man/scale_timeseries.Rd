@@ -13,7 +13,9 @@ scale_timeseries(
 \arguments{
 \item{BOLD}{Input fMRI data (V x T)}
 
-\item{scale}{Option for scaling units.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+\item{scale}{Option for scaling units.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
 is detected, in which case sd scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
@@ -21,7 +23,7 @@ is detected, in which case sd scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.
-}}
+}\if{html}{\out{</div>}}}
 
 \item{transpose}{Check orientation of data, which, if TRUE, will transpose
 the data when the number of time points is greater than the number of voxels.

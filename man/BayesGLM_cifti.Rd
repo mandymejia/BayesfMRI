@@ -15,7 +15,11 @@ BayesGLM_cifti(
   nuisance = NULL,
   dHRF = c(0, 1, 2),
   hpf = NULL,
-  DCT = if (is.null(hpf)) {     4 } else {     NULL },
+  DCT = if (is.null(hpf)) {
+     4
+ } else {
+     NULL
+ },
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -83,7 +87,9 @@ Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 typical \code{TR} this amounts to lower filter frequency than the
 approximately .01 Hz used in most studies.)}
 
-\item{scale_BOLD}{Option for scaling the BOLD response.\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
+\item{scale_BOLD}{Option for scaling the BOLD response.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
 is detected, in which case sd scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
@@ -91,7 +97,7 @@ is detected, in which case sd scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.
-}}
+}\if{html}{\out{</div>}}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}

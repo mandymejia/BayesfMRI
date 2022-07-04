@@ -449,7 +449,7 @@ beta.posterior.thetasamp <- function(
       theta_k <-
         theta_spde[, k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
       Q.beta[[k]] <-
-        inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+        INLA::inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
     }
   }
   Q <- Matrix::bdiag(Q.beta) #Q_theta in the paper
@@ -597,6 +597,9 @@ BayesGLM_group <- function(
 #' @param Q sparse p x p positive definite precision matrix (class = dgCMatrix)
 #'
 #' @return an n x p matrix of samples
+#' 
+#' @importFrom Matrix solve
+#' @importFrom stats rnorm
 #' @export
 qsample <- function(n, mu, Q) {
   p <- length(mu)
@@ -615,6 +618,9 @@ qsample <- function(n, mu, Q) {
 #' @param cholQ Cholesky decomposition of the precision (found via \code{Matrix::Cholesky(Q)})
 #'
 #' @return an n x p matrix of samples from the MVN distribution
+#' 
+#' @importFrom stats rnorm
+#' @importFrom Matrix solve
 #' @keywords internal
 cholQsample <- function(n, mu, cholQ) {
   p <- length(mu)
