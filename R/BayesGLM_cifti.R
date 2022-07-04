@@ -178,12 +178,13 @@ BayesGLM_cifti <- function(
   }
 
   # Check nuisance arguments.
+  if (identical(dHRF, c(0, 1, 2))) { dHRF <- 0 }
   stopifnot(length(dHRF)==1 & dHRF %in% c(0, 1, 2))
-  if (!is.null(DCT)) { 
-    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
+  if (!is.null(DCT)) {
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
   }
-  if (!is.null(hpf)) { 
+  if (!is.null(hpf)) {
     stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
     if (hpf==0) { hpf <- NULL }
   }
@@ -284,8 +285,8 @@ BayesGLM_cifti <- function(
   if (!is.null(onsets) && is.null(TR)) { stop('Please provide `TR` if onsets provided') }
   if (!is.null(onsets)) {
     do_multisesh <- inherits(onsets[[1]], "list")
-    if (!do_multisesh) { stopifnot(inherits(onsets, "matrix") || inherits(onsets, "data.frame")) }
     o1 <- if (do_multisesh) { onsets[[1]] } else { onsets }
+    if (!do_multisesh) { stopifnot(inherits(o1, "matrix") || inherits(o1, "data.frame")) }
     beta_names <- if (is.null(names(o1))) { paste0("beta", seq(length(o1))) } else { names(o1) }
     rm(o1)
   }

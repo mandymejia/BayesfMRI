@@ -254,8 +254,6 @@ prewhiten_prep <- function(data,
     for(v in 1:V) {
       if (is.na(resids[1,v])) next
       ar_v <- ar.yw(resids[,v],aic = FALSE,order.max = ar_order)
-      # aic_order <- ar.yw(resids[,v])$order # This should be the order
-      # of the time series if the AIC is used to select the best order
       AR_coeffs[v,,s] <- ar_v$ar # The AR parameter estimates
       AR_resid_var[v,s] <- ar_v$var.pred # Resulting variance
     }
@@ -420,15 +418,17 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
   V <- ncol(resids)
   AR_coefs <- matrix(NA, V, ar_order)
   AR_resid_var <- rep(NA, V)
+  AR_AIC <- if (aic) {rep(NA, V) } else { NULL }
   for (v in seq(V)) {
     if (is.na(resids[1,v])) { next }
     ar_v <- ar.yw(resids[,v], aic = aic, order.max = ar_order)
     aic_order <- ar_v$order # same as length(ar_v$ar)
     AR_coefs[v,] <- c(ar_v$ar, rep(0, ar_order-aic_order)) # The AR parameter estimates
     AR_resid_var[v] <- ar_v$var.pred # Residual variance
+    if (aic) { AR_AIC[v] <- ar_v$order } # Model order
   }
   
-  list(phi = AR_coefs, sigma_sq = AR_resid_var)
+  list(phi = AR_coefs, sigma_sq = AR_resid_var, aic = AR_AIC)
 }
 
 #' Smooth AR coefficients and white noise variance

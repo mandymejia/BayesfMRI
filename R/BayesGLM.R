@@ -249,6 +249,7 @@ BayesGLM <- function(
   if (do_pw) {
     AR_coeffs <- array(dim = c(V,ar_order,n_sess))
     AR_resid_var <- array(dim = c(V,n_sess))
+    AR_AIC <- if (aic) { array(dim = c(V,n_sess)) } else { NULL }
 
     #estimate prewhitening parameters for each session
     for (ss in 1:n_sess) {
@@ -256,11 +257,13 @@ BayesGLM <- function(
       AR_est <- pw_estimate(resids, ar_order, aic=aic)
       AR_coeffs[,,ss] <- AR_est$phi
       AR_resid_var[,ss] <- AR_est$sigma_sq
+      if (aic) { AR_AIC[,ss] <- AR_est$aic }
     }
 
     #average prewhitening parameters across sessions
     avg_AR <- apply(AR_coeffs, 1:2, mean)
     avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
+    if (aic) { max_AIC <- apply(AR_AIC, 1, max) } else { max_AIC <- NULL }
 
     #smooth prewhitening parameters
     if (ar_smooth > 0) {
@@ -524,7 +527,7 @@ BayesGLM <- function(
 
   }
 
-  if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var)
+  if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
   if(!do_pw) prewhiten_info <- NULL
   if(!do_Bayesian) INLA_result <- beta_estimates <- theta_posteriors <- mu.theta <- Q.theta <- y_all <- X_all_list <- NULL
   if (!do_EM) theta_estimates <- Sig_inv <- NULL
