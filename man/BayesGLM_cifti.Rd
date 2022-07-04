@@ -72,8 +72,9 @@ multi-session modeling, a list of such lists.)
 \item{nuisance}{(Optional) A TxJ matrix of nuisance signals
 (or list of such matrices, for multiple-session modeling).}
 
-\item{dHRF}{Logical indicating whether the temporal derivative of each column
-in the design matrix should be added to \code{nuisance}. Default: \code{TRUE}.}
+\item{dHRF}{Set to \code{1} to add the temporal derivative of each column
+in the design matrix, \code{2} to add the second derivatives too, or
+\code{0} to not add any columns. Default: \code{1}.}
 
 \item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
 high-pass filter to the data? Only one of these arguments should be provided.
