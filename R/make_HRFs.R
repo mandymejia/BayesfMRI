@@ -29,15 +29,15 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
   stimulus <- rep(0, nsec*downsample) # For stick function to be used in convolution
   inds <- seq(TR*downsample, nsec*downsample, by = TR*downsample) # Extract EVs in a function of TR
 
-  HRF_fn <- switch((deriv+1), HRF, dHRF, d2HRF)
-  HRF <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
-
   design <- vector("list", length=deriv+1)
 
   for (dd in seq(deriv+1)) {
     dname_dd <- switch(dd, "HRF", "dHRF", "d2HRF")
     design[[dd]] <- matrix(NA, nrow=duration, ncol=K)
     colnames(design[[dd]]) <- paste0(task_names, "_", dname_dd)
+
+    HRF_fn <- switch((dd+1), HRF, dHRF, d2HRF)
+    HRF <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
 
     for(k in 1:K){
       onsets_k <- onsets[[k]][,1] #onset times in scans
