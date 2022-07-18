@@ -269,6 +269,7 @@ BayesGLM <- function(
     if (ar_smooth > 0) {
       AR_smoothed_list <- pw_smooth(
         vertices=mesh$loc, faces=mesh$graph$tv,
+        #mask=mask,
         AR=avg_AR, var=avg_var, FWHM=ar_smooth
       )
       avg_AR <- AR_smoothed_list$AR

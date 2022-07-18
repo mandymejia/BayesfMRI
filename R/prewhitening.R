@@ -444,9 +444,10 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
 #' @importFrom ciftiTools smooth_cifti make_surf
 #'
 #' @return Smoothed AR coefficients and residual variance at every vertex
-pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
+pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
 
-  V <- nrow(vertices)
+  if (is.null(mask)) { mask <- rep(TRUE, nrow(vertices)) }
+  V <- sum(mask)
   V1 <- nrow(AR)
   V2 <- length(var)
   if(V != V1) stop('Number of rows in AR must match number of vertices')
@@ -460,21 +461,19 @@ pw_smooth <- function(vertices, faces, AR, var, FWHM=5){
   )
   AR_xif <- ciftiTools:::make_xifti(
     cortexL = AR,
-    surfL = surf_smooth
+    surfL = surf_smooth,
+    cortexL_mwall = mask
   )
-  # below two lines are patches, will be fixed in next ciftiTools update.
-  AR_xif$meta$cifti$brainstructures <- "left"
-  AR_xif$meta$cortex$medial_wall_mask$left <- rep(TRUE, V)
+  #AR_xif$meta$cifti$brainstructures <- "left"
   AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
   AR_smoothed <- AR_smoothed$data$cortex_left
 
   var_xif <- ciftiTools:::make_xifti(
     cortexL = var,
-    surfL = surf_smooth
+    surfL = surf_smooth,
+    cortexL_mwall = mask
   )
-  # below two lines are patches, will be fixed in next ciftiTools update.
-  var_xif$meta$cifti$brainstructures <- "left"
-  var_xif$meta$cortex$medial_wall_mask$left <- rep(TRUE, V)
+  #var_xif$meta$cifti$brainstructures <- "left"
   var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
   var_smoothed <- var_smoothed$data$cortex_left
 

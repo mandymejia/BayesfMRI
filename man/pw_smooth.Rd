@@ -4,7 +4,7 @@
 \alias{pw_smooth}
 \title{Smooth AR coefficients and white noise variance}
 \usage{
-pw_smooth(vertices, faces, AR, var, FWHM = 5)
+pw_smooth(vertices, faces, mask = NULL, AR, var, FWHM = 5)
 }
 \arguments{
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
