@@ -357,7 +357,7 @@ BayesGLM_cifti <- function(
     cat(" MAKING DESIGN MATRICES \n")
     design <- vector("list", n_sess)
     for (ss in seq(n_sess)) {
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime, deriv=dHRF)
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], deriv=dHRF)
     }
   }
 

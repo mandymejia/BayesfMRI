@@ -402,10 +402,11 @@ BayesGLM_slice <- function(
     make_design <- FALSE
   }
 
+  ntime <- vapply(BOLD, function(x){ dim(BOLD)[length(dim(BOLD))] }, 0)
   for(ss in 1:n_sess){
     if(make_design){
       cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime, deriv=dHRF)
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], deriv=dHRF)
     }
   }
 
