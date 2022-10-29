@@ -8,21 +8,21 @@ test_that("Classical modeling working", {
   check_wb()
 
   # Folder for the data to use for testing BayesfMRI
-  if (!exists("dir_data")) { dir_data <- "../BayesfMRI_testData" }
+  if (!exists("dir_data")) { dir_data <- "../data/151526" }
   if (!exists("dir_results")) { dir_results <- file.path(dir_data, "results") }
 
   # Get file names.
   fnames <- list(
     cifti = "tfMRI_GAMBLING_LR_Atlas.dtseries.nii",
-    e_loss = "EVs/loss_event.txt",
-    e_win = "EVs/win_event.txt",
-    e_neut = "EVs/neut_event.txt",
+    e_loss = "loss_event.txt",
+    e_win = "win_event.txt",
+    e_neut = "neut_event.txt",
     rps = "Movement_Regressors.txt"
   )
   fnames <- lapply(fnames,
     function(x){
       list(
-        test=file.path(dir_data, "test", x),
+        test=file.path(dir_data, x),
         retest=file.path(dir_data, "retest", x)
       )
     }
