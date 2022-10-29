@@ -16,6 +16,14 @@ output: github_document
 * `BayesGLM_cifti` – implements `BayesGLM` on CIFTI-format (greyordinates) fMRI data
 * `BayesGLM_slice` - implements `BayesGLM` on slice-wise volumetric fMRI data
 
+## Citation
+
+If you use `BayesfMRI`, please cite our [paper](https://doi.org/10.1080/01621459.2019.1611582 ). You can also obtain citation information from within R like so:
+
+``` {r}
+citation("BayesfMRI")
+```
+
 ## Important Note on Dependencies:
 
 `BayesfMRI` depends on the `ciftiTools` package, which requires an installation of Connectome Workbench.  It can be installed from the [HCP website](https://www.humanconnectome.org/software/get-connectome-workbench).
