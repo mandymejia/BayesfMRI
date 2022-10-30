@@ -23,38 +23,18 @@ wrapper functions:
 
 ## Citation
 
-If you use `BayesfMRI`, please cite our
-[paper](https://doi.org/10.1080/01621459.2019.1611582). You can also
-obtain citation information from within R like so:
+If you use `BayesfMRI` please cite the following papers:
+
+| Name                                                                     | APA Citation                                                                                                                                                                                                                       |
+|--------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Bayesian GLM](https://doi.org/10.1080/01621459.2019.1611582)            | Mejia, A. F., Yue, Y., Bolin, D., Lindgren, F., & Lindquist, M. A. (2020). A Bayesian general linear modeling approach to cortical surface fMRI data analysis. Journal of the American Statistical Association, 115(530), 501-520. |
+| [Spatial Bayesian GLM](https://doi.org/10.1016/j.neuroimage.2022.118908) | Spencer, D., Yue, Y. R., Bolin, D., Ryan, S., & Mejia, A. F. (2022). Spatial Bayesian GLM on the cortical surface produces reliable task activations in individuals and groups. NeuroImage, 249, 118908.                           |
+
+You can also obtain citation information from within R like so:
 
 ``` r
 citation("BayesfMRI")
 ```
-
-    ## 
-    ## To cite BayesfMRI in publications, please use:
-    ## 
-    ## For the spatial Bayesian GLM for task fMRI on the cortical surface,
-    ## please cite:
-    ## 
-    ##   Mejia, A. F., Yue, Y., Bolin, D., Lindgren, F., & Lindquist, M. A.
-    ##   (2020). A Bayesian general linear modeling approach to cortical
-    ##   surface fMRI data analysis. Journal of the American Statistical
-    ##   Association, 115(530), 501-520.
-    ## 
-    ## A BibTeX entry for LaTeX users is
-    ## 
-    ##   @Article{,
-    ##     title = {A {B}ayesian general linear modeling approach to cortical surface {fMRI} data analysis},
-    ##     author = {Amanda F. Mejia and Yu (Ryan) Yue and David Bolin and Finn Lindgren and Martin A. Lindquist},
-    ##     year = {2020},
-    ##     journal = {Journal of the American Statistical Association},
-    ##     pages = {501-520},
-    ##     volume = {115},
-    ##     number = {530},
-    ##     publisher = {Taylor and Francis},
-    ##     doi = {https://doi.org/10.1080/01621459.2019.1611582},
-    ##   }
 
 ## Important Note on Dependencies:
 
