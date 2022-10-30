@@ -10,15 +10,13 @@
 coverage](https://codecov.io/gh/mandymejia/BayesfMRI/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/BayesfMRI?branch=master)
 <!-- badges: end -->
 
-`BayesfMRI` R package. Includes the main function `BayesGLM`, which
-implements the spatial Bayesian GLM for task fMRI on the cortical
-surface proposed by Mejia et al. 2019a
-\[<https://doi.org/10.1080/01621459.2019.1611582>\]. Also contains two
+The `BayesfMRI` R package includes the main function `BayesGLM`, which
+implements a spatial Bayesian GLM for task fMRI. It also contains two
 wrapper functions:
 
--   `BayesGLM_cifti` – implements `BayesGLM` on CIFTI-format
-    (greyordinates) fMRI data
--   `BayesGLM_slice` - implements `BayesGLM` on slice-wise volumetric
+-   `BayesGLM_cifti` – implements `BayesGLM` on CIFTI cortical surface
+    fMRI data
+-   `BayesGLM_vol3D` - implements `BayesGLM` on NIFTI subcortical voxel
     fMRI data
 
 ## Citation
