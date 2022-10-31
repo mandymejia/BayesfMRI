@@ -209,49 +209,6 @@ s2m_B <- function(B,sigma){
   return(out)
 }
 
-#' Boundary Mask
-#'
-#' Identify the vertices within `boundary_width` edges of the input mask. The
-#'  faces must be triangular.
-#'
-#' @param faces a V x 3 matrix of integers. Each row defines a face by the index
-#'  of three vertices.
-#' @inheritParams mask_Param_vertices
-#' @param boundary_width a positive integer. Vertices no more than this number
-#'  of edges from any vertex in the input mask will be placed in the boundary mask.
-#'
-#' @return The boundary mask, a length-V logical vector. TRUE indicates vertices
-#'  within the boundary mask.
-#'
-#' @keywords internal
-boundary_mask <- function(faces, mask, boundary_width){
-  s <- ncol(faces)
-  v <- max(faces)
-  # For quads, boundary_mask() would count opposite vertices on a face as
-  #   adjacent--that's probably not desired.
-  stopifnot(s == 3)
-
-  stopifnot(boundary_width > 0)
-
-  boundary_mask <- rep(FALSE, v)
-  # Begin with the input mask.
-  verts_adj_previous <- which(mask)
-  for (ii in seq(1, boundary_width)) {
-    # Identify vertices not in the mask, but adjacent to it.
-    # Adjacency is defined by sharing a face.
-    faces_nmask <- rowSums(matrix(faces %in% verts_adj_previous, ncol=s))
-    faces_adj <- faces_nmask > 0 & faces_nmask < s
-    verts_adj <- unique(as.vector(faces[faces_adj,]))
-    verts_adj <- verts_adj[!(verts_adj %in% verts_adj_previous)]
-    # Add those vertices to the boundary mask, and use them as the mask in
-    #   the next iteration.
-    boundary_mask[verts_adj] <- TRUE
-    verts_adj_previous <- verts_adj
-  }
-
-  boundary_mask
-}
-
 #' Match user inputs to expected values
 #'
 #' Match each user input to an expected/allowed value. Raise a warning if either
