@@ -36,6 +36,10 @@ citation("BayesfMRI")
 
 `BayesfMRI` depends on the `ciftiTools` package, which requires an installation of Connectome Workbench.  It can be installed from the [HCP website](https://www.humanconnectome.org/software/get-connectome-workbench).
 
+On Mac platforms, an installation of [Xcode](https://mac.r-project.org/tools/) is necessary to build the C++ code included in `BayesfMRI`. 
+
+By default, the spatial Bayesian model in `BayesGLM` is implemented using an expectation-maximization algorithm written in C++. To instead use the INLA package, set `EM=FALSE`. The INLA package will be required, as well as an INLA-PARDISO license for computational efficiency. 
+
 <!-- The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain it by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=FALSE)`.  The default R-INLA binaries are built on Ubuntu1604. Instructions on how to obtain binaries for other Linux builds are available at https://www.r-inla.org/events/alternativelinuxbuilds.  **Note: INLA must be installed before installing `BayesfMRI`.**
 
 An INLA-PARDISO license is also required for computational efficiency.  To obtain an INLA-PARDISO license, run `inla.pardiso()` in R after running `library(INLA)`. Once you obtain a license, point to it using `INLA::inla.setOption(pardiso.license = "pardiso.lic")` followed by `INLA::inla.pardiso.check()` to ensure that PARDISO is successfully installed and running. -->
