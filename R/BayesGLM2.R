@@ -53,7 +53,7 @@ BayesGLM2 <- function(results,
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
   }
-
+  start_time <- proc.time()[3]
   # Check to see that the INLA package is installed
   check_BayesGLM(require_PARDISO=TRUE)
 
@@ -365,7 +365,7 @@ BayesGLM2 <- function(results,
   } else {
     ppm.summ <- active <- NULL
   }
-
+  total_time <- proc.time()[3] - start_time
   ### Save all results
   result <- list(estimates = betas.summ,
                  quantiles = quantiles.summ,
@@ -376,7 +376,8 @@ BayesGLM2 <- function(results,
                  alpha = alpha,
                  nsamp_theta = nsamp_theta,
                  nsamp_beta = nsamp_beta,
-                 Amat = Amat)
+                 Amat = Amat,
+                 total_time = total_time)
 
   return(result)
 
