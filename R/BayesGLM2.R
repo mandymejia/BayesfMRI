@@ -55,7 +55,7 @@ BayesGLM2 <- function(results,
   }
   start_time <- proc.time()[3]
   # Check to see that the INLA package is installed
-  check_BayesGLM(require_PARDISO=TRUE)
+  if(!use_EM) check_BayesGLM(require_PARDISO=TRUE)
 
   #Check if results are model objects or file paths
 
