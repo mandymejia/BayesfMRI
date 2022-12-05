@@ -628,15 +628,18 @@ BayesGLM2_vol <- function(results,
   first_result <- readRDS(results[1])
   which_BayesGLM <- which(sapply(first_result$GLMs_EM,class) == "BayesGLM")
   cifti_output <- first_result$betas_EM[[1]]
-  # data_idx <- !is.na(cifti_output$data$subcort[,1])
+  mask_idx <- which(cifti_output$meta$subcort$mask)
+  data_idx <- !is.na(cifti_output$data$subcort[,1])
+  cifti_labels <- cifti_output$meta$subcort$labels
+  output_idx <- which(data_idx)
   cifti_output$data$subcort[!is.na(cifti_output$data$subcort)] <- 0
   if(!3 %in% which_BayesGLM) stop("This function only works with subcortical results.")
   first_result <- first_result$GLMs_EM[[which_BayesGLM]]$EM_result_all
   num_regions <- length(first_result)
   for(reg in seq(num_regions)) {
-    first_result[[reg]]$posterior_Sig_inv <- 0 #Done to save memory
+    first_result[[reg]]$posterior_Sig_inv <- 0 #Done to save memory, if it hasn't been applied already
   }
-  results_out <- vector("list", length = M)
+  results_out <- vector("list", length = num_regions)
   names(results_out) <- names(first_result)
 
   for(reg in seq(num_regions)){

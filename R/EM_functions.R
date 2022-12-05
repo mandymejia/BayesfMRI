@@ -695,7 +695,7 @@ BayesGLMEM_vol3D <-
                    avg_beta_estimates = avg_beta_estimates,
                    theta_estimates = theta_estimates,
                    posterior_mu = mu, # For excursions
-                   posterior_Sig_inv = Sig_inv, # For excursions
+                   # posterior_Sig_inv = Sig_inv, # For excursions, taken out because it is not needed
                    mu.theta = mu.theta, #for joint group model
                    mu.theta_init = mu.theta_init, # To examine convergence
                    y = y_all, #for joint group model
@@ -710,6 +710,7 @@ BayesGLMEM_vol3D <-
                  mesh = sapply(spde_all, function(x) x$spde$n.spde, simplify = F),
                  session_names = session_names,
                  EM_result_all = EM_result_all,
+                 roi_model_labels = groups_df,
                  beta_names = beta_names,
                  beta_estimates = beta_estimates_all,
                  avg_beta_estimates = avg_beta_estimates_all,
