@@ -81,7 +81,11 @@ Eigen::MatrixXd makeV(int n_spde, int Ns) {
 //' @export
 // [[Rcpp::export(rng = false)]]
 Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 200,
-                           double grid_limit = 20.0) {
+                           double grid_limit = 50.0) {
+  if(grid_size < 20) {
+    grid_size = 20;
+    Rcout << "Grid size should be at least 20 for adequate coverage. Setting to 20 now." << std::endl;
+  }
   // Load parameters
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
@@ -91,9 +95,10 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
   double sumDiagP_tilCVkn = 0.0, sumDiagP_tilGCGV = 0.0;
   int n_spde = Cmat.rows(); // find the size of the mesh
   Eigen::MatrixXd out = Eigen::MatrixXd::Zero(grid_size, 2); // Create the output object
-  double grid_step = grid_limit / grid_size; // How big should each step be?
-  double eps = 0.001; // The level of precision that will be added to each grid step (grid starts at eps)
+  double eps = 1e-8; // The level of precision that will be added to each grid step (grid starts at eps)
+  double grid_step = 2.5e-4; // How big should each step be? This is small when < 1, but larger afterwards
   double kappa2 = eps, d1f1 = 0.0, d1f1_old = 0.0, d2f1 = 0.0, sumDiagP_tilCV; // start the grid for kappa2
+  double kappa2_old = kappa2;
   Eigen::MatrixXd Vh = makeV(n_spde,Ns);
   Eigen::SparseMatrix<double> Qt(n_spde,n_spde); // initialize the Q_tilde matrix
   makeQt(&Qt, kappa2, spde);
@@ -110,17 +115,20 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
     // Trace of C * Q^-1
     P_tilCV = P_til.transpose() * CV;
     diagP_tilCV = P_tilCV.diagonal();
-    sumDiagP_tilCV = diagP_tilCV.sum();
+    sumDiagP_tilCV = diagP_tilCV.sum() / Ns;
     // Trace of GCG * Q^-1
     P_tilGCGV = P_til.transpose() * GCGV;
     diagP_tilGCGV = P_tilGCGV.diagonal();
-    sumDiagP_tilGCGV = diagP_tilGCGV.sum();
+    sumDiagP_tilGCGV = diagP_tilGCGV.sum() / Ns;
     d1f1 = sumDiagP_tilCVkn / 2.0 - sumDiagP_tilGCGV / (2.0 * kappa2 * kappa2);
     if(i > 0) {
       d2f1 = d1f1-d1f1_old;
-      out((i-1),0) = kappa2;
+      out((i-1),0) = (kappa2 + kappa2_old) / 2.0;
       out((i-1),1) = d2f1;
     }
+    if(kappa2 > 1e-3) grid_step = 0.25;
+    if(kappa2 > 1) grid_step = grid_limit / grid_size;
+    kappa2_old = kappa2;
     kappa2 += grid_step;
     d1f1_old = d1f1;
   }
@@ -1036,6 +1044,8 @@ Eigen::VectorXd theta_fixpt_CG(Eigen::VectorXd theta, const Eigen::SparseMatrix<
     d2f2 = d2f2 / (-4 * M_PI * theta[k + K] * std::pow(theta[k],3));
     double d2f = interp_d2f1 + d2f2;
     new_kappa2 = theta[k] -  d1f / d2f; // Good ol' fashioned Newton's method
+    if(new_kappa2 < 1e-8) new_kappa2 = 1e-8;
+    if(new_kappa2 > 50) new_kappa2 = 50;
     // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
     theta_new[k] = new_kappa2;
     // Update phi

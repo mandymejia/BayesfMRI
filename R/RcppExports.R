@@ -19,7 +19,7 @@ logDetQt <- function(kappa2, in_list, n_sess) {
 #' @param Ns the integer number of samples for the Hutchinson approximation
 #' @param grid_limit the largest number in the grid
 #' @export
-d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 20.0) {
+d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 50.0) {
     .Call(`_BayesfMRI_d2f1_kappa`, spde, grid_size, Ns, grid_limit)
 }
 

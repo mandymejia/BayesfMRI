@@ -4,7 +4,7 @@
 \alias{d2f1_kappa}
 \title{Second derivative of the first term in the objective function for kappa2}
 \usage{
-d2f1_kappa(spde, grid_size = 50L, Ns = 200L, grid_limit = 20)
+d2f1_kappa(spde, grid_size = 50L, Ns = 200L, grid_limit = 50)
 }
 \arguments{
 \item{spde}{a list with elements Cmat, Gmat, and GtCinvG}
