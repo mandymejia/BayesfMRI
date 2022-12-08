@@ -28,6 +28,19 @@ double logDetQt(double kappa2, const Rcpp::List &in_list, double n_sess) {
   return lDQ;
 }
 
+// Pulled off of Stack Overflow, sorts an n x 3 matrix by the first column
+void eigen_sort_rows_by_head(Eigen::MatrixXd& A_nx3)
+{
+  std::vector<Eigen::VectorXd> vec;
+  for (int64_t i = 0; i < A_nx3.rows(); ++i)
+    vec.push_back(A_nx3.row(i));
+
+  std::sort(vec.begin(), vec.end(), [](Eigen::VectorXd const& t1, Eigen::VectorXd const& t2){ return t1(0) < t2(0); } );
+
+  for (int64_t i = 0; i < A_nx3.rows(); ++i)
+    A_nx3.row(i) = vec[i];
+};
+
 void makeQt(Eigen::SparseMatrix<double>* Q, double kappa2, const Rcpp::List &spde) {
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
@@ -39,6 +52,79 @@ void makeQt(Eigen::SparseMatrix<double>* Q, double kappa2, const Rcpp::List &spd
     }
   }
   // return Qt;
+}
+
+Eigen::MatrixXd makeV(int n_spde, int Ns) {
+  Eigen::MatrixXd V(n_spde,Ns);
+  Rcpp::NumericVector x(1);
+  for(int i = 0; i < n_spde; i++) {
+    for(int j = 0; j < Ns; j++) {
+      // x = std::rand() / ((RAND_MAX + 1u) / 2);
+      x = Rcpp::runif(1);
+      if(x[0] <= 0.5) {
+        V(i,j) = -1;
+      } else {
+        V(i,j) = 1;
+      }
+    }
+  }
+  return V;
+}
+
+//' Second derivative of the first term in the objective function for kappa2
+//'
+//' @param spde a list with elements Cmat, Gmat, and GtCinvG
+//' @param grid_size the number of grid points at which to numerically evaluate
+//'   the second derivative
+//' @param Ns the integer number of samples for the Hutchinson approximation
+//' @param grid_limit the largest number in the grid
+//' @export
+// [[Rcpp::export(rng = false)]]
+Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 200,
+                           double grid_limit = 20.0) {
+  // Load parameters
+  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+  Eigen::MatrixXd CV, P_tilCV, GCGV, P_tilGCGV;
+  Eigen::VectorXd diagP_tilCV, diagP_tilGCGV;
+  double sumDiagP_tilCVkn = 0.0, sumDiagP_tilGCGV = 0.0;
+  int n_spde = Cmat.rows(); // find the size of the mesh
+  Eigen::MatrixXd out = Eigen::MatrixXd::Zero(grid_size, 2); // Create the output object
+  double grid_step = grid_limit / grid_size; // How big should each step be?
+  double eps = 0.001; // The level of precision that will be added to each grid step (grid starts at eps)
+  double kappa2 = eps, d1f1 = 0.0, d1f1_old = 0.0, d2f1 = 0.0, sumDiagP_tilCV; // start the grid for kappa2
+  Eigen::MatrixXd Vh = makeV(n_spde,Ns);
+  Eigen::SparseMatrix<double> Qt(n_spde,n_spde); // initialize the Q_tilde matrix
+  makeQt(&Qt, kappa2, spde);
+  SimplicialLLT<Eigen::SparseMatrix<double>> cholQ;
+  cholQ.analyzePattern(Qt);
+  Eigen::MatrixXd P_til(n_spde, Ns);
+  for(int i=0;i<(grid_size+1);i++) {
+    makeQt(&Qt, kappa2, spde);
+    cholQ.factorize(Qt);
+    P_til = cholQ.solve(Vh);
+    CV = Cmat * Vh;
+    GCGV = GtCinvG * Vh;
+    // Trace approximations w/ Q for CG
+    // Trace of C * Q^-1
+    P_tilCV = P_til.transpose() * CV;
+    diagP_tilCV = P_tilCV.diagonal();
+    sumDiagP_tilCV = diagP_tilCV.sum();
+    // Trace of GCG * Q^-1
+    P_tilGCGV = P_til.transpose() * GCGV;
+    diagP_tilGCGV = P_tilGCGV.diagonal();
+    sumDiagP_tilGCGV = diagP_tilGCGV.sum();
+    d1f1 = sumDiagP_tilCVkn / 2.0 - sumDiagP_tilGCGV / (2.0 * kappa2 * kappa2);
+    if(i > 0) {
+      d2f1 = d1f1-d1f1_old;
+      out((i-1),0) = kappa2;
+      out((i-1),1) = d2f1;
+    }
+    kappa2 += grid_step;
+    d1f1_old = d1f1;
+  }
+  return out;
 }
 
 double kappa2InitObj(double kappa2, double phi, const List &spde, Eigen::VectorXd beta_hat, double n_sess) {
@@ -470,23 +556,6 @@ Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w,
   return theta;
 }
 
-Eigen::MatrixXd makeV(int n_spde, int Ns) {
-  Eigen::MatrixXd V(n_spde,Ns);
-  Rcpp::NumericVector x(1);
-  for(int i = 0; i < n_spde; i++) {
-    for(int j = 0; j < Ns; j++) {
-      // x = std::rand() / ((RAND_MAX + 1u) / 2);
-      x = Rcpp::runif(1);
-      if(x[0] <= 0.5) {
-        V(i,j) = -1;
-      } else {
-        V(i,j) = 1;
-      }
-    }
-  }
-  return V;
-}
-
 /*
  B of size n1 x n2
  Set A(i:i+n1,j:j+n2) = B (update)
@@ -745,6 +814,228 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
     // Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star << std::endl;
     new_kappa2 = kappa2Brent(0., 50., spde, a_star, b_star, n_sess);
+    // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
+    theta_new[k] = new_kappa2;
+    // Update phi
+    phi_partA = sumDiagPCVkn + muCmu;
+    phi_partA = phi_partA * new_kappa2;
+    phi_partB = sumDiagPGVkn + muGmu;
+    phi_partB = 2 * phi_partB;
+    phi_partC = sumDiagPGCGVkn + muGCGmu;
+    phi_partC = phi_partC / new_kappa2;
+    double TrQEww = phi_partA + phi_partB + phi_partC;
+    // Rcout << "TrQEww = " << TrQEww << std::endl;
+    phi_new = TrQEww / phi_denom;
+    theta_new[k + K] = phi_new;
+  }
+  time_kappa_phi = clock();
+  // double time_dif_setup, time_dif_QK, time_dif_mu, time_dif_sigma2, time_dif_kappa_phi;
+  // time_dif_setup = (double)(time_setup - time_start)/CLOCKS_PER_SEC;
+  // time_dif_QK = (double)(time_QK - time_setup)/CLOCKS_PER_SEC;
+  // time_dif_mu = (double)(time_mu - time_QK)/CLOCKS_PER_SEC;
+  // time_dif_sigma2 = (double)(time_sigma2 - time_mu)/CLOCKS_PER_SEC;
+  // time_dif_kappa_phi = (double)(time_kappa_phi - time_sigma2)/CLOCKS_PER_SEC;
+  // Rcout << "Setup: " << time_dif_setup << ", QK: " << time_dif_QK << ", mu: " << time_dif_mu << ", sigma2: " << time_dif_sigma2 << ", kappa & phi: " << time_dif_kappa_phi << std::endl;
+  return(theta_new);
+}
+
+Eigen::VectorXd theta_fixpt_CG(Eigen::VectorXd theta, const Eigen::SparseMatrix<double> A,
+                            Eigen::SparseMatrix<double> QK, SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                            SimplicialLLT<Eigen::SparseMatrix<double>> &cholQ,
+                            const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+                            const int Ns, const Eigen::VectorXd y, const Eigen::MatrixXd d2f1,
+                            const double yy, const List spde, double tol) {
+  clock_t time_start, time_setup, time_QK, time_mu, time_sigma2, time_kappa_phi;
+  // Rcout << "Starting fixed-point updates" << std::endl;
+  time_start = clock();
+  // Bring in the spde matrices
+  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+  // Grab metadata
+  int K = (theta.size() - 1) / 2;
+  int sig2_ind = theta.size() - 1;
+  int nKs = A.rows();
+  int ySize = y.size();
+  int n_spde = Cmat.rows();
+  double n_sess = nKs / (n_spde * K);
+  // int Ns = Vh.cols();
+  Eigen::MatrixXd Vh = makeV(nKs,Ns);
+  // Rcout << "dim(A)" << A.rows() << " x " << A.cols() << ", dim(Vh) = " << Vh.rows() << " x " << Vh.cols() << std::endl;
+  Eigen::MatrixXd Avh = A * Vh;
+  // Initialize objects
+  Eigen::SparseMatrix<double> AdivS2(nKs,nKs), Sig_inv(nKs,nKs), Qk(n_spde, n_spde);
+  Eigen::VectorXd theta_new = theta;
+  Eigen::VectorXd muKns(n_spde), Cmu(n_spde), Gmu(n_spde), diagPCVkn(Ns);
+  Eigen::VectorXd diagPGVkn(Ns), GCGmu(n_spde), diagPGCGVkn(Ns);
+  Eigen::VectorXd diagP_tilCVkn(Ns), diagP_tilGCGVkn(Ns), diff_kappa2;
+  Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
+  Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
+  Eigen::MatrixXd P_tilkn(n_spde,Ns), P_tilCVkn(Ns,Ns), P_tilGCGVkn(Ns,Ns);
+  double a_star, b_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
+  double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
+  double phi_denom = 4.0 * M_PI * n_spde * n_sess, d1f1, d1f2, d2f2;
+  double sumDiagP_tilCVkn = 0.0, sumDiagP_tilGCGVkn = 0.0, d1f= 0.0;
+  int idx_start, d2_grid_size = d2f1.rows();
+  time_setup = clock();
+  // Begin update
+  // for(int k = 0; k < K ; k++) {
+  //   makeQt(&Qk, theta(k), spde);
+  //   Qk = Qk / (4.0 * M_PI * theta(k + K));
+  //   for(int ns = 0; ns < n_sess; ns++) {
+  //     int start_i = k * n_spde + ns * K * n_spde;
+  //     setSparseBlock_update(&QK, start_i, start_i, Qk);
+  //   }
+  // }
+  Rcpp::List Q_list(K * n_sess);
+  int list_idx;
+  for(int ns=0;ns<n_sess;ns++) {
+    for(int k = 0; k < K ; k++) {
+      list_idx = ns*K + k;
+      makeQt(&Qk, theta(k), spde);
+      Qk = Qk / (4.0 * M_PI * theta(k + K));
+      Q_list(list_idx) =  Qk;
+    }
+  }
+  QK = sparseBdiag(Q_list);
+  time_QK = clock();
+  // setSparseCol_update(&QK,Q_list);
+
+  // for(int k = 0; k < K ; k++) {
+  //   makeQt(&Qk, theta(k), spde);
+  //   Qk = Qk / (4.0 * M_PI * theta(k + K));
+  //   for(int ns = 0; ns < n_sess; ns++) {
+  //     int start_i = k * n_spde + ns * K * n_spde;
+  //     setSparseCol_update(&QK, start_i, Qk);
+  //   }
+  // }
+  AdivS2 = A / theta[sig2_ind];
+  Sig_inv = QK + AdivS2;
+  cholSigInv.factorize(Sig_inv);
+  cholQ.factorize(QK); // for CG
+  Eigen::VectorXd m = XpsiY / theta(sig2_ind);
+  Eigen::VectorXd mu = cholSigInv.solve(m);
+  time_mu = clock();
+  // Rcout << "First 6 values of mu: " << mu.segment(0,6).transpose() << std::endl;
+  // Solve for sigma_2
+  Eigen::VectorXd XpsiMu = Xpsi * mu;
+  Eigen::MatrixXd P = cholSigInv.solve(Vh);
+  Eigen::MatrixXd P_til = cholQ.solve(Vh);
+  Eigen::MatrixXd PaVh = P.transpose() * Avh;
+  Eigen::VectorXd diagPaVh = PaVh.diagonal();
+  double TrSigA = diagPaVh.sum() / Ns;
+  Eigen::VectorXd Amu = A * mu;
+  double muAmu = mu.transpose() * Amu;
+  double TrAEww = muAmu + TrSigA;
+  // Rcout << "TrAEww = " << TrAEww << std::endl;
+  double yXpsiMu = y.transpose() * XpsiMu;
+  theta_new[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
+  time_sigma2 = clock();
+  // Update kappa2 and phi by task
+  for(int k = 0; k < K; k++) {
+    a_star = 0.0;
+    b_star = 0.0;
+    muCmu = 0.0;
+    muGmu = 0.0;
+    muGCGmu = 0.0;
+    sumDiagPCVkn = 0.0;
+    sumDiagPGVkn = 0.0;
+    sumDiagPGCGVkn = 0.0;
+    for(int ns = 0; ns < n_sess; ns++) {
+      idx_start = k * n_spde + ns * K * n_spde;
+      // idx_stop = idx_start + n_spde;
+      muKns = mu.segment(idx_start,n_spde);
+      // muCmu
+      Cmu = Cmat * muKns;
+      muCmu += muKns.transpose() * Cmu;
+      // muGmu
+      Gmu = Gmat * muKns;
+      muGmu += muKns.transpose() * Gmu;
+      // muGCGmu
+      GCGmu = GtCinvG * muKns;
+      muGCGmu += muKns.transpose() * GCGmu;
+      // Trace approximations w/ Sigma
+      Pkn = P.block(idx_start, 0, n_spde, Ns);
+      Vkn = Vh.block(idx_start, 0, n_spde, Ns);
+      // Trace of C*Sigma
+      CVkn = Cmat * Vkn;
+      PCVkn = Pkn.transpose() * CVkn;
+      diagPCVkn = PCVkn.diagonal();
+      sumDiagPCVkn += diagPCVkn.sum();
+      // Trace of G*Sigma
+      GVkn = Gmat * Vkn;
+      PGVkn = Pkn.transpose() * GVkn;
+      diagPGVkn = PGVkn.diagonal();
+      sumDiagPGVkn += diagPGVkn.sum();
+      // Trace of GCG*Sigma
+      GCGVkn = GtCinvG * Vkn;
+      PGCGVkn = Pkn.transpose() * GCGVkn;
+      diagPGCGVkn = PGCGVkn.diagonal();
+      sumDiagPGCGVkn += diagPGCGVkn.sum();
+      // Trace approximations w/ Q for CG
+      P_tilkn = P_til.block(idx_start, 0, n_spde, Ns);
+      // Trace of C * Q^-1
+      P_tilCVkn = P_tilkn.transpose() * CVkn;
+      diagP_tilCVkn = P_tilCVkn.diagonal();
+      sumDiagP_tilCVkn += diagP_tilCVkn.sum();
+      // Trace of GCG * Q^-1
+      P_tilGCGVkn = P_tilkn.transpose() * GCGVkn;
+      diagP_tilGCGVkn = P_tilGCGVkn.diagonal();
+      sumDiagP_tilGCGVkn += diagP_tilGCGVkn.sum();
+    }
+    sumDiagPCVkn = sumDiagPCVkn / Ns; // Approximate Tr(CSigma)
+    sumDiagPGVkn = sumDiagPGVkn / Ns; // Approximate Tr(GSigma)
+    sumDiagPGCGVkn = sumDiagPGCGVkn / Ns; // Approximate Tr(GCGSigma)
+    sumDiagP_tilCVkn = sumDiagP_tilCVkn / Ns; // Approximate Tr(CQ^-1)
+    sumDiagP_tilGCGVkn = sumDiagP_tilGCGVkn / Ns; // Approximate Tr(GCGQ^-1)
+    // Update kappa2
+    // Rcout << "muCmu = " << muCmu << ", muGCGmu = " << muGCGmu;
+    // Rcout << ", TrCSig = " << sumDiagPCVkn << ", TrGCGSig = " << sumDiagPGCGVkn << std::endl;
+    // Rcout << "head(diagPCV) = " << diagPCVkn.segment(0,6).transpose() << ", head(diagPGCGV) = " << diagPGCGVkn.segment(0,6).transpose() << std::endl;
+    // a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
+    // b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
+    // Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star << std::endl;
+    // new_kappa2 = kappa2Brent(0., 50., spde, a_star, b_star, n_sess);
+    // CG update for kappa2
+    d1f1 = sumDiagP_tilCVkn / 2.0 - sumDiagP_tilGCGVkn / (2.0 * theta[k] * theta[k]);
+    d1f2 = sumDiagPCVkn + muCmu + sumDiagPGCGVkn / (theta[k] * theta[k]) - muGCGmu / (theta[k] * theta[k]);
+    d1f2 = d1f2 / -(8 * M_PI * theta[k + K]);
+    d1f = d1f1 + d1f2;
+    // Using interpolation/extrapolation to estimate the value of d2f1
+    // Make a matrix with three columns to include the values of the
+    // absolute differences between the current value for kappa2 and the
+    // gridded values from the matrix that includes the precomputed numerical
+    // approximation to the second derivative.
+    Eigen::MatrixXd kappaDiff_d2f1 = Eigen::MatrixXd::Zero(d2f1.rows(),3);
+    kappaDiff_d2f1.rightCols(2) = d2f1;
+    for(int j=0;j<d2_grid_size;j++) {
+      kappaDiff_d2f1(j,0) = std::abs(theta[k] - d2f1(j,0)); // absolute difference
+    }
+    // Now reorder that matrix by the absolute differences
+    eigen_sort_rows_by_head(kappaDiff_d2f1);
+    // Calculate the slope and intercept of the line that passes through the
+    // two nearest points
+    double interp_slope = (kappaDiff_d2f1(1,2) - kappaDiff_d2f1(0,2)) / (kappaDiff_d2f1(1,1) - kappaDiff_d2f1(0,1));
+    double interp_intercept = kappaDiff_d2f1(0,2) - interp_slope * kappaDiff_d2f1(0,1);
+    double interp_d2f1 = interp_intercept + interp_slope * theta[k];
+    // BEGIN NOT USED
+    // int lowest_idx = 2;
+    // Eigen::VectorXd in_vec = diff_kappa2, out_vec(lowest_idx);
+    // for(int l=0;l<lowest_idx;l++) {
+    //   int min_idx =0;
+    //   for(int j=1;j<d2_grid_size;j++) {
+    //     if(diff_kappa2[j] < diff_kappa2[min_idx]) min_idx = j;
+    //   }
+    //   out_vec[l] = min_idx;
+    //   diff_kappa2 =
+    // }
+    // kappa_lower =
+    // d2f1_a =
+    // END NOT USED
+    double d2f2 = sumDiagPGCGVkn + muGCGmu;
+    d2f2 = d2f2 / (-4 * M_PI * theta[k + K] * std::pow(theta[k],3));
+    double d2f = interp_d2f1 + d2f2;
+    new_kappa2 = theta[k] -  d1f / d2f; // Good ol' fashioned Newton's method
     // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
     theta_new[k] = new_kappa2;
     // Update phi
@@ -1090,6 +1381,155 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
   return(sqobj);
 }
 
+SquaremOutput theta_squarem2_CG(Eigen::VectorXd par, const Eigen::SparseMatrix<double> A,
+                             Eigen::SparseMatrix<double> QK,
+                             SimplicialLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                             SimplicialLLT<Eigen::SparseMatrix<double>> &cholQ,
+                             // Eigen::PardisoLLT<Eigen::SparseMatrix<double>> &cholSigInv,
+                             const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
+                             const int Ns, const Eigen::VectorXd y, const double yy,
+                             const Eigen::MatrixXd d2f1,
+                             const List spde, double tol, bool verbose){
+  double res,parnorm,kres; // theta_length=par.size();
+  Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
+  Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
+  double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
+  // double ob_pcpp, ob_p1cpp, ob_p2cpp, ob_ptmp, ob_pnew, rel_llik_pp1, rel_llik_p1p2, rel_llik_tmpNew;
+  int iter,feval;
+  bool conv,extrap;
+  stepmin=SquaremDefault.stepmin0;
+  stepmax=SquaremDefault.stepmax0;
+  if(verbose){Rcout<<"Squarem-2"<<std::endl;}
+
+  iter=1;pcpp=par;pnew=par;
+  feval=0;conv=true;
+  // ob_pcpp = emObj(pcpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+
+  const long int parvectorlength=pcpp.size();
+
+  while(feval<SquaremDefault.maxiter){
+    //Step 1
+    extrap = true;
+    // try{p1cpp=fixptfn(pcpp);feval++;}
+    try{p1cpp=theta_fixpt_CG(pcpp, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, d2f1, yy, spde, tol);feval++;}
+    // try{p1cpp=theta_fixptPARDISO(pcpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+    catch(...){
+      Rcout<<"Error in fixptfn function evaluation";
+      return sqobjnull;
+    }
+    // ob_p1cpp = emObj(p1cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_pp1 = std::abs(ob_p1cpp - ob_pcpp) / std::abs(ob_pcpp);
+
+    sr2_scalar=0;
+    for (int i=0;i<parvectorlength;i++){sr2_scalar+=std::pow(p1cpp[i]-pcpp[i],2.0);}
+    // sr2_scalar = std::sqrt(sr2_scalar);
+    double pcpp_norm = pcpp.squaredNorm();
+    pcpp_norm = std::sqrt(pcpp_norm);
+    // if(sr2_scalar / pcpp_norm < tol){break;}
+    // if(std::sqrt(sr2_scalar)<tol){break;}
+    if(std::sqrt(sr2_scalar) / pcpp_norm <tol){break;}
+    // if(rel_llik_pp1<tol){break;}
+
+    //Step 2
+    try{p2cpp=theta_fixpt_CG(p1cpp, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, d2f1, yy, spde, tol);feval++;}
+    // try{p2cpp=theta_fixptPARDISO(p1cpp, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+    catch(...){
+      Rcout<<"Error in fixptfn function evaluation";
+      return sqobjnull;
+    }
+    // ob_p2cpp = emObj(p2cpp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+    // rel_llik_p1p2 = std::abs(ob_p2cpp - ob_p1cpp) / std::abs(ob_p1cpp);
+    sq2_scalar=0;
+    for (int i=0;i<parvectorlength;i++){sq2_scalar+=std::pow(p2cpp[i]-p1cpp[i],2.0);}
+    sq2_scalar=std::sqrt(sq2_scalar);
+    double p1cpp_norm = p1cpp.squaredNorm();
+    p1cpp_norm = std::sqrt(p1cpp_norm);
+    if (sq2_scalar / p1cpp_norm <tol){break;}
+    // if (rel_llik_p1p2<tol){break;}
+    // if (sq2_scalar<tol){break;}
+    res=sq2_scalar;
+    // res=rel_llik_p1p2;
+
+    sv2_scalar=0;
+    for (int i=0;i<parvectorlength;i++){sv2_scalar+=std::pow(p2cpp[i]-2.0*p1cpp[i]+pcpp[i],2.0);}
+    srv_scalar=0;
+    for (int i=0;i<parvectorlength;i++){srv_scalar+=(p2cpp[i]-2.0*p1cpp[i]+pcpp[i])*(p1cpp[i]-pcpp[i]);}
+    //std::cout<<"sr2,sv2,srv="<<sr2_scalar<<","<<sv2_scalar<<","<<srv_scalar<<std::endl;//debugging
+
+    //Step 3 Proposing new value
+    switch (SquaremDefault.method){
+    case 1: alpha= -srv_scalar/sv2_scalar;
+    case 2: alpha= -sr2_scalar/srv_scalar;
+    case 3: alpha= std::sqrt(sr2_scalar/sv2_scalar);
+    }
+
+    alpha=std::max(stepmin,std::min(stepmax,alpha));
+    //std::cout<<"alpha="<<alpha<<std::endl;//debugging
+    for (int i=0;i<parvectorlength;i++){pnew[i]=pcpp[i]+2.0*alpha*(p1cpp[i]-pcpp[i])+alpha*alpha*(p2cpp[i]-2.0*p1cpp[i]+pcpp[i]);}
+    // pnew = pcpp + 2.0*alpha*q1 + alpha*alpha*(q2-q1);
+    // ob_pnew = emObj(pnew,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+
+    //Step 4 stabilization
+    if(std::abs(alpha-1)>0.01){
+      try{ptmp=theta_fixpt_CG(pnew, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, d2f1, yy, spde, tol);feval++;}
+      // try{ptmp=theta_fixptPARDISO(pnew, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol);feval++;}
+      catch(...){
+        pnew=p2cpp;
+        if(alpha==stepmax){
+          stepmax=std::max(SquaremDefault.stepmax0,stepmax/SquaremDefault.mstep);
+        }
+        alpha=1;
+        extrap=false;
+        if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
+        if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
+        pcpp=pnew;
+        if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+        iter++;
+        continue;//next round in while loop
+      }
+      // ob_ptmp = emObj(ptmp,A,QK,cholSigInv,XpsiY,Xpsi,Ns,y,spde);
+      res=0;
+      for (int i=0;i<parvectorlength;i++){res+=std::pow(ptmp[i]-pnew[i],2.0);}
+      res=std::sqrt(res);
+      // double pnew_norm = pnew.squaredNorm();
+      // pnew_norm = std::sqrt(pnew_norm);
+      // res = res/ pnew_norm;
+      // rel_llik_tmpNew = std::abs(ob_ptmp - ob_pnew)/ std::abs(ob_pnew);
+      parnorm=0;
+      for (int i=0;i<parvectorlength;i++){parnorm+=std::pow(p2cpp[i],2.0);}
+      parnorm=std::sqrt(parnorm/parvectorlength);
+      kres=SquaremDefault.kr*(1+parnorm)+sq2_scalar;
+      if(res <= kres){
+        pnew=ptmp;
+      }else{
+        pnew=p2cpp;
+        if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
+        alpha=1;
+        extrap=false;
+      }
+      // res = rel_llik_tmpNew;
+    }
+
+    if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
+    if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
+
+    pcpp=pnew;
+    if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+    iter++;
+  }
+
+  if (feval >= SquaremDefault.maxiter){conv=false;}
+
+  //assigning values
+  sqobj.par=pcpp;
+  sqobj.valueobjfn=NAN;
+  sqobj.iter=iter;
+  sqobj.pfevals=feval;
+  sqobj.objfevals=0;
+  sqobj.convergence=conv;
+  return(sqobj);
+}
+
 //' Perform the EM algorithm of the Bayesian GLM fitting
 //'
 //' @param theta the vector of initial values for theta
@@ -1102,13 +1542,14 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 //' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 //' @param tol a value for the tolerance used for a stopping rule (compared to
 //'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
+//' @param CG (logical) Should conjugate gradient methods be used?
 //' @param verbose (logical) Should intermediate output be displayed?
 //' @export
 // [[Rcpp::export(rng = false)]]
 Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
                      Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
                      Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,
-                     int Ns, double tol, bool verbose = false) {
+                     int Ns, double tol, bool CG = false, bool verbose = false) {
   // Bring in the spde matrices
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
   Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
@@ -1123,6 +1564,11 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   // Eigen::PardisoLLT<Eigen::SparseMatrix<double,Eigen::RowMajor>> cholSigInv;
   cholSigInv.analyzePattern(Sig_inv);
   cholSigInv.factorize(Sig_inv);
+  SimplicialLLT<Eigen::SparseMatrix<double>> cholQ; //  for CG
+  if(CG) {
+    cholQ.analyzePattern(QK); //  for CG
+    cholQ.factorize(QK); // for CG
+  }
   if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
   // Initialize everything
   Eigen::SparseMatrix<double> Xpsi = X * Psi;
@@ -1153,7 +1599,15 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   // Using SQUAREM
   SquaremOutput SQ_result;
   SquaremDefault.tol = tol;
-  SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol, verbose);
+  if(CG) {
+    Rcout << "Precalculating the approximate second derivative for conjugate gradient...";
+    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 20);
+    Rcout << "DONE!" << std::endl;
+    SQ_result = theta_squarem2_CG(theta, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, yy, d2f1_k, spde, tol, verbose);
+  }
+  if(!CG){
+    SQ_result = theta_squarem2(theta, A, QK, cholSigInv, XpsiY, Xpsi, Ns, y, yy, spde, tol, verbose);
+  }
   theta= SQ_result.par;
   // Bring results together for output
   if(verbose) {Rcout << "Final theta: " << theta.transpose() << std::endl;}

@@ -287,6 +287,7 @@ BayesGLMEM <- function(data,
       A = as(A, "dgCMatrix"),
       Ns = 50,
       tol = tol,
+      CG = TRUE,
       verbose = verbose
     )
   # > End EM algorithm ----
@@ -650,6 +651,7 @@ BayesGLMEM_vol3D <-
         A = as(A, "dgCMatrix"),
         Ns = 50,
         tol = tol,
+        CG = TRUE,
         verbose = verbose
       )
     # > End EM algorithm ----

@@ -11,6 +11,18 @@ logDetQt <- function(kappa2, in_list, n_sess) {
     .Call(`_BayesfMRI_logDetQt`, kappa2, in_list, n_sess)
 }
 
+#' Second derivative of the first term in the objective function for kappa2
+#'
+#' @param spde a list with elements Cmat, Gmat, and GtCinvG
+#' @param grid_size the number of grid points at which to numerically evaluate
+#'   the second derivative
+#' @param Ns the integer number of samples for the Hutchinson approximation
+#' @param grid_limit the largest number in the grid
+#' @export
+d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 20.0) {
+    .Call(`_BayesfMRI_d2f1_kappa`, spde, grid_size, Ns, grid_limit)
+}
+
 #' Find the initial values of kappa2 and phi
 #'
 #' @param theta a vector of length two containing the range and scale parameters
@@ -37,10 +49,11 @@ initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
 #' @param Ns the number of columns for the random matrix used in the Hutchinson estimator
 #' @param tol a value for the tolerance used for a stopping rule (compared to
 #'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
+#' @param CG (logical) Should conjugate gradient methods be used?
 #' @param verbose (logical) Should intermediate output be displayed?
 #' @export
-findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
-    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol, verbose)
+findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, CG = FALSE, verbose = FALSE) {
+    .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol, CG, verbose)
 }
 
 #' Get the prewhitening matrix for a single data location
