@@ -132,7 +132,7 @@ BayesGLM_vol3D <-
 
   regions_set <- unique(labels)
   num_regions <- length(regions_set)
-  if(class(groups_df) != 'data.frame') stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
+  if(!inherits(groups_df,"data.frame")) stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
   if(!all.equal(sort(names(groups_df)), sort(c('label','region','group')))) stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
   if(nrow(groups_df) != num_regions) stop('The groups_df argument should contain one row for each region represented in the labels vector.')
 

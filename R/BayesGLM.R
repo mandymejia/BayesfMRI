@@ -149,14 +149,14 @@ BayesGLM_cifti <- function(cifti_fname,
   #do_sub <- ('subcortical' %in% brainstructures)
   if(!is.null(onsets)){
     #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
-    if(class(onsets[[1]]) == 'list') {
+    if(inherits(onsets[[1]],"list")) {
       if(is.null(names(onsets[[1]])))
         beta_names <- paste0("beta",seq_len(length(onsets[[1]])))
       if(!is.null(names(onsets[[1]])))
         beta_names <- names(onsets[[1]])
     }
     #for single session data, onsets is a list (representing tasks) of data frames or matrices
-    if(('data.frame' %in% class(onsets[[1]])) | ('matrix' %in% class(onsets[[1]]))) {
+    if(inherits(onsets[[1]],c("data.frame","matrix"))) {
       if(is.null(names(onsets)))
         beta_names <- paste0("beta",seq_len(length(onsets)))
       if(!is.null(names(onsets)))
@@ -164,13 +164,13 @@ BayesGLM_cifti <- function(cifti_fname,
     }
   }
   if(!is.null(design)) {
-    if(any(class(design) == "list")) {
+    if(inherits(design,"list")) {
       if(is.null(colnames(design[[1]])))
         beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
       if(!is.null(colnames(design[[1]])))
         beta_names <- colnames(design[[1]])
     }
-    if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
+    if(inherits(design,c("matrix","data.frame"))) {
       if(is.null(colnames(design)))
         beta_names <- paste0("beta",seq_len(ncol(design)))
       if(!is.null(colnames(design)))
@@ -214,7 +214,7 @@ BayesGLM_cifti <- function(cifti_fname,
 
   cat('\nSETTING UP DATA\n')
 
-  if(class(cifti_fname) == "character") {
+  if(inherits(cifti_fname,"character")) {
 
     ### For each session, separate the CIFTI data into left/right/sub and read in files
     # if(do_left) cifti_left <- vector('list', n_sess)
@@ -308,7 +308,7 @@ BayesGLM_cifti <- function(cifti_fname,
     }, simplify = F)
   }
 
-  if(class(cifti_fname[[1]]) == "xifti") {
+  if(inherits(cifti_fname[[1]],"xifti")) {
     cifti_data <- sapply(brainstructures, function(br_str) {
       if(br_str %in% c('left','right')) {
         hem_sess_cifti <- sapply(1:n_sess, function(ss){
@@ -661,13 +661,13 @@ BayesGLM_cifti <- function(cifti_fname,
   }
   for(ss in 1:n_sess){
     if(do_classical){
-      if(do_left & class(classicalGLM_results$left) != "try-error") {
+      if(do_left & !inherits(classicalGLM_results$left,"try-error")) {
         datL <- classicalGLM_results$left[[ss]]$estimates[cortexL_mwall==1,]
       }
-      if(do_right & class(classicalGLM_results$right) != "try-error") {
+      if(do_right & !inherits(classicalGLM_results$right,"try-error")) {
         datR <- classicalGLM_results$right[[ss]]$estimates[cortexR_mwall==1,]
       }
-      if(do_sub & class(classicalGLM_results$vol) != "try-error") {
+      if(do_sub & !inherits(classicalGLM_results$vol,"try-error")) {
         dat_sub <- classicalGLM_results$vol[[ss]]$estimates
       }
       classicalGLM_cifti[[ss]] <- as.xifti(
@@ -686,11 +686,11 @@ BayesGLM_cifti <- function(cifti_fname,
       classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_Bayesian){
-      if(do_left & class(BayesGLM_results$left) != "try-error")
+      if(do_left & !inherits(BayesGLM_results$left,"try-error"))
         datL <- BayesGLM_results$left$beta_estimates[[ss]][cortexL_mwall==1,]
-      if(do_right & class(BayesGLM_results$right) != "try-error")
+      if(do_right & !inherits(BayesGLM_results$right,"try-error"))
         datR <- BayesGLM_results$right$beta_estimates[[ss]][cortexR_mwall==1,]
-      if(do_sub & class(BayesGLM_results$vol) != "try-error")
+      if(do_sub & !inherits(BayesGLM_results$vol,"try-error"))
         dat_sub <- BayesGLM_results$vol$beta_estimates[[ss]]
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
@@ -707,11 +707,11 @@ BayesGLM_cifti <- function(cifti_fname,
       BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
     }
     if(do_EM) {
-      if(do_left & class(GLMEM_results$left) != "try-error")
+      if(do_left & !inherits(GLMEM_results$left,"try-error"))
         datL <- GLMEM_results$left$beta_estimates[[ss]]
-      if(do_right & class(GLMEM_results$right) != "try-error")
+      if(do_right & !inherits(GLMEM_results$right,"try-error"))
         datR <- GLMEM_results$right$beta_estimates[[ss]]
-      if(do_sub & class(GLMEM_results$vol) != "try-error")
+      if(do_sub & !inherits(GLMEM_results$vol,"try-error"))
         dat_sub <- GLMEM_results$vol$beta_estimates[[ss]]
       GLMEM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
@@ -733,17 +733,17 @@ BayesGLM_cifti <- function(cifti_fname,
     if(do_classical) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
-      if(do_left & class(classicalGLM_results$left) != "try-error") {
+      if(do_left & !inherits(classicalGLM_results$left,"try-error")) {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
         maskL <- classicalGLM_results$left$avg$mask[cortexL_mwall == 1]
         datL[maskL,] <- classicalGLM_results$left$avg$estimates[cortexL_mwall == 1,]
       }
-      if(do_right & class(classicalGLM_results$right) != "try-error") {
+      if(do_right & !inherits(classicalGLM_results$right,"try-error")) {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
         maskR <- classicalGLM_results$right$avg$mask[cortexR_mwall == 1]
         datR[maskR,] <- classicalGLM_results$right$avg$estimates[cortexR_mwall == 1,]
       }
-      if(do_sub & class(classicalGLM_results$vol) != "try-error") {
+      if(do_sub & !inherits(classicalGLM_results$vol,"try-error")) {
         dat_sub <- classicalGLM_results$vol$avg$estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object
@@ -765,17 +765,17 @@ BayesGLM_cifti <- function(cifti_fname,
     if (do_Bayesian) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
-      if(do_left & class(BayesGLM_results$left) != "try-error") {
+      if(do_left & !inherits(BayesGLM_results$left,"try-error")) {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
         maskL <- BayesGLM_results$left$mask[cortexL_mwall == 1]
         datL[maskL,] <- BayesGLM_results$left$avg_beta_estimates
       }
-      if(do_right & class(BayesGLM_results$right) != "try-error") {
+      if(do_right & !inherits(BayesGLM_results$right,"try-error")) {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
         maskR <- BayesGLM_results$right$mask[cortexR_mwall == 1]
         datR[maskR,] <- BayesGLM_results$right$avg_beta_estimates
       }
-      if(do_sub & class(BayesGLM_results$vol) != "try-error") {
+      if(do_sub & !inherits(BayesGLM_results$vol,"try-error")) {
         dat_sub <- BayesGLM_results$vol$avg_beta_estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object
@@ -797,17 +797,17 @@ BayesGLM_cifti <- function(cifti_fname,
     if (do_EM) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
-      if(do_left & class(GLMEM_results$left) != "try-error") {
+      if(do_left & !inherits(GLMEM_results$left,"try-error")) {
         datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
         maskL <- GLMEM_results$left$mask[cortexL_mwall == 1]
         datL[maskL,] <- GLMEM_results$left$avg_beta_estimates
       }
-      if(do_right & class(GLMEM_results$right) != "try-error") {
+      if(do_right & !inherits(GLMEM_results$right,"try-error")) {
         datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
         maskR <- GLMEM_results$right$mask[cortexR_mwall == 1]
         datR[maskR,] <- GLMEM_results$right$avg_beta_estimates
       }
-      if(do_sub & class(GLMEM_results$vol) != "try-error") {
+      if(do_sub & !inherits(GLMEM_results$vol,"try-error")) {
         dat_sub <- GLMEM_results$vol$avg_beta_estimates
       }
       # Adding the averages to the front of the BayesGLM_cifti object

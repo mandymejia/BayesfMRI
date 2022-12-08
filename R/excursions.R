@@ -1,13 +1,13 @@
 #' Find connected indices on mesh
-#' 
+#'
 #' @param ind indices
 #' @param mesh The inla.mesh
-#' 
+#'
 #' @return list of connected components in \code{ind}
-#' 
-#' @keywords internal 
+#'
+#' @keywords internal
 find.connected <- function(ind,mesh){
-  if(class(mesh) != "inla.mesh"){
+  if(!inherits(mesh,"inla.mesh")){
     stop("mesh should be of class inla.mesh")
   }
 
@@ -39,9 +39,9 @@ find.connected <- function(ind,mesh){
 }
 
 #' Find smallest activation
-#' 
+#'
 #' Find smallest activation
-#' 
+#'
 #' Internal function that finds the smallest excursion set. If res is is of class excurobj, the
 #'  continuous function is not used to calculate the area of the connected components. Instead the
 #'  function uses the approximation that the contribution from each element
@@ -49,16 +49,16 @@ find.connected <- function(ind,mesh){
 #'  The argument area.el contains these integrals. The argument is thus only used if res is of class
 #'  excurobj.  area.limit is a limit for the area of the sets. NULL is returned if all sets have areas
 #'  larger than area.limit. If factor>0 the set is expanded by an amount given by factor*area.limit.
-#' 
+#'
 #' @param res Undocumented
 #' @param mesh Undocumented
 #' @param area.limit Undocumented
 #' @param factor Undocumented
 #' @param area.el Undocumented
-#' 
+#'
 #' @import sp
-#' 
-#' @keywords internal 
+#'
+#' @keywords internal
 find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 
   # Check to see that the INLA package is installed
@@ -66,7 +66,7 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
     stop("`find.smallest.activation` requires the `grDevices` package. Please install it.", call. = FALSE)
   }
 
-  if (class(res) == "excurobj") {
+  if (inherits(res,"excurobj")) {
 
     ind.E <- which(res$E == 1)
     ind.rem <- NULL
@@ -131,13 +131,13 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 }
 
 #' Excursion sets with removal
-#' 
+#'
 #' Calculation of excursion sets with the removal of small areas
 #'
 #' Function similar to the excursions function, but which also takes a mesh as input
 #'  and computes modified excursion sets where all regions with areas smaller than area.limit are
 #'  removed in the internal calculations.
-#' 
+#'
 #' @param alpha Error probability for the excursion set.
 #' @param u Excursion or contour level.
 #' @param mu Expectation vector.
@@ -174,10 +174,10 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #'
 #' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. Otherwise a list with
 #' the same elements as the output of \code{continuous}.
-#' 
+#'
 #' @import excursions
 #' @importFrom INLA inla.mesh.projector
-#' 
+#'
 #' @export
 excursions.no.spurious <- function(alpha,
                                    u,
@@ -482,13 +482,13 @@ excursions.no.spurious <- function(alpha,
 }
 
 #' Excursion sets with INLA and removal
-#' 
+#'
 #' Calculation of excursion sets with the removal of small areas
 #'
 #' Function similar to the excursions.inla function, but which also takes a mesh as input
 #'  and computes modified excursion sets where all regions with areas smaller than area.limit are
 #'  removed in the internal calculations.
-#' 
+#'
 #' @param result.inla Result object from INLA call.
 #' @param stack The stack object used in the INLA call.
 #' @param name The name of the component for which to do the calculation. This argument should
@@ -523,9 +523,9 @@ excursions.no.spurious <- function(alpha,
 #'  function uses the approximation that the area for each node is the integral of the FEM basis function \eqn{\phi_i}.
 #' @param plot.progress Logical parameter that indicates whether the results should be plotted.
 #'
-#' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. 
+#' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}.
 #'  Otherwise a list with the same elements as the output of \code{continuous}.
-#' 
+#'
 #' @export
 excursions.inla.no.spurious <- function(result.inla,
                             stack,

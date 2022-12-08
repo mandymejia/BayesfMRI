@@ -14,10 +14,10 @@
 #'
 organize_replicates <- function(n_sess, beta_names, mesh){
 
-  if(!(class(mesh) %in% c('inla.mesh','BayesfMRI.spde'))) stop('mesh must be of class inla.mesh  (for surface data, see `help(make_mesh)`) or BayesfMRI.spde (for subcortical data, see `help(create_spde_vol3D)`)')
+  if(!inherits(mesh,c("inla.mesh","BayesfMRI.spde"))) stop('mesh must be of class inla.mesh  (for surface data, see `help(make_mesh)`) or BayesfMRI.spde (for subcortical data, see `help(create_spde_vol3D)`)')
   spatial <- mesh$idx$loc
 
-  if(class(mesh) == "BayesfMRI.spde") { # This is for the subcortical case
+  if(inherits(mesh,"BayesfMRI.spde")) { # This is for the subcortical case
     # We have additional locations within the mesh in this case, so we need to
     # account for them while also taking into account the fact that the
     # indices will increment between the regions

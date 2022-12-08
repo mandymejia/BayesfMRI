@@ -43,7 +43,7 @@ id_activations_cifti <- function(model_obj,
                                  excur_method = c("EB","QC"),
                                  verbose = TRUE){
 
-  if(class(model_obj) != 'BayesGLM_cifti') stop('The model_obj argument must be of class BayesGLM_cifti (output of BayesGLM_cifti function), but it is not.')
+  if(!inherits(model_obj,"BayesGLM_cifti")) stop('The model_obj argument must be of class BayesGLM_cifti (output of BayesGLM_cifti function), but it is not.')
 
   method <- match.arg(method, c('Bayesian','classical','EM'))
   if(!(method %in% c('Bayesian','classical','EM'))) stop("The method argument should only be 'Bayesian', 'classical', or 'EM'.")
@@ -237,7 +237,7 @@ id_activations.posterior <- function(model_obj,
                                      area.limit=NULL,
                                      excur_method = c("EB","QC")){
 
-  if(class(model_obj) != "BayesGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
+  if(!inherits(model_obj,"BayesGLM")) stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'BayesGLM'."))
 
   excur_method <- match.arg(excur_method, c("EB","QC"))
 
@@ -368,7 +368,7 @@ id_activations.classical <- function(model_obj,
                                      correction = c("FWER","FDR","none"),
                                      mesh = NULL) {
 
-  if(class(model_obj) != "classicalGLM") stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
+  if(!inherits(model_obj,"classicalGLM")) stop(paste0("The model object is of class ",class(model_obj)," but should be of class 'classicalGLM'."))
 
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
@@ -496,7 +496,7 @@ id_activations.em <-
            alpha = 0.05,
            threshold,
            area.limit = NULL) {
-    if (class(model_obj) != "BayesGLM")
+    if (!inherits(model_obj,"BayesGLM"))
       stop(paste0(
         "The model object is of class ",
         class(model_obj),

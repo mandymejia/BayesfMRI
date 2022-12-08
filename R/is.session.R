@@ -59,7 +59,7 @@ is.session <- function(sess){
     if(!is_pw){
       if(nrow(sess$BOLD) != nrow(sess$design)){stop("BOLD and design don't have the same number of rows (time points)")}
     } else {
-      if(class(sess$design) != "dgCMatrix"){stop(paste0('I expected the class of design to be dgCMatrix (for prewhitened data) or matrix (for non-prewhitened data), but it is of class ', class(sess$design)))}
+      if(!inherits(sess$design,"dgCMatrix")){stop(paste0('I expected the class of design to be dgCMatrix (for prewhitened data) or matrix (for non-prewhitened data), but it is of class ', class(sess$design)))}
       is_missing <- is.na(sess$BOLD[1,])
       nvox <- sum(!is_missing)
       if(nrow(sess$BOLD) != nrow(sess$design)/nvox){stop("If prewhitening has been performed, the number of rows in the design matrix should be T*V, where T=nrow(BOLD) and V is the number of columns of BOLD that are non-NA.")}

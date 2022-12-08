@@ -29,8 +29,8 @@ plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
     stop("`plot_slice` requires the `purrr` package. Please install it.", call. = FALSE)
   }
 
-  if(class(X) == "matrix") X = list(single_activation_field = X)
-  if(class(X) != "list") stop("Expected a matrix or list for X.")
+  if(inherits(X,"matrix")) X = list(single_activation_field = X)
+  if(!inherits(X,"list")) stop("Expected a matrix or list for X.")
   if(any(!sapply(X,function(x) {
     "matrix" %in% class(x)
   }, simplify = T))) {
@@ -234,13 +234,13 @@ melt_mat <- function(x) {
 }
 
 #' Melt list of matrices
-#' 
+#'
 #' See \code{melt_mat}
-#' 
+#'
 #' @param X_list list of matrices
 #' @return A data.frame
 #' @keywords internal
-#' 
+#'
 melt_mat2 <- function(X_list){
   X_list <- lapply(X_list, melt_mat)
   for (ii in seq(length(X_list))) {
