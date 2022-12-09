@@ -78,10 +78,11 @@ Eigen::MatrixXd makeV(int n_spde, int Ns) {
 //'   the second derivative
 //' @param Ns the integer number of samples for the Hutchinson approximation
 //' @param grid_limit the largest number in the grid
+//' @param n_sess The number of runs in the data
 //' @export
 // [[Rcpp::export(rng = false)]]
 Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 200,
-                           double grid_limit = 50.0) {
+                           double grid_limit = 50.0, int n_sess = 1) {
   if(grid_size < 20) {
     grid_size = 20;
     Rcout << "Grid size should be at least 20 for adequate coverage. Setting to 20 now." << std::endl;
@@ -124,7 +125,7 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
     if(i > 0) {
       d2f1 = d1f1-d1f1_old;
       out((i-1),0) = (kappa2 + kappa2_old) / 2.0;
-      out((i-1),1) = d2f1;
+      out((i-1),1) = d2f1 * n_sess;
     }
     if(kappa2 > 1e-3) grid_step = 0.25;
     if(kappa2 > 1) grid_step = grid_limit / grid_size;
@@ -1610,8 +1611,10 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   SquaremOutput SQ_result;
   SquaremDefault.tol = tol;
   if(CG) {
+    int nKs = A.rows();
+    int n_sess = nKs / (n_spde * K);
     Rcout << "Precalculating the approximate second derivative for conjugate gradient...";
-    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 20);
+    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 20, n_sess);
     Rcout << "DONE!" << std::endl;
     SQ_result = theta_squarem2_CG(theta, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, yy, d2f1_k, spde, tol, verbose);
   }

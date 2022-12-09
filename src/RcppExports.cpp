@@ -24,15 +24,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // d2f1_kappa
-Eigen::MatrixXd d2f1_kappa(const Rcpp::List& spde, int grid_size, int Ns, double grid_limit);
-RcppExport SEXP _BayesfMRI_d2f1_kappa(SEXP spdeSEXP, SEXP grid_sizeSEXP, SEXP NsSEXP, SEXP grid_limitSEXP) {
+Eigen::MatrixXd d2f1_kappa(const Rcpp::List& spde, int grid_size, int Ns, double grid_limit, int n_sess);
+RcppExport SEXP _BayesfMRI_d2f1_kappa(SEXP spdeSEXP, SEXP grid_sizeSEXP, SEXP NsSEXP, SEXP grid_limitSEXP, SEXP n_sessSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::traits::input_parameter< const Rcpp::List& >::type spde(spdeSEXP);
     Rcpp::traits::input_parameter< int >::type grid_size(grid_sizeSEXP);
     Rcpp::traits::input_parameter< int >::type Ns(NsSEXP);
     Rcpp::traits::input_parameter< double >::type grid_limit(grid_limitSEXP);
-    rcpp_result_gen = Rcpp::wrap(d2f1_kappa(spde, grid_size, Ns, grid_limit));
+    Rcpp::traits::input_parameter< int >::type n_sess(n_sessSEXP);
+    rcpp_result_gen = Rcpp::wrap(d2f1_kappa(spde, grid_size, Ns, grid_limit, n_sess));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -87,7 +88,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_BayesfMRI_logDetQt", (DL_FUNC) &_BayesfMRI_logDetQt, 3},
-    {"_BayesfMRI_d2f1_kappa", (DL_FUNC) &_BayesfMRI_d2f1_kappa, 4},
+    {"_BayesfMRI_d2f1_kappa", (DL_FUNC) &_BayesfMRI_d2f1_kappa, 5},
     {"_BayesfMRI_initialKP", (DL_FUNC) &_BayesfMRI_initialKP, 6},
     {"_BayesfMRI_findTheta", (DL_FUNC) &_BayesfMRI_findTheta, 11},
     {"_BayesfMRI_getSqrtInvCpp", (DL_FUNC) &_BayesfMRI_getSqrtInvCpp, 3},

@@ -18,9 +18,10 @@ logDetQt <- function(kappa2, in_list, n_sess) {
 #'   the second derivative
 #' @param Ns the integer number of samples for the Hutchinson approximation
 #' @param grid_limit the largest number in the grid
+#' @param n_sess The number of runs in the data
 #' @export
-d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 50.0) {
-    .Call(`_BayesfMRI_d2f1_kappa`, spde, grid_size, Ns, grid_limit)
+d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 50.0, n_sess = 1L) {
+    .Call(`_BayesfMRI_d2f1_kappa`, spde, grid_size, Ns, grid_limit, n_sess)
 }
 
 #' Find the initial values of kappa2 and phi

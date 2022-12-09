@@ -4,7 +4,7 @@
 \alias{d2f1_kappa}
 \title{Second derivative of the first term in the objective function for kappa2}
 \usage{
-d2f1_kappa(spde, grid_size = 50L, Ns = 200L, grid_limit = 50)
+d2f1_kappa(spde, grid_size = 50L, Ns = 200L, grid_limit = 50, n_sess = 1L)
 }
 \arguments{
 \item{spde}{a list with elements Cmat, Gmat, and GtCinvG}
@@ -15,6 +15,8 @@ the second derivative}
 \item{Ns}{the integer number of samples for the Hutchinson approximation}
 
 \item{grid_limit}{the largest number in the grid}
+
+\item{n_sess}{The number of runs in the data}
 }
 \description{
 Second derivative of the first term in the objective function for kappa2
