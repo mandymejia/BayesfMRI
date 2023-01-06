@@ -28,6 +28,7 @@ classicalGLM2 <- function(results,
                           gamma = 0,
                           correction = c("FWER", "FDR"),
                           alpha = 0.05) {
+  start_time <- proc.time()[3]
   result_classes <- sapply(results, class)
   results_class <- unique(result_classes)
   if (length(results_class) > 1)
@@ -108,7 +109,9 @@ classicalGLM2 <- function(results,
     ))
   }, simplify = F)
   names(gamma_result) <- paste0("gamma = ", gamma)
+  total_time <- proc.time()[3] - start_time
   out <- list(avg_estimate = avg_estimate,
-              active_result = gamma_result)
+              active_result = gamma_result,
+              total_time = total_time)
   return(out)
 }
