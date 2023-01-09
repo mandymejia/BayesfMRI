@@ -461,13 +461,16 @@ BayesGLM_cifti <- function(cifti_fname,
         # Adding the try() function here so that if one model fails, the others
         # can still run
         start_time <- proc.time()[3]
+        start_mem <- sum(.Internal(gc(FALSE,TRUE,TRUE))[13:14]) # Measures maximum memory use
         classicalGLM_results[[br_str]] <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_hem,
                                                        scale_design = FALSE) # done above
         classicalGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+        classicalGLM_results[[br_str]]$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
+        start_mem <- sum(.Internal(gc(FALSE,TRUE,TRUE))[13:14]) # Measures maximum memory use
         BayesGLM_results[[br_str]] <- BayesGLM(data = session_data,
                                                beta_names = beta_names,
                                                vertices = verts,
@@ -481,9 +484,11 @@ BayesGLM_cifti <- function(cifti_fname,
                                                avg_sessions = avg_sessions,
                                                trim_INLA = trim_INLA)
         BayesGLM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+        BayesGLM_results[[br_str]]$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }
       if(do_EM) {
         start_time <- proc.time()[3]
+        start_mem <- sum(.Internal(gc(FALSE,TRUE,TRUE))[13:14]) # Measures maximum memory use
         GLMEM_results[[br_str]] <- BayesGLMEM(data = session_data,
                                               beta_names = beta_names,
                                               vertices = verts,
@@ -499,6 +504,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                               verbose = verbose,
                                               avg_sessions = avg_sessions)
         GLMEM_results[[br_str]]$total_time <- proc.time()[3] - start_time
+        GLMEM_results[[br_str]]$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }
     }
     # >>> Subcortical model ----
@@ -551,13 +557,16 @@ BayesGLM_cifti <- function(cifti_fname,
 
       if(do_classical) {
         start_time <- proc.time()[3]
+        start_mem <- sum(.Internal(gc(FALSE,TRUE,TRUE))[13:14]) # Measures maximum memory use
         classicalGLM_results$vol <- classicalGLM(data=session_data,
                                                        scale_BOLD=scale_BOLD_sub,
                                                        scale_design = FALSE) # done above
         classicalGLM_results$vol$total_time <- proc.time()[3] - start_time
+        classicalGLM_results$vol$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }
       if(do_Bayesian) {
         start_time <- proc.time()[3]
+        start_mem <- sum(.Internal(gc(FALSE,TRUE,TRUE))[13:14]) # Measures maximum memory use
         BayesGLM_results$vol <- BayesGLM_vol3D(
           data = session_data,
           locations = locs,
@@ -571,9 +580,11 @@ BayesGLM_cifti <- function(cifti_fname,
           verbose=verbose
         )
         BayesGLM_results$vol$total_time <- proc.time()[3] - start_time
+        BayesGLM_results$vol$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }
       if(do_EM) {
         start_time <- proc.time()[3]
+        start_mem <- sum(.Internal(gc(FALSE,TRUE,TRUE))[13:14]) # Measures maximum memory use
         GLMEM_results$vol <- BayesGLMEM_vol3D(
           data = session_data,
           beta_names = NULL,
@@ -593,6 +604,7 @@ BayesGLM_cifti <- function(cifti_fname,
           avg_sessions = TRUE
         )
         GLMEM_results$vol$total_time <- proc.time()[3] - start_time
+        GLMEM_results$vol$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }
     }
   }
