@@ -82,7 +82,7 @@ Eigen::MatrixXd makeV(int n_spde, int Ns) {
 //' @export
 // [[Rcpp::export(rng = false)]]
 Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 200,
-                           double grid_limit = 50.0, int n_sess = 1) {
+                           double grid_limit = 4.0, int n_sess = 1) {
   if(grid_size < 20) {
     grid_size = 20;
     Rcout << "Grid size should be at least 20 for adequate coverage. Setting to 20 now." << std::endl;
@@ -98,7 +98,9 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
   Eigen::MatrixXd out = Eigen::MatrixXd::Zero(grid_size, 2); // Create the output object
   double eps = 1e-8; // The level of precision that will be added to each grid step (grid starts at eps)
   double grid_step = 2.5e-4; // How big should each step be? This is small when < 1, but larger afterwards
-  double kappa2 = eps, d1f1 = 0.0, d1f1_old = 0.0, d2f1 = 0.0, sumDiagP_tilCV; // start the grid for kappa2
+  double logkappa = -2.0;
+  grid_step = grid_limit / grid_size;
+  double kappa2 = 1.0, d1f1 = 0.0, d1f1_old = 0.0, d2f1 = 0.0, sumDiagP_tilCV; // start the grid for kappa2
   double kappa2_old = kappa2;
   Eigen::MatrixXd Vh = makeV(n_spde,Ns);
   Eigen::SparseMatrix<double> Qt(n_spde,n_spde); // initialize the Q_tilde matrix
@@ -130,7 +132,9 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
     if(kappa2 > 1e-3) grid_step = 0.25;
     if(kappa2 > 1) grid_step = grid_limit / grid_size;
     kappa2_old = kappa2;
-    kappa2 += grid_step;
+    // kappa2 += grid_step;
+    logkappa += grid_step;
+    kappa2 = std::pow(exp(logkappa),2.0);
     d1f1_old = d1f1;
   }
   return out;
