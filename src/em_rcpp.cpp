@@ -1618,7 +1618,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
     int nKs = A.rows();
     int n_sess = nKs / (n_spde * K);
     Rcout << "Precalculating the approximate second derivative for conjugate gradient...";
-    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 20, n_sess);
+    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 4.0, n_sess);
     Rcout << "DONE!" << std::endl;
     SQ_result = theta_squarem2_CG(theta, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, yy, d2f1_k, spde, tol, verbose);
   }
