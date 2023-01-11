@@ -75,9 +75,9 @@ Eigen::MatrixXd makeV(int n_spde, int Ns) {
 //'
 //' @param spde a list with elements Cmat, Gmat, and GtCinvG
 //' @param grid_size the number of grid points at which to numerically evaluate
-//'   the second derivative
+//'   the second derivative.
 //' @param Ns the integer number of samples for the Hutchinson approximation
-//' @param grid_limit the largest number in the grid
+//' @param grid_limit the largest number in the grid. The grid starts at -2.0.
 //' @param n_sess The number of runs in the data
 //' @export
 // [[Rcpp::export(rng = false)]]
@@ -97,10 +97,10 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
   int n_spde = Cmat.rows(); // find the size of the mesh
   Eigen::MatrixXd out = Eigen::MatrixXd::Zero(grid_size, 2); // Create the output object
   double eps = 1e-8; // The level of precision that will be added to each grid step (grid starts at eps)
-  double grid_step = 2.5e-4; // How big should each step be? This is small when < 1, but larger afterwards
+  // double grid_step = 2.5e-4; // How big should each step be? This is small when < 1, but larger afterwards
   double logkappa = -2.0;
-  grid_step = grid_limit / grid_size;
-  double kappa2 = 1.0, d1f1 = 0.0, d1f1_old = 0.0, d2f1 = 0.0, sumDiagP_tilCV; // start the grid for kappa2
+  double grid_step = (grid_limit + 2.0) / grid_size;
+  double kappa2 = std::pow(std::exp(logkappa),2.0), d1f1 = 0.0, d1f1_old = 0.0, d2f1 = 0.0, sumDiagP_tilCV; // start the grid for kappa2
   double kappa2_old = kappa2;
   Eigen::MatrixXd Vh = makeV(n_spde,Ns);
   Eigen::SparseMatrix<double> Qt(n_spde,n_spde); // initialize the Q_tilde matrix
@@ -134,7 +134,7 @@ Eigen::MatrixXd d2f1_kappa(const Rcpp::List &spde,int grid_size = 50, int Ns = 2
     kappa2_old = kappa2;
     // kappa2 += grid_step;
     logkappa += grid_step;
-    kappa2 = std::pow(exp(logkappa),2.0);
+    kappa2 = std::pow(std::exp(logkappa),2.0);
     d1f1_old = d1f1;
   }
   return out;
@@ -826,7 +826,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
     // Rcout << "k = " << k << " a_star = " << a_star << " b_star = " << b_star << std::endl;
-    new_kappa2 = kappa2Brent(0., 50., spde, a_star, b_star, n_sess);
+    new_kappa2 = kappa2Brent(0., 3000., spde, a_star, b_star, n_sess);
     // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
     theta_new[k] = new_kappa2;
     // Update phi
@@ -1050,7 +1050,7 @@ Eigen::VectorXd theta_fixpt_CG(Eigen::VectorXd theta, const Eigen::SparseMatrix<
     double d2f = interp_d2f1 + d2f2;
     new_kappa2 = theta[k] -  d1f / d2f; // Good ol' fashioned Newton's method
     if(new_kappa2 < 1e-8) new_kappa2 = 1e-8;
-    if(new_kappa2 > 50) new_kappa2 = 50;
+    if(new_kappa2 > 1e4) new_kappa2 = 1e4;
     // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
     theta_new[k] = new_kappa2;
     // Update phi

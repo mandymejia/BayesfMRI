@@ -15,12 +15,12 @@ logDetQt <- function(kappa2, in_list, n_sess) {
 #'
 #' @param spde a list with elements Cmat, Gmat, and GtCinvG
 #' @param grid_size the number of grid points at which to numerically evaluate
-#'   the second derivative
+#'   the second derivative.
 #' @param Ns the integer number of samples for the Hutchinson approximation
-#' @param grid_limit the largest number in the grid
+#' @param grid_limit the largest number in the grid. The grid starts at -2.0.
 #' @param n_sess The number of runs in the data
 #' @export
-d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 50.0, n_sess = 1L) {
+d2f1_kappa <- function(spde, grid_size = 50L, Ns = 200L, grid_limit = 4.0, n_sess = 1L) {
     .Call(`_BayesfMRI_d2f1_kappa`, spde, grid_size, Ns, grid_limit, n_sess)
 }
 
