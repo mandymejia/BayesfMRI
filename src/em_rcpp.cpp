@@ -516,7 +516,10 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, d
     if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
 
     pcpp=pnew;
-    if(SquaremDefault.trace){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+    if(SquaremDefault.trace) {
+      Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;
+      Rcout<<"Hyperparameter values: "<<pcpp.transpose()<<std::endl;
+      }
     iter++;
   }
 
@@ -885,8 +888,10 @@ Eigen::VectorXd theta_fixpt_CG(Eigen::VectorXd theta, const Eigen::SparseMatrix<
   Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
   Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
   Eigen::MatrixXd P_tilkn(n_spde,Ns), P_tilCVkn(Ns,Ns), P_tilGCGVkn(Ns,Ns);
-  double a_star, b_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
-  double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
+  double a_star = 0.0, b_star = 0.0, muCmu = 0.0, muGmu = 0.0;
+  double sumDiagPCVkn = 0.0, sumDiagPGVkn = 0.0, muGCGmu = 0.0;
+  double sumDiagPGCGVkn = 0.0, phi_partA = 0.0, phi_partB = 0.0, phi_partC = 0.0;
+  double new_kappa2 = 0.0, phi_new = 0.0;
   double phi_denom = 4.0 * M_PI * n_spde * n_sess, d1f1, d1f2, d2f2;
   double sumDiagP_tilCVkn = 0.0, sumDiagP_tilGCGVkn = 0.0, d1f= 0.0;
   int idx_start, d2_grid_size = d2f1.rows();
@@ -946,14 +951,16 @@ Eigen::VectorXd theta_fixpt_CG(Eigen::VectorXd theta, const Eigen::SparseMatrix<
   time_sigma2 = clock();
   // Update kappa2 and phi by task
   for(int k = 0; k < K; k++) {
-    a_star = 0.0;
-    b_star = 0.0;
-    muCmu = 0.0;
-    muGmu = 0.0;
-    muGCGmu = 0.0;
-    sumDiagPCVkn = 0.0;
-    sumDiagPGVkn = 0.0;
-    sumDiagPGCGVkn = 0.0;
+    if(shared) {
+      a_star = 0.0;
+      b_star = 0.0;
+      muCmu = 0.0;
+      muGmu = 0.0;
+      muGCGmu = 0.0;
+      sumDiagPCVkn = 0.0;
+      sumDiagPGVkn = 0.0;
+      sumDiagPGCGVkn = 0.0;
+    }
     for(int ns = 0; ns < n_sess; ns++) {
       idx_start = k * n_spde + ns * K * n_spde;
       // idx_stop = idx_start + n_spde;

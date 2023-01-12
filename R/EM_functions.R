@@ -28,6 +28,7 @@
 #'   BayesGLMEM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_direct_TRUE
 #' @inheritParams avg_sessions_Param
+#' @param shared (logical) should hyperparameters be shared across tasks?
 #'
 #' @return A list containing...
 #'
@@ -55,7 +56,8 @@ BayesGLMEM <- function(data,
                        num.threads = 1,
                        outfile = NULL,
                        verbose = FALSE,
-                       avg_sessions = TRUE) {
+                       avg_sessions = TRUE,
+                       shared = FALSE) {
 
   # > Data setup ----
   #check whether data is a list OR a session (for single-session analysis)
@@ -228,24 +230,49 @@ BayesGLMEM <- function(data,
     Psi <- Matrix::Diagonal(n = ncol(model_data$X))
     A <- Matrix::crossprod(model_data$X)
   }
-  # Initial values for kappa and tau
-  # Using values matching BayesGLM
-  kappa2 <- 4
-  phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
-  # Using values based on the classical GLM
-  cat("... FINDING BEST GUESS INITIAL VALUES\n")
+  # > Initial values for kappa and tau ----
+  # Setting a value for kappa2 and finding the optimal starting value for phi
+  kappa2 <- 50
+  Q_tilde <- Q_prime(kappa2,spde)
   beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
-  res_y <- (model_data$y - model_data$X %*% beta_hat)@x
-  sigma2 <- stats::var(res_y)
   beta_hat <- matrix(beta_hat, ncol = K*n_sess)
-  rcpp_spde <- create_listRcpp(spde)
-  spde <- rcpp_spde
   if(n_sess > 1) {
     task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
     beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
   }
+  phi <- apply(beta_hat,2, function(b) crossprod(b,Q_tilde) %*% b) / (4 * pi * V)
+  # # Using values based on the classical GLM
+  # # Starting with values matching BayesGLM
+  # kappa2 <- 4
+  # phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
+  # cat("... FINDING BEST GUESS INITIAL VALUES\n")
+  # beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
+  # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+  # sigma2 <- stats::var(res_y)
+  # beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+  # rcpp_spde <- create_listRcpp(spde)
+  # spde <- rcpp_spde
+  # if(n_sess > 1) {
+  #   task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+  #   beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
+  # }
+  # # kappa2_phi_rcpp <-
+  # #   apply(
+  # #     beta_hat,
+  # #     2,
+  # #     initialKP,
+  # #     theta = c(kappa2, phi),
+  # #     spde = rcpp_spde,
+  # #     n_sess = n_sess,
+  # #     tol = tol,
+  # #     verbose = verbose
+  # #   )
+  # n_threads <- parallel::detectCores()
+  # n_threads <- min(n_threads,K,num.threads)
+  # cl <- parallel::makeCluster(n_threads)
   # kappa2_phi_rcpp <-
-  #   apply(
+  #   parallel::parApply(
+  #     cl = cl,
   #     beta_hat,
   #     2,
   #     initialKP,
@@ -253,26 +280,11 @@ BayesGLMEM <- function(data,
   #     spde = rcpp_spde,
   #     n_sess = n_sess,
   #     tol = tol,
-  #     verbose = verbose
+  #     verbose = FALSE
   #   )
-  n_threads <- parallel::detectCores()
-  n_threads <- min(n_threads,K,num.threads)
-  cl <- parallel::makeCluster(n_threads)
-  kappa2_phi_rcpp <-
-    parallel::parApply(
-      cl = cl,
-      beta_hat,
-      2,
-      initialKP,
-      theta = c(kappa2, phi),
-      spde = rcpp_spde,
-      n_sess = n_sess,
-      tol = tol,
-      verbose = FALSE
-    )
-  parallel::stopCluster(cl)
-  cat("...... DONE!\n")
-  theta <- c(t(kappa2_phi_rcpp), sigma2)
+  # parallel::stopCluster(cl)
+  # cat("...... DONE!\n")
+  # theta <- c(t(kappa2_phi_rcpp), sigma2)
   theta_init <- theta
   Ns <- 50
   cat("... STARTING EM ALGORITHM\n")
@@ -602,41 +614,51 @@ BayesGLMEM_vol3D <-
     Psi <- Matrix::bdiag(rep(list(Psi_k),K))
     if(n_sess > 1) Psi <- Matrix::bdiag(rep(list(Psi),n_sess))
     A <- Matrix::crossprod(model_data$X%*%Psi)
-    # Initial values for kappa and tau
-    # Using values matching BayesGLM
-    kappa2 <- 4
-    phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
-    # Using values based on the classical GLM
-    cat("... FINDING BEST GUESS INITIAL VALUES\n")
+    # > Initial values for kappa and tau ----
+    # Setting a value for kappa2 and finding the optimal starting value for phi
+    kappa2 <- 50
+    Q_tilde <- Q_prime(kappa2,spde)
     beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
-    res_y <- (model_data$y - model_data$X %*% beta_hat)@x
-    sigma2 <- stats::var(res_y)
-    beta_hat <- (beta_hat %*% Psi)@x
     beta_hat <- matrix(beta_hat, ncol = K*n_sess)
-    rcpp_spde <- create_listRcpp(spde)
-    spde <- rcpp_spde
     if(n_sess > 1) {
       task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
       beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
     }
-    n_threads <- parallel::detectCores()
-    n_threads <- min(n_threads,K,num.threads)
-    cl <- parallel::makeCluster(n_threads)
-    kappa2_phi_rcpp <-
-      parallel::parApply(
-        cl = cl,
-        beta_hat,
-        2,
-        initialKP,
-        theta = c(kappa2, phi),
-        spde = rcpp_spde,
-        n_sess = n_sess,
-        tol = tol,
-        verbose = verbose
-      )
-    parallel::stopCluster(cl)
-    cat("...... DONE!\n")
-    theta <- c(t(kappa2_phi_rcpp), sigma2)
+    phi <- apply(beta_hat,2, function(b) crossprod(b,Q_tilde) %*% b) / (4 * pi * V)
+    # # Using values based on the classical GLM
+    # # Starting with values matching BayesGLM
+    # kappa2 <- 4
+    # phi <- 1 / (4*pi*kappa2*4) # This is a value that matches BayesGLM
+    # cat("... FINDING BEST GUESS INITIAL VALUES\n")
+    # beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
+    # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+    # sigma2 <- stats::var(res_y)
+    # beta_hat <- (beta_hat %*% Psi)@x
+    # beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+    # rcpp_spde <- create_listRcpp(spde)
+    # spde <- rcpp_spde
+    # if(n_sess > 1) {
+    #   task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+    #   beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
+    # }
+    # n_threads <- parallel::detectCores()
+    # n_threads <- min(n_threads,K,num.threads)
+    # cl <- parallel::makeCluster(n_threads)
+    # kappa2_phi_rcpp <-
+    #   parallel::parApply(
+    #     cl = cl,
+    #     beta_hat,
+    #     2,
+    #     initialKP,
+    #     theta = c(kappa2, phi),
+    #     spde = rcpp_spde,
+    #     n_sess = n_sess,
+    #     tol = tol,
+    #     verbose = verbose
+    #   )
+    # parallel::stopCluster(cl)
+    # cat("...... DONE!\n")
+    # theta <- c(t(kappa2_phi_rcpp), sigma2)
     theta_init <- theta
     Ns <- 50
     cat("... STARTING EM ALGORITHM\n")
