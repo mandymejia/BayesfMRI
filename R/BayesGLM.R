@@ -89,6 +89,7 @@
 #'   region.  See Details of the \code{BayesGLM_vol3D} function
 #' @param tol Only used when \code{method} is set to 'EM'. The numeric tolerance
 #'   used to determine convergence of the EM algorithm.
+#' @param shared (logical) Should hyperparameters be shared across tasks?
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -117,7 +118,8 @@ BayesGLM_cifti <- function(cifti_fname,
                      avg_sessions = TRUE,
                      trim_INLA = TRUE,
                      groups_df = NULL,
-                     tol = NULL){
+                     tol = NULL,
+                     shared = FALSE){
 
 #  GLM_method = match.arg(GLM_method, c('both','Bayesian','classical'))
   GLM_method = match.arg(GLM_method, c('all','Bayesian','classical','EM'))
@@ -211,6 +213,12 @@ BayesGLM_cifti <- function(cifti_fname,
   }
   if(length(session_names) != n_sess) stop('If session_names is provided, it must be of the same length as cifti_fname')
   if(is.null(nuisance) & length(nuisance_include) > 0) nuisance <- vector("list",length = n_sess)
+
+  # Note about sharing hyperparameters
+  if(shared & !do_EM) {
+    message("shared = TRUE, but GLM_method is not 'all' or 'EM'. Setting shared = FALSE.")
+    shared <- FALSE
+  }
 
   cat('\nSETTING UP DATA\n')
 
@@ -502,7 +510,8 @@ BayesGLM_cifti <- function(cifti_fname,
                                               num.threads = num.threads,
                                               outfile = outfile_name,
                                               verbose = verbose,
-                                              avg_sessions = avg_sessions)
+                                              avg_sessions = avg_sessions,
+                                              shared = shared)
         GLMEM_results[[br_str]]$total_time <- proc.time()[3] - start_time
         GLMEM_results[[br_str]]$max_memory <- sum(.Internal(gc(FALSE,FALSE,TRUE))[13:14]) - start_mem
       }

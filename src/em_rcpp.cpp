@@ -1050,7 +1050,7 @@ Eigen::VectorXd theta_fixpt_CG(Eigen::VectorXd theta, const Eigen::SparseMatrix<
     double d2f = interp_d2f1 + d2f2;
     new_kappa2 = theta[k] -  d1f / d2f; // Good ol' fashioned Newton's method
     if(new_kappa2 < 1e-8) new_kappa2 = 1e-8;
-    if(new_kappa2 > 1e4) new_kappa2 = 1e4;
+    if(new_kappa2 > 1e2) new_kappa2 = 1e2;
     // Rcout << ", new_kappa2 = " << new_kappa2 << std::endl;
     theta_new[k] = new_kappa2;
     // Update phi
@@ -1618,7 +1618,7 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
     int nKs = A.rows();
     int n_sess = nKs / (n_spde * K);
     Rcout << "Precalculating the approximate second derivative for conjugate gradient...";
-    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 4.0, n_sess);
+    Eigen::MatrixXd d2f1_k = d2f1_kappa(spde, 50, 200, 2.5, n_sess);
     Rcout << "DONE!" << std::endl;
     SQ_result = theta_squarem2_CG(theta, A, QK, cholSigInv, cholQ, XpsiY, Xpsi, Ns, y, yy, d2f1_k, spde, tol, verbose);
   }
