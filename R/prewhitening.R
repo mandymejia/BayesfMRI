@@ -435,6 +435,9 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
 #'
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
+#' @param mask A logical vector indicating, for each vertex, whether to include
+#'  it in smoothing. \code{NULL} (default) will use a vector of all \code{TRUE},
+#'  meaning that no vertex is masked out; all are used for smoothing.
 #' @param AR A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order
 #' @param var A vector length V containing the white noise variance estimates from the AR model
 #' @param FWHM FWHM parameter for smoothing. Remember that

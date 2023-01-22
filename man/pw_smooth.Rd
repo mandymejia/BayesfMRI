@@ -15,6 +15,10 @@ number of vertices in the mesh}
 indices for a given triangular face in the mesh. \eqn{F} is the number of
 faces in the mesh.}
 
+\item{mask}{A logical vector indicating, for each vertex, whether to include
+it in smoothing. \code{NULL} (default) will use a vector of all \code{TRUE},
+meaning that no vertex is masked out; all are used for smoothing.}
+
 \item{AR}{A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order}
 
 \item{var}{A vector length V containing the white noise variance estimates from the AR model}
