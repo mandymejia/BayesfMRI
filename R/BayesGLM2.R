@@ -247,13 +247,14 @@ BayesGLM2 <- function(results,
       # if(num_sessions_m>1 & !use_avg_m)
       # stop('This function is currently only applicable to results2 of single-session or average modeling at subject level.')
 
+      # Damon: these variables appear unnused.
       #Collect posterior mean and precision of hyperparameters
       mu_theta_m <- results2[[m]]$mu.theta
-      Q_theta_m <- results2[[m]]$Q.theta
+      # Q_theta_m <- results2[[m]]$Q.theta
       #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
-      Qmu_theta <- Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
-      Q_theta <- Q_theta + Q_theta_m
-      rm(mu_theta_m, Q_theta_m)
+      Qmu_theta <- 0 # Qmu_theta + as.vector(Q_theta_m%*%mu_theta_m)
+      Q_theta <- 0 # Q_theta + Q_theta_m
+      # rm(mu_theta_m, Q_theta_m)
 
       #compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y (all these matrices for a specific subject m)
       y_vec <- results2[[m]]$y
@@ -272,7 +273,7 @@ BayesGLM2 <- function(results,
     }
     results2 <- NULL # save memory
     #### THIS IS FROM WHEN WE USED INLA
-    # mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+    mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
     #
     # #### DRAW SAMPLES FROM q(theta|y)
     #
@@ -597,7 +598,7 @@ BayesGLM_group <- function(
 #' @param Q sparse p x p positive definite precision matrix (class = dgCMatrix)
 #'
 #' @return an n x p matrix of samples
-#' 
+#'
 #' @importFrom Matrix solve
 #' @importFrom stats rnorm
 #' @export
@@ -618,7 +619,7 @@ qsample <- function(n, mu, Q) {
 #' @param cholQ Cholesky decomposition of the precision (found via \code{Matrix::Cholesky(Q)})
 #'
 #' @return an n x p matrix of samples from the MVN distribution
-#' 
+#'
 #' @importFrom stats rnorm
 #' @importFrom Matrix solve
 #' @keywords internal
