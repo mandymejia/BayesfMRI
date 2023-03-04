@@ -103,8 +103,8 @@ is detected, in which case sd scaling will be used instead.
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{Bayes}{If TRUE, will fit a spatial Bayesian GLM in addition to the
-classical GLM. Classical GLM results are always returned.}
+\item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
+addition to the classical GLM. Classical GLM results are always returned.}
 
 \item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
 Default: \code{TRUE}.}

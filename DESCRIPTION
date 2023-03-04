@@ -32,8 +32,8 @@ Authors@R: c(
     )
 Description: Performs a spatial Bayesian general linear model (GLM) for task 
     fMRI data on the cortical surface. The INLA package is required, which, due
-    to a CRAN policy, will not be installed automatically. You can obtain the 
-    two packages by running `install.packages("INLA", repos=c(getOption("repos"), 
+    to a CRAN policy, will not be installed automatically. You can obtain INLA 
+    by running `install.packages("INLA", repos=c(getOption("repos"), 
     INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
 Depends: R (>= 3.6.0)
 License: GPL-3

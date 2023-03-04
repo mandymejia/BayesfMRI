@@ -14,7 +14,7 @@ BayesGLM(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
-  EM = TRUE,
+  EM = FALSE,
   ar_order = 6,
   ar_smooth = 6,
   aic = FALSE,
@@ -31,10 +31,10 @@ BayesGLM(
 )
 }
 \arguments{
-\item{data}{A list of sessions, where each session is a list with elements
-BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
-for more details.
-List element names represent session names.}
+\item{data}{A list of sessions in the \code{"BfMRI.sess"} object format. Each
+session is a list with elements "BOLD", "design" and "nuisance" (optional).
+The name of each element in \code{data} is the name of that session. See
+\code{?is.BfMRI.sess} for details.}
 
 \item{beta_names}{(Optional) Names of tasks represented in design matrix}
 
@@ -67,21 +67,21 @@ is detected, in which case sd scaling will be used instead.
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}.}
 
-\item{Bayes}{If TRUE, will fit a spatial Bayesian GLM in addition to the
-classical GLM. Classical GLM results are always returned.}
+\item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
+addition to the classical GLM. Classical GLM results are always returned.}
 
 \item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
-Default: \code{TRUE}.}
+Default: \code{FALSE}.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
 for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 
-\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\item{ar_smooth}{(numeric) FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
 
-\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
+\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}?}
 
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}

@@ -4,10 +4,10 @@
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-#' @param data A list of sessions, where each session is a list with elements
-#'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
-#'  for more details.
-#' List element names represent session names.
+#' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
+#'  session is a list with elements "BOLD", "design" and "nuisance" (optional). 
+#'  The name of each element in \code{data} is the name of that session. See 
+#'  \code{?is.BfMRI.sess} for details.
 #' @param beta_names (Optional) Names of tasks represented in design matrix
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
@@ -18,14 +18,15 @@
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
 #' @param EM (logical) Should the EM implementation of the Bayesian GLM be used?
-#'  Default: \code{TRUE}.
+#'  Default: \code{FALSE}.
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
 #'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
-#' @param ar_smooth FWHM parameter for smoothing. Remember that
+#' @param ar_smooth (numeric) FWHM parameter for smoothing. Remember that
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 #'  to not do any smoothing. Default: \code{5}.
-#' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.
+#' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? 
+#"  Default: \code{FALSE}.
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_result_Param_TRUE
 #' @param outfile File name where results will be written (for use by
@@ -46,6 +47,7 @@
 #' @importFrom Matrix bandSparse bdiag crossprod solve
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #' @importFrom stats as.formula
+#' @importFrom fMRItools is_1
 #'
 #' @importFrom utils tail
 #'
@@ -60,7 +62,7 @@ BayesGLM <- function(
   scale_BOLD=c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes=TRUE,
-  EM=TRUE,
+  EM=FALSE,
   ar_order = 6,
   ar_smooth = 6,
   aic = FALSE,
@@ -87,85 +89,92 @@ BayesGLM <- function(
   # T = length of time series for each session (vector)
   # K = number of unique tasks in all sessions
 
-  # Rename and coerce to logical
-  do_Bayesian <- as.logical(Bayes)
-  do_EM <- as.logical(EM)
-  if (do_Bayesian & !do_EM) { check_INLA(require_PARDISO=TRUE) }
-  if(do_EM & !do_Bayesian) {
-    warning("You have EM = TRUE and Bayes = FALSE. As the EM implementation is a Bayesian method, it will not be performed unless both EM = TRUE and Bayes = TRUE. Setting Bayes = TRUE.")
-    Bayes <- TRUE
-    do_Bayesian <- TRUE
+  # Preliminary steps. ---------------------------------------------------------
+  ## Simple argument checks. ---------------------------------------------------
+  if (isTRUE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+  }
+  if (isFALSE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
+  }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
+  stopifnot(is_1(scale_design, "logical"))
+  stopifnot(is_1(Bayes, "logical"))
+  stopifnot(is_1(EM, "logical"))
+  if (is.null(ar_order)) ar_order <- 0
+  stopifnot(is_1(ar_order, "numeric"))
+  do_pw <- ar_order > 0
+  if (is.null(ar_smooth)) ar_smooth <- 0
+  stopifnot(is_1(ar_smooth, "numeric"))
+  stopifnot(is_1(aic, "logical"))
+  stopifnot(is_1(num.threads, "numeric"))
+  stopifnot(is_1(return_INLA_result, "logical"))
+  stopifnot(is_1(aic, "logical"))
+  stopifnot(is_1(verbose, "logical"))
+  stopifnot(is_1(avg_sessions, "logical"))
+  stopifnot(is_posNum(meanTol))
+  stopifnot(is_posNum(varTol))
+  stopifnot(is_posNum(emTol))
+  stopifnot(is_1(trim_INLA, "logical"))
+
+  if (EM && !Bayes) {
+    warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
+    Bayes <- TRUE 
+  }
+  if (Bayes) {
+    if (!EM) { check_INLA(require_PARDISO=TRUE) }
+    if (is.null(outfile)) {
+      warning('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
+    }
+  }
+  # Rename these arguments.
+  do_Bayesian <- Bayes; rm(Bayes)
+  do_EM <- EM; rm(EM)
+
+  ## Check valid sessions. Get data dimensions. --------------------------------
+  if (!is.BfMRI.sess(data)) {
+    stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
   }
 
-  # Check prewhitening arguments.
-  if (is.null(ar_order)) ar_order <- 0
-  ar_order <- as.numeric(ar_order)
-  do_pw <- (ar_order > 0)
-  if (is.null(ar_smooth)) ar_smooth <- 0
-  ar_smooth <- as.numeric(ar_smooth)
+  session_names <- names(data)
+  n_sess <- length(session_names)
+  if (n_sess == 1 && avg_sessions) avg_sessions <- FALSE
+  V <- ncol(data[[1]]$BOLD) #number of data locations
+  ntime <- vapply(data, function(x){ nrow(x$BOLD) }, 0)
+  K <- ncol(data[[1]]$design) #number of tasks
 
-  #we need a mesh if doing spatial Bayesian modeling OR any AR smoothing
-  need_mesh <- (do_EM | do_Bayesian | (do_pw && ar_smooth > 0))
-  #check that only mesh OR vertices+faces supplied
+  ## Beta names: check or make. ------------------------------------------------
+  if (!is.null(beta_names)) {
+    if (length(beta_names) != K) {
+      stop(
+        'I detect ', K,
+        ' task based on the design matrix, but the length of beta_names is ',
+        length(beta_names), '.  Please fix beta_names.'
+      )
+    }
+  } else {
+    # Grab beta names from design (if provided)
+    beta_names <- colnames(data[[1]]$design)
+    if (is.null(beta_names)) { beta_names <- paste0("beta", seq(K)) }
+  }
+
+  ## Mesh: check or make. ------------------------------------------------------
+  # We need a mesh if doing spatial Bayesian modeling or any AR smoothing.
+  need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
   if (need_mesh) {
+    # Check that only mesh OR vertices+faces supplied
     has_mesh <- !is.null(mesh)
     has_verts_faces <- !is.null(vertices) && !is.null(faces)
     if (!xor(has_mesh, has_verts_faces)) {
       stop('Must supply EITHER mesh OR vertices and faces.')
     }
     if (is.null(mesh)) mesh <- make_mesh(vertices, faces) # This function has been modified to no longer require INLA (2022-03-24)
+    if (mesh$n != V) { stop("Mesh has ", mesh$n, " locations, but the data has ", V, " locations.") }
   } else {
     mesh <- NULL
   }
 
-  #check that all elements of the data list are valid sessions and have the same number of locations and tasks
-  session_names <- names(data)
-  n_sess <- length(session_names)
-  if (n_sess == 1 && avg_sessions) avg_sessions <- FALSE
-
-  if (!is.list(data)) stop('I expect data to be a list, but it is not')
-  data_classes <- sapply(data, 'class')
-  if (!all.equal(unique(data_classes),'list')) {
-    stop('I expect data to be a list of lists (sessions), but it is not')
-  }
-
-  #check dimensions
-  V <- ncol(data[[1]]$BOLD) #number of data locations
-  ntime <- vapply(data, function(x){ nrow(x$BOLD) }, 0)
-  K <- ncol(data[[1]]$design) #number of tasks
-  for(s in 1:n_sess){
-    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-  }
-  if (need_mesh) {
-    if (mesh$n != V) { stop("Mesh has ", mesh$n, " locations, but the data has ", V, " locations.") }
-  }
-
-  if (!is.null(beta_names)) {
-    if(length(beta_names) != K) {
-      stop(paste0(
-        'I detect ', K,
-        ' task based on the design matrix, but the length of beta_names is ',
-        length(beta_names), '.  Please fix beta_names.'
-      ))
-    }
-  } else {
-    # Grab beta names from design (if provided)
-    bn_maybe <- colnames(data[[1]]$design)
-    beta_names <- if (is.null(bn_maybe)) { paste0("beta", seq(K)) } else { bn_maybe }
-  }
-
-  if (do_Bayesian && is.null(outfile)) {
-    message('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
-  }
-
-  # Scale
-  if (isTRUE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'auto'`"); scale_BOLD <- "auto" }
-  if (isFALSE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'none'`"); scale_BOLD <- "none" }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-
-  # `mask`  -----------------------------
+  ## Mask: check or make.  -----------------------------------------------------
   # Get `mask` based on intersection of input mask and `make_mask` checks.
   if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) }
   mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol)
@@ -190,32 +199,32 @@ BayesGLM <- function(
       data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
     }
   }
-  if (do_Bayesian & ! do_EM) {spde <- INLA::inla.spde2.matern(mesh)}
+  if (do_Bayesian && !do_EM) {spde <- INLA::inla.spde2.matern(mesh)}
   if (do_EM) {spde <- create_spde_surf(mesh)}
 
   V <- sum(mask2)
   V_all <- length(mask2)
 
-  # ---------------------------------
+  ## Scale, nuisance regress, and/or concatenate session data. -----------------
   #collect data and design matrices
   design <- vector('list', length=n_sess)
   K2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
-  for(s in 1:n_sess){
+  for (ss in seq(n_sess)) {
     #scale data to represent % signal change (or just center if scale=FALSE)
-    data[[s]]$BOLD <- scale_timeseries(t(data[[s]]$BOLD), scale=scale_BOLD)
+    data[[ss]]$BOLD <- scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD)
     if (scale_design) {
-      data[[s]]$design <- scale_design_mat(data[[s]]$design)
+      data[[ss]]$design <- scale_design_mat(data[[ss]]$design)
     } else {
-      data[[s]]$design <- scale(data[[s]]$design, scale = FALSE)
+      data[[ss]]$design <- scale(data[[ss]]$design, scale = FALSE)
     }
-    design[[s]] <- data[[s]]$design #after scaling but before nuisance regression
+    design[[ss]] <- data[[ss]]$design #after scaling but before nuisance regression
 
     #regress nuisance parameters from BOLD data and design matrix
-    if ('nuisance' %in% names(data[[s]])) {
-      nuisance_s <- scale(data[[s]]$nuisance, scale=FALSE)
-      data[[s]]$BOLD <- nuisance_regression(data[[s]]$BOLD, nuisance_s)
-      data[[s]]$design <- nuisance_regression(data[[s]]$design, nuisance_s)
-      data[[s]]$nuisance <- NULL
+    if ('nuisance' %in% names(data[[ss]])) {
+      nuisance_s <- scale(data[[ss]]$nuisance, scale=FALSE)
+      data[[ss]]$BOLD <- nuisance_regression(data[[ss]]$BOLD, nuisance_s)
+      data[[ss]]$design <- nuisance_regression(data[[ss]]$design, nuisance_s)
+      data[[ss]]$nuisance <- NULL
     }
   }
 
@@ -243,7 +252,8 @@ BayesGLM <- function(
     ntime <- ntime[1]
   }
 
-  ## ESTIMATE PREWHITENING PARAMETERS -----
+  # Prewhitening. --------------------------------------------------------------
+  ## Estimate prewhitening parameters. -----------------------------------------
 
   #compute AR coefficients and average over sessions
   if (do_pw) {
@@ -277,7 +287,7 @@ BayesGLM <- function(
     }
   }
 
-  ## APPLY PREWHITENING -----
+  ## Apply prewhitening. -------------------------------------------------------
   if (do_pw) {
     # Create the sparse pre-whitening matrix
     cat(".... prewhitening... ")
@@ -334,8 +344,7 @@ BayesGLM <- function(
     }, simplify = F)
   }
 
-  ## ESTIMATE CLASSICAL GLM -----
-
+  # Classical GLM. -------------------------------------------------------------
   #organize data
   y_all <- c()
   X_all_list <- NULL
@@ -343,14 +352,14 @@ BayesGLM <- function(
   num_GLM <- n_sess
   classical_session_names <- session_names
   result_classical <- vector('list', length=num_GLM)
-  for(s in 1:num_GLM){
+  for (ss in seq(num_GLM)) {
     #set up vectorized data and big sparse design matrix
-    if(!do_pw) data_s <- organize_data(data[[s]]$BOLD, data[[s]]$design)
-    if(do_pw) data_s <- data[[s]] #data has already been "organized" (big sparse design) in prewhitening step above
+    if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
+    if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
 
     y_all <- c(y_all, data_s$BOLD)
     X_list <- list(data_s$design)
-    names(X_list) <- session_names[s]
+    names(X_list) <- session_names[ss]
     X_all_list <- c(X_all_list, X_list)
     y_reg <- data_s$BOLD #a vector (grouped by location)
     X_reg <- data_s$design
@@ -378,28 +387,26 @@ BayesGLM <- function(
     SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = K) #each?
     SE_beta_hat_s[mask2==TRUE,] <- SE_beta_s
 
-    result_classical[[s]] <- list(estimates = beta_hat_s,
-                                  SE_estimates = SE_beta_hat_s,
-                                  resids = resid_s,
-                                  DOF = DOF_true,
-                                  mask = mask2)
+    result_classical[[ss]] <- list(
+      estimates = beta_hat_s,
+      SE_estimates = SE_beta_hat_s,
+      resids = resid_s,
+      DOF = DOF_true,
+      mask = mask2
+    )
   }
   names(result_classical) <- classical_session_names
 
-  ## ESTIMATE BAYESIAN GLM -----
-
-  if(do_Bayesian){
-
-    ### THIS PART WILL CHANGE WITH EM VERSION
-
+  # Bayesian GLM. --------------------------------------------------------------
+  if (do_Bayesian) {
     #construct betas and repls objects
     replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
+    ## EM Model. ---------------------------------------------------------------
     if(do_EM) {
-
       if (!requireNamespace("MatrixModels", quietly = TRUE)) {
         stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
       }
@@ -426,18 +433,17 @@ BayesGLM <- function(
       n_threads <- parallel::detectCores()
       n_threads <- min(n_threads,K,num.threads)
       cl <- parallel::makeCluster(n_threads)
-      kappa2_phi_rcpp <-
-        parallel::parApply(
-          cl = cl,
-          beta_hat,
-          2,
-          initialKP,
-          theta = c(kappa2, phi),
-          spde = rcpp_spde,
-          n_sess = n_sess,
-          tol = emTol,
-          verbose = FALSE
-        )
+      kappa2_phi_rcpp <- parallel::parApply(
+        cl = cl,
+        beta_hat,
+        2,
+        initialKP,
+        theta = c(kappa2, phi),
+        spde = rcpp_spde,
+        n_sess = n_sess,
+        tol = emTol,
+        verbose = FALSE
+      )
       parallel::stopCluster(cl)
       if(verbose) cat("...... DONE!\n")
       theta <- c(t(kappa2_phi_rcpp), sigma2)
@@ -483,12 +489,11 @@ BayesGLM <- function(
       tau2 <- 1 / (4*pi*kappa2_new*phi_new)
       mu.theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
       cat("... done!\n")
-    }
 
-    if(!do_EM) {
+    ## INLA Model. -------------------------------------------------------------
+    } else {
       #estimate model using INLA
       cat('\n .... estimating model with INLA')
-      check_INLA(require_PARDISO=FALSE)
       #organize the formula and data objects
       repl_names <- names(repls)
       hyper_initial <- c(-2,2)
@@ -524,42 +529,51 @@ BayesGLM <- function(
         if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
       }
     }
-    ### END OF PART THAT WILL CHANGE WITH EM VERSION
-
   }
 
-  if(do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
-  if(!do_pw) prewhiten_info <- NULL
-  if(!do_Bayesian) INLA_result <- beta_estimates <- theta_posteriors <- mu.theta <- Q.theta <- y_all <- X_all_list <- NULL
-  if (!do_EM) theta_estimates <- Sig_inv <- NULL
-  if(do_Bayesian & !do_EM) theta_estimates <- Sig_inv <- NULL
-  if(do_EM) INLA_result <- theta_posteriors <- Q.theta <- NULL
+  # Clean up and return. -------------------------------------------------------
+  prewhiten_info <- NULL
+  if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
 
-  result <- list(INLA_result = INLA_result,
-                 beta_estimates = beta_estimates,
-                 result_classical = result_classical,
-                 mesh = mesh,
-                 mesh_orig = mesh_orig,
-                 mask = mask,
-                 design = design,
-                 session_names = session_names,
-                 beta_names = beta_names,
-                 theta_posteriors = theta_posteriors,
-                 theta_estimates = theta_estimates,
-                 posterior_Sig_inv = Sig_inv, # for joint group model
-                 mu.theta = mu.theta, #for joint group model
-                 Q.theta = Q.theta, #for joint group model
-                 y = y_all, #for joint group model
-                 X = X_all_list, #for joint group model
-                 prewhiten_info = prewhiten_info,
-                 call = match.call())
+  if (do_Bayesian) {
+    if (do_EM) {
+      INLA_result <- theta_posteriors <- Q.theta <- NULL
+    } else {
+      theta_estimates <- Sig_inv <- NULL
+    }
+  } else {
+    INLA_result <- theta_posteriors <- Q.theta <- NULL
+    beta_estimates <- theta_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
+  }
+
+  result <- list(
+    INLA_result = INLA_result,
+    beta_estimates = beta_estimates,
+    result_classical = result_classical,
+    mesh = mesh,
+    mesh_orig = mesh_orig,
+    mask = mask,
+    design = design,
+    session_names = session_names,
+    beta_names = beta_names,
+    theta_posteriors = theta_posteriors,
+    theta_estimates = theta_estimates,
+    # For joint group model ~~~~~~~~~~~~~
+    posterior_Sig_inv = Sig_inv, 
+    mu.theta = mu.theta, 
+    Q.theta = Q.theta, 
+    y = y_all, 
+    X = X_all_list, 
+    prewhiten_info = prewhiten_info,
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    call = match.call()
+  )
 
   class(result) <- "BayesGLM"
-
 
   if(!is.null(outfile)){
     saveRDS(result, file=outfile)
   }
 
-  return(result)
+  result
 }

@@ -219,10 +219,8 @@ prewhiten_prep <- function(data,
 
   K <- ncol(data[[1]]$design) #number of tasks
   ntime <- nrow(data[[1]]$BOLD) # Number of time steps
-  for(s in 1:n_sess){
-    if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
-    if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
-    if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
+  if (!is.BfMRI.sess(data)) {
+    stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
   }
 
   GLM_result <- vector('list', length=n_sess)

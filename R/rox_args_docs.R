@@ -157,8 +157,8 @@ NULL
 
 #'  Bayes
 #'
-#' @param Bayes If TRUE, will fit a spatial Bayesian GLM in addition to the
-#' classical GLM. Classical GLM results are always returned.
+#' @param Bayes If \code{TRUE} (default), will fit a spatial Bayesian GLM in 
+#'  addition to the classical GLM. Classical GLM results are always returned. 
 #'
 #' @name Bayes_Param
 NULL
