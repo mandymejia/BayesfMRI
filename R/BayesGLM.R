@@ -1,3 +1,92 @@
+#' Bayes GLM arg checks
+#' 
+#' Checks arguments for BayesGLM and BayesGLM_cifti
+#' 
+#' Avoids duplicated code between BayesGLM and BayesGLM_cifti
+#' 
+#' @param scale_BOLD,scale_design See \code{\link{BayesGLM}}.
+#' @param Bayes,EM See \code{\link{BayesGLM}}.
+#' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
+#' @param num.threads See \code{\link{BayesGLM}}.
+#' @param return_INLA_result See \code{\link{BayesGLM}}.
+#' @param outfile See \code{\link{BayesGLM}}.
+#' @param verbose See \code{\link{BayesGLM}}.
+#' @param avg_sessions See \code{\link{BayesGLM}}.
+#' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
+#' @param trim_INLA See \code{\link{BayesGLM}}.
+#'
+#' @return The arguments that may have changed, in a list: \code{scale_BOLD},
+#'  \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
+#' 
+#' @keywords internal
+BayesGLM_argChecks <- function(
+  scale_BOLD = c("auto", "mean", "sd", "none"),
+  scale_design = TRUE,
+  Bayes = TRUE,
+  EM = FALSE,
+  ar_order = 6,
+  ar_smooth = 5,
+  aic = FALSE,
+  num.threads = 4,
+  return_INLA_result = TRUE,
+  outfile = NULL,
+  verbose=FALSE,
+  avg_sessions = FALSE,
+  meanTol=1e-6,
+  varTol=1e-6,
+  emTol=1e-3,
+  trim_INLA = TRUE){
+
+  if (isTRUE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+  }
+  if (isFALSE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
+  }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
+  stopifnot(is_1(scale_design, "logical"))
+
+  stopifnot(is_1(Bayes, "logical"))
+  stopifnot(is_1(EM, "logical"))
+  if (EM && !Bayes) {
+    warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
+    Bayes <- TRUE 
+  }
+  if (Bayes) {
+    if (!EM) { check_INLA(require_PARDISO=TRUE) }
+    if (is.null(outfile)) {
+      warning('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
+    }
+  }
+  # Rename these arguments.
+  do_Bayesian <- Bayes; rm(Bayes)
+  do_EM <- EM; rm(EM)
+
+  if (is.null(ar_order)) ar_order <- 0
+  stopifnot(is_1(ar_order, "numeric"))
+  do_pw <- ar_order > 0
+  if (is.null(ar_smooth)) ar_smooth <- 0
+  stopifnot(is_1(ar_smooth, "numeric"))
+  stopifnot(is_1(aic, "logical"))
+  stopifnot(is_1(num.threads, "numeric"))
+  stopifnot(num.threads <= parallel::detectCores())
+  stopifnot(is_1(return_INLA_result, "logical"))
+  stopifnot(is_1(outfile, "character"))
+  stopifnot(is_1(verbose, "logical"))
+  stopifnot(is_1(avg_sessions, "logical"))
+  stopifnot(is_posNum(meanTol))
+  stopifnot(is_posNum(varTol))
+  stopifnot(is_posNum(emTol))
+  stopifnot(is_1(trim_INLA, "logical"))
+
+  list(
+    scale_BOLD=scale_BOLD,
+    do_Bayesian=do_Bayesian,
+    do_EM = do_EM, 
+    do_pw = do_pw
+  )
+}
+
 #' BayesGLM
 #'
 #' Applies spatial Bayesian GLM to task fMRI data
@@ -59,18 +148,18 @@ BayesGLM <- function(
   faces = NULL,
   mesh = NULL,
   mask = NULL,
-  scale_BOLD=c("auto", "mean", "sd", "none"),
+  contrasts = NULL,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
-  Bayes=TRUE,
-  EM=FALSE,
+  Bayes = TRUE,
+  EM = FALSE,
   ar_order = 6,
-  ar_smooth = 6,
+  ar_smooth = 5,
   aic = FALSE,
-  num.threads=4,
-  return_INLA_result=TRUE,
+  num.threads = 4,
+  return_INLA_result = TRUE,
   outfile = NULL,
   verbose=FALSE,
-  contrasts = NULL,
   avg_sessions = FALSE,
   meanTol=1e-6,
   varTol=1e-6,
@@ -90,48 +179,34 @@ BayesGLM <- function(
   # K = number of unique tasks in all sessions
 
   # Preliminary steps. ---------------------------------------------------------
-  ## Simple argument checks. ---------------------------------------------------
-  if (isTRUE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
-  }
-  if (isFALSE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
-  }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-  stopifnot(is_1(scale_design, "logical"))
-  stopifnot(is_1(Bayes, "logical"))
-  stopifnot(is_1(EM, "logical"))
-  if (is.null(ar_order)) ar_order <- 0
-  stopifnot(is_1(ar_order, "numeric"))
-  do_pw <- ar_order > 0
-  if (is.null(ar_smooth)) ar_smooth <- 0
-  stopifnot(is_1(ar_smooth, "numeric"))
-  stopifnot(is_1(aic, "logical"))
-  stopifnot(is_1(num.threads, "numeric"))
-  stopifnot(is_1(return_INLA_result, "logical"))
-  stopifnot(is_1(aic, "logical"))
-  stopifnot(is_1(verbose, "logical"))
-  stopifnot(is_1(avg_sessions, "logical"))
-  stopifnot(is_posNum(meanTol))
-  stopifnot(is_posNum(varTol))
-  stopifnot(is_posNum(emTol))
-  stopifnot(is_1(trim_INLA, "logical"))
-
-  if (EM && !Bayes) {
-    warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
-    Bayes <- TRUE 
-  }
-  if (Bayes) {
-    if (!EM) { check_INLA(require_PARDISO=TRUE) }
-    if (is.null(outfile)) {
-      warning('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
-    }
-  }
-  # Rename these arguments.
-  do_Bayesian <- Bayes; rm(Bayes)
-  do_EM <- EM; rm(EM)
-
-  ## Check valid sessions. Get data dimensions. --------------------------------
+  ## Check simple arguments.
+  ## These checks are in a separate function because they are shared with
+  ## `BayesGLM_cifti`.
+  argChecks <- BayesGLM_argChecks(
+    scale_BOLD = scale_BOLD,
+    scale_design = scale_design,
+    Bayes = Bayes,
+    EM = EM,
+    ar_order = ar_order,
+    ar_smooth = ar_smooth,
+    aic = aic,
+    num.threads = num.threads,
+    return_INLA_result = return_INLA_result,
+    outfile = outfile,
+    verbose = verbose,
+    avg_sessions = avg_sessions,
+    varTol = varTol,
+    meanTol = meanTol,
+    emTol = emTol,
+    trim_INLA = trim_INLA
+  )
+  scale_BOLD <- agChecks$scale_BOLD
+  do_Bayesian <- agChecks$do_Bayesian
+  do_EM <- agChecks$do_EM
+  do_pw <- agChecks$do_pw
+  need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
+  
+  ## Sessions and data dimensions. ---------------------------------------------
   if (!is.BfMRI.sess(data)) {
     stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
   }
@@ -143,24 +218,8 @@ BayesGLM <- function(
   ntime <- vapply(data, function(x){ nrow(x$BOLD) }, 0)
   K <- ncol(data[[1]]$design) #number of tasks
 
-  ## Beta names: check or make. ------------------------------------------------
-  if (!is.null(beta_names)) {
-    if (length(beta_names) != K) {
-      stop(
-        'I detect ', K,
-        ' task based on the design matrix, but the length of beta_names is ',
-        length(beta_names), '.  Please fix beta_names.'
-      )
-    }
-  } else {
-    # Grab beta names from design (if provided)
-    beta_names <- colnames(data[[1]]$design)
-    if (is.null(beta_names)) { beta_names <- paste0("beta", seq(K)) }
-  }
-
   ## Mesh: check or make. ------------------------------------------------------
   # We need a mesh if doing spatial Bayesian modeling or any AR smoothing.
-  need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
   if (need_mesh) {
     # Check that only mesh OR vertices+faces supplied
     has_mesh <- !is.null(mesh)
@@ -204,6 +263,21 @@ BayesGLM <- function(
 
   V <- sum(mask2)
   V_all <- length(mask2)
+
+  ## Beta names: check or make. ------------------------------------------------
+  if (!is.null(beta_names)) {
+    if (length(beta_names) != K) {
+      stop(
+        'I detect ', K,
+        ' task based on the design matrix, but the length of beta_names is ',
+        length(beta_names), '.  Please fix beta_names.'
+      )
+    }
+  } else {
+    # Grab beta names from design (if provided)
+    beta_names <- colnames(data[[1]]$design)
+    if (is.null(beta_names)) { beta_names <- paste0("beta", seq(K)) }
+  }
 
   ## Scale, nuisance regress, and/or concatenate session data. -----------------
   #collect data and design matrices
@@ -516,7 +590,7 @@ BayesGLM <- function(
 
       #extract useful stuff from INLA model result
       beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
-      theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+      hyperpar_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
 
       #extract stuff needed for group analysis
       mu.theta <- INLA_result$misc$theta.mode
@@ -537,13 +611,13 @@ BayesGLM <- function(
 
   if (do_Bayesian) {
     if (do_EM) {
-      INLA_result <- theta_posteriors <- Q.theta <- NULL
+      INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
     } else {
       theta_estimates <- Sig_inv <- NULL
     }
   } else {
-    INLA_result <- theta_posteriors <- Q.theta <- NULL
-    beta_estimates <- theta_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
+    INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
+    beta_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
   }
 
   result <- list(
@@ -556,7 +630,7 @@ BayesGLM <- function(
     design = design,
     session_names = session_names,
     beta_names = beta_names,
-    theta_posteriors = theta_posteriors,
+    hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~
     posterior_Sig_inv = Sig_inv, 

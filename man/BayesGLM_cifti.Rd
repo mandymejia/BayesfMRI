@@ -9,6 +9,7 @@ BayesGLM_cifti(
   surfL_fname = NULL,
   surfR_fname = NULL,
   brainstructures = c("left", "right"),
+  session_names = NULL,
   design = NULL,
   onsets = NULL,
   TR = NULL,
@@ -20,20 +21,19 @@ BayesGLM_cifti(
  } else {
      NULL
  },
+  resamp_res = 10000,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
-  EM = TRUE,
+  EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
-  resamp_res = 10000,
   num.threads = 4,
-  verbose = FALSE,
+  return_INLA_result = TRUE,
   outfile = NULL,
-  return_INLA_result = FALSE,
-  avg_sessions = TRUE,
-  session_names = NULL,
+  verbose = FALSE,
+  avg_sessions = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06,
   emTol = 0.001,
@@ -41,18 +41,27 @@ BayesGLM_cifti(
 )
 }
 \arguments{
-\item{cifti_fname}{File path (or vector thereof, for multiple sessions) of CIFTI-format fMRI timeseries data (*.dtseries.nii).}
+\item{cifti_fname}{File path (or vector thereof, for multiple sessions) of
+CIFTI-format fMRI timeseries data (*.dtseries.nii).}
 
-\item{surfL_fname}{File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and Bayes=TRUE.}
+\item{surfL_fname}{File path of GIFTI-format left cortical surface geometry
+(*.surf.gii). Must be provided if brainstructures includes \code{"left"} and
+\code{Bayes=TRUE}.}
 
-\item{surfR_fname}{File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and Bayes=TRUE.}
+\item{surfR_fname}{File path of GIFTI-format right cortical surface geometry
+(*.surf.gii). Must be provided if brainstructures includes \code{"right"}
+and \code{Bayes=TRUE}.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 Note that the subcortical models have not yet been implemented.}
 
-\item{design, onsets, TR}{Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
+\item{session_names}{(Optional) A vector of names corresponding to each
+session. Ignored if \code{avg_sessions == TRUE}.}
+
+\item{design, onsets, TR}{Either provide \code{design}, or provide both
+\code{onsets} and \code{TR}.
 
 \code{design} is a \eqn{T x K} task design matrix (or list of such
 matrices, for multiple-session modeling) with column names representing
@@ -69,7 +78,7 @@ multi-session modeling, a list of such lists.)
 
 \code{TR} is the temporal resolution of the data in seconds.}
 
-\item{nuisance}{(Optional) A TxJ matrix of nuisance signals
+\item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals
 (or list of such matrices, for multiple-session modeling).}
 
 \item{dHRF}{Set to \code{1} to add the temporal derivative of each column
@@ -87,6 +96,10 @@ of DCT bases to include.
 Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 typical \code{TR} this amounts to lower filter frequency than the
 approximately .01 Hz used in most studies.)}
+
+\item{resamp_res}{The number of vertices to which each cortical surface
+should be resampled, or \code{NULL} to not resample. For computational
+feasibility, a value of \code{10000} or lower is recommended.}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
@@ -107,7 +120,7 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 addition to the classical GLM. Classical GLM results are always returned.}
 
 \item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
-Default: \code{TRUE}.}
+Default: \code{FALSE}.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
@@ -119,12 +132,13 @@ to not do any smoothing. Default: \code{5}.}
 
 \item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
 
-\item{resamp_res}{The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.}
-
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}
 
-\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
+\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+Default: \code{FALSE}. Required for running \code{id_activations}
+after, but not for running BayesGLM_joint after to get
+posterior quantities of group means or contrasts.}
 
 \item{outfile}{(Optional) File name (without extension) of output file for
 \code{"BayesGLM"} result to use in Bayesian group modeling.
@@ -132,16 +146,10 @@ for model estimation. Default: \code{4}.}
 cortex and right cortex results, respectively. Default: \code{NULL}
 (do not save the results to any file).}
 
-\item{return_INLA_result}{Return the INLA model object? (It can be large.)
-Default: \code{FALSE}. Required for running \code{id_activations}
-after, but not for running BayesGLM_joint after to get
-posterior quantities of group means or contrasts.}
+\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
 sessions? Default: \code{FALSE}.}
-
-\item{session_names}{(Optional) A vector of names corresponding to each
-session. Ignored if \code{avg_sessions == TRUE}.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
 do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.}

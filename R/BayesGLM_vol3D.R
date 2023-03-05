@@ -180,9 +180,9 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     }
 
     #extract theta posteriors
-    theta_posteriors_grp <- get_posterior_densities_vol3D(object=INLA_result_grp, spde) #hyperparameter posterior densities
-    theta_posteriors_grp$model_group <- grp
-    if(grp == group_set[1]) theta_posteriors_all <- theta_posteriors_grp else theta_posteriors_all <- rbind(theta_posteriors_all, theta_posteriors_grp)
+    hyperpar_posteriors_grp <- get_posterior_densities_vol3D(object=INLA_result_grp, spde) #hyperparameter posterior densities
+    hyperpar_posteriors_grp$model_group <- grp
+    if(grp == group_set[1]) hyperpar_posteriors_all <- hyperpar_posteriors_grp else hyperpar_posteriors_all <- rbind(hyperpar_posteriors_all, hyperpar_posteriors_grp)
 
     #save spde and INLA objects
     spde_all[[which(group_set == grp)]] <- spde_grp
@@ -201,7 +201,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
-                   theta_posteriors = theta_posteriors,
+                   hyperpar_posteriors = hyperpar_posteriors,
                    call = match.call(),
                    GLM_result = GLM_result)
   } else {
@@ -211,7 +211,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
                    session_names = session_names,
                    beta_names = beta_names,
                    beta_estimates = beta_estimates,
-                   theta_posteriors = theta_posteriors,
+                   hyperpar_posteriors = hyperpar_posteriors,
                    call = match.call(),
                    GLM_result = GLM_result)
   }

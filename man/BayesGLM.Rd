@@ -11,18 +11,18 @@ BayesGLM(
   faces = NULL,
   mesh = NULL,
   mask = NULL,
+  contrasts = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
   EM = FALSE,
   ar_order = 6,
-  ar_smooth = 6,
+  ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  contrasts = NULL,
   avg_sessions = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06,
@@ -51,6 +51,8 @@ surface data).}
 
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
 vertex is to be included.}
+
+\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
@@ -95,8 +97,6 @@ posterior quantities of group means or contrasts.}
 \code{BayesGLM2}).}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
-
-\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
 sessions? Default: \code{FALSE}.}

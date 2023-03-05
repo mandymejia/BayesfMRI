@@ -7,44 +7,20 @@
 #'  user must first download and install the Connectome Workbench, available
 #'  from https://www.humanconnectome.org/software/get-connectome-workbench .
 #'
-# @section Label Levels:
-#  \code{xifti$meta$subcort$labels} is a factor with the following levels:
-#
-#  \enumerate{
-#    \item{Cortex-L}
-#    \item{Cortex-R}
-#    \item{Accumbens-L}
-#    \item{Accumbens-R}
-#    \item{Amygdala-L}
-#    \item{Amygdala-R}
-#    \item{Brain Stem}
-#    \item{Caudate-L}
-#    \item{Caudate-R}
-#    \item{Cerebellum-L}
-#    \item{Cerebellum-R}
-#    \item{Diencephalon-L}
-#    \item{Diencephalon-R}
-#    \item{Hippocampus-L}
-#    \item{Hippocampus-R}
-#    \item{Pallidum-L}
-#    \item{Pallidum-R}
-#    \item{Putamen-L}
-#    \item{Putamen-R}
-#    \item{Thalamus-L}
-#    \item{Thalamus-R}
-#  }
-#
-#  These correspond to the same structures as given by
-#  \code{ft_read_cifti} in the \code{cifti-matlab} MATLAB toolbox.
-#
-#' @param cifti_fname File path (or vector thereof, for multiple sessions) of CIFTI-format fMRI timeseries data (*.dtseries.nii).
-#' @param surfL_fname File path of GIFTI-format left cortical surface (*.surf.gii). Must be provided if brainstructures includes "left" and Bayes=TRUE.
-#' @param surfR_fname File path of GIFTI-format right cortical surface (*.surf.gii). Must be provided if brainstructures includes "right" and Bayes=TRUE.
+#' @param cifti_fname File path (or vector thereof, for multiple sessions) of 
+#'  CIFTI-format fMRI timeseries data (*.dtseries.nii).
+#' @param surfL_fname File path of GIFTI-format left cortical surface geometry 
+#'  (*.surf.gii). Must be provided if brainstructures includes \code{"left"} and 
+#'  \code{Bayes=TRUE}.
+#' @param surfR_fname File path of GIFTI-format right cortical surface geometry 
+#'  (*.surf.gii). Must be provided if brainstructures includes \code{"right"} 
+#'  and \code{Bayes=TRUE}.
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 #'  cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 #'  Note that the subcortical models have not yet been implemented.
-#' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
+#' @param design,onsets,TR Either provide \code{design}, or provide both 
+#'  \code{onsets} and \code{TR}.
 #'
 #'   \code{design} is a \eqn{T x K} task design matrix (or list of such
 #'   matrices, for multiple-session modeling) with column names representing
@@ -60,7 +36,7 @@
 #'   multi-session modeling, a list of such lists.)
 #'
 #'   \code{TR} is the temporal resolution of the data in seconds.
-#' @param nuisance (Optional) A TxJ matrix of nuisance signals
+#' @param nuisance (Optional) A \eqn{T \times J} matrix of nuisance signals
 #'  (or list of such matrices, for multiple-session modeling).
 #' @param dHRF Set to \code{1} to add the temporal derivative of each column
 #'  in the design matrix, \code{2} to add the second derivatives too, or
@@ -80,7 +56,7 @@
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
 #' @param EM (logical) Should the EM implementation of the Bayesian GLM be used?
-#'  Default: \code{TRUE}.
+#'  Default: \code{FALSE}.
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
 #'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
@@ -88,7 +64,9 @@
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 #'  to not do any smoothing. Default: \code{5}.
 #' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.
-#' @param resamp_res The number of vertices to which each cortical surface should be resampled, or NULL if no resampling is to be performed. For computational feasibility, a value of 10000 or lower is recommended.
+#' @param resamp_res The number of vertices to which each cortical surface
+#'  should be resampled, or \code{NULL} to not resample. For computational 
+#'  feasibility, a value of \code{10000} or lower is recommended.
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
 #' @param outfile (Optional) File name (without extension) of output file for
@@ -121,6 +99,7 @@ BayesGLM_cifti <- function(
   surfL_fname=NULL,
   surfR_fname=NULL,
   brainstructures=c('left','right'),
+  session_names=NULL,
   design=NULL,
   onsets=NULL,
   TR=NULL,
@@ -128,25 +107,80 @@ BayesGLM_cifti <- function(
   dHRF=c(0, 1, 2),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
-  scale_BOLD=c("auto", "mean", "sd", "none"),
-  scale_design=TRUE,
-  Bayes=TRUE,
-  EM=TRUE,
+  resamp_res=10000,
+  # Below arguments shared with `BayesGLM`
+  scale_BOLD = c("auto", "mean", "sd", "none"),
+  scale_design = TRUE,
+  Bayes = TRUE,
+  EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
-  resamp_res=10000,
-  num.threads=4,
+  num.threads = 4,
+  return_INLA_result = TRUE,
+  outfile = NULL,
   verbose=FALSE,
-  outfile=NULL,
-  return_INLA_result=FALSE,
-  avg_sessions = TRUE,
-  session_names=NULL,
-  meanTol=1e-6, varTol=1e-6,
-  emTol = 1e-3,
+  avg_sessions = FALSE,
+  meanTol=1e-6,
+  varTol=1e-6,
+  emTol=1e-3,
   trim_INLA = TRUE){
 
-  # Check args ------------------------------------------
+  # Preliminary steps. ---------------------------------------------------------
+  ## Check simple arguments.
+  ## These checks are in a separate function because they are shared with
+  ## `BayesGLM_cifti`.
+  argChecks <- BayesGLM_argChecks(
+    scale_BOLD = scale_BOLD,
+    scale_design = scale_design,
+    Bayes = Bayes,
+    EM = EM,
+    ar_order = ar_order,
+    ar_smooth = ar_smooth,
+    aic = aic,
+    num.threads = num.threads,
+    return_INLA_result = return_INLA_result,
+    outfile = outfile,
+    verbose = verbose,
+    avg_sessions = avg_sessions,
+    meanTol = meanTol,
+    varTol = varTol,
+    emTol = emTol,
+    trim_INLA = trim_INLA
+  )
+  scale_BOLD <- arxgChecks$scale_BOLD
+  do_Bayesian <- arxgChecks$do_Bayesian
+  do_EM <- arxgChecks$do_EM
+  do_pw <- arxgChecks$do_pw
+  need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
+
+  # Brain structures.
+  brainstructures <- ciftiTools:::match_input(
+    brainstructures, c("left","right"),
+    user_value_label="brainstructures"
+  )
+  if ("all" %in% brainstructures) {
+    message(
+      "`brainstructures` is `all`, so using both left and right cortex. ", 
+      "Skipping subcortex (not implemented yet)."
+    )
+    brainstructures <- c("left","right") # "subcortical"
+  }
+  do_left <- ('left' %in% brainstructures)
+  do_right <- ('right' %in% brainstructures)
+  
+  # Nuisance arguments.
+  dHRF <- match.arg(dHRF, c(0, 1, 2))
+  if (!is.null(DCT)) {
+    stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
+    if (DCT==0) { DCT <- NULL }
+  }
+  if (!is.null(hpf)) {
+    stopifnot(is_posNum(hpf, zero_ok=TRUE))
+    if (hpf==0) { hpf <- NULL }
+  }
+
+  # xifti.
   is_xifti <- FALSE
   if (is.character(cifti_fname)) {
     NULL
@@ -167,83 +201,10 @@ BayesGLM_cifti <- function(
   # or maybe just add surfaces to the `"xifti"` using `add_surf` and that will handle the
   # difference in resolution.
 
-  # Rename and coerce to logical
-  do_Bayesian <- as.logical(Bayes)
-  do_EM <- as.logical(EM)
-  if (do_Bayesian & !do_EM) { check_INLA(require_PARDISO=TRUE) }
-  if(do_EM & !do_Bayesian) {
-    warning("You have EM = TRUE and Bayes = FALSE. As the EM implementation is a Bayesian method, it will not be performed unless both EM = TRUE and Bayes = TRUE. Setting Bayes = TRUE.")
-    Bayes <- TRUE
-    do_Bayesian <- TRUE
-  }
-
-  # Check nuisance arguments.
-  if (identical(dHRF, c(0, 1, 2))) { dHRF <- 0 }
-  stopifnot(length(dHRF)==1 & dHRF %in% c(0, 1, 2))
-  if (!is.null(DCT)) {
-    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT))
-    if (DCT==0) { DCT <- NULL }
-  }
-  if (!is.null(hpf)) {
-    stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
-    if (hpf==0) { hpf <- NULL }
-  }
-
-  # Check prewhitening arguments.
-  if (is.null(ar_order)) ar_order <- 0
-  ar_order <- as.numeric(ar_order)
-  do_pw <- (ar_order > 0)
-  if (is.null(ar_smooth)) ar_smooth <- 0
-  ar_smooth <- as.numeric(ar_smooth)
-  stopifnot(is.logical(aic) && length(aic)==1)
-
-  avail_cores <- parallel::detectCores()
-  num.threads <- min(num.threads, avail_cores)
-  # if(avail_cores < 2) num.threads <- 1
-
-  # Check that arguments are compatible
-  brainstructures <- ciftiTools:::match_input(
-    brainstructures, c("left","right"),
-    user_value_label="brainstructures"
-  )
-  if ("all" %in% brainstructures) {
-    brainstructures <- c("left","right","subcortical")
-  }
-  do_left <- ('left' %in% brainstructures)
-  do_right <- ('right' %in% brainstructures)
-
-  need_mesh <- (do_Bayesian || (do_pw && ar_smooth > 0))
-
-  # Surfaces ---------------------------------------
-  # if(do_left & is.null(surfL_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  # if(do_right & is.null(surfR_fname)) stop('surfL_fname must be provided if brainstructures includes "left"')
-  surf_list <- list(left=NULL, right=NULL)
-  if (need_mesh) {
-    if (do_left) {
-      if (is.null(surfL_fname)) {
-        cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
-        surfL_fname <- ciftiTools.files()$surf["left"]
-      }
-      surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
-    }
-    if (do_right) {
-      if (is.null(surfR_fname)) {
-        cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
-        surfR_fname <- ciftiTools.files()$surf["right"]
-      }
-      surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
-    }
-  } else {
-    surf_list <- list(
-      left = list(vertices=NULL, faces=NULL),
-      right = list(vertices=NULL, faces=NULL)
-    )
-  }
-
-  # Sessions ---------------------------------------
+  ## Sessions. -----------------------------------------------------------------
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(cifti_fname)
-  if (n_sess == 1 & avg_sessions) avg_sessions <- FALSE
+  if (n_sess == 1 && avg_sessions) avg_sessions <- FALSE
   if (n_sess==1) {
     if (is.null(session_names)) session_names <- 'single_session'
     if (!is.null(design)) design <- list(single_session = design)
@@ -279,8 +240,32 @@ BayesGLM_cifti <- function(
   }
   if(is.null(nuisance)) nuisance <- vector("list",length = n_sess)
 
-  # `design`, `onsets`, `beta_names` ---------------------------------------
-  # Check `design` and `onsets`. Get `beta_names`.
+
+  ## Surfaces: check or get. ---------------------------------------------------
+  surf_list <- list(left=NULL, right=NULL)
+  if (need_mesh) {
+    if (do_left) {
+      if (is.null(surfL_fname)) {
+        cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
+        surfL_fname <- ciftiTools.files()$surf["left"]
+      }
+      surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
+    }
+    if (do_right) {
+      if (is.null(surfR_fname)) {
+        cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
+        surfR_fname <- ciftiTools.files()$surf["right"]
+      }
+      surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
+    }
+  } else {
+    surf_list <- list(
+      left = list(vertices=NULL, faces=NULL),
+      right = list(vertices=NULL, faces=NULL)
+    )
+  }
+
+  ## `design`, `onsets`, `beta_names`. -----------------------------------------
   if (!xor(is.null(design), is.null(onsets))) { stop('`design` or `onsets` must be provided, but not both.') }
   if (!is.null(onsets) && is.null(TR)) { stop('Please provide `TR` if onsets provided') }
   if (!is.null(onsets)) {
@@ -298,20 +283,17 @@ BayesGLM_cifti <- function(
     rm(d1)
   }
 
-  # Scale
-  if (isTRUE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'auto'`"); scale_BOLD <- "auto" }
-  if (isFALSE(scale_BOLD)) { cat("Setting `scale_BOLD <- 'none'`"); scale_BOLD <- "none" }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-
-  # Data setup ----------------------------------------------------------
+  # Data setup. ----------------------------------------------------------------
   cat('\n SETTING UP DATA \n')
+
+  ## xifti things. -------------------------------------------------------------
   ### For each session, separate the CIFTI data into left/right/sub and read in files
   BOLD_list <- list(left=NULL, right=NULL)
   mwallL <- mwallR <- NULL
   ntime <- vector("numeric", n_sess)
 
-  for (ss in 1:n_sess) {
-    if(n_sess > 1) cat(paste0(' .. reading in data for session ', ss,'\n'))
+  for (ss in seq(n_sess)) {
+    if (n_sess > 1) cat(paste0(' .. reading in data for session ', ss,'\n'))
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
@@ -354,7 +336,7 @@ BayesGLM_cifti <- function(
   BOLD_list <- BOLD_list[!vapply(BOLD_list, is.null, FALSE)]
   if (need_mesh) { surf_list <- surf_list[!vapply(surf_list, is.null, FALSE)] }
 
-  # Design and nuisance matrices -----------------------------------------------
+  ## Design and nuisance matrices. ---------------------------------------------
   if (is.null(design)) {
     cat(" MAKING DESIGN MATRICES \n")
     design <- vector("list", n_sess)
@@ -363,7 +345,7 @@ BayesGLM_cifti <- function(
     }
   }
 
-  ### Check that design matrix names are consistent across sessions
+  # Check that design matrix names are consistent across sessions.
   if (n_sess > 1) {
     tmp <- sapply(design, colnames)
     if(length(beta_names) == 1) {
@@ -377,10 +359,14 @@ BayesGLM_cifti <- function(
 
   beta_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more beta_names.
 
-  if (scale_design) design <- sapply(design, scale_design_mat, simplify = F)
-  if (!scale_design) design <- sapply(design, scale, scale = F, simplify = F) #center but do not scale
+  # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
+  design <- if (scale_design) {
+    sapply(design, scale_design_mat, simplify = F)
+  } else {
+    sapply(design, scale, scale = F, simplify = F)
+  }
 
-  ### ADD ADDITIONAL NUISANCE REGRESSORS
+  # Add DCT bases.
   DCTs <- vector("numeric", n_sess)
   for (ss in 1:n_sess) {
     # DCT highpass filter
@@ -403,22 +389,22 @@ BayesGLM_cifti <- function(
     }
   }
 
-  # Do GLM --------------------------------------------------------
-  cat(' RUNNING MODELS \n')
+  # Do GLM. --------------------------------------------------------------------
+  cat('RUNNING MODELS \n')
   classicalGLM_results <- list(left = NULL, right = NULL)
   BayesGLM_results <- list(left = NULL, right = NULL)
 
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
-  for (each_hem in brainstructures) {
+  for (bb in brainstructures) {
 
-    cat("\n ..",toupper(each_hem),"CORTEX ANALYSIS \n")
+    cat("\n ..",toupper(bb),"CORTEX ANALYSIS \n")
 
     # set up session list
     session_data <- vector('list', n_sess)
     names(session_data) <- session_names
-    for (ss in 1:n_sess) {
+    for (ss in seq(n_sess)) {
       session_data[[ss]] <- list(
-        BOLD = t(BOLD_list[[each_hem]][[ss]]),
+        BOLD = t(BOLD_list[[bb]][[ss]]),
         design=design[[ss]]
       )
       if (!is.null(nuisance)) {
@@ -429,9 +415,9 @@ BayesGLM_cifti <- function(
     # `outfile`
     if (!is.null(outfile)) {
       if (endsWith(outfile, ".rds")) {
-        outfile_name <- gsub(".rds$", paste0("_",each_hem,".rds"), outfile)
+        outfile_name <- gsub(".rds$", paste0("_",bb,".rds"), outfile)
       } else {
-        outfile_name <- paste0(outfile, "_",each_hem,".rds")
+        outfile_name <- paste0(outfile, "_",bb,".rds")
       }
     } else {
       outfile_name <- NULL
@@ -440,9 +426,9 @@ BayesGLM_cifti <- function(
     BayesGLM_out <- BayesGLM(
       data = session_data,
       beta_names = beta_names,
+      vertices = surf_list[[bb]]$vertices,
+      faces = surf_list[[bb]]$faces,
       mesh = NULL,
-      vertices = surf_list[[each_hem]]$vertices,
-      faces = surf_list[[each_hem]]$faces,
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
@@ -461,16 +447,16 @@ BayesGLM_cifti <- function(
       trim_INLA = trim_INLA
     )
 
-    BayesGLM_results[[each_hem]] <- BayesGLM_out[-grep("classical", names(BayesGLM_out))]
-    classicalGLM_results[[each_hem]] <- BayesGLM_out$result_classical
-    class(BayesGLM_results[[each_hem]]) <- 'BayesGLM'
-    class(classicalGLM_results[[each_hem]]) <- 'classicalGLM'
+    BayesGLM_results[[bb]] <- BayesGLM_out[-grep("classical", names(BayesGLM_out))]
+    classicalGLM_results[[bb]] <- BayesGLM_out$result_classical
+    class(BayesGLM_results[[bb]]) <- 'BayesGLM'
+    class(classicalGLM_results[[bb]]) <- 'classicalGLM'
 
     rm(BayesGLM_out); gc()
   }
 
   # update session info if averaged over sessions
-  if (avg_sessions==TRUE) {
+  if (avg_sessions) {
     session_names <- 'session_avg'
     n_sess_orig <- n_sess
     n_sess <- 1
@@ -485,11 +471,11 @@ BayesGLM_cifti <- function(
   classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
   names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
   datL <- datR <- NULL
-  for(ss in 1:n_sess){
+  for (ss in seq(n_sess)) {
 
     # CLASSICAL GLM
-    if(do_left) datL <- classicalGLM_results$left[[ss]]$estimates[mwallL==1,]
-    if(do_right) datR <- classicalGLM_results$right[[ss]]$estimates[mwallR==1,]
+    if (do_left) datL <- classicalGLM_results$left[[ss]]$estimates[mwallL==1,]
+    if (do_right) datR <- classicalGLM_results$right[[ss]]$estimates[mwallR==1,]
     classicalGLM_cifti[[ss]] <- as.xifti(
       cortexL = datL,
       cortexL_mwall = mwallL,
@@ -512,9 +498,6 @@ BayesGLM_cifti <- function(
     }
   }
 
-  #TO DO: Combine hyperparameters across hemispheres, rename "beta" to "task" (and in BayesGLM)
-  # Rename theta_posteriors to hyperpar_posteriors
-
   result <- list(
     betas_Bayesian = BayesGLM_cifti,
     betas_classical = classicalGLM_cifti,
@@ -529,11 +512,13 @@ BayesGLM_cifti <- function(
     session_names = session_names,
     n_sess_orig = n_sess_orig,
     beta_names = beta_names,
+    # task part of design matrix after centering/scaling but 
+    #   before nuisance regression and prewhitening.
     design = design
-  ) #task part of design matrix after centering/scaling but before nuisance regression and prewhitening
+  )
 
   cat('\n DONE! \n')
 
   class(result) <- "BayesGLM_cifti"
-  return(result)
+  result
 }
