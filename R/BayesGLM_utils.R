@@ -45,7 +45,7 @@ check_INLA <- function(require_PARDISO=TRUE){
 #' @inheritParams num.threads_Param
 #' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
 #' @inheritParams verbose_Param_inla
-#' @inheritParams contrasts_Param_inla
+#' @inheritParams contrasts_Param
 #' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
 #' @param inla.mode specifies the INLA mode to use (defaults to experimental)
 #'

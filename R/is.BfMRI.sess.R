@@ -92,7 +92,7 @@ is.a_session <- function(x){
 #'  \itemize{
 #'    \item{"BOLD"}{\eqn{T \times V} matrix of BOLD responses, rows are time points, columns are voxels}
 #'    \item{"design"}{\eqn{T \times K} matrix containing the K task regressors}
-#'    \item{"nuisance"}{Optional. \eqn{T \times L} matrix containing the L nuisance regressors}
+#'    \item{"nuisance"}{Optional. \eqn{T \times J} matrix containing the L nuisance regressors}
 #'  }
 #'  In addition, all sessions must have the same number of data locations and tasks.
 #'

@@ -22,7 +22,7 @@
 #' @param design,onsets,TR Either provide \code{design}, or provide both 
 #'  \code{onsets} and \code{TR}.
 #'
-#'   \code{design} is a \eqn{T x K} task design matrix (or list of such
+#'   \code{design} is a \eqn{T \times K} task design matrix (or list of such
 #'   matrices, for multiple-session modeling) with column names representing
 #'   tasks. Each column represents the expected BOLD response due to each task,
 #'   a convolution of the hemodynamic response function (HRF) and the task
@@ -52,37 +52,29 @@
 #'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 #'  typical \code{TR} this amounts to lower filter frequency than the
 #'  approximately .01 Hz used in most studies.)
-#' @inheritParams scale_BOLD_Param
-#' @inheritParams scale_design_Param
-#' @inheritParams Bayes_Param
-#' @param EM (logical) Should the EM implementation of the Bayesian GLM be used?
-#'  Default: \code{FALSE}.
-#' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
-#'  should be a number indicating the order of the autoregressive model to use
-#'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
-#' @param ar_smooth FWHM parameter for smoothing. Remember that
-#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-#'  to not do any smoothing. Default: \code{5}.
-#' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.
 #' @param resamp_res The number of vertices to which each cortical surface
 #'  should be resampled, or \code{NULL} to not resample. For computational 
 #'  feasibility, a value of \code{10000} or lower is recommended.
+#' @inheritParams task_names_Param
+#' @inheritParams session_names_Param
+#' @inheritParams contrasts_Param
+#' @inheritParams scale_BOLD_Param
+#' @inheritParams scale_design_Param
+#' @inheritParams Bayes_Param
+#' @inheritParams EM_Param
+#' @inheritParams ar_order_Param
+#' @inheritParams ar_smooth_Param
+#' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
+#' @inheritParams return_INLA_result_Param
+#' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
-#' @param outfile (Optional) File name (without extension) of output file for
-#'  \code{"BayesGLM"} result to use in Bayesian group modeling.
-#'  \code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
-#'  cortex and right cortex results, respectively. Default: \code{NULL}
-#'  (do not save the results to any file).
-#' @inheritParams return_INLA_result_Param_FALSE
 #' @inheritParams avg_sessions_Param
-#' @param session_names (Optional) A vector of names corresponding to each
-#'   session. Ignored if \code{avg_sessions == TRUE}.
-#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
-#'  do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.
-#' @param emTol The stopping tolerance for the EM algorithm. Default: \code{1e-3}.
-#' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location.
+#'  Locations which do not meet these thresholds are masked out of the analysis.
+#'  Default: \code{1e-6} for both.
+#' @inheritParams emTol_Param
+#' @inheritParams trim_INLA_Param
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
 #'
@@ -99,7 +91,6 @@ BayesGLM_cifti <- function(
   surfL_fname=NULL,
   surfR_fname=NULL,
   brainstructures=c('left','right'),
-  session_names=NULL,
   design=NULL,
   onsets=NULL,
   TR=NULL,
@@ -109,6 +100,9 @@ BayesGLM_cifti <- function(
   DCT=if(is.null(hpf)) {4} else {NULL},
   resamp_res=10000,
   # Below arguments shared with `BayesGLM`
+  task_names = NULL,
+  session_names = NULL,
+  contrasts = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -119,11 +113,11 @@ BayesGLM_cifti <- function(
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
-  verbose=FALSE,
-  avg_sessions = FALSE,
-  meanTol=1e-6,
-  varTol=1e-6,
-  emTol=1e-3,
+  verbose = FALSE,
+  avg_sessions = TRUE,
+  meanTol = 1e-6,
+  varTol = 1e-6,
+  emTol = 1e-3,
   trim_INLA = TRUE){
 
   # Preliminary steps. ---------------------------------------------------------
@@ -148,10 +142,10 @@ BayesGLM_cifti <- function(
     emTol = emTol,
     trim_INLA = trim_INLA
   )
-  scale_BOLD <- arxgChecks$scale_BOLD
-  do_Bayesian <- arxgChecks$do_Bayesian
-  do_EM <- arxgChecks$do_EM
-  do_pw <- arxgChecks$do_pw
+  scale_BOLD <- argChecks$scale_BOLD
+  do_Bayesian <- argChecks$do_Bayesian
+  do_EM <- argChecks$do_EM
+  do_pw <- argChecks$do_pw
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   # Brain structures.
@@ -265,21 +259,33 @@ BayesGLM_cifti <- function(
     )
   }
 
-  ## `design`, `onsets`, `beta_names`. -----------------------------------------
+  ## `design`, `onsets`, `task_names`. -----------------------------------------
   if (!xor(is.null(design), is.null(onsets))) { stop('`design` or `onsets` must be provided, but not both.') }
   if (!is.null(onsets) && is.null(TR)) { stop('Please provide `TR` if onsets provided') }
   if (!is.null(onsets)) {
     do_multisesh <- inherits(onsets[[1]], "list")
     o1 <- if (do_multisesh) { onsets[[1]] } else { onsets }
     if (!do_multisesh) { stopifnot(inherits(o1, "matrix") || inherits(o1, "data.frame")) }
-    beta_names <- if (is.null(names(o1))) { paste0("beta", seq(length(o1))) } else { names(o1) }
+    task_names <- if (!is.null(task_names)) {
+      task_names
+    } else if (!is.null(names(o1))) {
+      names(o1)
+    } else {
+      paste0("beta", seq(length(o1)))
+    }
     rm(o1)
   }
   if (!is.null(design)) {
     do_multisesh <- inherits(design, "list")
     if (!do_multisesh) { stopifnot(inherits(design, "matrix") || inherits(design, "data.frame")) }
     d1 <- if (do_multisesh) { design[[1]] } else { design }
-    beta_names <- if (is.null(colnames(d1))) { paste0("beta", seq(ncol(d1))) } else { names(d1) }
+    task_names <- if (!is.null(task_names)) {
+      task_names
+    } else if (!is.null(names(d1))) {
+      names(d1)
+    } else {
+      paste0("beta", seq(ncol(d1)))
+    }
     rm(d1)
   }
 
@@ -348,7 +354,7 @@ BayesGLM_cifti <- function(
   # Check that design matrix names are consistent across sessions.
   if (n_sess > 1) {
     tmp <- sapply(design, colnames)
-    if(length(beta_names) == 1) {
+    if(length(task_names) == 1) {
       num_names <- length(unique(tmp))
       if (num_names > 1) stop('task names must match across sessions for multi-session modeling')
     } else {
@@ -357,7 +363,7 @@ BayesGLM_cifti <- function(
     }
   }
 
-  beta_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more beta_names.
+  task_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more task_names.
 
   # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
   design <- if (scale_design) {
@@ -425,10 +431,12 @@ BayesGLM_cifti <- function(
 
     BayesGLM_out <- BayesGLM(
       data = session_data,
-      beta_names = beta_names,
       vertices = surf_list[[bb]]$vertices,
       faces = surf_list[[bb]]$faces,
       mesh = NULL,
+      contrasts = contrasts,
+      task_names = NULL, # because HRF
+      session_names = session_names,
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
@@ -482,7 +490,7 @@ BayesGLM_cifti <- function(
       cortexR = datR,
       cortexR_mwall = mwallR
     )
-    classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+    classicalGLM_cifti[[ss]]$meta$cifti$names <- task_names
 
     # BAYESIAN GLM
     if(do_Bayesian){
@@ -494,7 +502,7 @@ BayesGLM_cifti <- function(
         cortexR = datR,
         cortexR_mwall = mwallR
       )
-      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[ss]]$meta$cifti$names <- task_names
     }
   }
 
@@ -511,7 +519,7 @@ BayesGLM_cifti <- function(
     ),
     session_names = session_names,
     n_sess_orig = n_sess_orig,
-    beta_names = beta_names,
+    task_names = task_names,
     # task part of design matrix after centering/scaling but 
     #   before nuisance regression and prewhitening.
     design = design

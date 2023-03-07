@@ -6,11 +6,12 @@
 \usage{
 BayesGLM(
   data,
-  beta_names = NULL,
   vertices = NULL,
   faces = NULL,
   mesh = NULL,
   mask = NULL,
+  task_names = NULL,
+  session_names = NULL,
   contrasts = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
@@ -23,7 +24,7 @@ BayesGLM(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = FALSE,
+  avg_sessions = TRUE,
   meanTol = 1e-06,
   varTol = 1e-06,
   emTol = 0.001,
@@ -32,11 +33,12 @@ BayesGLM(
 }
 \arguments{
 \item{data}{A list of sessions in the \code{"BfMRI.sess"} object format. Each
-session is a list with elements "BOLD", "design" and "nuisance" (optional).
+session is a list with elements "BOLD", "design", and optionally "nuisance".
 The name of each element in \code{data} is the name of that session. See
-\code{?is.BfMRI.sess} for details.}
+\code{?is.BfMRI.sess} for details.
 
-\item{beta_names}{(Optional) Names of tasks represented in design matrix}
+Note that the argument \code{session_names} can be used instead of providing
+the session names by the list element names of \code{data}.}
 
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
 coordinates at which a given vertex in the mesh is located. \eqn{V} is the
@@ -49,8 +51,15 @@ faces in the mesh.}
 \item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
 surface data).}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating the
+vertices to be included.}
+
+\item{task_names}{(Optional) Names of tasks represented in design matrix.}
+
+\item{session_names}{(Optional, and only relevant for multi-session modeling)
+Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
+argument will overwrite the names of the list entries in \code{data}, if
+both exist.}
 
 \item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
@@ -73,7 +82,7 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 addition to the classical GLM. Classical GLM results are always returned.}
 
 \item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
-Default: \code{FALSE}.}
+Default: \code{FALSE}. This method is still in development.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
@@ -83,7 +92,8 @@ for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
 
-\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}?}
+\item{aic}{Use the AIC to select AR model order between \code{0} and
+\code{ar_order}? Default: \code{FALSE}.}
 
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}
@@ -99,15 +109,18 @@ posterior quantities of group means or contrasts.}
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{FALSE}.}
+sessions? Default: \code{TRUE}.}
 
-\item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
-do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.}
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
+Locations which do not meet these thresholds are masked out of the analysis.
+Default: \code{1e-6} for both.}
 
-\item{emTol}{The stopping tolerance for the EM algorithm. Default: \code{1e-3}.}
+\item{emTol}{The stopping tolerance for the EM algorithm. Default:
+\code{1e-3}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
-result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+result be trimmed to only what is necessary to use \code{id_activations}?
+Default: \code{TRUE}.}
 }
 \value{
 A list containing...

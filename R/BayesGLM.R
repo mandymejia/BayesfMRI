@@ -94,40 +94,37 @@ BayesGLM_argChecks <- function(
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
-#'  session is a list with elements "BOLD", "design" and "nuisance" (optional). 
+#'  session is a list with elements "BOLD", "design", and optionally "nuisance".
 #'  The name of each element in \code{data} is the name of that session. See 
 #'  \code{?is.BfMRI.sess} for details.
-#' @param beta_names (Optional) Names of tasks represented in design matrix
+#' 
+#'  Note that the argument \code{session_names} can be used instead of providing
+#'  the session names by the list element names of \code{data}.
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @inheritParams mesh_Param_inla
-#' @param mask (Optional) A length \eqn{V} logical vector indicating if each
-#'  vertex is to be included.
+#' @param mask (Optional) A length \eqn{V} logical vector indicating the
+#'  vertices to be included.
+#' @inheritParams task_names_Param
+#' @inheritParams session_names_Param
+#' @inheritParams contrasts_Param
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
-#' @param EM (logical) Should the EM implementation of the Bayesian GLM be used?
-#'  Default: \code{FALSE}.
-#' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
-#'  should be a number indicating the order of the autoregressive model to use
-#'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
-#' @param ar_smooth (numeric) FWHM parameter for smoothing. Remember that
-#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-#'  to not do any smoothing. Default: \code{5}.
-#' @param aic Use the AIC to select AR model order between \code{0} and \code{ar_order}? 
-#"  Default: \code{FALSE}.
+#' @inheritParams EM_Param
+#' @inheritParams ar_order_Param
+#' @inheritParams ar_smooth_Param
+#' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
-#' @inheritParams return_INLA_result_Param_TRUE
-#' @param outfile File name where results will be written (for use by
-#'  \code{BayesGLM2}).
+#' @inheritParams return_INLA_result_Param
+#' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
-#' @inheritParams contrasts_Param_inla
 #' @inheritParams avg_sessions_Param
-#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
-#'  do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.
-#' @param emTol The stopping tolerance for the EM algorithm. Default: \code{1e-3}.
-#' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location.
+#'  Locations which do not meet these thresholds are masked out of the analysis.
+#'  Default: \code{1e-6} for both.
+#' @inheritParams emTol_Param
+#' @inheritParams trim_INLA_Param
 #'
 #' @return A list containing...
 #'
@@ -143,11 +140,13 @@ BayesGLM_argChecks <- function(
 #' @export
 BayesGLM <- function(
   data,
-  beta_names = NULL,
   vertices = NULL,
   faces = NULL,
   mesh = NULL,
   mask = NULL,
+  # Below arguments shared with `BayesGLM_cifti`
+  task_names = NULL,
+  session_names = NULL,
   contrasts = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
@@ -159,11 +158,11 @@ BayesGLM <- function(
   num.threads = 4,
   return_INLA_result = TRUE,
   outfile = NULL,
-  verbose=FALSE,
-  avg_sessions = FALSE,
-  meanTol=1e-6,
-  varTol=1e-6,
-  emTol=1e-3,
+  verbose = FALSE,
+  avg_sessions = TRUE,
+  meanTol = 1e-6,
+  varTol = 1e-6,
+  emTol = 1e-3,
   trim_INLA = TRUE){
 
   #TO DO:
@@ -200,10 +199,10 @@ BayesGLM <- function(
     emTol = emTol,
     trim_INLA = trim_INLA
   )
-  scale_BOLD <- agChecks$scale_BOLD
-  do_Bayesian <- agChecks$do_Bayesian
-  do_EM <- agChecks$do_EM
-  do_pw <- agChecks$do_pw
+  scale_BOLD <- argChecks$scale_BOLD
+  do_Bayesian <- argChecks$do_Bayesian
+  do_EM <- argChecks$do_EM
+  do_pw <- argChecks$do_pw
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
   
   ## Sessions and data dimensions. ---------------------------------------------
@@ -211,7 +210,14 @@ BayesGLM <- function(
     stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
   }
 
-  session_names <- names(data)
+  if (is.null(session_names)) {
+    session_names <- names(data)
+  } else {
+    if (!is.null(names(data)) && !identical(session_names, names(data))) {
+      warning("Using `session_names` rather than `names(data)`.")
+      names(data) <- session_names
+    }
+  }
   n_sess <- length(session_names)
   if (n_sess == 1 && avg_sessions) avg_sessions <- FALSE
   V <- ncol(data[[1]]$BOLD) #number of data locations
@@ -265,18 +271,18 @@ BayesGLM <- function(
   V_all <- length(mask2)
 
   ## Beta names: check or make. ------------------------------------------------
-  if (!is.null(beta_names)) {
-    if (length(beta_names) != K) {
+  if (!is.null(task_names)) {
+    if (length(task_names) != K) {
       stop(
         'I detect ', K,
-        ' task based on the design matrix, but the length of beta_names is ',
-        length(beta_names), '.  Please fix beta_names.'
+        ' task based on the design matrix, but the length of task_names is ',
+        length(task_names), '.  Please fix task_names.'
       )
     }
   } else {
     # Grab beta names from design (if provided)
-    beta_names <- colnames(data[[1]]$design)
-    if (is.null(beta_names)) { beta_names <- paste0("beta", seq(K)) }
+    task_names <- colnames(data[[1]]$design)
+    if (is.null(task_names)) { task_names <- paste0("beta", seq(K)) }
   }
 
   ## Scale, nuisance regress, and/or concatenate session data. -----------------
@@ -474,7 +480,7 @@ BayesGLM <- function(
   # Bayesian GLM. --------------------------------------------------------------
   if (do_Bayesian) {
     #construct betas and repls objects
-    replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
+    replicates_list <- organize_replicates(n_sess=n_sess, task_names=task_names, mesh=mesh)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
@@ -548,13 +554,13 @@ BayesGLM <- function(
       m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
       mu <- Matrix::solve(Sig_inv, m)
       # Prepare results
-      beta_estimates <- matrix(NA, nrow = length(mask2), ncol = K*n_sess)
-      beta_estimates[mask2 == 1,] <- matrix(mu,nrow = V, ncol = K*n_sess)
-      colnames(beta_estimates) <- rep(beta_names, n_sess)
-      beta_estimates <- lapply(seq(n_sess), function(ns) beta_estimates[,(seq(K) + K * (ns - 1))])
-      names(beta_estimates) <- session_names
-      avg_beta_estimates <- NULL
-      if(avg_sessions) avg_beta_estimates <- Reduce(`+`,beta_estimates) / n_sess
+      task_estimates <- matrix(NA, nrow = length(mask2), ncol = K*n_sess)
+      task_estimates[mask2 == 1,] <- matrix(mu,nrow = V, ncol = K*n_sess)
+      colnames(task_estimates) <- rep(task_names, n_sess)
+      task_estimates <- lapply(seq(n_sess), function(ns) task_estimates[,(seq(K) + K * (ns - 1))])
+      names(task_estimates) <- session_names
+      avg_task_estimates <- NULL
+      if(avg_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / n_sess
       theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
       names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
       #extract stuff needed for group analysis
@@ -574,7 +580,7 @@ BayesGLM <- function(
       hyper_initial <- rep(list(hyper_initial), K)
       hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-      formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+      formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
       formula_vec <- c('y ~ -1', formula_vec)
       formula_str <- paste(formula_vec, collapse=' + ')
       formula <- as.formula(formula_str, env = globalenv())
@@ -589,8 +595,8 @@ BayesGLM <- function(
       if(verbose) cat("done!\n")
 
       #extract useful stuff from INLA model result
-      beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
-      hyperpar_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+      task_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
+      hyperpar_posteriors <- get_posterior_densities(object=INLA_result, spde, task_names) #hyperparameter posterior densities
 
       #extract stuff needed for group analysis
       mu.theta <- INLA_result$misc$theta.mode
@@ -617,19 +623,19 @@ BayesGLM <- function(
     }
   } else {
     INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
-    beta_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
+    task_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
   }
 
   result <- list(
     INLA_result = INLA_result,
-    beta_estimates = beta_estimates,
+    task_estimates = task_estimates,
     result_classical = result_classical,
     mesh = mesh,
     mesh_orig = mesh_orig,
     mask = mask,
     design = design,
+    task_names = task_names,
     session_names = session_names,
-    beta_names = beta_names,
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~

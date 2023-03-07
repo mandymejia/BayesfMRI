@@ -286,7 +286,7 @@ get_posterior_densities_vol3D <- function(object, spde){
 #'   neighborhood definitions
 #' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
 #'
-#'   \code{design} is a \eqn{T x K} task design matrix (or list of such
+#'   \code{design} is a \eqn{T \times K} task design matrix (or list of such
 #'   matrices, for multiple-session modeling) with column names representing
 #'   tasks. Each column represents the expected BOLD response due to each task,
 #'   a convolution of the hemodynamic response function (HRF) and the task
@@ -328,7 +328,7 @@ get_posterior_densities_vol3D <- function(object, spde){
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
-#' @inheritParams contrasts_Param_inla
+#' @inheritParams contrasts_Param
 #' @inheritParams avg_sessions_Param
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.

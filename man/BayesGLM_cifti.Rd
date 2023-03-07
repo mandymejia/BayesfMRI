@@ -9,7 +9,6 @@ BayesGLM_cifti(
   surfL_fname = NULL,
   surfR_fname = NULL,
   brainstructures = c("left", "right"),
-  session_names = NULL,
   design = NULL,
   onsets = NULL,
   TR = NULL,
@@ -22,6 +21,9 @@ BayesGLM_cifti(
      NULL
  },
   resamp_res = 10000,
+  task_names = NULL,
+  session_names = NULL,
+  contrasts = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -33,7 +35,7 @@ BayesGLM_cifti(
   return_INLA_result = TRUE,
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = FALSE,
+  avg_sessions = TRUE,
   meanTol = 1e-06,
   varTol = 1e-06,
   emTol = 0.001,
@@ -57,13 +59,10 @@ to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
 cortical surface). Default: \code{c("left","right")} (entire cortical surface).
 Note that the subcortical models have not yet been implemented.}
 
-\item{session_names}{(Optional) A vector of names corresponding to each
-session. Ignored if \code{avg_sessions == TRUE}.}
-
 \item{design, onsets, TR}{Either provide \code{design}, or provide both
 \code{onsets} and \code{TR}.
 
-\code{design} is a \eqn{T x K} task design matrix (or list of such
+\code{design} is a \eqn{T \times K} task design matrix (or list of such
 matrices, for multiple-session modeling) with column names representing
 tasks. Each column represents the expected BOLD response due to each task,
 a convolution of the hemodynamic response function (HRF) and the task
@@ -101,6 +100,15 @@ approximately .01 Hz used in most studies.)}
 should be resampled, or \code{NULL} to not resample. For computational
 feasibility, a value of \code{10000} or lower is recommended.}
 
+\item{task_names}{(Optional) Names of tasks represented in design matrix.}
+
+\item{session_names}{(Optional, and only relevant for multi-session modeling)
+Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
+argument will overwrite the names of the list entries in \code{data}, if
+both exist.}
+
+\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
+
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
@@ -120,44 +128,45 @@ maximum and then subtracting the mean? Default: \code{TRUE}.}
 addition to the classical GLM. Classical GLM results are always returned.}
 
 \item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
-Default: \code{FALSE}.}
+Default: \code{FALSE}. This method is still in development.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
 for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
 
-\item{ar_smooth}{FWHM parameter for smoothing. Remember that
+\item{ar_smooth}{(numeric) FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
 
-\item{aic}{Use the AIC to select AR model order between \code{0} and \code{ar_order}? Default: \code{FALSE}.}
+\item{aic}{Use the AIC to select AR model order between \code{0} and
+\code{ar_order}? Default: \code{FALSE}.}
 
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}
 
 \item{return_INLA_result}{Return the INLA model object? (It can be large.)
-Default: \code{FALSE}. Required for running \code{id_activations}
+Default: \code{TRUE}. Required for running \code{id_activations}
 after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
 
-\item{outfile}{(Optional) File name (without extension) of output file for
-\code{"BayesGLM"} result to use in Bayesian group modeling.
-\code{"_left.rds"} or \code{"_right.rds"} will be appended for the left
-cortex and right cortex results, respectively. Default: \code{NULL}
-(do not save the results to any file).}
+\item{outfile}{File name where results will be written (for use by
+\code{BayesGLM2}).}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
 \item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{FALSE}.}
+sessions? Default: \code{TRUE}.}
 
-\item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
-do not meet these thresholds are masked out of the analysis. Default: \code{1e-6}.}
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
+Locations which do not meet these thresholds are masked out of the analysis.
+Default: \code{1e-6} for both.}
 
-\item{emTol}{The stopping tolerance for the EM algorithm. Default: \code{1e-3}.}
+\item{emTol}{The stopping tolerance for the EM algorithm. Default:
+\code{1e-3}.}
 
 \item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
-result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+result be trimmed to only what is necessary to use \code{id_activations}?
+Default: \code{TRUE}.}
 }
 \value{
 An object of class \code{"BayesGLM"}, a list containing...
