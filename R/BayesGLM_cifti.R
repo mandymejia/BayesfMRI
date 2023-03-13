@@ -80,8 +80,7 @@
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
 #' @import ciftiTools
-# @importFrom fMRItools unmask_mat
-#' @import fMRItools
+#' @importFrom fMRItools unmask_mat dct_bases dct_convert match_input is_posNum
 #' @importFrom matrixStats rowVars rowSums2 colVars
 #' @importFrom parallel detectCores
 #'
@@ -149,7 +148,7 @@ BayesGLM_cifti <- function(
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   # Brain structures.
-  brainstructures <- ciftiTools:::match_input(
+  brainstructures <- fMRItools::match_input(
     brainstructures, c("left","right"),
     user_value_label="brainstructures"
   )
@@ -166,11 +165,11 @@ BayesGLM_cifti <- function(
   # Nuisance arguments.
   dHRF <- match.arg(dHRF, c(0, 1, 2))
   if (!is.null(DCT)) {
-    stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
+    stopifnot(fMRItools::is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
   }
   if (!is.null(hpf)) {
-    stopifnot(is_posNum(hpf, zero_ok=TRUE))
+    stopifnot(fMRItools::is_posNum(hpf, zero_ok=TRUE))
     if (hpf==0) { hpf <- NULL }
   }
 
@@ -379,12 +378,12 @@ BayesGLM_cifti <- function(
     if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
       if (!is.null(hpf)) {
-        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
+        DCTs[ss] <- round(fMRItools::dct_convert(ntime[ss], TR, f=hpf))
       } else {
         DCTs[ss] <- DCT
       }
       # Generate the bases and add them.
-      DCTb_ss <- dct_bases(ntime[ss], DCTs[ss])
+      DCTb_ss <- fMRItools::dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
         if (!is.null(nuisance)) {
           nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)

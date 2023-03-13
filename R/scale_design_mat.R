@@ -33,11 +33,8 @@
 # A <- cbind(t1,t2) # This is the design matrix
 # B <- scale_design_mat(A)
 scale_design_mat <- function(design_mat) {
-  if (!inherits(design_mat, "matrix")) stop("The design matrix must be a matrix class object.")
-  output_mat <- apply(design_mat,2,function(task) {
-    returned_col <- task / max(task)
-    returned_col <- returned_col - mean(returned_col)
-    return(returned_col)
+  stopifnot(is.matrix(design_mat))
+  apply(design_mat,2,function(task) {
+    (task - mean(task)) / max(abs(task))
   })
-  return(output_mat)
 }

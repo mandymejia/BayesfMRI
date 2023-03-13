@@ -333,6 +333,7 @@ get_posterior_densities_vol3D <- function(object, spde){
 #' @param trim_INLA (logical) should the \code{INLA_result} objects within the
 #'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
 #'
+#' @importFrom fMRItools dct_bases dct_convert
 #' @importFrom utils head
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
@@ -440,12 +441,12 @@ BayesGLM_slice <- function(
     if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
       if (!is.null(hpf)) {
-        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
+        DCTs[ss] <- round(fMRItools::dct_convert(ntime[ss], TR, f=hpf))
       } else {
         DCTs[ss] <- DCT
       }
       # Generate the bases and add them.
-      DCTb_ss <- dct_bases(ntime[ss], DCTs[ss])
+      DCTb_ss <- fMRItools::dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
         if (!is.null(nuisance)) {
           nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
