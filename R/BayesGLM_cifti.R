@@ -163,7 +163,7 @@ BayesGLM_cifti <- function(
   do_right <- ('right' %in% brainstructures)
   
   # Nuisance arguments.
-  dHRF <- match.arg(dHRF, c(0, 1, 2))
+  dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
   if (!is.null(DCT)) {
     stopifnot(fMRItools::is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }

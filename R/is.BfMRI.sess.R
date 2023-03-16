@@ -58,11 +58,6 @@ is.a_session <- function(x){
 
   # The dimensions are ok.
   if (des_pw) {
-    if ((nrow(x$BOLD) != nrow(x$design))) { 
-      message("'BOLD' and 'design' must have the same number of rows (time points).")
-      return(FALSE)
-    }
-  } else {
     nvox <- sum(!is.na(x$BOLD[1,]))
     if (nrow(x$BOLD) != nrow(x$design)/nvox) {
       message(
@@ -70,6 +65,11 @@ is.a_session <- function(x){
         "matrix should be T*V, where T=nrow(BOLD) and V is the number of ",
         "columns of BOLD that are non-NA."
       )
+      return(FALSE)
+    }
+  } else {
+    if ((nrow(x$BOLD) != nrow(x$design))) { 
+      message("'BOLD' and 'design' must have the same number of rows (time points).")
       return(FALSE)
     }
   }
@@ -106,18 +106,23 @@ is.BfMRI.sess <- function(x){
 
   nS <- length(x)
 
-  # Check that each session is valid.
+  # Check the first session.
   if (!is.a_session(x[[1]])) { 
     message("The first entry of `x` is not a valid session.")
     return(FALSE)
   }
+
+  # We're done now, if there's only one session.
+  if (nS < 2) { return(TRUE) }
+
+  # Check the rest of the sessions.
   all_is_sess <- vapply(x, is.a_session, FALSE)
   if (!all_is_sess) {
     message(sum(!all_is_sess), " out of ", nS, " entries in `x` are not valid sessions.")
     return(FALSE)
   }
 
-  # Check that the sessions have the same number of data locations and tasks.
+  # Check that all sessions have the same number of data locations and tasks.
   nV <- ncol(x[[1]]$BOLD)
   nK <- ncol(x[[1]]$design)
   for (ii in seq(2, nS)) {

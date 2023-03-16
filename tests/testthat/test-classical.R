@@ -8,64 +8,44 @@ test_that("Classical modeling working", {
   check_wb()
 
   # Folder for the data to use for testing BayesfMRI
-  if (!exists("dir_data")) { dir_data <- "../data/151526" }
+  if (!exists("dir_data")) { dir_data <- "data" }
   if (!exists("dir_results")) { dir_results <- file.path(dir_data, "results") }
 
   # Get file names.
   fnames <- list(
-    cifti = "tfMRI_GAMBLING_LR_Atlas.dtseries.nii",
-    e_loss = "loss_event.txt",
-    e_win = "win_event.txt",
-    e_neut = "neut_event.txt",
-    rps = "Movement_Regressors.txt"
+    #cifti = "derivatives surface_pipeline sub-MSC01 processed_task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_bold_32k_fsLR.dtseries.nii",
+    #tmask = "derivatives surface_pipeline sub-MSC01 processed_task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_bold_32k_fsLR_tmask.txt"
+    cifti_1 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-01_bold.dtseries.nii",
+    events_1 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-01_events.tsv",
+    cifti_2 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-02_bold.dtseries.nii",
+    events_2 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-02_events.tsv"
   )
-  fnames <- lapply(fnames,
-    function(x){
-      list(
-        test=file.path(dir_data, x),
-        retest=file.path(dir_data, "retest", x)
+  fnames <- lapply(fnames, function(x){file.path(dir_data, x)})
+
+  events <- lapply(fnames[c("events_1", "events_2")], read.table, header=TRUE)
+  task_names <- c("RHand", "LHand", "RFoot", "LFoot", "Tongue")
+  events <- lapply(events, function(x){
+    setNames(lapply(task_names, function(y){
+      cbind(
+        onset = x$onset[x$trial_type==y],
+        duration = x$duration[x$trial_type==y]
       )
-    }
-  )
-
-  # Read files.
-  events <- lapply(fnames[c("e_loss", "e_win", "e_neut")],
-    function(x){
-      lapply(x, function(y){ read.table(y, header=FALSE) })
-    }
-  )
-  RPs <- lapply(fnames$rps,
-    function(x){
-      as.matrix(read.table(x, header=FALSE))
-    }
-  )
-  surfL_fname <- ciftiTools::demo_files()$surf["left"]
-  surfR_fname <- ciftiTools::demo_files()$surf["right"]
-  events <- list(
-    test = lapply(events, function(x){x$test[,seq(2)]}),
-    retest = lapply(events, function(x){x$retest[,seq(2)]})
-  )
-  # Merge the 3 gambling events.
-  events_all <- lapply(events, function(x){do.call(rbind, x)})
-  events_all <- lapply(events_all, function(x){list(gamble=x[order(x[,1]),])})
-
-  TR <- .72
+    }), task_names)
+  })
 
   # data.frame where each row describes a combination of arguments to test.
   sess_avg <- c("1_TRUE", "2_TRUE", "2_FALSE")
-  ntask <- c(1,3)
   prewhiten <- c(TRUE, FALSE)
-  params <- expand.grid(sess_avg=sess_avg, ntask=ntask, prewhiten=prewhiten, stringsAsFactors=FALSE)
+  params <- expand.grid(sess_avg=sess_avg, prewhiten=prewhiten, stringsAsFactors=FALSE)
   params$sess <- as.numeric(gsub("_.*", "", sess_avg))
   params$avg <- as.logical(gsub(".*_", "", sess_avg))
   params$bs <- "left"
   params$smooth <- 5
-  # Add non-combinatorial test: both hemispheres
+  # Add non-combinatorial test: both hemispheres; no smoothing
   params <- rbind(
     params,
     data.frame(
       sess_avg="1_TRUE",
-      ntask=1,
       prewhiten=TRUE,
       sess=1,
       avg=TRUE,
@@ -84,45 +64,22 @@ test_that("Classical modeling working", {
         params$sess[ii]>1,
         ifelse(params$avg[ii], "sessions (w/ averaging),", "sessions (not avg),"),
         "session,"
-      ),
-      ifelse(params$ntask[ii]==1, "1 task,", "3 tasks,"), "and",
+      ), "and",
       ifelse(params$prewhiten[ii], "with prewhitening", "without prewhitening"), "\n\n"
     )
-
-    # Format the arguments
-    if (params$ntask[ii] == 3) {
-      onsets_ii <- events
-    } else {
-      onsets_ii <- events_all
-    }
-    cii_ii <- fnames$cifti
-    nuisance_ii <- RPs
-    if (params$sess[ii] == 1) {
-      onsets_ii <- onsets_ii$test
-      cii_ii <- cii_ii$test
-      nuisance_ii <- nuisance_ii$test
-    } else {
-      cii_ii <- as.character(cii_ii)
-    }
-    if (params$bs[ii] == "left") {
-      bs_ii <- "left"
-    } else {
-      bs_ii <- c("left", "right")
-    }
 
     # Do BayesGLM_cifti.
     # --- left hemisphere only
     # --- AR_smooth is 5
     # --- resolution is 2000
     exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
-      cifti_fname = cii_ii,
-      surfL_fname = surfL_fname,
-      surfR_fname = surfR_fname,
-      brainstructures = bs_ii,
-      onsets = onsets_ii,
-      TR = TR,
-      nuisance = nuisance_ii,
-      GLM_method = "classical",
+      cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(params$sess[ii])],
+      surfL_fname=ciftiTools.files()$surf["left"],
+      surfR_fname=ciftiTools.files()$surf["right"],
+      brainstructures = params$bs[ii],
+      onsets = switch(params$sess[ii], events[[1]], events[seq(2)]),
+      TR = 2.2,
+      Bayes = FALSE,
       ar_order = ifelse(params$prewhiten[ii], 6, 0),
       ar_smooth = params$smooth[ii],
       resamp_res = 1000,

@@ -204,6 +204,11 @@ BayesGLM <- function(
   do_EM <- argChecks$do_EM
   do_pw <- argChecks$do_pw
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
+
+  ## Define a few return variables that may or may not be calculated. ----------
+  INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
+  task_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
+  theta_estimates <- Sig_inv <- NULL
   
   ## Sessions and data dimensions. ---------------------------------------------
   if (!is.BfMRI.sess(data)) {
@@ -614,17 +619,6 @@ BayesGLM <- function(
   # Clean up and return. -------------------------------------------------------
   prewhiten_info <- NULL
   if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
-
-  if (do_Bayesian) {
-    if (do_EM) {
-      INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
-    } else {
-      theta_estimates <- Sig_inv <- NULL
-    }
-  } else {
-    INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
-    task_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
-  }
 
   result <- list(
     INLA_result = INLA_result,

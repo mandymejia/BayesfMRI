@@ -4,9 +4,9 @@
 # ## path to your PARDISO license
 # my_pardiso <- "../INLA/pardiso.lic"
 ## path to your Connectome Workbench
-my_wb <- "../workbench"
+my_wb <- "~/Desktop/workbench"
 ## path to test data
-dir_data <- "../BayesfMRI_testData"
+dir_data <- "data"
 ## path to results from tests
 dir_results <- file.path(dir_data, "results")
 
