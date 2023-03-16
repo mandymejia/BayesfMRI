@@ -25,5 +25,4 @@ library(BayesfMRI)
 tests_dir <- "testthat"
 if (!endsWith(getwd(), "tests")) { setwd("tests") }
 source(file.path(tests_dir, "test-classical.R"))
-source(file.path(tests_dir, "test-Bayes.R"))
 source(file.path(tests_dir, "test-misc.R"))
