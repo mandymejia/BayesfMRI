@@ -69,7 +69,7 @@ estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, 
 
 # Make Formula
 #
-# @param beta_names char vector of the names of each bbeta object in the environment
+# @param task_names char vector of the names of each bbeta object in the environment
 # @param repl_names char vector of the names of each replicate object in the environment
 # @param hyper_initial Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix
 #
@@ -78,16 +78,16 @@ estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, 
 # @importFrom stats as.formula
 #
 # @keywords internal
-# make_formula <- function(beta_names, repl_names, hyper_initial=NULL){
+# make_formula <- function(task_names, repl_names, hyper_initial=NULL){
 #
 #   # Example:
-#   # beta_names = bbeta1, bbeta2, ...
+#   # task_names = bbeta1, bbeta2, ...
 #   # repl_names = repl1, repl2, ...
 #   # formula: y ~ -1 + f(bbeta1, model = spde, replicate = repl1) + f(bbeta2, model = spde_sh, replicate = repl2)
 #
-#   # check length of beta_names, repl_names, hyper_initial
+#   # check length of task_names, repl_names, hyper_initial
 #
-#   n_beta <- length(beta_names)
+#   n_beta <- length(task_names)
 #
 #   if(!is.null(hyper_initial)){
 #     #if hyper_list provided is a vector, repeat it n_beta times as a list
@@ -99,7 +99,7 @@ estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, 
 #     hyper_vec <- NULL
 #   }
 #
-#   formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+#   formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
 #   formula_vec <- c('y ~ -1', formula_vec)
 #   formula_str <- paste(formula_vec, collapse=' + ')
 #   return(formula_str)
@@ -162,7 +162,7 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 
   res.beta <- object$summary.random
   nbeta <- length(res.beta)
-  beta_names <- names(res.beta)
+  task_names <- names(res.beta)
 
   n_sess <- length(session_names)
   n_loc <- length(res.beta[[1]]$mean)/n_sess #number of locations for which beta is estimated
@@ -190,7 +190,7 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
     }
     betas[[v]] <- matrix(NA, nrow=V, ncol=nbeta)
     betas[[v]][mask==1,] <- betas_v
-    colnames(betas[[v]]) <- beta_names
+    colnames(betas[[v]]) <- task_names
   }
   return(betas)
 }
@@ -204,18 +204,18 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 #'  \code{inla()}
 #' @param spde The model used for the latent fields in the \code{inla()} call,
 #'  an object of class \code{"inla.spde"}
-#' @param beta_names Descriptive names of model regressors (tasks).
+#' @param task_names Descriptive names of model regressors (tasks).
 #'
 #' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
 #' @keywords internal
-get_posterior_densities <- function(object, spde, beta_names){
+get_posterior_densities <- function(object, spde, task_names){
 
-  numbeta <- length(beta_names)
+  numbeta <- length(task_names)
 
   for(b in 1:numbeta){
-    name_b <- beta_names[b]
+    name_b <- task_names[b]
     result.spde.b <- INLA::inla.spde2.result(object, name_b, spde)
     # Kappa and Tau
     log_kappa.b <- as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)

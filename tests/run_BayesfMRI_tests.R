@@ -20,9 +20,10 @@ library(testthat)
 library(brainSim)
 library(ciftiTools)
 if (interactive()) { ciftiTools.setOption('wb_path', my_wb) }
+library(BayesfMRI)
 
 tests_dir <- "testthat"
-if (!endsWith(getwd(), "tests")) { tests_dir <- file.path("tests", tests_dir) }
+if (!endsWith(getwd(), "tests")) { setwd("tests") }
 source(file.path(tests_dir, "test-classical.R"))
 source(file.path(tests_dir, "test-Bayes.R"))
 source(file.path(tests_dir, "test-misc.R"))

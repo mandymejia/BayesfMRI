@@ -124,7 +124,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   #     beta_out[beta_out == 0] <- NA
   #     return(beta_out)
   #   }, simplify = F)
-  #   names(out) <- BayesGLM_object$beta_names
+  #   names(out) <- BayesGLM_object$task_names
   #   return(out)
   # }, simplify= F)
 
@@ -132,7 +132,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   # ggplot(melt_mat2(coef_images)) +
   point_df <- melt_mat2(point_estimates)
   if(!is.null(BayesGLM_object$GLMs_Bayesian)) {
-    point_df$L2 <- BayesGLM_object$GLMs_Bayesian$beta_names[point_df$L2]
+    point_df$L2 <- BayesGLM_object$GLMs_Bayesian$task_names[point_df$L2]
   }
   out_grob <- ggplot(point_df) +
   geom_raster(aes(x = Var1, y = Var2, fill = value)) +

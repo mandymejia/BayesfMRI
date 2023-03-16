@@ -1,9 +1,9 @@
 #' Bayes GLM arg checks
-#' 
+#'
 #' Checks arguments for BayesGLM and BayesGLM_cifti
-#' 
+#'
 #' Avoids duplicated code between BayesGLM and BayesGLM_cifti
-#' 
+#'
 #' @param scale_BOLD,scale_design See \code{\link{BayesGLM}}.
 #' @param Bayes,EM See \code{\link{BayesGLM}}.
 #' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
@@ -17,7 +17,7 @@
 #'
 #' @return The arguments that may have changed, in a list: \code{scale_BOLD},
 #'  \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
-#' 
+#'
 #' @keywords internal
 BayesGLM_argChecks <- function(
   scale_BOLD = c("auto", "mean", "sd", "none"),
@@ -50,7 +50,7 @@ BayesGLM_argChecks <- function(
   stopifnot(is_1(EM, "logical"))
   if (EM && !Bayes) {
     warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
-    Bayes <- TRUE 
+    Bayes <- TRUE
   }
   if (Bayes) {
     if (!EM) { check_INLA(require_PARDISO=TRUE) }
@@ -82,7 +82,7 @@ BayesGLM_argChecks <- function(
   list(
     scale_BOLD=scale_BOLD,
     do_Bayesian=do_Bayesian,
-    do_EM = do_EM, 
+    do_EM = do_EM,
     do_pw = do_pw
   )
 }
@@ -95,9 +95,9 @@ BayesGLM_argChecks <- function(
 #'
 #' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
 #'  session is a list with elements "BOLD", "design", and optionally "nuisance".
-#'  The name of each element in \code{data} is the name of that session. See 
+#'  The name of each element in \code{data} is the name of that session. See
 #'  \code{?is.BfMRI.sess} for details.
-#' 
+#'
 #'  Note that the argument \code{session_names} can be used instead of providing
 #'  the session names by the list element names of \code{data}.
 #' @inheritParams vertices_Param
@@ -209,7 +209,7 @@ BayesGLM <- function(
   INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
   task_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
   theta_estimates <- Sig_inv <- NULL
-  
+
   ## Sessions and data dimensions. ---------------------------------------------
   if (!is.BfMRI.sess(data)) {
     stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
@@ -633,11 +633,11 @@ BayesGLM <- function(
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~
-    posterior_Sig_inv = Sig_inv, 
-    mu.theta = mu.theta, 
-    Q.theta = Q.theta, 
-    y = y_all, 
-    X = X_all_list, 
+    posterior_Sig_inv = Sig_inv,
+    mu.theta = mu.theta,
+    Q.theta = Q.theta,
+    y = y_all,
+    X = X_all_list,
     prewhiten_info = prewhiten_info,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     call = match.call()

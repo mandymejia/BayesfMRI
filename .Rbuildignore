@@ -17,10 +17,9 @@
 ^R/EM_functions\.R$
 ^R/id_activations_2means\.R$
 ^R/classicalGLM_pw\.R$
-^tests/run_BayesfMRI_tests\.R$
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
 ^vignettes/BayesfMRI_HCP\.Rmd$
 ^codecov\.yml$
-^tests/BayesfMRI_test_DS\.R$
+^tests/data\.R$

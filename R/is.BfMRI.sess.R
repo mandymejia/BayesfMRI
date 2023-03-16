@@ -116,9 +116,9 @@ is.BfMRI.sess <- function(x){
   if (nS < 2) { return(TRUE) }
 
   # Check the rest of the sessions.
-  all_is_sess <- vapply(x, is.a_session, FALSE)
-  if (!all_is_sess) {
-    message(sum(!all_is_sess), " out of ", nS, " entries in `x` are not valid sessions.")
+  is_sess_vec <- vapply(x, is.a_session, FALSE)
+  if (!all(is_sess_vec)) {
+    message(sum(!is_sess_vec), " out of ", nS, " entries in `x` are not valid sessions.")
     return(FALSE)
   }
 
@@ -126,7 +126,7 @@ is.BfMRI.sess <- function(x){
   nV <- ncol(x[[1]]$BOLD)
   nK <- ncol(x[[1]]$design)
   for (ii in seq(2, nS)) {
-    if (ncol(x[[ii]]$BOLD != nV)) {
+    if (ncol(x[[ii]]$BOLD) != nV) {
       message(
         "The first session has ", nV, " locations, but session ", ii, 
         " (and maybe others) does not. All sessions must have the same number ",
@@ -134,7 +134,7 @@ is.BfMRI.sess <- function(x){
       )
       return(FALSE)
     }
-    if (ncol(x[[ii]]$design != nK)) {
+    if (ncol(x[[ii]]$design) != nK) {
       message(
         "The first session has ", nK, " locations, but session ", ii, 
         " (and maybe others) does not. All sessions must have the same number ",

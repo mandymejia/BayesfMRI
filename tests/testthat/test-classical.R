@@ -95,7 +95,8 @@ test_that("Classical modeling working", {
     if (ii == 1) {
       # Test the other arguments too.
       act_ii <- id_activations_cifti(
-        bfmri_ii, threshold=.1, method='classical', alpha=0.1, correction='FWER', excur_method='QC'
+        bfmri_ii, threshold=.1, method='classical', alpha=0.1, correction='FWER'
+        #, excur_method='QC'
       )
     }
 

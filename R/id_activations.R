@@ -67,13 +67,13 @@ id_activations_cifti <- function(model_obj,
   do_sub <- !is.null(GLM_list$subcortical)
 
   if (is.null(field_names))
-    field_names <- model_obj$beta_names
-  if (any(!(field_names %in% model_obj$beta_names)))
+    field_names <- model_obj$task_names
+  if (any(!(field_names %in% model_obj$task_names)))
     stop(paste0(
-      'All elements of field_names must appear in model_obj$beta_names: ',
-      paste(model_obj$beta_names, collapse = ',')
+      'All elements of field_names must appear in model_obj$task_names: ',
+      paste(model_obj$task_names, collapse = ',')
     ))
-  field_inds <- which(model_obj$beta_names %in% field_names)
+  field_inds <- which(model_obj$task_names %in% field_names)
 
   if(method == "Bayesian" & is.null(GLM_list[[which(!is.null(GLM_list))]]$INLA_result)) method <- "EM"
 
@@ -131,7 +131,7 @@ id_activations_cifti <- function(model_obj,
 
   #map results to xifti objects
   activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
-  if(length(field_names) != length(model_obj$beta_names)) activations_xifti$meta$cifti$names <- field_names
+  if(length(field_names) != length(model_obj$task_names)) activations_xifti$meta$cifti$names <- field_names
   if(do_left) {
     datL <- 1*activations$cortexL$active
     if(method=='classical') datL <- datL[!is.na(datL[,1]),] #remove medial wall locations
@@ -239,8 +239,8 @@ id_activations.posterior <- function(model_obj,
   sess_ind <- which(all_sessions == session_name)
 
   #check field_names argument
-  if(is.null(field_names)) field_names <- model_obj$beta_names
-  if(any(!(field_names %in% model_obj$beta_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+  if(is.null(field_names)) field_names <- model_obj$task_names
+  if(any(!(field_names %in% model_obj$task_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$task_names, collapse=', ')))
 
   #check alpha argument
 	if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
@@ -361,7 +361,8 @@ id_activations.classical <- function(model_obj,
   if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nvox)
   #perform multiple comparisons correction
   p_values <- p_values_adj <- active <- matrix(NA, nvox, K)
-  for(k in 1:K){
+
+    for(k in 1:K){
     p_values_k <- sapply(t_star[,k], pt, df = DOF, lower.tail = F)
     if(correction == "FWER") p_vals_adj_k <- p.adjust(p_values_k, method='bonferroni')
     if(correction == "FDR") p_vals_adj_k <- p.adjust(p_values_k, method='BH')
@@ -478,8 +479,8 @@ id_activations.em <-
     # }
 
     #check field_names argument
-    if(is.null(field_names)) field_names <- model_obj$beta_names
-    if(!any(field_names %in% model_obj$beta_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$beta_names, collapse=', ')))
+    if(is.null(field_names)) field_names <- model_obj$task_names
+    if(!any(field_names %in% model_obj$task_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$task_names, collapse=', ')))
 
     #check alpha argument
     if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')

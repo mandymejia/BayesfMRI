@@ -164,7 +164,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim
       beta_out[beta_out == 0] <- NA
       return(beta_out)
     }, simplify = F)
-    names(out) <- BayesGLM_object$beta_names
+    names(out) <- BayesGLM_object$task_names
     return(out)
   }, simplify= F)
   out_grob <- BayesfMRI:::melt_mat2(coef_images) %>%

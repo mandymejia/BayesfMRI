@@ -148,10 +148,7 @@ BayesGLM_cifti <- function(
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   # Brain structures.
-  brainstructures <- fMRItools::match_input(
-    brainstructures, c("left","right"),
-    user_value_label="brainstructures"
-  )
+  if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
   if ("all" %in% brainstructures) {
     message(
       "`brainstructures` is `all`, so using both left and right cortex. ", 
@@ -159,6 +156,10 @@ BayesGLM_cifti <- function(
     )
     brainstructures <- c("left","right") # "subcortical"
   }
+  brainstructures <- fMRItools::match_input(
+    brainstructures, c("left","right"),
+    user_value_label="brainstructures"
+  )
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
   
