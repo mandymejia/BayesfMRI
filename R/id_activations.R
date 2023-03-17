@@ -232,7 +232,7 @@ id_activations.posterior <- function(model_obj,
   #if session_name=NULL and multiple sessions available, pick first session and return a warning
   if(is.null(session_name)){
     session_name <- all_sessions[1]
-    warning(paste0("Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+    warning(paste0("Using the first session. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
   }
   #check that session_name is valid
   if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))

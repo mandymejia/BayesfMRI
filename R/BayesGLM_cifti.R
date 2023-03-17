@@ -332,9 +332,15 @@ BayesGLM_cifti <- function(
 
     # Grab BOLD data (input NAs in medial wall locations)
     if (do_left) {
+      if (is.null(xii_ss$data$cortex_left)) {
+        stop("No left cortex data for session ", ii, ".")
+      }
       BOLD_list[["left"]][[ss]] <- fMRItools::unmask_mat(xii_ss$data$cortex_left, mwallL)
     }
     if (do_right) {
+      if (is.null(xii_ss$data$cortex_right)) {
+        stop("No right cortex data for session ", ii, ".")
+      }
       BOLD_list[["right"]][[ss]] <- fMRItools::unmask_mat(xii_ss$data$cortex_right, mwallR)
     }
   }

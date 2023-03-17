@@ -22,4 +22,6 @@
 ^vignettes/BayesfMRI_simulation_files$
 ^vignettes/BayesfMRI_HCP\.Rmd$
 ^codecov\.yml$
-^tests/data\.R$
+^tests/run_BayesfMRI_tests\.R$
+^tests/data_notInPackage
+^tests/results_notInPackage

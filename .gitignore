@@ -13,4 +13,4 @@ vignettes/.DS_Store
 BayesfMRI 1.9 test.R
 BayesfMRI To-Do List.gdoc
 R/BayesGLM_cifti_check.R
-tests/data
+tests/results_notInPackage

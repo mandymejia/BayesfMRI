@@ -201,7 +201,10 @@ plot.BayesGLM_cifti <- function(x, session=NULL, method=NULL, idx=NULL, zlim=c(-
   }
 
   # Session
-  if (is.null(session)) { session <- 1 }
+  if (is.null(session)) { 
+    if (length(x[[method]]) > 1) { message("Plotting the first session.") }
+    session <- 1 
+  }
   if (is.null(x[[method]][[session]])) {
     stop(paste("Session", session, "of method", method, "does not exist."))
   }

@@ -71,7 +71,7 @@ BayesGLM_argChecks <- function(
   stopifnot(is_1(num.threads, "numeric"))
   stopifnot(num.threads <= parallel::detectCores())
   stopifnot(is_1(return_INLA_result, "logical"))
-  stopifnot(is_1(outfile, "character"))
+  stopifnot(is.null(outfile) || is_1(outfile, "character"))
   stopifnot(is_1(verbose, "logical"))
   stopifnot(is_1(avg_sessions, "logical"))
   stopifnot(is_posNum(meanTol))

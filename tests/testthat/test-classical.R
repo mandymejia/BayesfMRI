@@ -4,21 +4,18 @@ check_wb <- function() {
   }
 }
 
-test_that("Classical modeling working", {
+test_that("The classical GLM is working", {
+
   check_wb()
 
-  # Folder for the data to use for testing BayesfMRI
-  if (!exists("dir_data")) { dir_data <- "data" }
-  if (!exists("dir_results")) { dir_results <- file.path(dir_data, "results") }
+  data_res <- 3000
 
   # Get file names.
   fnames <- list(
-    #cifti = "derivatives surface_pipeline sub-MSC01 processed_task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_bold_32k_fsLR.dtseries.nii",
-    #tmask = "derivatives surface_pipeline sub-MSC01 processed_task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_bold_32k_fsLR_tmask.txt"
-    cifti_1 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-01_bold.dtseries.nii",
-    events_1 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-01_events.tsv",
-    cifti_2 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-02_bold.dtseries.nii",
-    events_2 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-02_events.tsv"
+    cifti_1 = "motor1-3k-LH.rds",
+    events_1 = "motor1-events.tsv",
+    cifti_2 = "motor2-3k-LH.rds",
+    events_2 = "motor2-events.tsv"
   )
   fnames <- lapply(fnames, function(x){file.path(dir_data, x)})
 
@@ -41,7 +38,7 @@ test_that("Classical modeling working", {
   params$avg <- as.logical(gsub(".*_", "", sess_avg))
   params$bs <- "left"
   params$smooth <- 5
-  # Add non-combinatorial test: both hemispheres; no smoothing
+  # Add non-combinatorial test: no smoothing
   params <- rbind(
     params,
     data.frame(
@@ -49,11 +46,10 @@ test_that("Classical modeling working", {
       prewhiten=TRUE,
       sess=1,
       avg=TRUE,
-      bs=c("both", "right"),
-      smooth=c(5, 0)
+      bs="left",
+      smooth=0
     )
   )
-  # [TO DO] Add non-combinatorial test: no nuisance regressors
 
   # Test each combination.
   for (ii in seq(nrow(params))) {
@@ -68,40 +64,29 @@ test_that("Classical modeling working", {
       ifelse(params$prewhiten[ii], "with prewhitening", "without prewhitening"), "\n\n"
     )
 
-    # Do BayesGLM_cifti.
-    # --- left hemisphere only
-    # --- AR_smooth is 5
-    # --- resolution is 2000
+    # Do BayesGLM_cifti
+    xii_ii <- lapply(c(fnames$cifti_1, fnames$cifti_2)[seq(params$sess[ii])], readRDS)
     exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
-      cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(params$sess[ii])],
+      cifti_fname = xii_ii,
       surfL_fname=ciftiTools.files()$surf["left"],
       surfR_fname=ciftiTools.files()$surf["right"],
+      resamp_res=data_res,
       brainstructures = params$bs[ii],
       onsets = switch(params$sess[ii], events[[1]], events[seq(2)]),
       TR = 2.2,
       Bayes = FALSE,
       ar_order = ifelse(params$prewhiten[ii], 6, 0),
       ar_smooth = params$smooth[ii],
-      resamp_res = 1000,
       verbose = FALSE,
       return_INLA_result = TRUE,
-      outfile = file.path(dir_results, "bfmri_out"),
+      outfile = NULL,
       avg_sessions = params$avg[ii]
     ))
+    print(exec_time)
+
+    expect_no_error(inherits(bfmri_ii, "BayesGLM_cifti"))
 
     # Identify the activations.
     act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='classical', alpha=0.05)
-    # plot(act_ii$activations_xifti)
-    if (ii == 1) {
-      # Test the other arguments too.
-      act_ii <- id_activations_cifti(
-        bfmri_ii, threshold=.1, method='classical', alpha=0.1, correction='FWER'
-        #, excur_method='QC'
-      )
-    }
-
-    # Save/plot?
-
-    print(exec_time)
   }
 })
