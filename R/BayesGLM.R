@@ -590,8 +590,13 @@ BayesGLM <- function(
       formula_str <- paste(formula_vec, collapse=' + ')
       formula <- as.formula(formula_str, env = globalenv())
 
+      browser()
+
       INLA_result <- INLA::inla(
-        formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
+        formula,
+        data=model_data,
+        #data=INLA::inla.stack.data(model_data, spde=spde),
+        control.predictor=list(A=model_data$X, compute = TRUE),
         verbose = verbose, keep = FALSE, num.threads = num.threads,
         control.inla = list(strategy = "gaussian", int.strategy = "eb"),
         control.family=list(hyper=list(prec=list(initial=1))),

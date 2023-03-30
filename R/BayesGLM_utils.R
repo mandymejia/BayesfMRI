@@ -15,6 +15,9 @@ check_INLA <- function(require_PARDISO=TRUE){
 
   # Check to see if PARDISO is installed
   if (require_PARDISO) {
+    # Damon: this only works in INLA has been loaded, like `library(INLA)`.
+    # But maybe BayesfMRI has been loaded, yet INLA has not been explicitly loaded.
+    # In that case, this message is confusing. 
     if (!exists("inla.pardiso.check", mode = "function")) {
       warning(paste(
         "Please update to the latest stable version of `INLA` for full functionality",
