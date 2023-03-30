@@ -588,9 +588,7 @@ BayesGLM <- function(
       formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
       formula_vec <- c('y ~ -1', formula_vec)
       formula_str <- paste(formula_vec, collapse=' + ')
-      formula <- as.formula(formula_str, env = globalenv())
-
-      browser()
+      formula <- as.formula(formula_str)
 
       INLA_result <- INLA::inla(
         formula,

@@ -52,6 +52,10 @@
 #'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
 #'  typical \code{TR} this amounts to lower filter frequency than the
 #'  approximately .01 Hz used in most studies.)
+#' 
+#'  Using at least two DCT bases is as sufficient as using linear and quadratic
+#'  drift terms in the design matrix. So if DCT detrending is being used, there
+#'  is no need to add linear and quadratic drift terms to \code{nuisance}.
 #' @param resamp_res The number of vertices to which each cortical surface
 #'  should be resampled, or \code{NULL} to not resample. For computational 
 #'  feasibility, a value of \code{10000} or lower is recommended.
