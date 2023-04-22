@@ -111,7 +111,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   # Extract the point estimates
   if(is.null(session_name)) session_name <- BayesGLM_object$GLMs_Bayesian$session_names
   # point_estimates <- sapply(session_name, function(sn){
-  #   as.matrix(convert_mat_A %*% BayesGLM_object$beta_estimates[[sn]])
+  #   as.matrix(convert_mat_A %*% BayesGLM_object$task_estimates[[sn]])
   # }, simplify = F)
   point_estimates <- BayesGLM_object$betas_Bayesian
   if(is.null(zlim)) zlim <- c(min(unlist(point_estimates), na.rm = T),

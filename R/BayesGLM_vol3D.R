@@ -92,8 +92,8 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
   groups_df <- groups_df[!is.na(groups_df$group),]
   group_set <- unique(groups_df$group)
 
-  beta_estimates_all <- matrix(NA, nrow=V, ncol=K)
-  beta_estimates_all <- rep(list(beta_estimates_all), n_sess)
+  task_estimates_all <- matrix(NA, nrow=V, ncol=K)
+  task_estimates_all <- rep(list(task_estimates_all), n_sess)
   INLA_result_all <- vector('list', length=length(group_set))
   spde_all <- vector('list', length=length(group_set))
   names(INLA_result_all) <- paste0('model_group_',group_set)
@@ -162,7 +162,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
     formula_vec <- c('y ~ -1', formula_vec)
     formula_str <- paste(formula_vec, collapse=' + ')
-    formula <- as.formula(formula_str, env = globalenv())
+    formula <- as.formula(formula_str)
 
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
@@ -174,9 +174,9 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     print(Sys.time() - t0)
 
     #extract beta estimates and project back to data locations for current group
-    beta_estimates_grp <- extract_estimates(object=INLA_result_grp, session_names=session_names) #posterior means of latent task field
+    task_estimates_grp <- extract_estimates(object=INLA_result_grp, session_names=session_names) #posterior means of latent task field
     for(s in 1:n_sess){
-      beta_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% beta_estimates_grp[[s]])
+      task_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% task_estimates_grp[[s]])
     }
 
     #extract theta posteriors
@@ -200,7 +200,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
                    task_names = task_names,
-                   beta_estimates = beta_estimates,
+                   task_estimates = task_estimates,
                    hyperpar_posteriors = hyperpar_posteriors,
                    call = match.call(),
                    GLM_result = GLM_result)
@@ -210,7 +210,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
                    task_names = task_names,
-                   beta_estimates = beta_estimates,
+                   task_estimates = task_estimates,
                    hyperpar_posteriors = hyperpar_posteriors,
                    call = match.call(),
                    GLM_result = GLM_result)
@@ -498,10 +498,10 @@ BayesGLM_slice <- function(
     convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
     # Extract the point estimates
     point_estimates <- sapply(session_names, function(sn){
-      as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
+      as.matrix(convert_mat_A %*% BayesGLM_out$task_estimates[[sn]])
     }, simplify = F)
     if(avg_sessions)
-      avg_point_estimates <- BayesGLM_out$avg_beta_estimates
+      avg_point_estimates <- BayesGLM_out$avg_task_estimates
   }
 
   classical_slice <- Bayes_slice <- vector('list', n_sess)

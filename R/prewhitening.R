@@ -407,7 +407,7 @@ prewhiten_do <- function(prewhiten_result,
 #' @param resids Estimated residuals
 #' @param ar_order,aic Order of the AR model used to prewhiten the data at each location.
 #'  If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
-#'  the order will be between zero and \code{ar_order}, as determined by the AIC. 
+#'  the order will be between zero and \code{ar_order}, as determined by the AIC.
 #' @importFrom stats ar.yw
 #'
 #' @return Estimaed AR coefficients and residual variance at every vertex
@@ -419,34 +419,17 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
   AR_AIC <- if (aic) {rep(NA, V) } else { NULL }
   for (v in seq(V)) {
     if (is.na(resids[1,v])) { next }
-    ar_v <- ar.yw(resids[,v], aic = aic, order.max = ar_order)
+
+    # If `AIC`, overwrite the model order with the one selected by `cAIC`.
+    if (aic) { ar_order <- which.min(cAIC(resids, order.max=ar_order)) - 1 }
+
+    ar_v <- ar.yw(resids[,v], aic = FALSE, order.max = ar_order)
     aic_order <- ar_v$order # same as length(ar_v$ar)
-    # [TO DO]: Integrate
-    # 
-    # provided script
-    # ar_information_criteria <- function(y, order_limit = 10) {
-    #   N <- length(y)
-    #   if(order_limit %% 1 !=0) stop(“order_limit should be an integer”)
-    #   if(order_limit < 1) stop(“order_limit should be at least 1")
-    #   AICc_vals <-  numeric(order_limit+1)
-    #   ar_mdl <- ar.yw(x = y, aic = FALSE, demean = TRUE, order.max = order_limit)
-    #   AIC_vals <- ar_mdl$aic
-    #   for(k in 0:order_limit){
-    #     AIC_k <- AIC_vals[k+1]
-    #     log_var <- AIC_k - (2*(k+1))
-    #     AICc_vals[k+1] <- log_var + 2*N*(k+1)/(N-k-2)
-    #   }
-    #   AICc = AICc_vals - min(AICc_vals)
-    # }
-    #
-    # new version
-    # aicc <- ar_mdl$aic - (2*(k)) + 2*N*(k)/(N-k-3)
-    # aicc = aicc - min(aicc)
     AR_coefs[v,] <- c(ar_v$ar, rep(0, ar_order-aic_order)) # The AR parameter estimates
     AR_resid_var[v] <- ar_v$var.pred # Residual variance
     if (aic) { AR_AIC[v] <- ar_v$order } # Model order
   }
-  
+
   list(phi = AR_coefs, sigma_sq = AR_resid_var, aic = AR_AIC)
 }
 
@@ -500,5 +483,4 @@ pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
   var_smoothed <- var_smoothed$data$cortex_left
 
   return(list(AR = AR_smoothed, var = var_smoothed))
-
 }

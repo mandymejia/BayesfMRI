@@ -197,7 +197,7 @@ id_activations_cifti <- function(model_obj,
 #'
 #'
 #' @return A list with two elements: \code{active}, which gives a matrix of zeros
-#' and ones of the same dimension as \code{model_obj$beta_estimates${session_name}},
+#' and ones of the same dimension as \code{model_obj$task_estimates${session_name}},
 #' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 #'  more information).
 #'
@@ -419,7 +419,7 @@ id_activations.classical <- function(model_obj,
 #'
 #'
 #' @return A list with two elements: \code{active}, which gives a matrix of zeros
-#' and ones of the same dimension as \code{model_obj$beta_estimates${session_name}},
+#' and ones of the same dimension as \code{model_obj$task_estimates${session_name}},
 #' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 #'  more information).
 #'
@@ -456,8 +456,8 @@ id_activations.em <-
     }
 
     #if averages not available and session_name=NULL, pick first session and return a warning
-    # has_avg <- is.matrix(model_obj$avg_beta_estimates)
-    has_avg <- !is.null(model_obj$avg_beta_estimates)
+    # has_avg <- is.matrix(model_obj$avg_task_estimates)
+    has_avg <- !is.null(model_obj$avg_task_estimates)
     if(is.null(session_name) & !has_avg){
       session_name <- all_sessions[1]
       warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
@@ -501,7 +501,7 @@ id_activations.em <-
           beta_est <- c(model_obj$EM_result_all[[m]]$posterior_mu)
         }
         if(session_name != "avg") {
-          beta_mesh_est <- c(model_obj$beta_estimates[[which(all_sessions == session_name)]])
+          beta_mesh_est <- c(model_obj$task_estimates[[which(all_sessions == session_name)]])
           beta_est <- beta_mesh_est[!is.na(beta_mesh_est)]
         }
         Phi_k <- model_obj$EM_result_all[[m]]$mesh$Amat
@@ -560,7 +560,7 @@ id_activations.em <-
             alpha = alpha,
             u = threshold,
             mu = stats::na.omit(
-              c(model_obj$beta_estimates[[session_name]])
+              c(model_obj$task_estimates[[session_name]])
             ),
             Q = model_obj$posterior_Sig_inv,
             type = ">", method = "EB"

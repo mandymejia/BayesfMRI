@@ -126,7 +126,7 @@ BayesGLM2 <- function(results,
     # later.
     # if(num_sessions > 1) {
     #   message("Currently, multi-session analysis is only possible using the averages across sessions.")
-    #   use_avg <- "matrix" %in% class(result$avg_beta_estimates)
+    #   use_avg <- "matrix" %in% class(result$avg_task_estimates)
     #   if(!use_avg) stop("This function does not currently support group analysis on multiple sessions unless the analysis is done on subject-level averages across sessions.")
     #   num_sessions <- 1
     # }
@@ -185,7 +185,7 @@ BayesGLM2 <- function(results,
       }
       # [TO DO]: more checks?
       if(!inherits(results2[[m]], 'BayesGLM')) stop("Each RDS file in results2 argument must contain an object of class BayesGLM")
-      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_beta_estimates)
+      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_task_estimates)
       num_sessions_m <- length(results2[[m]]$session_names)
       # if(use_avg & use_avg_m) num_sessions_m <- 1
       if(num_sessions_m != num_sessions) stop(paste("Group modeling currently only supports an equal number of sessions across all subjects. Subject 1 has", num_sessions, "sessions, but subject", m, "has",paste0(length(results2[[m]]$session_names),".")))
@@ -230,10 +230,10 @@ BayesGLM2 <- function(results,
     # Second pass: compute result. ---------------------------------------------
 
     for(m in 1:M){
-      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_beta_estimates)
+      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_task_estimates)
       # if(use_avg & use_avg_m) num_sessions_m <- 1
       if (need_Mask) { results2[[m]] <- retro_mask_BGLM(results2[[m]], Mask[results2[[m]]$mask]) }
-      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_beta_estimates)
+      # use_avg_m <- "matrix" %in% class(results2[[m]]$avg_task_estimates)
 
       #Check match of beta names
       task_names_m <- results2[[m]]$task_names

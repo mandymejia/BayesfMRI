@@ -504,8 +504,8 @@ BayesGLM_cifti <- function(
 
     # BAYESIAN GLM
     if(do_Bayesian){
-      if(do_left) datL <- BayesGLM_results$left$beta_estimates[[ss]][mwallL==1,]
-      if(do_right) datR <- BayesGLM_results$right$beta_estimates[[ss]][mwallR==1,]
+      if(do_left) datL <- BayesGLM_results$left$task_estimates[[ss]][mwallL==1,]
+      if(do_right) datR <- BayesGLM_results$right$task_estimates[[ss]][mwallR==1,]
       BayesGLM_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = mwallL,

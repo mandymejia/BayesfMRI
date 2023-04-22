@@ -17,8 +17,8 @@ retro_mask_BGLM <- function(x, mask){
 
   mask2 <- x$mask; x$mask[x$mask][!mask] <- FALSE
 
-  for (ii in seq(length(x$beta_estimates))) {
-    x$beta_estimates[[ii]][!mask2,] <- NA
+  for (ii in seq(length(x$task_estimates))) {
+    x$task_estimates[[ii]][!mask2,] <- NA
   }
 
   if ("result_classical" %in% names(x)) {
@@ -35,7 +35,7 @@ retro_mask_BGLM <- function(x, mask){
   x$mask[!mask2] <- FALSE
 
   nT <- length(x$y) / nV
-  nB <- ncol(x$beta_estimates[[1]])
+  nB <- ncol(x$task_estimates[[1]])
   stopifnot(nT == round(nT))
   x$y <- c(matrix(x$y, ncol=nV)[,mask])
 

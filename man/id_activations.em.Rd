@@ -29,7 +29,7 @@ If \code{NULL} (default), the average across all sessions is used.}
 }
 \value{
 A list with two elements: \code{active}, which gives a matrix of zeros
-and ones of the same dimension as \code{model_obj$beta_estimates${session_name}},
+and ones of the same dimension as \code{model_obj$task_estimates${session_name}},
 and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 more information).
 }
