@@ -89,17 +89,17 @@ BayesGLM_argChecks <- function(
 
 #' BayesGLM
 #'
-#' Applies spatial Bayesian GLM to task fMRI data
+#' Performs spatial Bayesian GLM for fMRI task activation
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
-#'  session is a list with elements "BOLD", "design", and optionally "nuisance".
-#'  The name of each element in \code{data} is the name of that session. See
-#'  \code{?is.BfMRI.sess} for details.
+#'  session is a list with elements \code{"BOLD"}, \code{"design"}, and 
+#'  optionally \code{"nuisance"}. The name of each element in \code{data} is the
+#'  name of that session. See \code{?is.BfMRI.sess} for details.
 #'
 #'  Note that the argument \code{session_names} can be used instead of providing
-#'  the session names by the list element names of \code{data}.
+#'  the session names as the names of the elements in \code{data}.
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @inheritParams mesh_Param_inla
@@ -126,7 +126,50 @@ BayesGLM_argChecks <- function(
 #' @inheritParams emTol_Param
 #' @inheritParams trim_INLA_Param
 #'
-#' @return A list containing...
+#' @return A \code{"BayesGLM"} object: a list with elements
+#'  \describe{
+#'    \item{INLA_result}{The full result of the call to \code{INLA::inla}.}
+#'    \item{task_estimates}{The task coefficients for the Bayesian model.}
+#'    \item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
+#'    \item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
+#'    \item{mesh_orig}{The original mesh provided.}
+#'    \item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+#'    \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
+#'    \item{task_names}{The names of the tasks.}
+#'    \item{session_names}{The names of the sessions.}
+#'    \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
+#'    \item{theta_estimates}{Theta estimates from the Bayesian model.}
+#'    \item{posterior_Sig_inv}{For joint group modelling.}
+#'    \item{mu.theta}{For joint group modelling.}
+#'    \item{Q.theta}{For joint group modelling.}
+#'    \item{y}{For joint group modelling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
+#'    \item{X}{For joint group modelling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
+#'    \item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
+#'    \item{call}{match.call() for this function call.}
+#'  }
+#'
+# result <- list(
+#   INLA_result = INLA_result,
+#   task_estimates = task_estimates,
+#   result_classical = result_classical,
+#   mesh = mesh,
+#   mesh_orig = mesh_orig,
+#   mask = mask,
+#   design = design,
+#   task_names = task_names,
+#   session_names = session_names,
+#   hyperpar_posteriors = hyperpar_posteriors,
+#   theta_estimates = theta_estimates,
+#   # For joint group model ~~~~~~~~~~~~~
+#   posterior_Sig_inv = Sig_inv,
+#   mu.theta = mu.theta,
+#   Q.theta = Q.theta,
+#   y = y_all,
+#   X = X_all_list,
+#   prewhiten_info = prewhiten_info,
+#   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#   call = match.call()
+# ) 
 #'
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars

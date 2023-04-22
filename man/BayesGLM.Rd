@@ -33,12 +33,12 @@ BayesGLM(
 }
 \arguments{
 \item{data}{A list of sessions in the \code{"BfMRI.sess"} object format. Each
-session is a list with elements "BOLD", "design", and optionally "nuisance".
-The name of each element in \code{data} is the name of that session. See
-\code{?is.BfMRI.sess} for details.
+session is a list with elements \code{"BOLD"}, \code{"design"}, and
+optionally \code{"nuisance"}. The name of each element in \code{data} is the
+name of that session. See \code{?is.BfMRI.sess} for details.
 
 Note that the argument \code{session_names} can be used instead of providing
-the session names by the list element names of \code{data}.}
+the session names as the names of the elements in \code{data}.}
 
 \item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
 coordinates at which a given vertex in the mesh is located. \eqn{V} is the
@@ -123,10 +123,30 @@ result be trimmed to only what is necessary to use \code{id_activations}?
 Default: \code{TRUE}.}
 }
 \value{
-A list containing...
+A \code{"BayesGLM"} object: a list with elements
+\describe{
+\item{INLA_result}{The full result of the call to \code{INLA::inla}.}
+\item{task_estimates}{The task coefficients for the Bayesian model.}
+\item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
+\item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
+\item{mesh_orig}{The original mesh provided.}
+\item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+\item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
+\item{task_names}{The names of the tasks.}
+\item{session_names}{The names of the sessions.}
+\item{hyperpar_posteriors}{Hyperparameter posterior densities.}
+\item{theta_estimates}{Theta estimates from the Bayesian model.}
+\item{posterior_Sig_inv}{For joint group modelling.}
+\item{mu.theta}{For joint group modelling.}
+\item{Q.theta}{For joint group modelling.}
+\item{y}{For joint group modelling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
+\item{X}{For joint group modelling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
+\item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
+\item{call}{match.call() for this function call.}
+}
 }
 \description{
-Applies spatial Bayesian GLM to task fMRI data
+Performs spatial Bayesian GLM for fMRI task activation
 }
 \section{INLA Requirement}{
 

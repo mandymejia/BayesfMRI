@@ -189,11 +189,11 @@ An object of class \code{"BayesGLM_cifti"}: a list with elements
 \describe{
 \item{betas_Bayesian}{The task coefficients for the Bayesian model.}
 \item{betas_classical}{The task coefficients for the classical model.}
-\item{GLMs_Bayesian}{The entire list of GLM results for the Bayesian model.}
-\item{GLMs_classical}{The entire list of GLM results for the classical model.}
+\item{GLMs_Bayesian}{The entire list of GLM results, except for parameters estimated for the classical model.}
+\item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
 \item{session_names}{The names of the sessions.}
 \item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-\item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression and prewhitening.}
+\item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
 }
 }
 \description{
@@ -204,5 +204,11 @@ Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 This function uses a system wrapper for the 'wb_command' executable. The
 user must first download and install the Connectome Workbench, available
 from https://www.humanconnectome.org/software/get-connectome-workbench .
+}
+
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
 }
 

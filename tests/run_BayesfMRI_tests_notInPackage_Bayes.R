@@ -120,8 +120,6 @@ for (ii in seq(nrow(params))) {
     avg_sessions = params$avg[ii]
   ))
 
-  stop()
-
   # Plot GLM results.
   if (saveResults) {
     plot(

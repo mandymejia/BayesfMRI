@@ -2,6 +2,8 @@
 #'
 #' Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 #'
+#' @inheritSection INLA_Description INLA Requirement 
+#'
 #' @section Connectome Workbench Requirement:
 #'  This function uses a system wrapper for the 'wb_command' executable. The
 #'  user must first download and install the Connectome Workbench, available
@@ -96,11 +98,11 @@
 #'  \describe{
 #'    \item{betas_Bayesian}{The task coefficients for the Bayesian model.}
 #'    \item{betas_classical}{The task coefficients for the classical model.}
-#'    \item{GLMs_Bayesian}{The entire list of GLM results for the Bayesian model.}
-#'    \item{GLMs_classical}{The entire list of GLM results for the classical model.}
+#'    \item{GLMs_Bayesian}{The entire list of GLM results, except for parameters estimated for the classical model.}
+#'    \item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
 #'    \item{session_names}{The names of the sessions.}
 #'    \item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-#'    \item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression and prewhitening.}
+#'    \item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
 #'  }
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti

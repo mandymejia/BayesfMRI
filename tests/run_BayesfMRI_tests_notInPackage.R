@@ -27,7 +27,6 @@ if (doINLA) {
   inla.setOption(pardiso.license = my_pardiso)
   inla.pardiso.check()
 }
-library(brainSim)
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
 library(BayesfMRI)
