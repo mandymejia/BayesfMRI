@@ -43,21 +43,30 @@ BayesGLM_cifti(
 )
 }
 \arguments{
-\item{cifti_fname}{File path (or vector thereof, for multiple sessions) of
-CIFTI-format fMRI timeseries data (*.dtseries.nii).}
+\item{cifti_fname}{fMRI timeseries data in CIFTI format ("*.dtseries.nii").
+For single-session analysis this can be a file path to a CIFTI file or a
+\code{"xifti"} object from the \code{ciftiTools} package. For multi-session
+analysis this can be a vector of file paths or a list of \code{"xifti"}
+objects.}
 
-\item{surfL_fname}{File path of GIFTI-format left cortical surface geometry
-(*.surf.gii). Must be provided if brainstructures includes \code{"left"} and
-\code{Bayes=TRUE}.}
+\item{surfL_fname}{Left cortex surface geometry in GIFTI format
+("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
+object from the \code{ciftiTools} package. This argument is only used if
+\code{brainstructures} includes \code{"left"} and \code{Bayes==TRUE}. If
+it's not provided, the HCP group-average inflated surface included in the
+\code{ciftiTools} package will be used.}
 
-\item{surfR_fname}{File path of GIFTI-format right cortical surface geometry
-(*.surf.gii). Must be provided if brainstructures includes \code{"right"}
-and \code{Bayes=TRUE}.}
+\item{surfR_fname}{Right cortex surface geometry in GIFTI format
+("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
+object from the \code{ciftiTools} package. This argument is only used if
+\code{brainstructures} includes \code{"right"} and \code{Bayes==TRUE}. If
+it's not provided, the HCP group-average inflated surface included in the
+\code{ciftiTools} package will be used.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
-to obtain: \code{"left"} (left cortical surface) and/or \code{"right"} (right
-cortical surface). Default: \code{c("left","right")} (entire cortical surface).
-Note that the subcortical models have not yet been implemented.}
+to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
+(right cortical surface). Default: \code{c("left","right")} (both
+hemispheres). Note that the subcortical models have not yet been implemented.}
 
 \item{design, onsets, TR}{Either provide \code{design}, or provide both
 \code{onsets} and \code{TR}.
@@ -70,12 +79,13 @@ stimulus. Note that the scale of the regressors will affect the scale and
 interpretation of the beta coefficients, so imposing a proper scale (e.g.,
 set maximum to 1) is recommended.
 
-\code{onsets} is a matrix of onsets (first column) and durations (second column)
-for each task in seconds, organized as a list where each element of the
-list corresponds to one task. Names of list should be task names. (Or for
-multi-session modeling, a list of such lists.)
+\code{onsets} is a \eqn{K}-length list in which the name of each element is
+the name of the corresponding task, and the value of each element is a
+matrix of onsets (first column) and durations (second column) for each
+stimuli (each row) of the corresponding task. For multi-session modeling,
+this argument should be a list of such lists.
 
-\code{TR} is the temporal resolution of the data in seconds.}
+\code{TR} is the temporal resolution of the data, in seconds.}
 
 \item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals
 (or list of such matrices, for multiple-session modeling).}
@@ -92,9 +102,11 @@ to yield a filter with as close a frequency to \code{hpf} as possible.
 Alternatively, \code{DCT} can be provided to directly specify the number
 of DCT bases to include.
 
-Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
-typical \code{TR} this amounts to lower filter frequency than the
-approximately .01 Hz used in most studies.)
+Default: \code{DCT=4}. For typical \code{TR}, four DCT bases amounts to a
+lower frequency cutoff than the approximately .01 Hz used in most studies.
+We selected this default to err on the side of retaining more low-frequency
+information, but we recommend setting these arguments to values most
+appropriate for the data analysis at hand.
 
 Using at least two DCT bases is as sufficient as using linear and quadratic
 drift terms in the design matrix. So if DCT detrending is being used, there
@@ -173,7 +185,16 @@ result be trimmed to only what is necessary to use \code{id_activations}?
 Default: \code{TRUE}.}
 }
 \value{
-An object of class \code{"BayesGLM"}, a list containing...
+An object of class \code{"BayesGLM_cifti"}: a list with elements
+\describe{
+\item{betas_Bayesian}{The task coefficients for the Bayesian model.}
+\item{betas_classical}{The task coefficients for the classical model.}
+\item{GLMs_Bayesian}{The entire list of GLM results for the Bayesian model.}
+\item{GLMs_classical}{The entire list of GLM results for the classical model.}
+\item{session_names}{The names of the sessions.}
+\item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
+\item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression and prewhitening.}
+}
 }
 \description{
 Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
