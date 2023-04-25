@@ -1,13 +1,11 @@
 # [Build --> Install and Restart]
 
-# [TO DO] Bayes=TRUE
-# [TO DO] BayesGLM2
-
+# Setup ------------------------------------------------------------------------
 # [Edit these]
-doINLA <- FALSE
+doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 1000 # use e.g. 24k instead, to actually verify results
+resamp_res <- 24000
 my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
@@ -52,6 +50,8 @@ events <- lapply(events, function(x){
   }), task_names)
 })
 
+# BayesGLM ---------------------------------------------------------------------
+
 # data.frame where each row describes a combination of arguments to test.
 sess_avg <- c("1_TRUE", "2_TRUE", "2_FALSE")
 prewhiten <- c(TRUE, FALSE)
@@ -60,6 +60,7 @@ params$sess <- as.numeric(gsub("_.*", "", sess_avg))
 params$avg <- as.logical(gsub(".*_", "", sess_avg))
 params$bs <- "left"
 params$smooth <- 5
+params$Bayes <- FALSE
 # Add non-combinatorial test: both hemispheres; no smoothing
 params <- rbind(
   params,
@@ -69,9 +70,25 @@ params <- rbind(
     sess=1,
     avg=TRUE,
     bs=c("both", "right"),
-    smooth=c(5, 0)
+    smooth=c(5, 0),
+    Bayes=FALSE
   )
 )
+if (doINLA) {
+  # Add Bayesian modeling tests: just three
+  params <- rbind(
+    params,
+    data.frame(
+      sess_avg=c("1_TRUE", "2_TRUE", "2_FALSE"),
+      prewhiten=c(FALSE, TRUE, FALSE),
+      sess=c(1, 2, 2),
+      avg=c(TRUE, TRUE, FALSE),
+      bs=c("right", "both", "right"),
+      smooth=c(5, 5, 0),
+      Bayes=TRUE
+    )
+  )
+}
 
 # Test each combination.
 for (ii in seq(nrow(params))) {
@@ -83,7 +100,8 @@ for (ii in seq(nrow(params))) {
       ifelse(params$avg[ii], "sessions (w/ averaging),", "sessions (not avg),"),
       "session,"
     ), "and",
-    ifelse(params$prewhiten[ii], "with prewhitening", "without prewhitening"), "\n\n"
+    ifelse(params$prewhiten[ii], "with prewhitening", "without prewhitening"),
+    ifelse(params$Bayes[ii], ", Bayesian model", ", classical model" ), "\n\n"
   )
 
   # Do BayesGLM_cifti
@@ -94,31 +112,21 @@ for (ii in seq(nrow(params))) {
     brainstructures = params$bs[ii],
     onsets = switch(params$sess[ii], events[[1]], events[seq(2)]),
     TR = 2.2,
-    Bayes = FALSE,
+    Bayes = params$Bayes[ii],
     ar_order = ifelse(params$prewhiten[ii], 6, 0),
     ar_smooth = params$smooth[ii],
-    resamp_res = resamp_res,
+    resamp_res = ifelse(params$Bayes[ii], resamp_res/4, resamp_res),
     verbose = FALSE,
     return_INLA_result = TRUE,
     outfile = file.path(dir_results, "bfmri_out"),
     avg_sessions = params$avg[ii]
   ))
-  exec_time2 <- system.time(bfmri_ii2 <- BayesGLM_cifti(
-    cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(params$sess[ii])],
-    surfL_fname=ciftiTools.files()$surf["left"],
-    surfR_fname=ciftiTools.files()$surf["right"],
-    brainstructures = params$bs[ii],
-    onsets = switch(params$sess[ii], events[[1]], events[seq(2)]),
-    TR = 2.2,
-    Bayes = TRUE,
-    ar_order = ifelse(params$prewhiten[ii], 6, 0),
-    ar_smooth = params$smooth[ii],
-    resamp_res = resamp_res,
-    verbose = FALSE,
-    return_INLA_result = TRUE,
-    outfile = file.path(dir_results, "bfmri_out"),
-    avg_sessions = params$avg[ii]
-  ))
+  print(exec_time)
+
+  if (FALSE) {
+    bgroup_fake <- list(bfmri_ii, bfmri_ii)
+    z <- BayesGLM2(bgroup_fake)
+  }
 
   # Plot GLM results.
   if (saveResults) {
@@ -136,29 +144,64 @@ for (ii in seq(nrow(params))) {
   # plot(...)
 
   # Identify the activations.
-  act_ii <- id_activations_cifti(bfmri_ii, threshold=0, method='classical', alpha=0.05)
+  act_ii <- id_activations_cifti(bfmri_ii, threshold=.01, method=ifelse(params$Bayes[ii], "Bayesian", "classical"), alpha=0.05)
   # plot(act_ii$activations_xifti)
   if (ii == 1) {
     # Test the other arguments too.
-    act_ii <- id_activations_cifti(
+    act_ii_temp <- id_activations_cifti(
       bfmri_ii, threshold=.1, method='classical', alpha=0.1, correction='FWER'
       #, excur_method='QC'
     )
-    if (saveResults) {
-      plot(
-        act_ii$activations_xifti, idx=5,
-        title=paste0("Tongue activations, params ", ii),
-        fname=file.path(dir_resultThis, paste0("act_", ii))
-      )
-    }
+    rm(act_ii_temp)
+  }
+  if (saveResults) {
+    plot(
+      act_ii$activations_xifti, idx=5,
+      title=paste0("Tongue activations, params ", ii),
+      fname=file.path(dir_resultThis, paste0("act_", ii))
+    )
   }
 
   if (saveResults) {
     saveRDS(
-      list(bfmri=bfmri_ii, act=act_ii),
+      list(bfmri=bfmri_ii, act=act_ii, exec_time=exec_time),
       file.path(dir_resultThis, paste0("params_", ii, ".rds"))
     )
   }
 }
+
+# BayesGLM2?
+
+# Export summary graphics ------------------------------------------------------
+params$sess_avg <- NULL
+library(gridExtra)
+png(
+  file.path(dir_resultThis, "params.png"),
+  height = 50*nrow(params), width = 200*ncol(params)
+)
+grid.table(params)
+dev.off()
+
+ctast <- read_xifti(file.path(dir_data, "derivatives surface_pipeline sub-MSC01 task_contrasts_cifti motor sub-MSC01-motor_contrasts_32k_fsLR.dscalar.nii"))
+plot(
+  ctast, idx=5, zlim=c(-5, 5),
+  title=paste0("MSC tongue contrast"),
+  fname=file.path(dir_resultThis, paste0("MSC_tongue_contrast"))
+)
+
+ciftiTools:::view_comp(
+  file.path(dir_resultThis, c(paste0("bglm_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
+  fname=file.path(dir_resultThis, "bglm_comp.png")
+)
+
+ciftiTools:::view_comp(
+  file.path(dir_resultThis, c(paste0("act_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
+  fname=file.path(dir_resultThis, "act_comp.png")
+)
+
+# BayesGLM2 --------------------------------------------------------------------
+# z <- lapply(file.path(dir_resultThis, c("params_9.rds", "params_10.rds")), readRDS)
+# z <- list(z[[1]]$bfmri, z[[2]]$bfmri)
+# bglm2 <- BayesGLM2(z)
 
 # [TO DO] compare results with previous versions to check against new problems.
