@@ -75,7 +75,9 @@ id_activations_cifti <- function(model_obj,
     ))
   field_inds <- which(model_obj$task_names %in% field_names)
 
-  if(method == "Bayesian" & is.null(GLM_list[[which(!is.null(GLM_list))]]$INLA_result)) method <- "EM"
+  if(method == "Bayesian" && !("INLA_result" %in% do.call(c, lapply(GLM_list, names)))) {
+    method <- "EM"
+  }
 
   if(method=='Bayesian'){
     #loop over hemispheres/structures
