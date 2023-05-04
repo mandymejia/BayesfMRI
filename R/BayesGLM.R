@@ -118,7 +118,7 @@ BayesGLM_cifti <- function(cifti_fname,
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
-  check_BayesGLM(require_PARDISO=do_Bayesian)
+  #check_BayesGLM(require_PARDISO=do_Bayesian)
 
   avail_cores <- parallel::detectCores()
   if(avail_cores < 2) {
@@ -141,30 +141,30 @@ BayesGLM_cifti <- function(cifti_fname,
     #for multiple session data, onsets is a list (representing sessions) of lists (representing tasks)
     if(class(onsets[[1]]) == 'list') {
       if(is.null(names(onsets[[1]])))
-        beta_names <- paste0("beta",seq_len(length(onsets[[1]])))
+        task_names <- paste0("beta",seq_len(length(onsets[[1]])))
       if(!is.null(names(onsets[[1]])))
-        beta_names <- names(onsets[[1]])
+        task_names <- names(onsets[[1]])
     }
     #for single session data, onsets is a list (representing tasks) of data frames or matrices
     if(('data.frame' %in% class(onsets[[1]])) | ('matrix' %in% class(onsets[[1]]))) {
       if(is.null(names(onsets)))
-        beta_names <- paste0("beta",seq_len(length(onsets)))
+        task_names <- paste0("beta",seq_len(length(onsets)))
       if(!is.null(names(onsets)))
-        beta_names <- names(onsets)
+        task_names <- names(onsets)
     }
   }
   if(!is.null(design)) {
     if(class(design) == "list") {
       if(is.null(colnames(design[[1]])))
-        beta_names <- paste0("beta",seq_len(ncol(design[[1]])))
+        task_names <- paste0("beta",seq_len(ncol(design[[1]])))
       if(!is.null(colnames(design[[1]])))
-        beta_names <- colnames(design[[1]])
+        task_names <- colnames(design[[1]])
     }
     if("matrix" %in% class(design) | "data.frame" %in% class(design)) {
       if(is.null(colnames(design)))
-        beta_names <- paste0("beta",seq_len(ncol(design)))
+        task_names <- paste0("beta",seq_len(ncol(design)))
       if(!is.null(colnames(design)))
-        beta_names <- colnames(design)
+        task_names <- colnames(design)
     }
   }
 
@@ -208,8 +208,9 @@ BayesGLM_cifti <- function(cifti_fname,
   if(is.null(design)) {
     make_design <- TRUE
     design <- vector('list', length=n_sess)
+  } else {
+    make_design <- FALSE
   }
-  if(!is.null(design)) make_design <- FALSE
 
   for(ss in 1:n_sess){
 
@@ -263,7 +264,7 @@ BayesGLM_cifti <- function(cifti_fname,
   ### Check that design matrix names consistent across sessions
   if(n_sess > 1){
     tmp <- sapply(design, colnames)
-    if(length(beta_names) == 1) {
+    if(length(task_names) == 1) {
       num_names <- length(unique(tmp))
       if(num_names > 1) stop('task names must match across sessions for multi-session modeling')
     } else {
@@ -357,7 +358,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                                          scale_design = FALSE) # done above
 
     if(do_Bayesian) BayesGLM_left <- BayesGLM(data = session_data,
-                                              beta_names = beta_names,
+                                              task_names = task_names,
                                               vertices = verts_left,
                                               faces = faces_left,
                                               scale_BOLD = scale_BOLD_left,
@@ -422,7 +423,7 @@ BayesGLM_cifti <- function(cifti_fname,
                                                          scale_design = FALSE) #done above
 
     if(do_Bayesian) BayesGLM_right <- BayesGLM(session_data,
-                                               beta_names = beta_names,
+                                               task_names = task_names,
                                                vertices = verts_right,
                                                 faces = faces_right,
                                                 scale_BOLD=scale_BOLD_right,
@@ -504,7 +505,7 @@ BayesGLM_cifti <- function(cifti_fname,
         #subcortLab = nifti_labels
       )
 
-      classicalGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      classicalGLM_cifti[[ss]]$meta$cifti$names <- task_names
     }
     if(do_Bayesian){
       if(do_left) datL <- BayesGLM_left$beta_estimates[[ss]][cortexL_mwall==1,]
@@ -518,7 +519,7 @@ BayesGLM_cifti <- function(cifti_fname,
         #mask = mask,
         #subcortLab = nifti_labels
       )
-      BayesGLM_cifti[[ss]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[ss]]$meta$cifti$names <- task_names
     }
   }
 
@@ -527,12 +528,12 @@ BayesGLM_cifti <- function(cifti_fname,
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
       if(do_left) {
-        datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
+        datL <- matrix(NA, sum(cortexL_mwall),length(task_names))
         maskL <- classicalGLM_left$avg$mask[cortexL_mwall == 1]
         datL[maskL,] <- classicalGLM_left$avg$estimates[cortexL_mwall == 1,]
       }
       if(do_right) {
-        datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
+        datR <- matrix(NA, sum(cortexR_mwall),length(task_names))
         maskR <- classicalGLM_right$avg$mask[cortexR_mwall == 1]
         datR[maskR,] <- classicalGLM_right$avg$estimates[cortexR_mwall == 1,]
       }
@@ -546,19 +547,19 @@ BayesGLM_cifti <- function(cifti_fname,
         )),
         classicalGLM_cifti
       )
-      classicalGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      classicalGLM_cifti[[1]]$meta$cifti$names <- task_names
     }
 
     if (do_Bayesian) {
       # Need to include the missing locations for medial walls within the
       # linear combinations or the xifti object will be mis-mapped.
       if(do_left) {
-        datL <- matrix(NA, sum(cortexL_mwall),length(beta_names))
+        datL <- matrix(NA, sum(cortexL_mwall),length(task_names))
         maskL <- BayesGLM_left$mask[cortexL_mwall == 1]
         datL[maskL,] <- BayesGLM_left$avg_beta_estimates
       }
       if(do_right) {
-        datR <- matrix(NA, sum(cortexR_mwall),length(beta_names))
+        datR <- matrix(NA, sum(cortexR_mwall),length(task_names))
         maskR <- BayesGLM_right$mask[cortexR_mwall == 1]
         datR[maskR,] <- BayesGLM_right$avg_beta_estimates
       }
@@ -572,7 +573,7 @@ BayesGLM_cifti <- function(cifti_fname,
         )),
         BayesGLM_cifti
       )
-      BayesGLM_cifti[[1]]$meta$cifti$names <- beta_names
+      BayesGLM_cifti[[1]]$meta$cifti$names <- task_names
     }
   }
 
@@ -586,7 +587,7 @@ BayesGLM_cifti <- function(cifti_fname,
   }
 
   result <- list(session_names = session_names,
-                 beta_names = beta_names,
+                 task_names = task_names,
                  betas_Bayesian = BayesGLM_cifti,
                  betas_classical = classicalGLM_cifti,
                  GLMs_Bayesian = list(cortexL = BayesGLM_left,
@@ -616,7 +617,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
 #'  for more details.
 #' List element names represent session names.
-#' @param beta_names (Optional) Names of tasks represented in design matrix
+#' @param task_names (Optional) Names of tasks represented in design matrix
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @inheritParams mesh_Param_inla
@@ -643,7 +644,7 @@ BayesGLM_cifti <- function(cifti_fname,
 #' @export
 BayesGLM <- function(
   data,
-  beta_names = NULL,
+  task_names = NULL,
   vertices = NULL,
   faces = NULL,
   mesh = NULL,
@@ -694,17 +695,17 @@ BayesGLM <- function(
     K <- ncol(data[[1]]$design) / sum(!is_missing)
   }
 
-  if(!is.null(beta_names)){
-    if(length(beta_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of beta_names is ', length(beta_names), '.  Please fix beta_names.'))
+  if(!is.null(task_names)){
+    if(length(task_names) != K) stop(paste0('I detect ', K, ' task based on the design matrix, but the length of task_names is ', length(task_names), '.  Please fix task_names.'))
   }
 
-  if(is.null(beta_names)){
+  if(is.null(task_names)){
     if(!is_pw){
-      beta_names_maybe <- colnames(data[[1]]$design) #if no prewhitening, can grab beta names from design (if not provided)
-      if(!is.null(beta_names_maybe)) beta_names <- beta_names_maybe
-      if(is.null(beta_names_maybe)) beta_names <- paste0('beta',1:K)
+      task_names_maybe <- colnames(data[[1]]$design) #if no prewhitening, can grab beta names from design (if not provided)
+      if(!is.null(task_names_maybe)) task_names <- task_names_maybe
+      if(is.null(task_names_maybe)) task_names <- paste0('beta',1:K)
     } else {
-     beta_names <- paste0('beta',1:K)
+     task_names <- paste0('beta',1:K)
     }
   }
 
@@ -838,12 +839,12 @@ BayesGLM <- function(
   }
 
   #construct betas and repls objects
-  replicates_list <- organize_replicates(n_sess=n_sess, beta_names=beta_names, mesh=mesh)
+  replicates_list <- organize_replicates(n_sess=n_sess, task_names=task_names, mesh=mesh)
   betas <- replicates_list$betas
   repls <- replicates_list$repls
 
   #organize the formula and data objects
-  #formula <- make_formula(beta_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
+  #formula <- make_formula(task_names = names(betas), repl_names = names(repls), hyper_initial = c(-2,2))
   #formula <- as.formula(formula)
 
   repl_names <- names(repls)
@@ -851,17 +852,17 @@ BayesGLM <- function(
   hyper_initial <- rep(list(hyper_initial), K)
   hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-  formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+  formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
   formula_vec <- c('y ~ -1', formula_vec)
   formula_str <- paste(formula_vec, collapse=' + ')
-  formula <- as.formula(formula_str, env = globalenv())
+  formula <- as.formula(formula_str)
 
   model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
   if(n_sess > 1 & avg_sessions) {
     cat("Set linear combinations for averages across sessions\n")
     diag_coefs <- Diagonal(n = V, x = 1/n_sess)
-    session_coefs <- Matrix::bdiag(rep(list(diag_coefs),length(beta_names))) # Just finished this line
+    session_coefs <- Matrix::bdiag(rep(list(diag_coefs),length(task_names))) # Just finished this line
     full_coefs <- Reduce(cbind,rep(list(session_coefs),n_sess))
     design_pred <- rbind(model_data$X, full_coefs)
     response_pred <- rep(NA,dim(full_coefs)[1])
@@ -889,7 +890,7 @@ BayesGLM <- function(
 
   #extract useful stuff from INLA model result
   beta_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask) #posterior means of latent task field
-  theta_posteriors <- get_posterior_densities(object=INLA_result, spde, beta_names) #hyperparameter posterior densities
+  theta_posteriors <- get_posterior_densities(object=INLA_result, spde, task_names) #hyperparameter posterior densities
   # The mean of the mean beta estimates across sessions
   if(n_sess > 1 & avg_sessions) {
     pred_idx <- which(is.na(model_data$y))
@@ -899,7 +900,7 @@ BayesGLM <- function(
       bbeta_out <- avg_beta_means[(seq(V) + (k-1)*V)]
       return(bbeta_out)
     }, simplify = T)
-    names(avg_beta_estimates) <- beta_names
+    names(avg_beta_estimates) <- task_names
   } else {
     avg_beta_estimates <- NULL
   }
@@ -918,7 +919,7 @@ BayesGLM <- function(
                    mask_orig = mask_orig,
                    design = design,
                    session_names = session_names,
-                   beta_names = beta_names,
+                   task_names = task_names,
                    beta_estimates = beta_estimates,
                    avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,
@@ -937,7 +938,7 @@ BayesGLM <- function(
                    mask_orig = mask_orig,
                    design = design,
                    session_names = session_names,
-                   beta_names = beta_names,
+                   task_names = task_names,
                    beta_estimates = beta_estimates,
                    avg_beta_estimates = avg_beta_estimates,
                    theta_posteriors = theta_posteriors,

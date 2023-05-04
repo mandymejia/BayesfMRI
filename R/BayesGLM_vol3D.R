@@ -151,18 +151,18 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
 
     #construct betas and repls objects
-    replicates_list <- organize_replicates(n_sess=n_sess, beta_names = beta_names, mesh = spde_grp)
+    replicates_list <- organize_replicates(n_sess=n_sess, task_names = task_names, mesh = spde_grp)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
-    beta_names <- names(betas)
+    task_names <- names(betas)
     repl_names <- names(repls)
     n_beta <- length(names(betas))
     hyper_initial <- c(-2,2)
     hyper_initial <- rep(list(hyper_initial), n_beta)
     hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-    formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+    formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
     formula_vec <- c('y ~ -1', formula_vec)
     formula_str <- paste(formula_vec, collapse=' + ')
     formula <- as.formula(formula_str, env = globalenv())
@@ -202,7 +202,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
                    spde_obj = spde_all,
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
-                   beta_names = beta_names,
+                   task_names = task_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
                    call = match.call(),
@@ -212,7 +212,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
                    spde_obj = spde_obj,
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
-                   beta_names = beta_names,
+                   task_names = task_names,
                    beta_estimates = beta_estimates,
                    theta_posteriors = theta_posteriors,
                    call = match.call(),
@@ -520,9 +520,9 @@ BayesGLM_slice <- function(
   }
 
   if (do_Bayesian) {
-    beta_names <- BayesGLM_out$beta_names
+    task_names <- BayesGLM_out$task_names
   } else {
-    beta_names <- NULL
+    task_names <- NULL
     BayesGLM_out <- NULL
   }
 
@@ -530,7 +530,7 @@ BayesGLM_slice <- function(
     classicalGLM_out <- NULL
 
   result <- list(session_names = session_names,
-                 beta_names = beta_names,
+                 task_names = task_names,
                  betas_Bayesian = Bayes_slice,
                  betas_classical = classical_slice,
                  GLMs_Bayesian = BayesGLM_out,

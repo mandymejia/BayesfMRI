@@ -4,10 +4,10 @@
 \alias{make_formula}
 \title{Make Formula}
 \usage{
-make_formula(beta_names, repl_names, hyper_initial = NULL)
+make_formula(task_names, repl_names, hyper_initial = NULL)
 }
 \arguments{
-\item{beta_names}{char vector of the names of each bbeta object in the environment}
+\item{task_names}{char vector of the names of each bbeta object in the environment}
 
 \item{repl_names}{char vector of the names of each replicate object in the environment}
 

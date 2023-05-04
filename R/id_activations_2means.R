@@ -62,7 +62,7 @@ id_activations.2means <- function(
     }
     n_remain <- n_sample
     if (is.null(field_name))
-      field_name <- model_obj$beta_names
+      field_name <- model_obj$task_names
     select_vars <- sapply(field_name, function(each_var)
       0,
       simplify = FALSE)
@@ -95,8 +95,8 @@ id_activations.2means <- function(
       names(out) <- field_name
       return(out)
     }, simplify = FALSE)
-    # complete_sample <- vector("list", length(model_obj$beta_names))
-    # names(complete_sample) <- model_obj$beta_names
+    # complete_sample <- vector("list", length(model_obj$task_names))
+    # names(complete_sample) <- model_obj$task_names
     while (n_remain > 0) {
       cat("Sampling,", n_remain, "samples remain of", n_sample, "\n")
       next_sample_size <- min(n_remain, 100)
@@ -107,7 +107,7 @@ id_activations.2means <- function(
       )
       next_sample <-
         sapply(model_obj$session_names, function(each_ses) {
-          sapply(model_obj$beta_names, function(each_var) {
+          sapply(model_obj$task_names, function(each_var) {
             sapply(test_sample, function(each_sample) {
               var_name <- gsub(":[0-9]*", "", rownames(each_sample$latent))
               var_sample <- each_sample$latent[var_name == each_var, ]

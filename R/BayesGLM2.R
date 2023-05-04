@@ -117,13 +117,13 @@ BayesGLM2 <- function(results,
   #TO DO: Generalize to multi-session models (just need to expand the contrasts vector to summarize across sessions as well as subjects)
 
   # If contrasts is null, by default set up a contrast vector that will compute the average across subjects for each task
-  K <- length(results[[1]]$beta_names) #number of tasks
-  beta_names <- results[[1]]$beta_names
+  K <- length(results[[1]]$task_names) #number of tasks
+  task_names <- results[[1]]$task_names
   if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
   if(is.null(contrasts)) {
     if(verbose) cat('Setting up contrast vectors to compute the average across subjects for each task. If other contrasts are desired, provide a contrasts argument.\n')
     contrasts <- vector('list', length=K)
-    names(contrasts) <- paste0(beta_names,'_avg')
+    names(contrasts) <- paste0(task_names,'_avg')
     for(k in 1:K){
       # Old, broken, fixed?
       contrast_onesubj_k <- rep(c(rep(0, k-1), 1/(num_sessions*M), rep(0, K-k)),num_sessions) #(1/J, 0, ... 0) for k=1, (0, 1/J, 0, ..., 0) for k=2, ..., (0, ..., 0, 1/J) for k=K, for each session
@@ -188,8 +188,8 @@ BayesGLM2 <- function(results,
     # use_avg_m <- "matrix" %in% class(results[[m]]$avg_beta_estimates)
 
     #Check match of beta names
-    beta_names_m <- results[[m]]$beta_names
-    if(!all.equal(beta_names_m, beta_names, check.attributes=FALSE)) stop('All subjects must have the same tasks in the same order.')
+    task_names_m <- results[[m]]$task_names
+    if(!all.equal(task_names_m, task_names, check.attributes=FALSE)) stop('All subjects must have the same tasks in the same order.')
 
     #Check that mesh has same neighborhood structure
     faces_m <- results[[m]]$mesh$faces

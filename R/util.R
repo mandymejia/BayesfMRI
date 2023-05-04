@@ -103,7 +103,7 @@
 #   out <- list()
 #   class(out) <- "summary.BayesGLM"
 #   out$sessions <- object$session_names
-#   out$betas <- object$beta_names
+#   out$betas <- object$task_names
 #   out$call <- object$INLA_result$call
 #   out$inla.summary <- summary(object$model)
 #   return(out)
