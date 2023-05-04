@@ -15,13 +15,7 @@ trim_INLA_result <- function(INLA_result) {
     ),
     marginals.random = INLA_result$marginals.random,
     misc = list(
-      configs = list(
-        nconfig = INLA_result$misc$configs$nconfig,
-        contents = INLA_result$misc$configs$contents,
-        config = sapply(INLA_result$misc$configs$config, function(conf) {
-          return(conf[c('mean','Q','Qinv','log.posterior','pred_idx')])
-        }, simplify = F)
-      )
+      configs = INLA_result$misc$configs
     )
   )
   class(out_object) <- "inla"

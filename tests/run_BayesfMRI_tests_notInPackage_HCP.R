@@ -125,7 +125,8 @@ for (ii in seq(nrow(params))) {
     verbose = FALSE,
     return_INLA_result = TRUE,
     outfile = file.path(dir_results, "bfmri_out"),
-    avg_sessions = params$avg[ii]
+    avg_sessions = params$avg[ii],
+    trim_INLA = TRUE
   ))
   print(exec_time)
 
