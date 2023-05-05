@@ -92,7 +92,6 @@ if (doINLA) {
 
 # Test each combination.
 for (ii in seq(nrow(params))) {
-  if (!(ii %in% c(7, 10))) {next}
   # Print a description of the combination to test.
   cat(
     params$sess[ii],
