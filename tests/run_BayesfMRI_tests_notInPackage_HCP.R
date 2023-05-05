@@ -1,11 +1,13 @@
 # [Build --> Install and Restart]
 
+# TO DO: diff act names for HCP vs MSC
+
 # Setup ------------------------------------------------------------------------
 # [Edit these]
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 6000
+resamp_res <- 4000
 my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
