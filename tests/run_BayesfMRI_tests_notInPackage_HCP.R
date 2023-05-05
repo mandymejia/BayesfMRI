@@ -5,7 +5,7 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 24000
+resamp_res <- 6000
 my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
@@ -74,7 +74,7 @@ params <- rbind(
     prewhiten=TRUE,
     sess=1,
     avg=TRUE,
-    bs=c("both", "right"),
+    bs=c("both", "left"),
     smooth=c(5, 0),
     Bayes=FALSE
   )
@@ -88,7 +88,7 @@ if (doINLA) {
       prewhiten=c(FALSE, TRUE, FALSE),
       sess=c(1, 2, 2),
       avg=c(TRUE, TRUE, FALSE),
-      bs=c("right", "both", "right"),
+      bs=c("left", "both", "left"),
       smooth=c(5, 5, 0),
       Bayes=TRUE
     )
@@ -115,22 +115,19 @@ for (ii in seq(nrow(params))) {
     surfL_fname=ciftiTools.files()$surf["left"],
     surfR_fname=ciftiTools.files()$surf["right"],
     brainstructures = params$bs[ii],
-    onsets = switch(params$sess[ii], events[seq(3)], events[seq(6)]),
+    onsets = switch(params$sess[ii], events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
     TR = 2.2,
     nuisance=switch(params$sess[ii], nuis$rp_1, nuis),
     Bayes = params$Bayes[ii],
     ar_order = ifelse(params$prewhiten[ii], 6, 0),
     ar_smooth = params$smooth[ii],
-    resamp_res = ifelse(params$Bayes[ii], resamp_res/4, resamp_res),
+    resamp_res = ifelse(params$Bayes[ii], resamp_res/2, resamp_res) / ifelse(params$bs[ii]=="both", 2, 1),
     verbose = FALSE,
     return_INLA_result = TRUE,
     outfile = file.path(dir_results, "bfmri_out"),
-    avg_sessions = params$avg[ii],
-    trim_INLA = TRUE
+    avg_sessions = params$avg[ii]
   ))
   print(exec_time)
-
-  saveRDS(bfmri_ii, "~/Desktop/param9_hcp.rds")
 
   if (FALSE) {
     bgroup_fake <- list(bfmri_ii, bfmri_ii)
@@ -140,8 +137,8 @@ for (ii in seq(nrow(params))) {
   # Plot GLM results.
   if (saveResults) {
     plot(
-      bfmri_ii, idx=5,
-      title=paste0("Tongue, params ", ii),
+      bfmri_ii, idx=1,
+      title=paste0("Win, params ", ii),
       fname=file.path(dir_resultThis, paste0("bglm_", ii))
     )
   }
@@ -165,8 +162,8 @@ for (ii in seq(nrow(params))) {
   }
   if (saveResults) {
     plot(
-      act_ii$activations_xifti, idx=5,
-      title=paste0("Tongue activations, params ", ii),
+      act_ii$activations_xifti, idx=1,
+      title=paste0("Win activations, params ", ii),
       fname=file.path(dir_resultThis, paste0("act_", ii))
     )
   }
@@ -174,43 +171,13 @@ for (ii in seq(nrow(params))) {
   if (saveResults) {
     saveRDS(
       list(bfmri=bfmri_ii, act=act_ii, exec_time=exec_time),
-      file.path(dir_resultThis, paste0("params_", ii, "_HCP.rds"))
+      file.path(dir_resultThis, paste0("params", ii, "_HCP.rds"))
     )
   }
 }
 
+file.remove(file.path(dir_results, "bfmri_out_left.rds"))
+file.remove(file.path(dir_results, "bfmri_out_right.rds"))
+
 # BayesGLM2?
 
-# Export summary graphics ------------------------------------------------------
-params$sess_avg <- NULL
-library(gridExtra)
-png(
-  file.path(dir_resultThis, "params.png"),
-  height = 50*nrow(params), width = 200*ncol(params)
-)
-grid.table(params)
-dev.off()
-
-ctast <- read_xifti(file.path(dir_data, "derivatives surface_pipeline sub-MSC01 task_contrasts_cifti motor sub-MSC01-motor_contrasts_32k_fsLR.dscalar.nii"))
-plot(
-  ctast, idx=5, zlim=c(-5, 5),
-  title=paste0("MSC tongue contrast"),
-  fname=file.path(dir_resultThis, paste0("MSC_tongue_contrast"))
-)
-
-ciftiTools:::view_comp(
-  file.path(dir_resultThis, c(paste0("bglm_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
-  fname=file.path(dir_resultThis, "bglm_comp.png")
-)
-
-ciftiTools:::view_comp(
-  file.path(dir_resultThis, c(paste0("act_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
-  fname=file.path(dir_resultThis, "act_comp.png")
-)
-
-# BayesGLM2 --------------------------------------------------------------------
-# z <- lapply(file.path(dir_resultThis, c("params_9.rds", "params_10.rds")), readRDS)
-# z <- list(z[[1]]$bfmri, z[[2]]$bfmri)
-# bglm2 <- BayesGLM2(z)
-
-# [TO DO] compare results with previous versions to check against new problems.

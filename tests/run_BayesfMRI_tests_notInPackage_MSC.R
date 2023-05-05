@@ -5,7 +5,7 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 24000
+resamp_res <- 6000
 my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
@@ -92,6 +92,7 @@ if (doINLA) {
 
 # Test each combination.
 for (ii in seq(nrow(params))) {
+  if (!(ii %in% c(7, 10))) {next}
   # Print a description of the combination to test.
   cat(
     params$sess[ii],
@@ -115,7 +116,7 @@ for (ii in seq(nrow(params))) {
     Bayes = params$Bayes[ii],
     ar_order = ifelse(params$prewhiten[ii], 6, 0),
     ar_smooth = params$smooth[ii],
-    resamp_res = ifelse(params$Bayes[ii], resamp_res/4, resamp_res),
+    resamp_res = ifelse(params$Bayes[ii], resamp_res/2, resamp_res) / ifelse(params$bs[ii]=="both", 2, 1),
     verbose = FALSE,
     return_INLA_result = TRUE,
     outfile = file.path(dir_results, "bfmri_out"),
@@ -165,10 +166,13 @@ for (ii in seq(nrow(params))) {
   if (saveResults) {
     saveRDS(
       list(bfmri=bfmri_ii, act=act_ii, exec_time=exec_time),
-      file.path(dir_resultThis, paste0("params_", ii, ".rds"))
+      file.path(dir_resultThis, paste0("params", ii, "_MSC.rds"))
     )
   }
 }
+
+file.remove(file.path(dir_results, "bfmri_out_left.rds"))
+file.remove(file.path(dir_results, "bfmri_out_right.rds"))
 
 # BayesGLM2?
 
@@ -198,10 +202,3 @@ ciftiTools:::view_comp(
   file.path(dir_resultThis, c(paste0("act_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
   fname=file.path(dir_resultThis, "act_comp.png")
 )
-
-# BayesGLM2 --------------------------------------------------------------------
-# z <- lapply(file.path(dir_resultThis, c("params_9.rds", "params_10.rds")), readRDS)
-# z <- list(z[[1]]$bfmri, z[[2]]$bfmri)
-# bglm2 <- BayesGLM2(z)
-
-# [TO DO] compare results with previous versions to check against new problems.
