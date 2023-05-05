@@ -1,6 +1,6 @@
 # [Build --> Install and Restart]
 
-# TO DO: diff act names for HCP vs MSC
+# TO DO: diff plot names for HCP vs MSC
 
 # Setup ------------------------------------------------------------------------
 # [Edit these]
