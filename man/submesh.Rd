@@ -18,3 +18,4 @@ a mesh object with fewer vertices than the original input mesh
 \description{
 Remove part of a mesh without using INLA functions
 }
+\keyword{internal}

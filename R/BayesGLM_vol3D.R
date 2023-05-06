@@ -39,6 +39,7 @@
 #'
 #' @return A list containing...
 #' @importFrom stats as.formula
+#' @importFrom fMRItools nuisance_regression
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),
@@ -170,7 +171,15 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
 
     # estimate model using INLA
     t0 <- Sys.time()
-    INLA_result_grp <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1, num.threads = num.threads, verbose=verbose)
+    check_INLA(require_PARDISO=FALSE)
+    INLA_result_grp <- INLA::inla(
+      formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
+      verbose = FALSE, keep = FALSE, num.threads = 4,
+      inla.mode = "experimental", .parent.frame = parent.frame(),
+      control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+      control.family=list(hyper=list(prec=list(initial=1))),
+      control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
+    )
     print(Sys.time() - t0)
 
     #extract beta estimates and project back to data locations for current group

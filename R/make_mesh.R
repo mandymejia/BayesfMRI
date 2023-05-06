@@ -46,7 +46,7 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
 #'   \code{use_INLA = FALSE}
 #'
 #' @return a mesh object with fewer vertices than the original input mesh
-#' @export
+#' @keywords internal
 submesh <- function(mask, mesh) {
   t.count <- Matrix::rowSums(matrix((mask >= 0.5)[mesh$graph$tv], nrow(mesh$graph$tv),3))
   tri <- which(t.count == 3)

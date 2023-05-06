@@ -601,7 +601,7 @@ BayesGLM_group <- function(
 #'
 #' @importFrom Matrix solve
 #' @importFrom stats rnorm
-#' @export
+#' @keywords internal
 qsample <- function(n, mu, Q) {
   p <- length(mu)
   if(p != nrow(Q) | p != ncol(Q)) stop("Dimension mismatch between mu and Q.")

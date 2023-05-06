@@ -19,3 +19,4 @@ an n x p matrix of samples
 \description{
 Sample from a multivariate normal with mean and precision
 }
+\keyword{internal}

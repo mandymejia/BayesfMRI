@@ -95,94 +95,6 @@ library(ggplot2)
 library(purrr)
 # library(reshape2) # replaced with BayesfMRI:::melt_mat2
 
-plot_slice <- function(X, color_palette = NULL, zlim = NULL) {
-  if (inherits(X, "matrix")) X = list(single_activation_field = X)
-  if (inherits(X, "list")) stop("Expected a matrix or list for X.")
-  if (!all(sapply(X, inherits, "matrix" simplify = T))) {
-    stop("All list images should be matrices.")
-  }
-  requireNamespace("ggplot2")
-  requireNamespace("dplyr")
-  requireNamespace("purrr")
-  if(is.null(zlim)) {
-    zmin <- min(BayesfMRI:::melt_mat2(X)$value,na.rm = T)
-    zmax <- max(BayesfMRI:::melt_mat2(X)$value,na.rm = T)
-    zlim <- c(zmin,zmax)
-  }
-  if(is.null(color_palette)){
-    color_palette <- ciftiTools::ROY_BIG_BL(
-      min = zlim[1],
-      max = zlim[2],
-      mid = mean(zlim),
-      pos_half = FALSE
-    )
-  }
-  if(min(BayesfMRI:::melt_mat2(X)$value, na.rm = T) >= 0) {
-    color_palette <- ciftiTools::ROY_BIG_BL(
-      min = zlim[1],
-      max = zlim[2],
-      mid = mean(zlim),
-      pos_half = TRUE
-    )
-  }
-  out_grob <- BayesfMRI:::melt_mat2(X)
-  out_grob$value <- ifelse(out_grob$value < min(zlim, na.rm = T), min(zlim, na.rm = T), out_grob$value)
-  out_grob$value <- ifelse(out_grob$value > max(zlim, na.rm = T), max(zlim, na.rm = T), out_grob$value)
-  out_grob <- ggplot(out_grob) +
-    geom_raster(aes(x = Var1, y = Var2, fill = value)) +
-    scale_fill_gradientn("",colors = rev(color_palette$color),
-                         limits = zlim,
-                         na.value = "white") +
-    facet_grid(.~L1) +
-    labs(x="", y="") +
-    theme_bw() +
-    theme(panel.grid = element_blank(),
-          axis.ticks = element_blank(),
-          axis.text = element_blank())
-  return(out_grob)
-}
-
-plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim = NULL) {
-  # Create a conversion matrix
-  in_binary_mask <- which(mask == 1, arr.ind = T)
-  in_binary_mask <- in_binary_mask[,2:1]
-  convert_mat_A <- INLA::inla.spde.make.A(mesh = BayesGLM_object$mesh, loc = in_binary_mask)
-  # Extract the point estimates
-  if(is.null(session_name)) session_name <- BayesGLM_object$session_names
-  point_estimates <- sapply(session_name, function(sn){
-    as.matrix(convert_mat_A %*% BayesGLM_object$task_estimates[[sn]])
-  }, simplify = F)
-  if(is.null(zlim)) zlim <- c(min(unlist(point_estimates)),
-                              max(unlist(point_estimates)))
-  # For new version of `ciftiTools`, change the following line to:
-  # wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), half = "pos")
-  wb_palette <- ciftiTools::ROY_BIG_BL(min = zlim[1], max = zlim[2], mid = mean(zlim), pos_half = FALSE)
-  coef_images <- sapply(point_estimates, function(pe) {
-    out <- sapply(split(pe, col(pe)), function(beta) {
-      beta_out <- mask
-      beta_out[beta_out == 1] <- beta
-      beta_out[beta_out == 0] <- NA
-      return(beta_out)
-    }, simplify = F)
-    names(out) <- BayesGLM_object$task_names
-    return(out)
-  }, simplify= F)
-  out_grob <- BayesfMRI:::melt_mat2(coef_images) %>%
-    ggplot() +
-    geom_raster(aes(x = Var1, y = Var2, fill = value)) +
-    scale_fill_gradientn("",colors = rev(wb_palette$color),
-                         # values = wb_palette$value,
-                         limits = zlim,
-                         na.value = "white") +
-    facet_grid(L1~L2) +
-    labs(x="", y="") +
-    theme_bw() +
-    theme(panel.grid = element_blank(),
-          axis.ticks = element_blank(),
-          axis.text = element_blank())
-  return(out_grob)
-}
-
 ```
  1,
     num_tasks = 2,
@@ -202,6 +114,16 @@ To do.
 We can fit a classical GLM to the data using the `classicalGLM()` function. Note that by default, the BOLD data and the design are scaled so that the estimated coefficients for each task represent the percent signal change associated with each task. For simulated data, we do not scale to avoid inducing changes to the true beta coefficient maps. The resulting images of the point estimates for the coefficients can be seen below.
 
 ```{r Classical GLM, message=F, warning=F, fig.height=3, fig.width=7}
+vec2image <- function(vec_data, template_image) {
+  each_col <- sapply(split(vec_data, col(vec_data)), function(vd) {
+    out <- template_image
+    out[out == 1] <- vd
+    out[out == 0] <- NA
+    return(out)
+  }, simplify = F)
+  return(each_col)
+}
+
 single_session_classical <- classicalGLM(data = simulated_data$data, scale_BOLD = "none", scale_design = FALSE)
 classical_estimates <- vec2image(single_session_classical$session_1, template_image = binary_template)
 plot_slice(classical_estimates, zlim = c(-1.5,1.5))

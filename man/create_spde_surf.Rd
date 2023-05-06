@@ -18,3 +18,4 @@ SPDE object representing triangular mesh structure on data locations
 \description{
 Create SPDE for 2D surface data
 }
+\keyword{internal}

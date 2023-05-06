@@ -26,40 +26,6 @@ check_INLA <- function(require_PARDISO=TRUE){
   invisible(NULL)
 }
 
-#' Estimate INLA model
-#'
-#' @inheritSection INLA_Description INLA Requirement
-#'
-#' @param formula Formula to put into inla
-#' @param data Dataset
-#' @param A Large, sparse observation matrix
-#' @param spde The spatial model, an object of class inla.spde
-#' @param prec_initial Initial precision
-#' @inheritParams num.threads_Param
-#' @param int.strategy INLA strategy for numerical integration.  "eb" (empirical Bayes) is recommended for computational efficiency, or "ccd" for greater accuracy
-#' @inheritParams verbose_Param_inla
-#' @inheritParams contrasts_Param
-#' @param lincomb A linear combinations object created with \code{inla.make.lincomb}
-#' @param inla.mode specifies the INLA mode to use (defaults to experimental)
-#'
-#' @return Results from INLA
-#'
-#' @export
-estimate_model <- function(formula, data, A, spde, prec_initial, num.threads=4, int.strategy = "eb", verbose=FALSE, contrasts = NULL, lincomb = NULL, inla.mode = "experimental"){
-
-  check_INLA(require_PARDISO=FALSE)
-
-  INLA::inla(
-    formula, data=data, control.predictor=list(A=A, compute = TRUE),
-    verbose = verbose, keep = FALSE, num.threads = num.threads,
-    inla.mode = inla.mode, .parent.frame = parent.frame(),
-    control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
-    control.family=list(hyper=list(prec=list(initial=prec_initial))),
-    control.compute=list(config=TRUE), contrasts = contrasts, lincomb = lincomb #required for excursions
-  )
-}
-
-
 # Make Formula
 #
 # @param task_names char vector of the names of each bbeta object in the environment

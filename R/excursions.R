@@ -177,7 +177,7 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' 
 #' @import excursions
 #' 
-#' @export
+#' @keywords internal
 excursions.no.spurious <- function(alpha,
                                    u,
                                    mu,
@@ -526,7 +526,7 @@ excursions.no.spurious <- function(alpha,
 #' @return If \code{use.continuous = FALSE}, an item of class \code{excurobj}. 
 #'  Otherwise a list with the same elements as the output of \code{continuous}.
 #' 
-#' @export
+#' @keywords internal
 excursions.inla.no.spurious <- function(result.inla,
                             stack,
                             name=NULL,

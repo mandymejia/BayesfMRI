@@ -95,3 +95,4 @@ Function similar to the excursions.inla function, but which also takes a mesh as
 and computes modified excursion sets where all regions with areas smaller than area.limit are
 removed in the internal calculations.
 }
+\keyword{internal}

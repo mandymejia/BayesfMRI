@@ -16,25 +16,32 @@ id_activations_cifti(
 )
 }
 \arguments{
-\item{model_obj}{Result of BayesGLM_cifti model call (of class BayesGLM_cifti)}
+\item{model_obj}{Result of \code{BayesGLM_cifti} model call, of class
+\code{"BayesGLM_cifti"}}
 
-\item{field_names}{Name of latent field, or vector of names, on which to identify activations. By default, analyze all tasks.}
+\item{field_names}{The name(s) of the latent field(s) on which to
+identify activations. If \code{NULL} (default), analyze all tasks.}
 
-\item{session_name}{(character) The name of the session that should be
-examined. If \code{NULL} (default), the average across all sessions is used.}
+\item{session_name}{The name of the session to examine.
+If \code{NULL} (default), the average across all sessions is used.}
 
-\item{alpha}{Significance level (e.g. 0.05)}
+\item{alpha}{Significance level. Default: \code{0.05}.}
 
-\item{method}{Either 'Bayesian' or 'classical'}
+\item{method}{\code{"Bayesian"} (default) or \code{"classical"}.}
 
-\item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)}
+\item{threshold}{Activation threshold, for example \code{1} for 1\\% signal
+change if \code{scale_BOLD=="mean"} during model estimation. Setting a
+threshold is required for the Bayesian method; \code{NULL} (default) will
+use a threshold of zero for the classical method.}
 
-\item{correction}{For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)
+\item{correction}{For the classical method only: Type of multiple comparisons
+correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
+(Benjamini Hochberg), or \code{"none"}.
 depending on the method that should be used to find the excursions set. Note that to ID
 activations for averages across sessions, the method chosen must be \code{EB}. The difference
 in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.}
 
-\item{verbose}{(Logical) If TRUE, print progress updates.}
+\item{verbose}{Print progress updates? Default: \code{TRUE}.}
 }
 \description{
 Identify areas of activation for each task

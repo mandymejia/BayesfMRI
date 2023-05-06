@@ -22,32 +22,27 @@
 #'
 #' @importFrom Matrix sparseMatrix
 #'
-#' @export
+#' @keywords internal
 organize_data <- function(y, X, transpose = TRUE){
 
-	ntime <- nrow(y)
-	nvox <- ncol(y)
-
-	#check orientation, send warning message and transpose if necessary
-	if(ntime > nvox & transpose == TRUE){
-		warning('More columns than rows. Transposing matrix so rows are data locations and columns are time points')
-		y <- t(y)
-		ntime <- nrow(y)
-		nvox <- ncol(y)
-	}
+  if (nrow(y) > ncol(y) && transpose) {
+    warning('More columns than rows. Transposing matrix so rows are data locations and columns are time points')
+    y <- t(y)
+  }
+	nT <- nrow(y)
+	nV0 <- ncol(y)
 
 	y <- as.vector(y) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
-	ix <- 1:(ntime*nvox)
-	iy <- rep(1:nvox, each = ntime)
+	ix <- seq(nT*nV)
+	iy <- rep(seq(nV), each = nT)
 
-	K <- ncol(X)
-	for(k in 1:K){
-		X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,k], nvox))
-		if(k==1) bigX <- X_k else bigX <- cbind(bigX, X_k)
+	nK <- ncol(X)
+	for (kk in seq(nK)) {
+		X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,kk], nV))
+    bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
 	}
 
-	result <- list(BOLD=y, design=bigX)
-	return(result)
+	list(BOLD=y, design=bigX)
 }
 
 #' Organize prewhitened data for Bayesian GLM
@@ -74,32 +69,27 @@ organize_data <- function(y, X, transpose = TRUE){
 #'
 #' @importFrom Matrix bdiag
 #'
-#' @export
+#' @keywords internal
 organize_data_pw <- function(y, X, transpose = TRUE){
 
-  ntime <- nrow(y)
-  nvox <- ncol(y)
-  is_missing <- is.na(y[1,])
-  K <- ncol(X) / sum(!is_missing)
-  V <- sum(!is_missing)
-
-  #check orientation, send warning message and transpose if necessary
-  if(ntime > nvox & transpose == TRUE){
+  if (nrow(y) > ncol(y) && transpose) {
     warning('More columns than rows. Transposing matrix so rows are data locations and columns are time points')
     y <- t(y)
-    ntime <- nrow(y)
-    nvox <- ncol(y)
   }
+	nT <- nrow(y)
+
+  is_missing <- is.na(y[1,])
+  nK <- ncol(X) / sum(!is_missing)
+  nV <- sum(!is_missing)
 
   y <- as.vector(y) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
 
-  # bigX <- Matrix(0,ntime*V,V*K)
-  for(k in 1:K){
-    k_inds <- seq(k,V*K,by = K)
+  # bigX <- Matrix(0,nT*V,V*K)
+  for (kk in seq(nK)) {
+    k_inds <- seq(kk, nV*nK,by = nK)
     X_k <- X[,k_inds]
-    if(k==1) bigX <- X_k else bigX <- cbind(bigX, X_k)
+    bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
   }
 
-  result <- list(y=y, X=bigX)
-  return(result)
+  list(y=y, X=bigX)
 }

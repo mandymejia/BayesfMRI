@@ -97,3 +97,4 @@ Function similar to the excursions function, but which also takes a mesh as inpu
 and computes modified excursion sets where all regions with areas smaller than area.limit are
 removed in the internal calculations.
 }
+\keyword{internal}

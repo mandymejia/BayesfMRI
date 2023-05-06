@@ -182,7 +182,7 @@ get_spacing <- function(locations){
 #'
 #' @return A list of matrices C and G appearing in sparse SPDE precision
 #'
-#' @export
+#' @keywords internal
 galerkin_db <- function(FV, P, surface=FALSE){
   d <- ncol(FV)-1
   if(surface){

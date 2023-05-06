@@ -7,21 +7,24 @@
 ^LICENSE\.md$
 ^CRAN-RELEASE$
 ^cran-comments\.md
-^R/summarize_sessions\.R$
+^codecov\.yml$
+# Tests ------------------------
+^tests/run_BayesfMRI_tests\.R$
+^tests/data_notInPackage
+^tests/results_notInPackage
+# Volumetric -------------------
 ^R/BayesGLM_vol3D\.R$
+^R/create_spde_vol3D\.R$
 ^R/vol2mesh\.R$
-^R/boundary\.R$
-^R/plot_BayesGLM_slice\.R$
-^R/BayesGLM2_old\.R$
-^R/simulate_slice_data_1\.R$
-^R/EM_functions\.R$
-^R/id_activations_2means\.R$
-^R/classicalGLM_pw\.R$
+^R/make_slice_mesh\.R$
+^R/plot_slice\.R$
+# EM ---------------------------
+^R/EM_utils\.R$
+# Vignettes (TO-DO) ------------
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
 ^vignettes/BayesfMRI_HCP\.Rmd$
-^codecov\.yml$
-^tests/run_BayesfMRI_tests\.R$
-^tests/data_notInPackage
-^tests/results_notInPackage
+# Others -----------------------
+^R/boundary\.R$
+^R/summarize_sessions\.R$

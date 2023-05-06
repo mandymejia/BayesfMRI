@@ -5,7 +5,7 @@
 #'
 #' @return inverse covariance matrix for AR process (up to a constant scaling factor)
 #' @importFrom Matrix diag
-#' @export
+#' @keywords internal
 getInvCovAR <- function(ar, ntime){
   Inv0 <- diag(ntime)
   incr0 <- matrix(0, nrow=ntime, ncol=ntime)
@@ -51,7 +51,7 @@ getSqrtInv <- function(Inv){
 #'   rows and columns that can be postmultiplied by the original time series
 #'   in order to perform prewhitening.
 #' @importFrom Matrix sparseMatrix bandSparse
-#' @export
+#' @keywords internal
 #'
 #' @examples
 #' \dontrun{
@@ -170,6 +170,7 @@ prewhiten_cifti <- function(data,
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @importFrom stats ar.yw
+#' @importFrom fMRItools nuisance_regression
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average

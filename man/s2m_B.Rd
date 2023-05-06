@@ -17,3 +17,4 @@ An array of dimension \code{head(dim(B),-1)} with a point estimate of B based on
 \description{
 Sequential 2-means on array B
 }
+\keyword{internal}

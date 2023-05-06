@@ -176,7 +176,7 @@ BayesGLM_argChecks <- function(
 #' @importFrom Matrix bandSparse bdiag crossprod solve
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #' @importFrom stats as.formula
-#' @importFrom fMRItools is_1
+#' @importFrom fMRItools is_1 nuisance_regression
 #'
 #' @importFrom utils tail
 #'

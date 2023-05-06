@@ -6,7 +6,7 @@
 #'   usually 1:n)
 #'
 #' @return SPDE object representing triangular mesh structure on data locations
-#' @export
+#' @keywords internal
 create_spde_surf <- function(mesh) {
   gal <- galerkin_db(mesh$graph$tv, mesh$loc,surface = TRUE)
 

@@ -38,3 +38,4 @@ plot(x, type = 'l')
 lines(y, col = 'red')
 }
 }
+\keyword{internal}

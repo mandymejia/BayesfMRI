@@ -2,24 +2,31 @@
 #'
 #' Identify areas of activation for each task
 #'
-#' @param model_obj Result of BayesGLM_cifti model call (of class BayesGLM_cifti)
+#' @param model_obj Result of \code{BayesGLM_cifti} model call, of class
+#'  \code{"BayesGLM_cifti"}
 # @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
-#' @param field_names Name of latent field, or vector of names, on which to identify activations. By default, analyze all tasks.
-#' @param session_name (character) The name of the session that should be
-#' examined. If \code{NULL} (default), the average across all sessions is used.
-#' @param alpha Significance level (e.g. 0.05)
-#' @param method Either 'Bayesian' or 'classical'
-#' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE during model estimation)
+#' @param field_names The name(s) of the latent field(s) on which to 
+#'  identify activations. If \code{NULL} (default), analyze all tasks.
+#' @param session_name The name of the session to examine. 
+#' If \code{NULL} (default), the average across all sessions is used.
+#' @param alpha Significance level. Default: \code{0.05}.
+#' @param method \code{"Bayesian"} (default) or \code{"classical"}.
+#' @param threshold Activation threshold, for example \code{1} for 1\% signal
+#'  change if \code{scale_BOLD=="mean"} during model estimation. Setting a 
+#'  threshold is required for the Bayesian method; \code{NULL} (default) will 
+#'  use a threshold of zero for the classical method.
 # @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile Correction), depending on the method that should be used to find the
 #   excursions set. Note that if any contrasts (including averages across sessions) are used in the modeling, the method chosen must be \code{EB}.
 #   The difference in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
 # @param area.limit For method = 'Bayesian' only: Below this value, clusters of activations will be considered spurious.  If NULL (default), no limit.
-#' @param correction For method = 'classical' only: Type of multiple comparisons correction, 'FDR' (Benjamini Hochberg) or 'FWER' (Bonferroni correction)
+#' @param correction For the classical method only: Type of multiple comparisons
+#'  correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
+#'  (Benjamini Hochberg), or \code{"none"}.
 # @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
 #' depending on the method that should be used to find the excursions set. Note that to ID
 #' activations for averages across sessions, the method chosen must be \code{EB}. The difference
 #' in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
-#' @param verbose (Logical) If TRUE, print progress updates.
+#' @param verbose Print progress updates? Default: \code{TRUE}.
 # @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
 # @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
 #'
@@ -29,18 +36,24 @@
 #' @export
 #'
 #'
-id_activations_cifti <- function(model_obj,
-                                 field_names=NULL,
-                                 session_name=NULL,
-                                 alpha=0.05,
-                                 method=c('Bayesian','classical'),
-                                 threshold=NULL,
-                                 #area.limit=NULL,
-                                 correction = c("FWER","FDR","none"),
-                                 #excur_method = c("EB","QC"),
-                                 verbose = TRUE){
+id_activations_cifti <- function(
+  model_obj,
+  field_names=NULL,
+  session_name=NULL,
+  alpha=0.05,
+  method=c("Bayesian", "classical"),
+  threshold=NULL,
+  #area.limit=NULL,
+  correction = c("FWER", "FDR", "none"),
+  #excur_method = c("EB", "QC"),
+  verbose = TRUE){
 
-  if(class(model_obj) != 'BayesGLM_cifti') stop('The model_obj argument must be of class BayesGLM_cifti (output of BayesGLM_cifti function), but it is not.')
+  # Simple argument checks
+
+
+  if (!inherits(model_obj, "BayesGLM_cifti")) {
+    stop("`model_obj` must be of class 'BayesGLM_cifti' (output of `BayesGLM_cifti` function).")
+  }
 
   ## HERE -- figure out how to trigger NULL if Bayes=FALSE  (also below when adding the mesh)
   ## If no Bayesian results but method=Bayesian, should return error (or switch to classical with a warning)
@@ -115,21 +128,21 @@ id_activations_cifti <- function(model_obj,
     }
   }
 
-  if(method=='EM'){
-    for(mm in 1:num_models){
-      if(is.null(GLM_list[[mm]])) next
-      model_m <- GLM_list[[mm]]
-      if(verbose) cat(paste0('Identifying EM GLM activations in ',names(GLM_list)[mm],'\n'))
-      act_m <- id_activations.em(model_obj=model_m,
-                                 field_names=field_names,
-                                 session_name=session_name,
-                                 threshold=threshold,
-                                 alpha=alpha,
-                                 area.limit=NULL)
+  # if(method=='EM'){
+  #   for(mm in 1:num_models){
+  #     if(is.null(GLM_list[[mm]])) next
+  #     model_m <- GLM_list[[mm]]
+  #     if(verbose) cat(paste0('Identifying EM GLM activations in ',names(GLM_list)[mm],'\n'))
+  #     act_m <- id_activations.em(model_obj=model_m,
+  #                                field_names=field_names,
+  #                                session_name=session_name,
+  #                                threshold=threshold,
+  #                                alpha=alpha,
+  #                                area.limit=NULL)
 
-      activations[[mm]] <- act_m
-    }
-  }
+  #     activations[[mm]] <- act_m
+  #   }
+  # }
 
   #map results to xifti objects
   activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
@@ -170,11 +183,6 @@ id_activations_cifti <- function(model_obj,
 
   return(result)
 }
-
-
-
-
-
 
 #' Identify activations using joint posterior probabilities
 #'

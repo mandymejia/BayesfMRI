@@ -17,3 +17,4 @@ inverse covariance matrix for AR process (up to a constant scaling factor)
 \description{
 Compute inverse covariance matrix for AR process (up to a constant scaling factor)
 }
+\keyword{internal}
