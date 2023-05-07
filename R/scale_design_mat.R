@@ -5,7 +5,7 @@
 #'
 #' @return A scaled design matrix
 #' 
-#' @export
+#' @keywords internal
 #' 
 # @examples
 # # Task 1

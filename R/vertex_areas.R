@@ -1,3 +1,5 @@
+#' Surface area of each vertex
+#' 
 #' Compute surface areas of each vertex in a triangular mesh.
 #' 
 #' @inheritSection INLA_Description INLA Requirement
@@ -7,7 +9,7 @@
 #' @return Vector of areas
 #' 
 #' @export
-compute_vertex_areas <- function(mesh)
+vertex_areas <- function(mesh)
 {
   if(missing(mesh))
   { print("This needs a valid mesh! Input a mesh now")}

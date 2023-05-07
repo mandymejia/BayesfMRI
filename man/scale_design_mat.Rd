@@ -16,3 +16,4 @@ A scaled design matrix
 \description{
 Scale the design matrix
 }
+\keyword{internal}
