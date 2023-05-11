@@ -11,7 +11,8 @@ scale_timeseries(
 )
 }
 \arguments{
-\item{BOLD}{Input fMRI data (V x T)}
+\item{BOLD}{\eqn{V \times T} matrix of fMRI data. Rows are
+time points; columns are data locations (vertices/voxels).}
 
 \item{scale}{Option for scaling units.
 
@@ -25,15 +26,14 @@ is detected, in which case sd scaling will be used instead.
 \code{"none"} will only center the data, not scale it.
 }\if{html}{\out{</div>}}}
 
-\item{transpose}{Check orientation of data, which, if TRUE, will transpose
-the data when the number of time points is greater than the number of voxels.
-Note: this is not always true for subcortical regions.}
+\item{transpose}{Check orientation of data? If \code{TRUE}, will transpose
+the data when the number of time points is greater than the number of voxels.}
 }
 \value{
 Scale to units of percent local signal change and centers
 }
 \description{
-Scale the BOLD timeseries
+Scale the fMRI data, with several options for the scaling units.
 }
 \examples{
 nT <- 30

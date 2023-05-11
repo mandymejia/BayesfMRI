@@ -1,6 +1,10 @@
 #' Scale the BOLD timeseries
+#' 
+#' Scale the fMRI data, with several options for the scaling units.
 #'
-#' @param BOLD Input fMRI data (V x T)
+#' @param BOLD \eqn{V \times T} matrix of fMRI data. Rows are 
+#' 	time points; columns are data locations (vertices/voxels).
+#' 
 #' @param scale Option for scaling units.
 #'
 #' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
@@ -11,9 +15,9 @@
 #' 	\code{"sd"} scaling will scale the data by local standard deviation.
 #'
 #' 	\code{"none"} will only center the data, not scale it.
-#' @param transpose Check orientation of data, which, if TRUE, will transpose
+#' @param transpose Check orientation of data? If \code{TRUE}, will transpose
 #' 	the data when the number of time points is greater than the number of voxels.
-#' 	Note: this is not always true for subcortical regions.
+# 	Note: this is not always true for subcortical regions.
 #'
 #' @return Scale to units of percent local signal change and centers
 #'
