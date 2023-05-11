@@ -17,7 +17,7 @@ Names of list indicate task names.}
 \item{duration}{Length of fMRI timeseries, in SCANS.}
 
 \item{downsample}{Downsample factor for convolving stimulus boxcar or stick
-function with canonical HRF}
+function with canonical HRF. Default: \code{100}.}
 
 \item{deriv}{This can take the value of 0, 1, or 2, and will use the HRF
 function, the first derivative of the HRF, or the second derivative of the
@@ -28,4 +28,11 @@ Design matrix containing one HRF column for each task
 }
 \description{
 Create HRF design matrix columns from onsets and durations
+}
+\examples{
+onsets <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
+TR <- .72 # .72 seconds per volume, or (1/.72) Hz
+duration <- 300 # session is 300 volumes long (300*.72 seconds long)
+make_HRFs(onsets, TR, duration)
+
 }

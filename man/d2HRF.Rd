@@ -25,3 +25,8 @@ d2HRF vector corresponding to time
 \description{
 Calculate second derivative of the canonical (double-gamma) HRF
 }
+\examples{
+downsample <- 100
+d2HRF(seq(0, 30, by=1/downsample))
+
+}

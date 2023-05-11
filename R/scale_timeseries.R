@@ -17,6 +17,12 @@
 #'
 #' @return Scale to units of percent local signal change and centers
 #'
+#' @examples
+#' nT <- 30
+#' nV <- 400
+#' X <- matrix(rnorm(nV*nT), nrow=nV)
+#' scale_timeseries(X)
+#' 
 #' @export
 scale_timeseries <- function(BOLD, scale=c("auto", "mean", "sd", "none"), transpose = TRUE){
 

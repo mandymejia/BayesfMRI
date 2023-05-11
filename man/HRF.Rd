@@ -25,3 +25,8 @@ HRF vector corresponding to time
 \description{
 Calculate the canonical (double-gamma) HRF
 }
+\examples{
+downsample <- 100
+HRF(seq(0, 30, by=1/downsample))
+
+}

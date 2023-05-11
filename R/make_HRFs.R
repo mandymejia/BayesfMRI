@@ -9,7 +9,7 @@
 #' @param TR Temporal resolution of fMRI data, in SECONDS.
 #' @param duration Length of fMRI timeseries, in SCANS.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
-#'  function with canonical HRF
+#'  function with canonical HRF. Default: \code{100}.
 #' @param deriv This can take the value of 0, 1, or 2, and will use the HRF
 #'   function, the first derivative of the HRF, or the second derivative of the
 #'   HRF, respectively.
@@ -17,6 +17,12 @@
 #' @return Design matrix containing one HRF column for each task
 #'
 #' @importFrom stats convolve
+#' 
+#' @examples 
+#' onsets <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
+#' TR <- .72 # .72 seconds per volume, or (1/.72) Hz
+#' duration <- 300 # session is 300 volumes long (300*.72 seconds long)
+#' make_HRFs(onsets, TR, duration)
 #'
 #' @export
 make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
@@ -71,9 +77,14 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
 #' @param c scale of undershoot, default is 0.35
 #'
 #' @return HRF vector corresponding to time
+#' 
+#' @examples
+#' downsample <- 100
+#' HRF(seq(0, 30, by=1/downsample))
+#' 
 #' @export
 HRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
-  return(((t/(a1*b1))^a1) * exp(-(t-a1*b1)/b1) - c * ((t/(a2*b2))^a2) * exp(-(t - a2*b2)/b2))
+  ((t/(a1*b1))^a1) * exp(-(t-a1*b1)/b1) - c * ((t/(a2*b2))^a2) * exp(-(t - a2*b2)/b2)
 }
 
 #' Calculate first derivative of the canonical (double-gamma) HRF
@@ -86,15 +97,20 @@ HRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
 #' @param c scale of undershoot, default is 0.35
 #'
 #' @return dHRF vector corresponding to time
+#' 
+#' @examples
+#' downsample <- 100
+#' dHRF(seq(0, 30, by=1/downsample))
+#' 
 #' @export
 dHRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
-  C1 = (1/(a1*b1))^a1; C2 = c*(1/(a2*b2))^a2
-  A1 = a1*t^(a1 - 1)*exp(-(t - a1*b1)/b1)
-  A2 = a2*t^(a2 - 1)*exp(-(t - a2*b2)/b2)
-  B1 = t^a1 / b1 * exp(-(t - a1*b1)/b1)
-  B2 = t^a2 / b2 * exp(-(t - a2*b2)/b2)
-  out <- C1*(A1 - B1) - C2 * (A2 - B2)
-  return(out)
+  C1 <- (1/(a1*b1))^a1
+  C2 <- c*(1/(a2*b2))^a2
+  A1 <- a1*t^(a1 - 1)*exp(-(t - a1*b1)/b1)
+  A2 <- a2*t^(a2 - 1)*exp(-(t - a2*b2)/b2)
+  B1 <- t^a1 / b1 * exp(-(t - a1*b1)/b1)
+  B2 <- t^a2 / b2 * exp(-(t - a2*b2)/b2)
+  C1*(A1 - B1) - C2 * (A2 - B2)
 }
 
 #' Calculate second derivative of the canonical (double-gamma) HRF
@@ -107,13 +123,18 @@ dHRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
 #' @param c scale of undershoot, default is 0.35
 #'
 #' @return d2HRF vector corresponding to time
+#' 
+#' @examples
+#' downsample <- 100
+#' d2HRF(seq(0, 30, by=1/downsample))
+#' 
 #' @export
 d2HRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
-  C1 = (1/(a1*b1))^a1; C2 = c*(1/(a2*b2))^a2
-  dA1 = a1 * ((a1 - 1) - t/b1) * t^(a1-2) * exp(-(t - a1*b1)/b1)
-  dB1 = (1/b1) * (a1 - (t / b1)) * t^(a1 - 1) * exp(-(t - a1*b1)/b1)
-  dA2 = a2 * ((a2 - 1) - t/b2) * t^(a2-2) * exp(-(t - a2*b2)/b2)
-  dB2 = (1/b2) * (a2 - (t / b2)) * t^(a2 - 1) * exp(-(t - a2*b2)/b2)
-  out <- C1 * (dA1 - dB1) - C2 * (dA2 - dB2)
-  return(out)
+  C1 <- (1/(a1*b1))^a1
+  C2 <- c*(1/(a2*b2))^a2
+  dA1 <- a1 * ((a1 - 1) - t/b1) * t^(a1-2) * exp(-(t - a1*b1)/b1)
+  dB1 <- (1/b1) * (a1 - (t / b1)) * t^(a1 - 1) * exp(-(t - a1*b1)/b1)
+  dA2 <- a2 * ((a2 - 1) - t/b2) * t^(a2-2) * exp(-(t - a2*b2)/b2)
+  dB2 <- (1/b2) * (a2 - (t / b2)) * t^(a2 - 1) * exp(-(t - a2*b2)/b2)
+  C1 * (dA1 - dB1) - C2 * (dA2 - dB2)
 }

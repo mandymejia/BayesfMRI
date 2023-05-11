@@ -25,3 +25,8 @@ dHRF vector corresponding to time
 \description{
 Calculate first derivative of the canonical (double-gamma) HRF
 }
+\examples{
+downsample <- 100
+dHRF(seq(0, 30, by=1/downsample))
+
+}
