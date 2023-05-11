@@ -111,7 +111,7 @@ BayesGLM_argChecks <- function(
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
-#' @inheritParams EM_Param
+# @inheritParams EM_Param
 #' @inheritParams ar_order_Param
 #' @inheritParams ar_smooth_Param
 #' @inheritParams aic_Param
@@ -195,7 +195,7 @@ BayesGLM <- function(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
-  EM = FALSE,
+  #EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
@@ -208,6 +208,8 @@ BayesGLM <- function(
   varTol = 1e-6,
   emTol = 1e-3,
   trim_INLA = TRUE){
+
+  EM <- FALSE
 
   #TO DO:
   #add "(ignored if classicalGLM_only = TRUE) to some params"
