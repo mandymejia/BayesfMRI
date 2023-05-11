@@ -2,12 +2,12 @@
 #' 
 #' Check if object is valid for a list entry in \code{"BfMRI.sess"}.
 #'
-#' A valid entry in a \code{"BfMRI.sess"} object is a list with the following 
-#'  named fields:
+#' A valid entry in a \code{"BfMRI.sess"} object is a list with these named 
+#'  fields:
 #'  \itemize{
-#'    \item{"BOLD"}{\eqn{T \times V} matrix of BOLD responses, rows are time points, columns are voxels}
-#'    \item{"design"}{\eqn{T \times K} matrix containing the K task regressors}
-#'    \item{"nuisance"}{Optional. \eqn{T \times L} matrix containing the L nuisance regressors}
+#'    \item{"BOLD"}{\eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
+#'    \item{"design"}{\eqn{T \times K} matrix containing the \eqn{K} task regressors.}
+#'    \item{"nuisance"}{Optional. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
 #'
 #' @param x The putative entry in a \code{"BfMRI.sess"} object.
@@ -87,14 +87,32 @@ is.a_session <- function(x){
 #' 
 #' Check if object is valid for a \code{"BfMRI.sess"} object.
 #'
-#' A valid entry in a \code{"BfMRI.sess"} object is a list of lists, each with 
-#'  the following named fields:
+#' A \code{"BfMRI.sess"} object is a list of length \eqn{S}, where \eqn{S} is 
+#'  the number of sessions in the analysis. Each list entry corresponds to a
+#'  separate session, and should itself be a list with these named fields:
 #'  \itemize{
-#'    \item{"BOLD"}{\eqn{T \times V} matrix of BOLD responses, rows are time points, columns are voxels}
-#'    \item{"design"}{\eqn{T \times K} matrix containing the K task regressors}
-#'    \item{"nuisance"}{Optional. \eqn{T \times J} matrix containing the L nuisance regressors}
+#'    \item{"BOLD"}{\eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
+#'    \item{"design"}{\eqn{T \times K} matrix containing the \eqn{K} task regressors.}
+#'    \item{"nuisance"}{Optional. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
-#'  In addition, all sessions must have the same number of data locations and tasks.
+#'  In addition, all sessions must have the same number of data locations, \eqn{V}, and tasks, \eqn{K}.
+#' 
+#' @examples 
+#' nT <- 300
+#' nV <- 700 
+#' BOLD1 <- matrix(rnorm(nT*nV), nrow=nT)
+#' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
+#' onsets1 <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
+#' onsets2 <- list(taskA=cbind(c(1,18,25),4))
+#' TR <- .72 # .72 seconds per volume, or (1/.72) Hz
+#' duration <- nT # session is 300 volumes long (300*.72 seconds long)
+#' design1 <- make_HRFs(onsets1, TR, duration)
+#' design2 <- make_HRFs(onsets2, TR, duration)
+#' x <- list(
+#'  sessionOne = list(BOLD=BOLD1, design=design1),
+#'  sessionTwo = list(BOLD=BOLD2, design=design2)
+#' )
+#' stopifnot(is.BfMRI.sess(x))
 #'
 #' @param x The putative \code{"BfMRI.sess"} object.
 #'

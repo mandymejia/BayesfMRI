@@ -842,7 +842,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 //' @param tol a value for the tolerance used for a stopping rule (compared to
 //'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
 //' @param verbose (logical) Should intermediate output be displayed?
-//' @export
+//' 
 // [[Rcpp::export(.findTheta, rng = false)]]
 Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
                      Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
