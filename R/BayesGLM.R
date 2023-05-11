@@ -648,8 +648,8 @@ BayesGLM <- function(
   if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
 
   result <- list(
-    INLA_model_obj = INLA_model_obj,
     task_estimates = task_estimates,
+    INLA_model_obj = INLA_model_obj,
     result_classical = result_classical,
     mesh = mesh,
     mesh_orig = mesh_orig,

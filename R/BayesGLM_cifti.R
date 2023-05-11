@@ -2,35 +2,35 @@
 #'
 #' Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 #'
-#' @inheritSection INLA_Description INLA Requirement 
+#' @inheritSection INLA_Description INLA Requirement
 #'
 #' @section Connectome Workbench Requirement:
 #'  This function uses a system wrapper for the 'wb_command' executable. The
 #'  user must first download and install the Connectome Workbench, available
 #'  from https://www.humanconnectome.org/software/get-connectome-workbench .
 #'
-#' @param cifti_fname fMRI timeseries data in CIFTI format ("*.dtseries.nii"). 
-#'  For single-session analysis this can be a file path to a CIFTI file or a 
+#' @param cifti_fname fMRI timeseries data in CIFTI format ("*.dtseries.nii").
+#'  For single-session analysis this can be a file path to a CIFTI file or a
 #'  \code{"xifti"} object from the \code{ciftiTools} package. For multi-session
-#'  analysis this can be a vector of file paths or a list of \code{"xifti"} 
+#'  analysis this can be a vector of file paths or a list of \code{"xifti"}
 #'  objects.
-#' @param surfL_fname Left cortex surface geometry in GIFTI format 
+#' @param surfL_fname Left cortex surface geometry in GIFTI format
 #'  ("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
 #'  object from the \code{ciftiTools} package. This argument is only used if
-#'  \code{brainstructures} includes \code{"left"} and \code{Bayes==TRUE}. If 
-#'  it's not provided, the HCP group-average inflated surface included in the 
+#'  \code{brainstructures} includes \code{"left"} and \code{Bayes==TRUE}. If
+#'  it's not provided, the HCP group-average inflated surface included in the
 #'  \code{ciftiTools} package will be used.
-#' @param surfR_fname Right cortex surface geometry in GIFTI format 
+#' @param surfR_fname Right cortex surface geometry in GIFTI format
 #'  ("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
 #'  object from the \code{ciftiTools} package. This argument is only used if
-#'  \code{brainstructures} includes \code{"right"} and \code{Bayes==TRUE}. If 
-#'  it's not provided, the HCP group-average inflated surface included in the 
+#'  \code{brainstructures} includes \code{"right"} and \code{Bayes==TRUE}. If
+#'  it's not provided, the HCP group-average inflated surface included in the
 #'  \code{ciftiTools} package will be used.
 #' @param brainstructures Character vector indicating which brain structure(s)
-#'  to analyze: \code{"left"} (left cortical surface) and/or \code{"right"} 
-#'  (right cortical surface). Default: \code{c("left","right")} (both 
+#'  to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
+#'  (right cortical surface). Default: \code{c("left","right")} (both
 #'  hemispheres). Note that the subcortical models have not yet been implemented.
-#' @param design,onsets,TR Either provide \code{design}, or provide both 
+#' @param design,onsets,TR Either provide \code{design}, or provide both
 #'  \code{onsets} and \code{TR}.
 #'
 #'   \code{design} is a \eqn{T \times K} task design matrix (or list of such
@@ -61,17 +61,17 @@
 #'  Alternatively, \code{DCT} can be provided to directly specify the number
 #'  of DCT bases to include.
 #'
-#'  Default: \code{DCT=4}. For typical \code{TR}, four DCT bases amounts to a 
+#'  Default: \code{DCT=4}. For typical \code{TR}, four DCT bases amounts to a
 #'  lower frequency cutoff than the approximately .01 Hz used in most studies.
 #'  We selected this default to err on the side of retaining more low-frequency
 #'  information, but we recommend setting these arguments to values most
-#'  appropriate for the data analysis at hand. 
-#' 
+#'  appropriate for the data analysis at hand.
+#'
 #'  Using at least two DCT bases is as sufficient as using linear and quadratic
 #'  drift terms in the design matrix. So if DCT detrending is being used, there
 #'  is no need to add linear and quadratic drift terms to \code{nuisance}.
 #' @param resamp_res The number of vertices to which each cortical surface
-#'  should be resampled, or \code{NULL} to not resample. For computational 
+#'  should be resampled, or \code{NULL} to not resample. For computational
 #'  feasibility, a value of \code{10000} or lower is recommended.
 #' @inheritParams task_names_Param
 #' @inheritParams session_names_Param
@@ -180,7 +180,7 @@ BayesGLM_cifti <- function(
   if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
   if ("all" %in% brainstructures) {
     message(
-      "`brainstructures` is `all`, so using both left and right cortex. ", 
+      "`brainstructures` is `all`, so using both left and right cortex. ",
       "Skipping subcortex (not implemented yet)."
     )
     brainstructures <- c("left","right") # "subcortical"
@@ -191,7 +191,7 @@ BayesGLM_cifti <- function(
   )
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
-  
+
   # Nuisance arguments.
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
   if (!is.null(DCT)) {
@@ -204,8 +204,8 @@ BayesGLM_cifti <- function(
   }
 
   # xifti.
-  #   Coerce to: a (length one) character vector, or a (length one) list of 
-  #   \code{"xifti"} objects. 
+  #   Coerce to: a (length one) character vector, or a (length one) list of
+  #   \code{"xifti"} objects.
   is_xifti <- FALSE
   if (is.character(cifti_fname)) {
     NULL
@@ -433,7 +433,6 @@ BayesGLM_cifti <- function(
 
   # Do GLM. --------------------------------------------------------------------
   cat('RUNNING MODELS \n')
-  classicalGLM_results <- list(left = NULL, right = NULL)
   BayesGLM_results <- list(left = NULL, right = NULL)
 
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
@@ -491,10 +490,7 @@ BayesGLM_cifti <- function(
       trim_INLA = trim_INLA
     )
 
-    BayesGLM_results[[bb]] <- BayesGLM_out[-grep("classical", names(BayesGLM_out))]
-    classicalGLM_results[[bb]] <- BayesGLM_out$result_classical
-    class(BayesGLM_results[[bb]]) <- 'BayesGLM'
-    class(classicalGLM_results[[bb]]) <- 'classicalGLM'
+    BayesGLM_results[[bb]] <- BayesGLM_out
 
     rm(BayesGLM_out); gc()
   }
@@ -512,51 +508,44 @@ BayesGLM_cifti <- function(
 
   cat(' PUTTING RESULTS IN CIFTI FORMAT \n')
 
-  classicalGLM_cifti <- BayesGLM_cifti <- vector('list', n_sess)
-  names(classicalGLM_cifti) <- names(BayesGLM_cifti) <- session_names
+  task_cifti_classical <- task_cifti <- vector('list', n_sess)
+  names(task_cifti_classical) <- names(task_cifti) <- session_names
   datL <- datR <- NULL
   for (ss in seq(n_sess)) {
 
     # CLASSICAL GLM
-    if (do_left) datL <- classicalGLM_results$left[[ss]]$estimates[mwallL==1,]
-    if (do_right) datR <- classicalGLM_results$right[[ss]]$estimates[mwallR==1,]
-    classicalGLM_cifti[[ss]] <- as.xifti(
+    if (do_left) datL <- BayesGLM_results$left$result_classical[[ss]]$estimates[mwallL==1,]
+    if (do_right) datR <- BayesGLM_results$left$result_classical[[ss]]$estimates[mwallR==1,]
+    task_cifti_classical[[ss]] <- as.xifti(
       cortexL = datL,
       cortexL_mwall = mwallL,
       cortexR = datR,
       cortexR_mwall = mwallR
     )
-    classicalGLM_cifti[[ss]]$meta$cifti$names <- task_names
+    task_cifti_classical[[ss]]$meta$cifti$names <- task_names
 
     # BAYESIAN GLM
     if(do_Bayesian){
       if(do_left) datL <- BayesGLM_results$left$task_estimates[[ss]][mwallL==1,]
       if(do_right) datR <- BayesGLM_results$right$task_estimates[[ss]][mwallR==1,]
-      BayesGLM_cifti[[ss]] <- as.xifti(
+      task_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = mwallL,
         cortexR = datR,
         cortexR_mwall = mwallR
       )
-      BayesGLM_cifti[[ss]]$meta$cifti$names <- task_names
+      task_cifti[[ss]]$meta$cifti$names <- task_names
     }
   }
 
   result <- list(
-    betas_Bayesian = BayesGLM_cifti,
-    betas_classical = classicalGLM_cifti,
-    GLMs_Bayesian = list(
-      cortexL = BayesGLM_results$left,
-      cortexR = BayesGLM_results$right
-    ),
-    GLMs_classical = list(
-      cortexL = classicalGLM_results$left,
-      cortexR = classicalGLM_results$right
-    ),
+    task_estimates = task_cifti,
+    task_estimates_classical = task_cifti_classical,
+    BayesGLM_results = BayesGLM_results,
     session_names = session_names,
     n_sess_orig = n_sess_orig,
     task_names = task_names,
-    # task part of design matrix after centering/scaling but 
+    # task part of design matrix after centering/scaling but
     #   before nuisance regression and prewhitening.
     design = design
   )

@@ -58,7 +58,7 @@ id_activations_cifti <- function(
   ## HERE -- figure out how to trigger NULL if Bayes=FALSE  (also below when adding the mesh)
   ## If no Bayesian results but method=Bayesian, should return error (or switch to classical with a warning)
 
-  if(is.null(model_obj$betas_Bayesian[[1]])) method <- 'classical'
+  if(is.null(model_obj$task_estimates[[1]])) method <- 'classical'
   method <- match.arg(method, c('Bayesian','classical'))
   if(!(method %in% c('Bayesian','classical'))) stop("The method argument should be 'Bayesian', 'EM', or 'classical'.")
 
@@ -70,8 +70,7 @@ id_activations_cifti <- function(
     if(method=='Bayesian') stop("Must specify an activation threshold when method='Bayesian'.")
   }
 
-  if(method=='Bayesian') GLM_list <- model_obj$GLMs_Bayesian
-  if(method=='classical') GLM_list <- model_obj$GLMs_classical
+  GLM_list <- model_obj$BayesGLM_results
   num_models <- length(GLM_list)
   activations <- vector('list', length=num_models)
   names(activations) <- names(GLM_list)
