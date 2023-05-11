@@ -4,7 +4,7 @@
 \alias{trim_INLA_Param}
 \title{trim_INLA}
 \arguments{
-\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+\item{trim_INLA}{(logical) should the \code{INLA_model_obj} within the
 result be trimmed to only what is necessary to use \code{id_activations}?
 Default: \code{TRUE}.}
 }

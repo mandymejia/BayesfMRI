@@ -20,7 +20,7 @@ BayesGLM(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA_result = TRUE,
+  return_INLA = TRUE,
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
@@ -94,7 +94,7 @@ to not do any smoothing. Default: \code{5}.}
 \item{num.threads}{The maximum number of threads to use in the inla-program
 for model estimation. Default: \code{4}.}
 
-\item{return_INLA_result}{Return the INLA model object? (It can be large.)
+\item{return_INLA}{Return the INLA model object? (It can be large.)
 Default: \code{TRUE}. Required for running \code{id_activations}
 after, but not for running BayesGLM_joint after to get
 posterior quantities of group means or contrasts.}
@@ -114,14 +114,14 @@ Default: \code{1e-6} for both.}
 \item{emTol}{The stopping tolerance for the EM algorithm. Default:
 \code{1e-3}.}
 
-\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
+\item{trim_INLA}{(logical) should the \code{INLA_model_obj} within the
 result be trimmed to only what is necessary to use \code{id_activations}?
 Default: \code{TRUE}.}
 }
 \value{
 A \code{"BayesGLM"} object: a list with elements
 \describe{
-\item{INLA_result}{The full result of the call to \code{INLA::inla}.}
+\item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
 \item{task_estimates}{The task coefficients for the Bayesian model.}
 \item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
 \item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}

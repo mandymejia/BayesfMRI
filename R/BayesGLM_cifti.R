@@ -84,7 +84,7 @@
 #' @inheritParams ar_smooth_Param
 #' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
-#' @inheritParams return_INLA_result_Param
+#' @inheritParams return_INLA_Param
 #' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
 #' @inheritParams avg_sessions_Param
@@ -137,7 +137,7 @@ BayesGLM_cifti <- function(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA_result = TRUE,
+  return_INLA = TRUE,
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
@@ -161,7 +161,7 @@ BayesGLM_cifti <- function(
     ar_smooth = ar_smooth,
     aic = aic,
     num.threads = num.threads,
-    return_INLA_result = return_INLA_result,
+    return_INLA = return_INLA,
     outfile = outfile,
     verbose = verbose,
     avg_sessions = avg_sessions,
@@ -481,7 +481,7 @@ BayesGLM_cifti <- function(
       ar_smooth = ar_smooth,
       aic = aic,
       num.threads = num.threads,
-      return_INLA_result = return_INLA_result,
+      return_INLA = return_INLA,
       outfile = outfile_name,
       verbose = verbose,
       avg_sessions = avg_sessions,

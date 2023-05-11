@@ -13,7 +13,7 @@ BayesGLM_argChecks(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA_result = TRUE,
+  return_INLA = TRUE,
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = FALSE,
@@ -32,7 +32,7 @@ BayesGLM_argChecks(
 
 \item{num.threads}{See \code{\link{BayesGLM}}.}
 
-\item{return_INLA_result}{See \code{\link{BayesGLM}}.}
+\item{return_INLA}{See \code{\link{BayesGLM}}.}
 
 \item{outfile}{See \code{\link{BayesGLM}}.}
 

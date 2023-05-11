@@ -131,14 +131,14 @@ NULL
 #' @name outfile_Param
 NULL
 
-#' return_INLA_result
+#' return_INLA
 #'
-#' @param return_INLA_result Return the INLA model object? (It can be large.)
+#' @param return_INLA Return the INLA model object? (It can be large.)
 #'  Default: \code{TRUE}. Required for running \code{id_activations}
 #'  after, but not for running BayesGLM_joint after to get
 #'  posterior quantities of group means or contrasts.
 #'
-#' @name return_INLA_result_Param
+#' @name return_INLA_Param
 NULL
 
 #' scale_BOLD
@@ -191,7 +191,7 @@ NULL
 
 #' trim_INLA
 #'
-#' @param trim_INLA (logical) should the \code{INLA_result} objects within the
+#' @param trim_INLA (logical) should the \code{INLA_model_obj} within the
 #'  result be trimmed to only what is necessary to use \code{id_activations}? 
 #'  Default: \code{TRUE}.
 #'

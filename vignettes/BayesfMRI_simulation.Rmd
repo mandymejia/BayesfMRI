@@ -144,7 +144,7 @@ plot(mesh, main = "")
 Next, the spatial Bayesian GLM can be estimated using the `BayesGLM()` function. As in the classical GLM, we do not scale the timeseries or the design matrix to avoid inducing changes in the true beta coefficients. **Note: Model is pre-computed. Set `eval=TRUE` to compute. For this dataset, the expected computation time is approximately 5 minutes with PARDISO enabled.**
 
 ```{r Bayes GLM, eval=F}
-single_session_result <- BayesGLM(data = simulated_data$data, mesh = mesh, scale_BOLD = "none", scale_design = FALSE, verbose = FALSE, return_INLA_result=FALSE)
+single_session_result <- BayesGLM(data = simulated_data$data, mesh = mesh, scale_BOLD = "none", scale_design = FALSE, verbose = FALSE, return_INLA=FALSE)
 saveRDS(single_session_result, "single_session_BayesGLM_results.rds")
 ```
 

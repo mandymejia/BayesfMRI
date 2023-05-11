@@ -8,7 +8,7 @@
 #' @param Bayes,EM See \code{\link{BayesGLM}}.
 #' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
 #' @param num.threads See \code{\link{BayesGLM}}.
-#' @param return_INLA_result See \code{\link{BayesGLM}}.
+#' @param return_INLA See \code{\link{BayesGLM}}.
 #' @param outfile See \code{\link{BayesGLM}}.
 #' @param verbose See \code{\link{BayesGLM}}.
 #' @param avg_sessions See \code{\link{BayesGLM}}.
@@ -28,7 +28,7 @@ BayesGLM_argChecks <- function(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA_result = TRUE,
+  return_INLA = TRUE,
   outfile = NULL,
   verbose=FALSE,
   avg_sessions = FALSE,
@@ -70,7 +70,7 @@ BayesGLM_argChecks <- function(
   stopifnot(is_1(aic, "logical"))
   stopifnot(is_1(num.threads, "numeric"))
   stopifnot(num.threads <= parallel::detectCores())
-  stopifnot(is_1(return_INLA_result, "logical"))
+  stopifnot(is_1(return_INLA, "logical"))
   stopifnot(is.null(outfile) || is_1(outfile, "character"))
   stopifnot(is_1(verbose, "logical"))
   stopifnot(is_1(avg_sessions, "logical"))
@@ -116,7 +116,7 @@ BayesGLM_argChecks <- function(
 #' @inheritParams ar_smooth_Param
 #' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
-#' @inheritParams return_INLA_result_Param
+#' @inheritParams return_INLA_Param
 #' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
 #' @inheritParams avg_sessions_Param
@@ -128,7 +128,7 @@ BayesGLM_argChecks <- function(
 #'
 #' @return A \code{"BayesGLM"} object: a list with elements
 #'  \describe{
-#'    \item{INLA_result}{The full result of the call to \code{INLA::inla}.}
+#'    \item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
 #'    \item{task_estimates}{The task coefficients for the Bayesian model.}
 #'    \item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
 #'    \item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
@@ -148,28 +148,6 @@ BayesGLM_argChecks <- function(
 #'    \item{call}{match.call() for this function call.}
 #'  }
 #'
-# result <- list(
-#   INLA_result = INLA_result,
-#   task_estimates = task_estimates,
-#   result_classical = result_classical,
-#   mesh = mesh,
-#   mesh_orig = mesh_orig,
-#   mask = mask,
-#   design = design,
-#   task_names = task_names,
-#   session_names = session_names,
-#   hyperpar_posteriors = hyperpar_posteriors,
-#   theta_estimates = theta_estimates,
-#   # For joint group model ~~~~~~~~~~~~~
-#   posterior_Sig_inv = Sig_inv,
-#   mu.theta = mu.theta,
-#   Q.theta = Q.theta,
-#   y = y_all,
-#   X = X_all_list,
-#   prewhiten_info = prewhiten_info,
-#   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#   call = match.call()
-# ) 
 #'
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
@@ -200,7 +178,7 @@ BayesGLM <- function(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA_result = TRUE,
+  return_INLA = TRUE,
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
@@ -236,7 +214,7 @@ BayesGLM <- function(
     ar_smooth = ar_smooth,
     aic = aic,
     num.threads = num.threads,
-    return_INLA_result = return_INLA_result,
+    return_INLA = return_INLA,
     outfile = outfile,
     verbose = verbose,
     avg_sessions = avg_sessions,
@@ -252,7 +230,7 @@ BayesGLM <- function(
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   ## Define a few return variables that may or may not be calculated. ----------
-  INLA_result <- hyperpar_posteriors <- Q.theta <- NULL
+  INLA_model_obj <- hyperpar_posteriors <- Q.theta <- NULL
   task_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
   theta_estimates <- Sig_inv <- NULL
 
@@ -636,7 +614,7 @@ BayesGLM <- function(
       formula_str <- paste(formula_vec, collapse=' + ')
       formula <- as.formula(formula_str)
 
-      INLA_result <- INLA::inla(
+      INLA_model_obj <- INLA::inla(
         formula,
         data=model_data,
         #data=INLA::inla.stack.data(model_data, spde=spde),
@@ -649,18 +627,18 @@ BayesGLM <- function(
       if(verbose) cat("done!\n")
 
       #extract useful stuff from INLA model result
-      task_estimates <- extract_estimates(object=INLA_result, session_names=session_names, mask=mask2) #posterior means of latent task field
-      hyperpar_posteriors <- get_posterior_densities(object=INLA_result, spde, task_names) #hyperparameter posterior densities
+      task_estimates <- extract_estimates(object=INLA_model_obj, session_names=session_names, mask=mask2) #posterior means of latent task field
+      hyperpar_posteriors <- get_posterior_densities(object=INLA_model_obj, spde, task_names) #hyperparameter posterior densities
 
       #extract stuff needed for group analysis
-      mu.theta <- INLA_result$misc$theta.mode
-      Q.theta <- solve(INLA_result$misc$cov.intern) #not needed for EM version
+      mu.theta <- INLA_model_obj$misc$theta.mode
+      Q.theta <- solve(INLA_model_obj$misc$cov.intern) #not needed for EM version
 
       #construct object to be returned
-      if(!return_INLA_result){
-        INLA_result <- NULL
+      if(!return_INLA){
+        INLA_model_obj <- NULL
       } else {
-        if(trim_INLA) INLA_result <- trim_INLA_result(INLA_result)
+        if(trim_INLA) INLA_model_obj <- trim_INLA_model_obj(INLA_model_obj)
       }
     }
   }
@@ -670,7 +648,7 @@ BayesGLM <- function(
   if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
 
   result <- list(
-    INLA_result = INLA_result,
+    INLA_model_obj = INLA_model_obj,
     task_estimates = task_estimates,
     result_classical = result_classical,
     mesh = mesh,

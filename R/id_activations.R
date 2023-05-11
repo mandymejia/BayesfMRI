@@ -88,7 +88,7 @@ id_activations_cifti <- function(
     ))
   field_inds <- which(model_obj$task_names %in% field_names)
 
-  if(method == "Bayesian" && !("INLA_result" %in% do.call(c, lapply(GLM_list, names)))) {
+  if(method == "Bayesian" && !("INLA_model_obj" %in% do.call(c, lapply(GLM_list, names)))) {
     method <- "EM"
   }
 
@@ -267,9 +267,9 @@ id_activations.posterior <- function(model_obj,
 	for(f in field_names){
 
 		#if(is.null(area.limit)){
-			res.exc <- excursions.inla(model_obj$INLA_result, name=f, ind=inds, u=threshold, type='>', alpha=alpha, method="EB")
+			res.exc <- excursions.inla(model_obj$INLA_model_obj, name=f, ind=inds, u=threshold, type='>', alpha=alpha, method="EB")
 		#} else {
-		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_result, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
+		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_model_obj, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
 		#}
 	  which_f <- which(field_names==f)
 		act[,which_f] <- res.exc$E[inds]

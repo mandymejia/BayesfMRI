@@ -31,7 +31,7 @@
 #' 	\code{"sd"} scaling will scale the data by local standard deviation.
 #'
 #' 	\code{"none"} will only center the data, not scale it.
-#' @inheritParams return_INLA_result_Param_FALSE
+#' @inheritParams return_INLA_Param_FALSE
 #' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @param GLM If TRUE, classical GLM estimates will also be returned
 #' @inheritParams num.threads_Param
@@ -43,7 +43,7 @@
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),
-  return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
+  return_INLA=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
 
   check_INLA(FALSE)
 
@@ -95,9 +95,9 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
 
   task_estimates_all <- matrix(NA, nrow=V, ncol=K)
   task_estimates_all <- rep(list(task_estimates_all), n_sess)
-  INLA_result_all <- vector('list', length=length(group_set))
+  INLA_model_obj_all <- vector('list', length=length(group_set))
   spde_all <- vector('list', length=length(group_set))
-  names(INLA_result_all) <- paste0('model_group_',group_set)
+  names(INLA_model_obj_all) <- paste0('model_group_',group_set)
   names(spde_all) <- paste0('model_group_',group_set)
 
   for(grp in group_set){
@@ -172,7 +172,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     # estimate model using INLA
     t0 <- Sys.time()
     check_INLA(require_PARDISO=FALSE)
-    INLA_result_grp <- INLA::inla(
+    INLA_model_obj_grp <- INLA::inla(
       formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
       verbose = FALSE, keep = FALSE, num.threads = 4,
       inla.mode = "experimental", .parent.frame = parent.frame(),
@@ -183,19 +183,19 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     print(Sys.time() - t0)
 
     #extract beta estimates and project back to data locations for current group
-    task_estimates_grp <- extract_estimates(object=INLA_result_grp, session_names=session_names) #posterior means of latent task field
+    task_estimates_grp <- extract_estimates(object=INLA_model_obj_grp, session_names=session_names) #posterior means of latent task field
     for(s in 1:n_sess){
       task_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% task_estimates_grp[[s]])
     }
 
     #extract theta posteriors
-    hyperpar_posteriors_grp <- get_posterior_densities_vol3D(object=INLA_result_grp, spde) #hyperparameter posterior densities
+    hyperpar_posteriors_grp <- get_posterior_densities_vol3D(object=INLA_model_obj_grp, spde) #hyperparameter posterior densities
     hyperpar_posteriors_grp$model_group <- grp
     if(grp == group_set[1]) hyperpar_posteriors_all <- hyperpar_posteriors_grp else hyperpar_posteriors_all <- rbind(hyperpar_posteriors_all, hyperpar_posteriors_grp)
 
     #save spde and INLA objects
     spde_all[[which(group_set == grp)]] <- spde_grp
-    if(return_INLA_result) INLA_result_all[[which(group_set == grp)]] <- INLA_result_grp
+    if(return_INLA) INLA_model_obj_all[[which(group_set == grp)]] <- INLA_model_obj_grp
   }
 
   # for testing/debugging
@@ -203,8 +203,8 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
   #ggplot(betas_df, aes(x=classical, y=Bayesian)) + facet_grid(region ~ task) + geom_point() + geom_smooth() + geom_abline(intercept=0, slope=1, col='red')
 
   #construct object to be returned
-  if(return_INLA_result){
-    result <- list(INLA_result = INLA_result_all,
+  if(return_INLA){
+    result <- list(INLA_model_obj = INLA_model_obj_all,
                    spde_obj = spde_all,
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
@@ -214,7 +214,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
                    call = match.call(),
                    GLM_result = GLM_result)
   } else {
-    result <- list(INLA_result = NULL,
+    result <- list(INLA_model_obj = NULL,
                    spde_obj = spde_obj,
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
@@ -333,14 +333,13 @@ get_posterior_densities_vol3D <- function(object, spde){
 #'   and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
-#' @inheritParams return_INLA_result_Param_TRUE
+#' @inheritParams return_INLA_Param_TRUE
 #' @param outfile (Optional) File name (without extension) of output file for
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param
 #' @inheritParams avg_sessions_Param
-#' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @inheritParams trim_INLA_Param
 #'
 #' @importFrom fMRItools dct_bases dct_convert
 #' @importFrom utils head
@@ -363,7 +362,7 @@ BayesGLM_slice <- function(
   num.threads = 4,
   GLM_method = 'both',
   session_names = NULL,
-  return_INLA_result = TRUE,
+  return_INLA = TRUE,
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
@@ -495,7 +494,7 @@ BayesGLM_slice <- function(
                              scale_BOLD=scale_BOLD,
                              scale_design = scale_design,
                              num.threads = num.threads,
-                             return_INLA_result = return_INLA_result,
+                             return_INLA = return_INLA,
                              outfile = outfile,
                              verbose = verbose,
                              avg_sessions = avg_sessions,
