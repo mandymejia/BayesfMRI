@@ -9,15 +9,15 @@ dHRF(t, a1 = 6, b1 = 0.9, a2 = 12, b2 = 0.9, c = 0.35)
 \arguments{
 \item{t}{time vector}
 
-\item{a1}{delay of response, default is 6}
+\item{a1}{delay of response. Default: \code{6}}
 
-\item{b1}{response dispersion, default is 0.9}
+\item{b1}{response dispersion. Default: \code{0.9}}
 
-\item{a2}{delay of undershoot, default is 12}
+\item{a2}{delay of undershoot. Default: \code{12}}
 
-\item{b2}{dispersion of undershoot, default is 0.9}
+\item{b2}{dispersion of undershoot. Default: \code{0.9}}
 
-\item{c}{scale of undershoot, default is 0.35}
+\item{c}{scale of undershoot. Default: \code{0.35}}
 }
 \value{
 dHRF vector corresponding to time

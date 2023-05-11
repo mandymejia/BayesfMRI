@@ -1,8 +1,8 @@
 #' Bayes GLM arg checks
 #'
-#' Checks arguments for BayesGLM and BayesGLM_cifti
+#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
 #'
-#' Avoids duplicated code between BayesGLM and BayesGLM_cifti
+#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
 #'
 #' @param scale_BOLD,scale_design See \code{\link{BayesGLM}}.
 #' @param Bayes,EM See \code{\link{BayesGLM}}.

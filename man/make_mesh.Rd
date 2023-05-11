@@ -15,13 +15,15 @@ number of vertices in the mesh}
 indices for a given triangular face in the mesh. \eqn{F} is the number of
 faces in the mesh.}
 
-\item{use_INLA}{(logical) should INLA be used to make the mesh or not?}
+\item{use_INLA}{(logical) Use the INLA package to make the mesh? Default:
+\code{FALSE}. Otherwise, mesh construction is based on an internal function,
+\code{galerkin_db}.}
 }
 \value{
-Triangular mesh from matrices and vertices
+INLA triangular mesh
 }
 \description{
-Make triangular mesh from faces and vertices.
+Make INLA triangular mesh from faces and vertices
 }
 \section{INLA Requirement}{
 

@@ -13,10 +13,13 @@ prewhiten_prep(
 )
 }
 \arguments{
-\item{data}{List of sessions (see \code{is.session} and \code{is.session_pw})}
+\item{data}{A list of sessions, where each session is a list with elements
+\code{BOLD}, \code{design}, and optionally \code{nuisance}. See
+\code{?is.BfMRI.sess} for details.}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mask}{(Optional) A length \eqn{V} logical vector where \code{FALSE}
+values indicated data locations to exclude. Default: \code{NULL}, to include
+every location (same as a vector of all \code{TRUE}).}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 

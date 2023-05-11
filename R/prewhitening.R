@@ -86,11 +86,14 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
   }
 }
 
-#' Prewhiten cifti session data
+#' Prewhiten CIFTI session data
 #'
-#' @param data List of sessions (see \code{is.session} and \code{is.session_pw})
-#' @param mask (Optional) A length \eqn{V} logical vector indicating if each
-#'  vertex is to be included.
+#' @param data A list of sessions, where each session is a list with elements
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{?is.BfMRI.sess} for details.
+#' @param mask (Optional) A length \eqn{V} logical vector where \code{FALSE}
+#'  values indicated data locations to exclude. Default: \code{NULL}, to include
+#'  every location (same as a vector of all \code{TRUE}).
 #' @param scale_BOLD Option for scaling the BOLD response.
 #'
 #' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
@@ -101,20 +104,22 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' 	\code{"sd"} scaling will scale the data by local standard deviation.
 #'
 #' 	\code{"none"} will only center the data, not scale it.
-#' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
-#' @param ar_order Order of the AR used to prewhiten the data at each location
+#' @param scale_design (logical) Scale the design matrix? Default: \code{TRUE}.
+#' @param ar_order Order of the AR model used to prewhiten the data at each 
+#'  location. Default: \code{6}.
 #' @param ar_smooth FWHM parameter for smoothing. Remember that
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 #'  to not do any smoothing. Default: \code{5}.
-#' @param cifti_data A \code{xifti} object used to map the AR coefficient
+#' @param cifti_data A \code{"xifti"} object used to map the AR coefficient
 #'   estimates onto the surface mesh for smoothing.
-#' @param hemisphere 'left' or 'right'
+#' @param hemisphere \code{"left"} or \code{"right"}.
 #' @param num.threads (scalar) The number of threads to use in parallelizing the
-#'   prewhitening
+#'   prewhitening. Default: \code{NULL}.
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average
 #'   residual variance after prewhitening, and the value given for \code{ar_order}.
+#' 
 #' @export
 prewhiten_cifti <- function(data,
                             mask = NULL,
@@ -154,9 +159,12 @@ prewhiten_cifti <- function(data,
 
 #' Estimate residual autocorrelation for prewhitening
 #'
-#' @param data List of sessions (see \code{is.session} and \code{is.session_pw})
-#' @param mask (Optional) A length \eqn{V} logical vector indicating if each
-#'  vertex is to be included.
+#' @param data A list of sessions, where each session is a list with elements
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{?is.BfMRI.sess} for details.
+#' @param mask (Optional) A length \eqn{V} logical vector where \code{FALSE}
+#'  values indicated data locations to exclude. Default: \code{NULL}, to include
+#'  every location (same as a vector of all \code{TRUE}).
 #' @param scale_BOLD Option for scaling the BOLD response.
 #'
 #' 	If \code{"auto"} (default), will use mean scaling except if demeaned data

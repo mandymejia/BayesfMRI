@@ -7,10 +7,10 @@
 make_HRFs(onsets, TR, duration, downsample = 100, deriv = 0)
 }
 \arguments{
-\item{onsets}{A matrix of onsets (first column) and durations (second column)
-for each task in SECONDS (set duration to zero for event related design),
-organized as a list where each element of the list corresponds to one task.
-Names of list indicate task names.}
+\item{onsets}{\eqn{K}-length list in which the name of each element is
+the name of the corresponding task, and the value of each element is a
+matrix of onsets (first column) and durations (second column) for each
+stimuli (each row) of the corresponding task, in SECONDS.}
 
 \item{TR}{Temporal resolution of fMRI data, in SECONDS.}
 
@@ -19,7 +19,7 @@ Names of list indicate task names.}
 \item{downsample}{Downsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
-\item{deriv}{This can take the value of 0, 1, or 2, and will use the HRF
+\item{deriv}{\code{0} (default), \code{1}, or \code{2}, to use the HRF
 function, the first derivative of the HRF, or the second derivative of the
 HRF, respectively.}
 }

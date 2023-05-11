@@ -2,7 +2,7 @@
 % Please edit documentation in R/prewhitening.R
 \name{prewhiten_cifti}
 \alias{prewhiten_cifti}
-\title{Prewhiten cifti session data}
+\title{Prewhiten CIFTI session data}
 \usage{
 prewhiten_cifti(
   data,
@@ -17,10 +17,13 @@ prewhiten_cifti(
 )
 }
 \arguments{
-\item{data}{List of sessions (see \code{is.session} and \code{is.session_pw})}
+\item{data}{A list of sessions, where each session is a list with elements
+\code{BOLD}, \code{design}, and optionally \code{nuisance}. See
+\code{?is.BfMRI.sess} for details.}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mask}{(Optional) A length \eqn{V} logical vector where \code{FALSE}
+values indicated data locations to exclude. Default: \code{NULL}, to include
+every location (same as a vector of all \code{TRUE}).}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
@@ -34,21 +37,22 @@ is detected, in which case sd scaling will be used instead.
 \code{"none"} will only center the data, not scale it.
 }\if{html}{\out{</div>}}}
 
-\item{scale_design}{(logical) Should the design matrix be scaled? (Default is TRUE)}
+\item{scale_design}{(logical) Scale the design matrix? Default: \code{TRUE}.}
 
-\item{ar_order}{Order of the AR used to prewhiten the data at each location}
+\item{ar_order}{Order of the AR model used to prewhiten the data at each
+location. Default: \code{6}.}
 
 \item{ar_smooth}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
 
-\item{cifti_data}{A \code{xifti} object used to map the AR coefficient
+\item{cifti_data}{A \code{"xifti"} object used to map the AR coefficient
 estimates onto the surface mesh for smoothing.}
 
-\item{hemisphere}{'left' or 'right'}
+\item{hemisphere}{\code{"left"} or \code{"right"}.}
 
 \item{num.threads}{(scalar) The number of threads to use in parallelizing the
-prewhitening}
+prewhitening. Default: \code{NULL}.}
 }
 \value{
 The prewhitened data (in a list), the smoothed, averaged AR
@@ -56,5 +60,5 @@ coefficient estimates used in the prewhitening, the smoothed, average
 residual variance after prewhitening, and the value given for \code{ar_order}.
 }
 \description{
-Prewhiten cifti session data
+Prewhiten CIFTI session data
 }

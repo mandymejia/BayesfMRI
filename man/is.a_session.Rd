@@ -20,7 +20,7 @@ A valid entry in a \code{"BfMRI.sess"} object is a list with these named
 fields:
 \itemize{
 \item{"BOLD"}{\eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
-\item{"design"}{\eqn{T \times K} matrix containing the \eqn{K} task regressors.}
+\item{"design"}{\eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
 \item{"nuisance"}{Optional. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 }
 }

@@ -181,17 +181,31 @@ s2m_B <- function(B,sigma){
   return(out)
 }
 
-#' Create a mask based on vertices that are invalid
+#' Mask out invalid data
+#' 
+#' Mask out data locations that are invalid (missing data, low mean, or low
+#'  variance) for any session.
 #'
 #' @param data A list of sessions, where each session is a list with elements
-#'  BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
-#'  for more details.
-#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
-#'  do not meet these thresholds are masked out of the analysis. Defaults: \code{1e-6}.
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{?is.BfMRI.sess} for details.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. 
+#'  Locations which do not meet these thresholds are masked out of the analysis. 
+#'  Defaults: \code{1e-6}.
 #' @param verbose Print messages counting how many locations are removed?
 #'
 #' @importFrom matrixStats colVars
-#' @return A logical vector indicating valid vertices
+#' @return A logical vector indicating locations that are valid across all sessions.
+#' 
+#' @examples
+#' nT <- 30
+#' nV <- 400
+#' BOLD1 <- matrix(rnorm(nT*nV), nrow=nT)
+#' BOLD1[,seq(30,50)] <- NA
+#' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
+#' BOLD2[,65] <- BOLD2[,65] / 1e10
+#' data <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
+#' make_mask(data)
 #'
 #' @export
 make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){

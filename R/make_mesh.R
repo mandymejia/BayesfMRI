@@ -1,14 +1,16 @@
 #' Make Mesh
 #'
-#' Make triangular mesh from faces and vertices.
+#' Make INLA triangular mesh from faces and vertices
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
-#' @param use_INLA (logical) should INLA be used to make the mesh or not?
+#' @param use_INLA (logical) Use the INLA package to make the mesh? Default:
+#'  \code{FALSE}. Otherwise, mesh construction is based on an internal function,
+#'  \code{galerkin_db}.
 #'
-#' @return Triangular mesh from matrices and vertices
+#' @return INLA triangular mesh
 #'
 #' @export
 make_mesh <- function(vertices, faces, use_INLA = FALSE){

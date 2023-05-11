@@ -49,9 +49,9 @@ The arguments that may have changed, in a list: \code{scale_BOLD},
 \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
 }
 \description{
-Checks arguments for BayesGLM and BayesGLM_cifti
+Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
 }
 \details{
-Avoids duplicated code between BayesGLM and BayesGLM_cifti
+Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
 }
 \keyword{internal}

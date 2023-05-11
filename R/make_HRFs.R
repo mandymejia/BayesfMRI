@@ -2,15 +2,15 @@
 #'
 #' Create HRF design matrix columns from onsets and durations
 #'
-#' @param onsets A matrix of onsets (first column) and durations (second column)
-#'  for each task in SECONDS (set duration to zero for event related design),
-#'  organized as a list where each element of the list corresponds to one task.
-#'  Names of list indicate task names.
+#' @param onsets \eqn{K}-length list in which the name of each element is
+#'  the name of the corresponding task, and the value of each element is a
+#'  matrix of onsets (first column) and durations (second column) for each
+#'  stimuli (each row) of the corresponding task, in SECONDS. 
 #' @param TR Temporal resolution of fMRI data, in SECONDS.
 #' @param duration Length of fMRI timeseries, in SCANS.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
-#' @param deriv This can take the value of 0, 1, or 2, and will use the HRF
+#' @param deriv \code{0} (default), \code{1}, or \code{2}, to use the HRF
 #'   function, the first derivative of the HRF, or the second derivative of the
 #'   HRF, respectively.
 #'
@@ -70,11 +70,11 @@ make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
 #' Calculate the canonical (double-gamma) HRF
 #'
 #' @param t time vector
-#' @param a1 delay of response, default is 6
-#' @param b1 response dispersion, default is 0.9
-#' @param a2 delay of undershoot, default is 12
-#' @param b2 dispersion of undershoot, default is 0.9
-#' @param c scale of undershoot, default is 0.35
+#' @param a1 delay of response. Default: \code{6}
+#' @param b1 response dispersion. Default: \code{0.9}
+#' @param a2 delay of undershoot. Default: \code{12}
+#' @param b2 dispersion of undershoot. Default: \code{0.9}
+#' @param c scale of undershoot. Default: \code{0.35}
 #'
 #' @return HRF vector corresponding to time
 #' 
@@ -90,11 +90,11 @@ HRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
 #' Calculate first derivative of the canonical (double-gamma) HRF
 #'
 #' @param t time vector
-#' @param a1 delay of response, default is 6
-#' @param b1 response dispersion, default is 0.9
-#' @param a2 delay of undershoot, default is 12
-#' @param b2 dispersion of undershoot, default is 0.9
-#' @param c scale of undershoot, default is 0.35
+#' @param a1 delay of response. Default: \code{6}
+#' @param b1 response dispersion. Default: \code{0.9}
+#' @param a2 delay of undershoot. Default: \code{12}
+#' @param b2 dispersion of undershoot. Default: \code{0.9}
+#' @param c scale of undershoot. Default: \code{0.35}
 #'
 #' @return dHRF vector corresponding to time
 #' 
@@ -116,11 +116,11 @@ dHRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
 #' Calculate second derivative of the canonical (double-gamma) HRF
 #'
 #' @param t time vector
-#' @param a1 delay of response, default is 6
-#' @param b1 response dispersion, default is 0.9
-#' @param a2 delay of undershoot, default is 12
-#' @param b2 dispersion of undershoot, default is 0.9
-#' @param c scale of undershoot, default is 0.35
+#' @param a1 delay of response. Default: \code{6}
+#' @param b1 response dispersion. Default: \code{0.9}
+#' @param a2 delay of undershoot. Default: \code{12}
+#' @param b2 dispersion of undershoot. Default: \code{0.9}
+#' @param c scale of undershoot. Default: \code{0.35}
 #'
 #' @return d2HRF vector corresponding to time
 #' 
