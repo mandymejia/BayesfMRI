@@ -10,8 +10,8 @@ using namespace Eigen;
 //' @param kappa2 a scalar
 //' @param in_list a list with elements Cmat, Gmat, and GtCinvG
 //' @param n_sess the integer number of sessions
-//' @export
-// [[Rcpp::export(rng = false)]]
+//' 
+// [[Rcpp::export(.logDetQt, rng = false)]]
 double logDetQt(double kappa2, const Rcpp::List &in_list, double n_sess) {
   // Load parameters
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (in_list["Cmat"]);
@@ -438,8 +438,8 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, d
 //' @param n_sess the number of sessions
 //' @param tol the stopping rule tolerance
 //' @param verbose (logical) Should intermediate output be displayed?
-//' @export
-// [[Rcpp::export(rng = false)]]
+//' 
+// [[Rcpp::export(.initialKP, rng = false)]]
 Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w,
                           double n_sess, double tol, bool verbose) {
   int n_spde = w.size();
@@ -843,7 +843,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 //'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
 //' @param verbose (logical) Should intermediate output be displayed?
 //' @export
-// [[Rcpp::export(rng = false)]]
+// [[Rcpp::export(.findTheta, rng = false)]]
 Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
                      Eigen::SparseMatrix<double> X, Eigen::SparseMatrix<double> QK,
                      Eigen::SparseMatrix<double> Psi, Eigen::SparseMatrix<double> A,

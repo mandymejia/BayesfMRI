@@ -444,7 +444,7 @@ id_activations.em <-
            alpha = 0.05,
            threshold,
            area.limit = NULL) {
-    if (class(model_obj) != "BayesGLM")
+    if (!inherits(model_obj, "BayesGLM"))
       stop(paste0(
         "The model object is of class ",
         class(model_obj),

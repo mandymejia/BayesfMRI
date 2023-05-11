@@ -339,7 +339,7 @@ neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' @return scalar output of the negative objective function
 #' @keywords internal
 neg_kappa_fn4 <- function(kappa2, spde, a_star, b_star, n_sess) {
-  log_det_Qt <- logDetQt(kappa2, spde, n_sess)
+  log_det_Qt <- .logDetQt(kappa2, spde, n_sess)
   out <- kappa2*a_star + b_star / kappa2 - log_det_Qt
   return(out)
 }
@@ -514,7 +514,7 @@ kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
     Qt <- Matrix::bdiag(rep(list(Qt),KK))
   }
   # log_det_Q <- sum(2*log(Matrix::diag(Rt)))
-  log_det_Q <- logDetQt(kappa2,in_list = spde,n_sess = KK)
+  log_det_Q <- .logDetQt(kappa2,in_list = spde,n_sess = KK)
   bQb <- as.numeric(Matrix::crossprod(beta_hat, Qt %*% beta_hat))
   # cat("log_det_Q =", log_det_Q, ", bQb =",bQb,"\n")
   # out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)

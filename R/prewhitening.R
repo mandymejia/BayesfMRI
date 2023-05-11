@@ -354,7 +354,7 @@ prewhiten_do <- function(prewhiten_result,
       #                                      ntime = ntime,
       #                                      AR_var = avg_var[v])
       # This is an updated, faster version of prewhiten.v written in C++
-      template_pw_list[[v]] <- getSqrtInvCpp(AR_coeffs = avg_AR[v,],
+      template_pw_list[[v]] <- .getSqrtInvCpp(AR_coeffs = avg_AR[v,],
                                              nTime = ntime,
                                              avg_var = avg_var[v])
     }
@@ -370,7 +370,7 @@ prewhiten_do <- function(prewhiten_result,
         cl,
         # prewhiten.v,
         # This is an updated, faster version of prewhiten.v written in C++
-        getSqrtInvCpp,
+        .getSqrtInvCpp,
         AR_coeffs = split(avg_AR, row(avg_AR)),
         # ntime = ntime,
         nTime = ntime,
@@ -433,6 +433,13 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
 
   list(phi = AR_coefs, sigma_sq = AR_resid_var, aic = AR_AIC)
 }
+
+#' Corrected AIC To-Do
+#' 
+#' Get corrected AIC
+#' 
+#' @keywords internal
+cAIC <- function(...){invisible(NULL)}
 
 #' Smooth AR coefficients and white noise variance
 #'

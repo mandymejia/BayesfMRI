@@ -180,6 +180,7 @@ BayesGLM_argChecks <- function(
 #'
 #' @importFrom utils tail
 #'
+#' @importFrom methods as
 #' @export
 BayesGLM <- function(
   data,
@@ -431,7 +432,7 @@ BayesGLM <- function(
         #                                      ntime = ntime,
         #                                      AR_var = avg_var[vv])
         # This is a more efficient prewhitening function written in C++
-        template_pw_list[[vv]] <- getSqrtInvCpp(AR_coeffs = avg_AR[vv,],
+        template_pw_list[[vv]] <- .getSqrtInvCpp(AR_coeffs = avg_AR[vv,],
                                               nTime = ntime,
                                               avg_var = avg_var[vv])
       }
@@ -446,7 +447,7 @@ BayesGLM <- function(
         parallel::clusterMap(
           cl,
           # prewhiten.v,
-          getSqrtInvCpp,
+          .getSqrtInvCpp,
           AR_coeffs = split(avg_AR, row(avg_AR)),
           # ntime = ntime,
           nTime = ntime,
@@ -565,7 +566,7 @@ BayesGLM <- function(
         cl = cl,
         beta_hat,
         2,
-        initialKP,
+        .initialKP,
         theta = c(kappa2, phi),
         spde = rcpp_spde,
         n_sess = n_sess,
@@ -579,7 +580,7 @@ BayesGLM <- function(
       Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
       if(verbose) cat("... STARTING EM ALGORITHM\n")
       em_output <-
-        findTheta(
+        .findTheta(
           theta = theta,
           spde = rcpp_spde,
           y = model_data$y,

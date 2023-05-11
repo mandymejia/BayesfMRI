@@ -6,8 +6,8 @@
 #' @param kappa2 a scalar
 #' @param in_list a list with elements Cmat, Gmat, and GtCinvG
 #' @param n_sess the integer number of sessions
-#' @export
-logDetQt <- function(kappa2, in_list, n_sess) {
+#' 
+.logDetQt <- function(kappa2, in_list, n_sess) {
     .Call(`_BayesfMRI_logDetQt`, kappa2, in_list, n_sess)
 }
 
@@ -20,8 +20,8 @@ logDetQt <- function(kappa2, in_list, n_sess) {
 #' @param n_sess the number of sessions
 #' @param tol the stopping rule tolerance
 #' @param verbose (logical) Should intermediate output be displayed?
-#' @export
-initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
+#' 
+.initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
     .Call(`_BayesfMRI_initialKP`, theta, spde, w, n_sess, tol, verbose)
 }
 
@@ -39,7 +39,7 @@ initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
 #'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
 #' @param verbose (logical) Should intermediate output be displayed?
 #' @export
-findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
+.findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
     .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol, verbose)
 }
 
@@ -48,8 +48,8 @@ findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
 #' @param AR_coeffs a length-p vector where p is the AR order
 #' @param nTime (integer) the length of the time series that is being prewhitened
 #' @param avg_var a scalar value of the residual variances of the AR model
-#' @export
-getSqrtInvCpp <- function(AR_coeffs, nTime, avg_var) {
+#' 
+.getSqrtInvCpp <- function(AR_coeffs, nTime, avg_var) {
     .Call(`_BayesfMRI_getSqrtInvCpp`, AR_coeffs, nTime, avg_var)
 }
 

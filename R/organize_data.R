@@ -30,7 +30,7 @@ organize_data <- function(y, X, transpose = TRUE){
     y <- t(y)
   }
 	nT <- nrow(y)
-	nV0 <- ncol(y)
+	nV <- ncol(y)
 
 	y <- as.vector(y) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
 	ix <- seq(nT*nV)

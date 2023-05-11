@@ -10,16 +10,18 @@
 ^codecov\.yml$
 # Tests ------------------------
 ^tests/run_BayesfMRI_tests\.R$
+^tests/run_BayesfMRI_tests_notInPackage_MSC\.R$
+^tests/run_BayesfMRI_tests_notInPackage_HCP\.R$
 ^tests/data_notInPackage
 ^tests/results_notInPackage
 # Volumetric -------------------
 ^R/BayesGLM_vol3D\.R$
-^R/create_spde_vol3D\.R$
+#^R/create_spde_vol3D\.R$
 ^R/vol2mesh\.R$
 ^R/make_slice_mesh\.R$
 ^R/plot_slice\.R$
 # EM ---------------------------
-^R/EM_utils\.R$
+# ^R/EM_utils\.R$
 # Vignettes (TO-DO) ------------
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$

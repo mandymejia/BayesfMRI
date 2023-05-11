@@ -48,13 +48,10 @@ Imports:
     matrixStats,
     methods,
     Rcpp,
-    RcppEigen,
     stats,
     sp,
-    SQUAREM,
     utils
 Suggests:
-    brainSim,
     covr,
     abind,
     dplyr,
@@ -68,6 +65,7 @@ Suggests:
     purrr,
     rdist,
     rmarkdown,
+    SQUAREM,
     testthat (>= 3.0.0)
 LazyData: true
 Roxygen: list(markdown = TRUE)

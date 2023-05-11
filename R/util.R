@@ -141,6 +141,7 @@
 #'
 #' @return The number of nonzero values detected within x
 #'
+#' @importFrom stats kmeans
 #' @keywords internal
 s2m <- function(x,b){
   two_means <- kmeans(abs(x),2)
