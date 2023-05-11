@@ -16,8 +16,8 @@
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions, where each session is a list with elements
-#'  BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
-#'  List element names represent session names.
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{?is.BfMRI.sess} for details.
 #' @param locations Vx3 matrix of x,y,z coordinates of each voxel
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
