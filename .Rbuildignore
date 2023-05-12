@@ -8,6 +8,7 @@
 ^CRAN-RELEASE$
 ^cran-comments\.md
 ^codecov\.yml$
+^CRAN-SUBMISSION$
 # Tests ------------------------
 ^tests/simulate_cifti\.R$
 ^tests/run_BayesfMRI_tests_notInPackage_MSC\.R$
