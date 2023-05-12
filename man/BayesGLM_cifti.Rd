@@ -31,14 +31,12 @@ BayesGLM_cifti(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA = TRUE,
+  return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
   meanTol = 1e-06,
-  varTol = 1e-06,
-  emTol = 0.001,
-  trim_INLA = TRUE
+  varTol = 1e-06
 )
 }
 \arguments{
@@ -158,7 +156,7 @@ for model estimation. Default: \code{4}.}
 
 \item{return_INLA}{Return the INLA model object? (It can be large.)
 Default: \code{TRUE}. Required for running \code{id_activations}
-after, but not for running BayesGLM_joint after to get
+after, but not for running BayesGLM2 after to get
 posterior quantities of group means or contrasts.}
 
 \item{outfile}{File name where results will be written (for use by
@@ -166,19 +164,12 @@ posterior quantities of group means or contrasts.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+\item{avg_sessions}{Average task estimates (betas) over multiple sessions?
+Default: \code{TRUE}.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
 Default: \code{1e-6} for both.}
-
-\item{emTol}{The stopping tolerance for the EM algorithm. Default:
-\code{1e-3}.}
-
-\item{trim_INLA}{(logical) should the \code{INLA_model_obj} within the
-result be trimmed to only what is necessary to use \code{id_activations}?
-Default: \code{TRUE}.}
 }
 \value{
 An object of class \code{"BayesGLM_cifti"}: a list with elements

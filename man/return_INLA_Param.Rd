@@ -6,7 +6,7 @@
 \arguments{
 \item{return_INLA}{Return the INLA model object? (It can be large.)
 Default: \code{TRUE}. Required for running \code{id_activations}
-after, but not for running BayesGLM_joint after to get
+after, but not for running BayesGLM2 after to get
 posterior quantities of group means or contrasts.}
 }
 \description{

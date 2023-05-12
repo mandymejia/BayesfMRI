@@ -5,7 +5,7 @@
 #' @param model_obj Result of \code{BayesGLM_cifti} model call, of class
 #'  \code{"BayesGLM_cifti"}
 # @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
-#' @param field_names The name(s) of the latent field(s) on which to 
+#' @param task_names The name(s) of the latent field(s) on which to 
 #'  identify activations. If \code{NULL} (default), analyze all tasks.
 #' @param session_name The name of the session to examine. 
 #' If \code{NULL} (default), the average across all sessions is used.
@@ -38,7 +38,7 @@
 #'
 id_activations_cifti <- function(
   model_obj,
-  field_names=NULL,
+  task_names=NULL,
   session_name=NULL,
   alpha=0.05,
   method=c("Bayesian", "classical"),
@@ -78,18 +78,22 @@ id_activations_cifti <- function(
   do_right <- !is.null(GLM_list$cortexR)
   do_sub <- !is.null(GLM_list$subcortical)
 
-  if (is.null(field_names))
-    field_names <- model_obj$task_names
-  if (any(!(field_names %in% model_obj$task_names)))
+  if (is.null(task_names))
+    task_names <- model_obj$task_names
+  if (any(!(task_names %in% model_obj$task_names)))
     stop(paste0(
-      'All elements of field_names must appear in model_obj$task_names: ',
+      'All elements of task_names must appear in model_obj$task_names: ',
       paste(model_obj$task_names, collapse = ',')
     ))
-  field_inds <- which(model_obj$task_names %in% field_names)
+  field_inds <- which(model_obj$task_names %in% task_names)
 
   if(method == "Bayesian" && !("INLA_model_obj" %in% do.call(c, lapply(GLM_list, names)))) {
     method <- "EM"
   }
+
+  # TO DO: integrate
+  # mu.theta <- INLA_model_obj$misc$theta.mode
+  # Q.theta <- solve(INLA_model_obj$misc$cov.intern) #not needed for EM version
 
   if(method=='Bayesian'){
     #loop over hemispheres/structures
@@ -98,7 +102,7 @@ id_activations_cifti <- function(
       model_m <- GLM_list[[mm]]
       if(verbose) cat(paste0('Identifying Bayesian GLM activations in ',names(GLM_list)[mm],'\n'))
       act_m <- id_activations.posterior(model_obj=model_m,
-                                        field_names=field_names,
+                                        task_names=task_names,
                                         session_name=session_name,
                                         threshold=threshold,
                                         alpha=alpha)
@@ -133,7 +137,7 @@ id_activations_cifti <- function(
   #     model_m <- GLM_list[[mm]]
   #     if(verbose) cat(paste0('Identifying EM GLM activations in ',names(GLM_list)[mm],'\n'))
   #     act_m <- id_activations.em(model_obj=model_m,
-  #                                field_names=field_names,
+  #                                task_names=task_names,
   #                                session_name=session_name,
   #                                threshold=threshold,
   #                                alpha=alpha,
@@ -145,18 +149,18 @@ id_activations_cifti <- function(
 
   #map results to xifti objects
   activations_xifti <- 0*model_obj[[paste0("betas_", method[1])]][[1]]
-  if(length(field_names) != length(model_obj$task_names)) activations_xifti$meta$cifti$names <- field_names
+  if(length(task_names) != length(model_obj$task_names)) activations_xifti$meta$cifti$names <- task_names
   if(do_left) {
     datL <- 1*activations$cortexL$active
     if(method=='classical') datL <- datL[!is.na(datL[,1]),] #remove medial wall locations
     #datL[datL==0] <- NA
-    activations_xifti$data$cortex_left <- matrix(datL, ncol=length(field_names))
+    activations_xifti$data$cortex_left <- matrix(datL, ncol=length(task_names))
   }
   if(do_right) {
     datR <- 1*activations$cortexR$active
     if(method=='classical') datR <- datR[!is.na(datR[,1]),] #remove medial wall locations
     #datR[datR==0] <- NA
-    activations_xifti$data$cortex_right <- matrix(datR, ncol=length(field_names))
+    activations_xifti$data$cortex_right <- matrix(datR, ncol=length(task_names))
   }
   if(do_sub) {
     if(method == "EM") {
@@ -172,7 +176,7 @@ id_activations_cifti <- function(
       activations_xifti$data$subcort[!is.na(model_obj$betas_classical[[1]]$data$subcort[,1]),] <-
         datS
     }
-    activations_xifti$data$subcort <- matrix(datS, ncol=length(field_names))
+    activations_xifti$data$subcort <- matrix(datS, ncol=length(task_names))
   }
 
   activations_xifti <- convert_xifti(activations_xifti, "dlabel", colors='red')
@@ -193,7 +197,7 @@ id_activations_cifti <- function(
 #'  posterior distribution of the latent field.
 #'
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLM
-#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
+#' @param task_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
 #' @param session_name (character) The name of the session that should be examined.
 #' If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
@@ -214,7 +218,7 @@ id_activations_cifti <- function(
 #'
 #' @export
 id_activations.posterior <- function(model_obj,
-                                     field_names=NULL,
+                                     task_names=NULL,
                                      session_name=NULL,
                                      alpha=0.05,
                                      threshold){
@@ -247,9 +251,9 @@ id_activations.posterior <- function(model_obj,
   if(!(session_name %in% all_sessions)) stop(paste0('session_name does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
   sess_ind <- which(all_sessions == session_name)
 
-  #check field_names argument
-  if(is.null(field_names)) field_names <- model_obj$task_names
-  if(any(!(field_names %in% model_obj$task_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$task_names, collapse=', ')))
+  #check task_names argument
+  if(is.null(task_names)) task_names <- model_obj$task_names
+  if(any(!(task_names %in% model_obj$task_names))) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$task_names, collapse=', ')))
 
   #check alpha argument
 	if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
@@ -260,17 +264,17 @@ id_activations.posterior <- function(model_obj,
   inds <- (1:n_vox) + (sess_ind-1)*n_vox
 
 	#loop over latent fields
-	excur <- vector('list', length=length(field_names))
-	act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-	colnames(act) <- field_names
-	for(f in field_names){
+	excur <- vector('list', length=length(task_names))
+	act <- matrix(NA, nrow=n_vox, ncol=length(task_names))
+	colnames(act) <- task_names
+	for(f in task_names){
 
 		#if(is.null(area.limit)){
 			res.exc <- excursions.inla(model_obj$INLA_model_obj, name=f, ind=inds, u=threshold, type='>', alpha=alpha, method="EB")
 		#} else {
 		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_model_obj, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
 		#}
-	  which_f <- which(field_names==f)
+	  which_f <- which(task_names==f)
 		act[,which_f] <- res.exc$E[inds]
     excur[[which_f]] <- res.exc
 	}
@@ -419,7 +423,7 @@ id_activations.classical <- function(model_obj,
 #'  posterior distribution of the latent field.
 #'
 #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLMEM
-#' @param field_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
+#' @param task_names Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
 #' @param session_name (character) The name of the session that should be examined.
 #' If \code{NULL} (default), the average across all sessions is used.
 #' @param alpha Significance level (e.g. 0.05)
@@ -438,7 +442,7 @@ id_activations.classical <- function(model_obj,
 #' @export
 id_activations.em <-
   function(model_obj,
-           field_names = NULL,
+           task_names = NULL,
            session_name = NULL,
            alpha = 0.05,
            threshold,
@@ -487,9 +491,9 @@ id_activations.em <-
     #   }
     # }
 
-    #check field_names argument
-    if(is.null(field_names)) field_names <- model_obj$task_names
-    if(!any(field_names %in% model_obj$task_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$task_names, collapse=', ')))
+    #check task_names argument
+    if(is.null(task_names)) task_names <- model_obj$task_names
+    if(!any(task_names %in% model_obj$task_names)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$task_names, collapse=', ')))
 
     #check alpha argument
     if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
@@ -502,9 +506,9 @@ id_activations.em <-
         # mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
         #                   model_obj$spde_obj[[m]]$faces[[1]])
         # n_vox <- mesh$n
-        # excur <- vector('list', length=length(field_names))
-        # act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-        # colnames(act) <- field_names
+        # excur <- vector('list', length=length(task_names))
+        # act <- matrix(NA, nrow=n_vox, ncol=length(task_names))
+        # colnames(act) <- task_names
 
         if(session_name == "avg") {
           beta_est <- c(model_obj$EM_result_all[[m]]$posterior_mu)
@@ -517,7 +521,7 @@ id_activations.em <-
         # Phi <-
         #   Matrix::bdiag(rep(
         #     list(Phi_k),
-        #     length(field_names)
+        #     length(task_names)
         #   ))
         # w <- beta_est %*% Phi
         Sig_inv <- model_obj$EM_result_all[[m]]$posterior_Sig_inv
@@ -526,13 +530,13 @@ id_activations.em <-
         ### use the ind argument for excursions to get the marginal posterior
         ### excursions sets (much faster)
 
-        n_vox <- length(beta_est) / length(field_names)
-        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
+        n_vox <- length(beta_est) / length(task_names)
+        act <- matrix(NA, nrow=n_vox, ncol=length(task_names))
 
         V <- Matrix::diag(INLA::inla.qinv(Sig_inv))
 
-        for(f in field_names) {
-          which_f <- which(field_names==f)
+        for(f in task_names) {
+          which_f <- which(task_names==f)
           f_inds <- (1:n_vox) + (which_f - 1)*n_vox
           res.exc <-
             excursions(
@@ -561,9 +565,9 @@ id_activations.em <-
         # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
 
         #loop over latent fields
-        excur <- vector('list', length=length(field_names))
-        act <- matrix(NA, nrow=n_vox, ncol=length(field_names))
-        colnames(act) <- field_names
+        excur <- vector('list', length=length(task_names))
+        act <- matrix(NA, nrow=n_vox, ncol=length(task_names))
+        colnames(act) <- task_names
         res.exc <-
           excursions(
             alpha = alpha,
@@ -574,8 +578,8 @@ id_activations.em <-
             Q = model_obj$posterior_Sig_inv,
             type = ">", method = "EB"
           )
-        for(f in field_names) {
-          which_f <- which(field_names==f)
+        for(f in task_names) {
+          which_f <- which(task_names==f)
           f_inds <- (1:n_vox) + (which_f - 1)*n_vox
           act[,which_f] <- res.exc$E[f_inds]
         }

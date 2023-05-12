@@ -1,12 +1,13 @@
 #' Organize replicates
 #'
-#' beta and repl vectors are of length \eqn{nvox X n_sess X n_task}.
+#' beta and repl vectors are of length \eqn{nvox \times n_sess \times n_task}.
 #' 	The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
 #' 	The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 #'
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param task_names Vector of names for each task
-#' @inheritParams mesh_Param_either
+#' @inheritParams mesh_Param_inla
+# @inheritParams mesh_Param_either
 #'
 #' @return replicates vector and betas for sessions
 #'

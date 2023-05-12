@@ -12,7 +12,7 @@
 \item{session}{Which session should be plotted? \code{NULL} (default) will
 use the first.}
 
-\item{method}{"Bayesian" or "classical". \code{NULL} (default) will use
+\item{method}{"Bayes" or "classical". \code{NULL} (default) will use
 the Bayesian results if available, and the classical results if not.}
 
 \item{idx}{The data columns to plot. Overrides the \code{idx} argument to

@@ -12,13 +12,13 @@ organize_replicates(n_sess, task_names, mesh)
 \item{task_names}{Vector of names for each task}
 
 \item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data)}
+surface data).}
 }
 \value{
 replicates vector and betas for sessions
 }
 \description{
-beta and repl vectors are of length \eqn{nvox X n_sess X n_task}.
+beta and repl vectors are of length \eqn{nvox \times n_sess \times n_task}.
 The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
 The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 }

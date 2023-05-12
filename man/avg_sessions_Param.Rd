@@ -4,8 +4,8 @@
 \alias{avg_sessions_Param}
 \title{avg_sessions}
 \arguments{
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+\item{avg_sessions}{Average task estimates (betas) over multiple sessions?
+Default: \code{TRUE}.}
 }
 \description{
 avg_sessions

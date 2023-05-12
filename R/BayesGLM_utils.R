@@ -151,6 +151,8 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
     betas[[v]][mask==1,] <- betas_v
     colnames(betas[[v]]) <- task_names
   }
+
+  attr(betas, "GLM_type") <- "Bayesian"
   return(betas)
 }
 

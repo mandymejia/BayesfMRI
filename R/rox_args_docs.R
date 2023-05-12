@@ -35,8 +35,8 @@ NULL
 
 #' avg_sessions
 #'
-#' @param avg_sessions Average estimates for betas over multiple
-#'  sessions? Default: \code{TRUE}.
+#' @param avg_sessions Average task estimates (betas) over multiple sessions? 
+#'  Default: \code{TRUE}.
 #'
 #' @name avg_sessions_Param
 NULL
@@ -74,7 +74,7 @@ NULL
 
 #'  faces
 #'
-#' @param faces An \eqn{F x 3} matrix, where each row contains the vertex
+#' @param faces An \eqn{F \times 3} matrix, where each row contains the vertex
 #'  indices for a given triangular face in the mesh. \eqn{F} is the number of
 #'  faces in the mesh.
 #'
@@ -135,7 +135,7 @@ NULL
 #'
 #' @param return_INLA Return the INLA model object? (It can be large.)
 #'  Default: \code{TRUE}. Required for running \code{id_activations}
-#'  after, but not for running BayesGLM_joint after to get
+#'  after, but not for running BayesGLM2 after to get
 #'  posterior quantities of group means or contrasts.
 #'
 #' @name return_INLA_Param
@@ -221,7 +221,7 @@ NULL
 
 #'  vertices
 #'
-#' @param vertices A \eqn{V x 3} matrix, where each row contains the Euclidean
+#' @param vertices A \eqn{V \times 3} matrix, where each row contains the Euclidean
 #'  coordinates at which a given vertex in the mesh is located. \eqn{V} is the
 #'  number of vertices in the mesh
 #'

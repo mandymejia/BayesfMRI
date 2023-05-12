@@ -20,14 +20,12 @@ BayesGLM(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA = TRUE,
+  return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
   meanTol = 1e-06,
-  varTol = 1e-06,
-  emTol = 0.001,
-  trim_INLA = TRUE
+  varTol = 1e-06
 )
 }
 \arguments{
@@ -39,19 +37,27 @@ name of that session. See \code{?is.BfMRI.sess} for details.
 Note that the argument \code{session_names} can be used instead of providing
 the session names as the names of the elements in \code{data}.}
 
-\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
-coordinates at which a given vertex in the mesh is located. \eqn{V} is the
-number of vertices in the mesh}
+\item{vertices, faces}{If \code{Bayes}, the geometry data can be provided
+with either both the \code{vertices} and \code{faces} arguments, or with the
+\code{mesh} argument.
 
-\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
-indices for a given triangular face in the mesh. \eqn{F} is the number of
-faces in the mesh.}
+\code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
+Euclidean coordinates at which a given vertex in the mesh is located.
+\eqn{V} is the number of vertices in the mesh.
 
-\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data).}
+\code{faces} is a \eqn{F \times 3} matrix, where each row contains the
+vertex indices for a given triangular face in the mesh. \eqn{F} is the
+number of faces in the mesh.}
+
+\item{mesh}{If \code{Bayes}, the geometry data can be provided
+with either both the \code{vertices} and \code{faces} arguments, or with the
+\code{mesh} argument.
+
+\code{mesh} is an \code{"inla.mesh"} object. This can be created for surface
+data using \code{\link{make_mesh}}.}
 
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating the
-vertices to be included.}
+vertices to include.}
 
 \item{task_names}{(Optional) Names of tasks represented in design matrix.}
 
@@ -96,7 +102,7 @@ for model estimation. Default: \code{4}.}
 
 \item{return_INLA}{Return the INLA model object? (It can be large.)
 Default: \code{TRUE}. Required for running \code{id_activations}
-after, but not for running BayesGLM_joint after to get
+after, but not for running BayesGLM2 after to get
 posterior quantities of group means or contrasts.}
 
 \item{outfile}{File name where results will be written (for use by
@@ -104,19 +110,12 @@ posterior quantities of group means or contrasts.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+\item{avg_sessions}{Average task estimates (betas) over multiple sessions?
+Default: \code{TRUE}.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
 Default: \code{1e-6} for both.}
-
-\item{emTol}{The stopping tolerance for the EM algorithm. Default:
-\code{1e-3}.}
-
-\item{trim_INLA}{(logical) should the \code{INLA_model_obj} within the
-result be trimmed to only what is necessary to use \code{id_activations}?
-Default: \code{TRUE}.}
 }
 \value{
 A \code{"BayesGLM"} object: a list with elements

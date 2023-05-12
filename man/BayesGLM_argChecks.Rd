@@ -13,14 +13,13 @@ BayesGLM_argChecks(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA = TRUE,
+  return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06,
-  emTol = 0.001,
-  trim_INLA = TRUE
+  emTol = 0.001
 )
 }
 \arguments{
@@ -41,8 +40,6 @@ BayesGLM_argChecks(
 \item{avg_sessions}{See \code{\link{BayesGLM}}.}
 
 \item{meanTol, varTol, emTol}{See \code{\link{BayesGLM}}.}
-
-\item{trim_INLA}{See \code{\link{BayesGLM}}.}
 }
 \value{
 The arguments that may have changed, in a list: \code{scale_BOLD},

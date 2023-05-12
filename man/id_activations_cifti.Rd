@@ -6,7 +6,7 @@
 \usage{
 id_activations_cifti(
   model_obj,
-  field_names = NULL,
+  task_names = NULL,
   session_name = NULL,
   alpha = 0.05,
   method = c("Bayesian", "classical"),
@@ -19,7 +19,7 @@ id_activations_cifti(
 \item{model_obj}{Result of \code{BayesGLM_cifti} model call, of class
 \code{"BayesGLM_cifti"}}
 
-\item{field_names}{The name(s) of the latent field(s) on which to
+\item{task_names}{The name(s) of the latent field(s) on which to
 identify activations. If \code{NULL} (default), analyze all tasks.}
 
 \item{session_name}{The name of the session to examine.

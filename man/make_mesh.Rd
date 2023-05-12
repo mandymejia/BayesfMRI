@@ -7,11 +7,11 @@
 make_mesh(vertices, faces, use_INLA = FALSE)
 }
 \arguments{
-\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+\item{vertices}{A \eqn{V \times 3} matrix, where each row contains the Euclidean
 coordinates at which a given vertex in the mesh is located. \eqn{V} is the
 number of vertices in the mesh}
 
-\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+\item{faces}{An \eqn{F \times 3} matrix, where each row contains the vertex
 indices for a given triangular face in the mesh. \eqn{F} is the number of
 faces in the mesh.}
 

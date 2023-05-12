@@ -6,7 +6,7 @@
 \usage{
 id_activations.posterior(
   model_obj,
-  field_names = NULL,
+  task_names = NULL,
   session_name = NULL,
   alpha = 0.05,
   threshold
@@ -15,7 +15,7 @@ id_activations.posterior(
 \arguments{
 \item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
 
-\item{field_names}{Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.}
+\item{task_names}{Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.}
 
 \item{session_name}{(character) The name of the session that should be examined.
 If \code{NULL} (default), the average across all sessions is used.}
