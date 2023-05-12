@@ -12,7 +12,7 @@ my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
-dir_results <- "tests/results_notINPackage"
+dir_results <- "tests/results_notInPackage"
 thisResultName <- gsub(
   ".", "_",
   as.character(packageVersion("BayesfMRI")[[1]]), fixed=TRUE
@@ -111,6 +111,8 @@ for (ii in seq(nrow(params))) {
     ifelse(params$Bayes[ii], ", Bayesian model", ", classical model" ), "\n\n"
   )
 
+  if (!params$Bayes[ii]) { next }
+
   # Do BayesGLM_cifti
   exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
     cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(params$sess[ii])],
@@ -119,6 +121,7 @@ for (ii in seq(nrow(params))) {
     brainstructures = params$bs[ii],
     onsets = switch(params$sess[ii], events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
     TR = 2.2,
+    dHRF=2,
     nuisance=switch(params$sess[ii], nuis$rp_1, nuis),
     Bayes = params$Bayes[ii],
     ar_order = ifelse(params$prewhiten[ii], 6, 0),
@@ -130,6 +133,7 @@ for (ii in seq(nrow(params))) {
     avg_sessions = params$avg[ii]
   ))
   print(exec_time)
+  stop()
 
   if (FALSE) {
     bgroup_fake <- list(bfmri_ii, bfmri_ii)

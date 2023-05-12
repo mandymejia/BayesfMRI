@@ -9,8 +9,10 @@
 ^cran-comments\.md
 ^codecov\.yml$
 # Tests ------------------------
+^tests/simulate_cifti\.R$
 ^tests/run_BayesfMRI_tests_notInPackage_MSC\.R$
 ^tests/run_BayesfMRI_tests_notInPackage_HCP\.R$
+^tests/run_BayesfMRI_tests_notInPackage_sim\.R$
 ^tests/data_notInPackage
 ^tests/results_notInPackage
 # Volumetric -------------------

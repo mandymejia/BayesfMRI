@@ -1,15 +1,17 @@
 # [Build --> Install and Restart]
 
+# TO DO: diff plot names for HCP vs MSC
+
 # Setup ------------------------------------------------------------------------
 # [Edit these]
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 6000
+resamp_res <- 4000
 my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
-dir_data <- "tests/data_notInPackage"
+dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
 dir_results <- "tests/results_notInPackage"
 thisResultName <- gsub(
   ".", "_",
@@ -29,26 +31,20 @@ library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
 library(BayesfMRI)
 
-# Get file names.
-fnames <- list(
-  #tmask = "derivatives surface_pipeline sub-MSC01 processed_task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_bold_32k_fsLR_tmask.txt"
-  cifti_1 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-01_bold.dtseries.nii",
-  events_1 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-01_events.tsv",
-  cifti_2 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-02_bold.dtseries.nii",
-  events_2 = "derivatives surface_pipeline sub-MSC01 task_timecourses ses-func01 sub-MSC01_ses-func01_task-motor_run-02_events.tsv"
+# Simulate data ----------------------------------------------------------------
+source("tests/simulate_cifti.R")
+bsim <- simulate_cifti_multiple(
+  wb_path=my_wb,
+  brainstructures="both",
+  n_subjects=1,
+  n_sessions=2,
+  n_runs=1,
+  ntasks=3,
+  ntime=400,
+  sessions_var=3,
+  runs_var=2,
+  resamp_res=resamp_res
 )
-fnames <- lapply(fnames, function(x){file.path(dir_data, x)})
-
-events <- lapply(fnames[c("events_1", "events_2")], read.table, header=TRUE)
-task_names <- c("RHand", "LHand", "RFoot", "LFoot", "Tongue")
-events <- lapply(events, function(x){
-  setNames(lapply(task_names, function(y){
-    cbind(
-      onset = x$onset[x$trial_type==y],
-      duration = x$duration[x$trial_type==y]
-    )
-  }), task_names)
-})
 
 # BayesGLM ---------------------------------------------------------------------
 
@@ -69,7 +65,7 @@ params <- rbind(
     prewhiten=TRUE,
     sess=1,
     avg=TRUE,
-    bs=c("both", "right"),
+    bs=c("both", "left"),
     smooth=c(5, 0),
     Bayes=FALSE
   )
@@ -83,7 +79,7 @@ if (doINLA) {
       prewhiten=c(FALSE, TRUE, FALSE),
       sess=c(1, 2, 2),
       avg=c(TRUE, TRUE, FALSE),
-      bs=c("right", "both", "right"),
+      bs=c("left", "both", "left"),
       smooth=c(5, 5, 0),
       Bayes=TRUE
     )
@@ -106,22 +102,22 @@ for (ii in seq(nrow(params))) {
 
   # Do BayesGLM_cifti
   exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
-    cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(params$sess[ii])],
+    cifti_fname = bsim$simulated_cifti[seq(params$sess[ii])],
     surfL_fname=ciftiTools.files()$surf["left"],
     surfR_fname=ciftiTools.files()$surf["right"],
     brainstructures = params$bs[ii],
-    onsets = switch(params$sess[ii], events[[1]], events[seq(2)]),
-    TR = 2.2,
+    design = bsim$design,
     Bayes = params$Bayes[ii],
     ar_order = ifelse(params$prewhiten[ii], 6, 0),
     ar_smooth = params$smooth[ii],
     resamp_res = ifelse(params$Bayes[ii], resamp_res/2, resamp_res) / ifelse(params$bs[ii]=="both", 2, 1),
     verbose = FALSE,
-    return_INLA = TRUE,
+    return_INLA = "trimmed",
     outfile = file.path(dir_results, "bfmri_out"),
     avg_sessions = params$avg[ii]
   ))
   print(exec_time)
+  stop()
 
   if (FALSE) {
     bgroup_fake <- list(bfmri_ii, bfmri_ii)
@@ -131,8 +127,8 @@ for (ii in seq(nrow(params))) {
   # Plot GLM results.
   if (saveResults) {
     plot(
-      bfmri_ii, idx=5,
-      title=paste0("Tongue, params ", ii),
+      bfmri_ii, idx=1,
+      title=paste0("Win, params ", ii),
       fname=file.path(dir_resultThis, paste0("bglm_", ii))
     )
   }
@@ -156,8 +152,8 @@ for (ii in seq(nrow(params))) {
   }
   if (saveResults) {
     plot(
-      act_ii$activations_xifti, idx=5,
-      title=paste0("Tongue activations, params ", ii),
+      act_ii$activations_xifti, idx=1,
+      title=paste0("Win activations, params ", ii),
       fname=file.path(dir_resultThis, paste0("act_", ii))
     )
   }
@@ -165,7 +161,7 @@ for (ii in seq(nrow(params))) {
   if (saveResults) {
     saveRDS(
       list(bfmri=bfmri_ii, act=act_ii, exec_time=exec_time),
-      file.path(dir_resultThis, paste0("params", ii, "_MSC.rds"))
+      file.path(dir_resultThis, paste0("params", ii, "_HCP.rds"))
     )
   }
 }
@@ -175,29 +171,3 @@ file.remove(file.path(dir_results, "bfmri_out_right.rds"))
 
 # BayesGLM2?
 
-# Export summary graphics ------------------------------------------------------
-params$sess_avg <- NULL
-library(gridExtra)
-png(
-  file.path(dir_resultThis, "params.png"),
-  height = 50*nrow(params), width = 200*ncol(params)
-)
-grid.table(params)
-dev.off()
-
-ctast <- read_xifti(file.path(dir_data, "derivatives surface_pipeline sub-MSC01 task_contrasts_cifti motor sub-MSC01-motor_contrasts_32k_fsLR.dscalar.nii"))
-plot(
-  ctast, idx=5, zlim=c(-5, 5),
-  title=paste0("MSC tongue contrast"),
-  fname=file.path(dir_resultThis, paste0("MSC_tongue_contrast"))
-)
-
-ciftiTools:::view_comp(
-  file.path(dir_resultThis, c(paste0("bglm_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
-  fname=file.path(dir_resultThis, "bglm_comp.png")
-)
-
-ciftiTools:::view_comp(
-  file.path(dir_resultThis, c(paste0("act_", seq(1, 11), ".png"), "MSC_tongue_contrast.png")),
-  fname=file.path(dir_resultThis, "act_comp.png")
-)
