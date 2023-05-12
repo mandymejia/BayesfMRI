@@ -39,7 +39,7 @@
 #'
 #' @return A list containing...
 #' @importFrom stats as.formula
-#' @importFrom fMRItools nuisance_regression
+#' @importFrom fMRItools nuisance_regression scale_timeseries
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),

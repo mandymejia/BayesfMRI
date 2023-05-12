@@ -11,11 +11,11 @@
 #' @param n_subjects The number of subjects for which to generate data
 #' @param n_sessions The number of sessions per subject to generate
 #' @param n_runs The number of runs per session to generate
-#' @param subjects_var The amount of average variance in coefficient location
+#' @param subject_var The amount of average variance in coefficient location
 #'   from subject to subject
-#' @param sessions_var The amount of average variance in coefficient location
+#' @param session_var The amount of average variance in coefficient location
 #'   from session to session within subject
-#' @param runs_var The amount of average variance in coefficient location from
+#' @param run_var The amount of average variance in coefficient location from
 #'   run to run within session
 #'
 #' @importFrom ciftiTools smooth_cifti
@@ -32,9 +32,9 @@ spatial_effects_cifti_cs <- function(
   n_subjects = 1,
   n_sessions = 1,
   n_runs = 1,
-  subjects_var = 4,
-  sessions_var = 2,
-  runs_var = 1) {
+  subject_var = 4,
+  session_var = 2,
+  run_var = 1) {
 
   if (!inherits(xii, "xifti")) { stop("`xii` must be a `'xifti'` object.") }
   xii <- remove_xifti(xii, "subcortical")
@@ -56,14 +56,14 @@ spatial_effects_cifti_cs <- function(
       # Now jitter for subjects
       hem_centers_i <-
         sapply(hem_centers, function(hc) {
-          if(!is.null(hc)) return(hc + rpois(1, subjects_var))
+          if(!is.null(hc)) return(hc + rpois(1, subject_var))
           if(is.null(hc)) return(NULL)
         }, simplify = F)
       sapply(paste("Session",seq(n_sessions)), function(j) {
         # Jitter a little less for sessions
         hem_centers_ij <-
           sapply(hem_centers_i, function(hc) {
-            if(!is.null(hc)) return(hc + rpois(1, subjects_var))
+            if(!is.null(hc)) return(hc + rpois(1, subject_var))
             if(is.null(hc)) return(NULL)
           }, simplify = F)
         sapply(paste("Run", seq(n_runs)), function(k) {
@@ -71,7 +71,7 @@ spatial_effects_cifti_cs <- function(
           binary_act_ijk <-
             mapply(function(hc,nvox) {
               if(is.null(hc)) return(NULL)
-              hem_center_ijk <- hc + rpois(1, subjects_var)
+              hem_center_ijk <- hc + rpois(1, subject_var)
               hem_binary <- rep(0,nvox)
               hem_binary[hem_center_ijk] <- 1
               return(as.matrix(hem_binary))
@@ -127,11 +127,11 @@ spatial_effects_cifti_cs <- function(
 # #' @param n_subjects The number of subjects for which to generate data
 # #' @param n_sessions The number of sessions per subject to generate
 # #' @param n_runs The number of runs per session to generate
-# #' @param subjects_var The amount of average variance in coefficient location
+# #' @param subject_var The amount of average variance in coefficient location
 # #'   from subject to subject
-# #' @param sessions_var The amount of average variance in coefficient location
+# #' @param session_var The amount of average variance in coefficient location
 # #'   from session to session within subject
-# #' @param runs_var The amount of average variance in coefficient location from
+# #' @param run_var The amount of average variance in coefficient location from
 # #'   run to run within session
 # #'
 # #' @importFrom ciftiTools smooth_cifti
@@ -147,9 +147,9 @@ spatial_effects_cifti_cs <- function(
 #                                      n_subjects = 1,
 #                                      n_sessions = 1,
 #                                      n_runs = 1,
-#                                      subjects_var = 4,
-#                                      sessions_var = 2,
-#                                      runs_var = 1) {
+#                                      subject_var = 4,
+#                                      session_var = 2,
+#                                      run_var = 1) {
 #   if(!"xifti" %in% class(xii)) stop("The xii must have class 'xifti'.")
 #   n_vox <- nrow(xii$data$subcort)
 
@@ -168,14 +168,14 @@ spatial_effects_cifti_cs <- function(
 #       # Now jitter for subjects
 #       hem_centers_i <-
 #         sapply(hem_centers, function(hc) {
-#           if(!is.null(hc)) return(hc + rpois(1, subjects_var))
+#           if(!is.null(hc)) return(hc + rpois(1, subject_var))
 #           if(is.null(hc)) return(NULL)
 #         }, simplify = F)
 #       sapply(paste("Session",seq(n_sessions)), function(j) {
 #         # Jitter a little less for sessions
 #         hem_centers_ij <-
 #           sapply(hem_centers_i, function(hc) {
-#             if(!is.null(hc)) return(hc + rpois(1, subjects_var))
+#             if(!is.null(hc)) return(hc + rpois(1, subject_var))
 #             if(is.null(hc)) return(NULL)
 #           }, simplify = F)
 #         sapply(paste("Run", seq(n_runs)), function(k) {
@@ -183,7 +183,7 @@ spatial_effects_cifti_cs <- function(
 #           binary_act_ijk <-
 #             mapply(function(hc,nvox) {
 #               if(is.null(hc)) return(NULL)
-#               hem_center_ijk <- hc + rpois(1, subjects_var)
+#               hem_center_ijk <- hc + rpois(1, subject_var)
 #               hem_binary <- rep(0,nvox)
 #               hem_binary[hem_center_ijk] <- 1
 #               return(as.matrix(hem_binary))

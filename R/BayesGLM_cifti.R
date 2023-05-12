@@ -333,6 +333,9 @@ BayesGLM_cifti <- function(
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
+      if (!is.null(resamp_res) && infer_resolution(xii_ss)!=resamp_res) {
+        xii_ss <- resample_xifti(xii_ss, resamp_res=resamp_res)
+      }
     } else {
       xii_ss <- read_cifti(
         cifti_fname[ss], brainstructures=brainstructures,

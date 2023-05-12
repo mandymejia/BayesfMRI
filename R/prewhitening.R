@@ -178,7 +178,7 @@ prewhiten_cifti <- function(data,
 #' @param scale_design (logical) Should the design matrix be scaled? (Default is TRUE)
 #' @param ar_order Order of the AR used to prewhiten the data at each location
 #' @importFrom stats ar.yw
-#' @importFrom fMRItools nuisance_regression
+#' @importFrom fMRItools nuisance_regression scale_timeseries
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average
