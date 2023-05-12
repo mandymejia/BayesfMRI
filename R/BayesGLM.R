@@ -13,7 +13,6 @@
 #' @param verbose See \code{\link{BayesGLM}}.
 #' @param avg_sessions See \code{\link{BayesGLM}}.
 #' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
-#' @param trim_INLA See \code{\link{BayesGLM}}.
 #'
 #' @return The arguments that may have changed, in a list: \code{scale_BOLD},
 #'  \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
@@ -28,14 +27,14 @@ BayesGLM_argChecks <- function(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA = TRUE,
+  return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose=FALSE,
   avg_sessions = FALSE,
   meanTol=1e-6,
   varTol=1e-6,
-  emTol=1e-3,
-  trim_INLA = TRUE){
+  emTol=1e-3
+  ){
 
   if (isTRUE(scale_BOLD)) {
     message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
@@ -58,6 +57,15 @@ BayesGLM_argChecks <- function(
       warning('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
     }
   }
+
+  if (isTRUE(return_INLA)) {
+    message("Setting `return_INLA` to 'trimmed'"); return_INLA <- "trimmed"
+  }
+  if (isFALSE(return_INLA)) {
+    message("Setting `return_INLA` to 'minimal'"); return_INLA <- "minimal"
+  }
+  return_INLA <- match.arg(return_INLA, c("trimmed", "full", "minimal"))
+
   # Rename these arguments.
   do_Bayesian <- Bayes; rm(Bayes)
   do_EM <- EM; rm(EM)
@@ -70,20 +78,19 @@ BayesGLM_argChecks <- function(
   stopifnot(is_1(aic, "logical"))
   stopifnot(is_1(num.threads, "numeric"))
   stopifnot(num.threads <= parallel::detectCores())
-  stopifnot(is_1(return_INLA, "logical"))
   stopifnot(is.null(outfile) || is_1(outfile, "character"))
   stopifnot(is_1(verbose, "logical"))
   stopifnot(is_1(avg_sessions, "logical"))
   stopifnot(is_posNum(meanTol))
   stopifnot(is_posNum(varTol))
   stopifnot(is_posNum(emTol))
-  stopifnot(is_1(trim_INLA, "logical"))
 
   list(
     scale_BOLD=scale_BOLD,
     do_Bayesian=do_Bayesian,
     do_EM = do_EM,
-    do_pw = do_pw
+    do_pw = do_pw,
+    return_INLA=return_INLA
   )
 }
 
@@ -94,17 +101,31 @@ BayesGLM_argChecks <- function(
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
-#'  session is a list with elements \code{"BOLD"}, \code{"design"}, and 
+#'  session is a list with elements \code{"BOLD"}, \code{"design"}, and
 #'  optionally \code{"nuisance"}. The name of each element in \code{data} is the
 #'  name of that session. See \code{?is.BfMRI.sess} for details.
 #'
 #'  Note that the argument \code{session_names} can be used instead of providing
 #'  the session names as the names of the elements in \code{data}.
-#' @inheritParams vertices_Param
-#' @inheritParams faces_Param
-#' @inheritParams mesh_Param_inla
+#' @param vertices,faces If \code{Bayes}, the geometry data can be provided
+#'  with either both the \code{vertices} and \code{faces} arguments, or with the
+#'  \code{mesh} argument.
+#'
+#'  \code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
+#'  Euclidean coordinates at which a given vertex in the mesh is located.
+#'  \eqn{V} is the number of vertices in the mesh.
+#'
+#'  \code{faces} is a \eqn{F \times 3} matrix, where each row contains the
+#'  vertex indices for a given triangular face in the mesh. \eqn{F} is the
+#'  number of faces in the mesh.
+#' @param mesh If \code{Bayes}, the geometry data can be provided
+#'  with either both the \code{vertices} and \code{faces} arguments, or with the
+#'  \code{mesh} argument.
+#'
+#'  \code{mesh} is an \code{"inla.mesh"} object. This can be created for surface
+#'  data using \code{\link{make_mesh}}.
 #' @param mask (Optional) A length \eqn{V} logical vector indicating the
-#'  vertices to be included.
+#'  vertices to include.
 #' @inheritParams task_names_Param
 #' @inheritParams session_names_Param
 #' @inheritParams contrasts_Param
@@ -123,8 +144,7 @@ BayesGLM_argChecks <- function(
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Default: \code{1e-6} for both.
-#' @inheritParams emTol_Param
-#' @inheritParams trim_INLA_Param
+# @inheritParams emTol_Param
 #'
 #' @return A \code{"BayesGLM"} object: a list with elements
 #'  \describe{
@@ -178,16 +198,16 @@ BayesGLM <- function(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA = TRUE,
+  return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
   meanTol = 1e-6,
-  varTol = 1e-6,
-  emTol = 1e-3,
-  trim_INLA = TRUE){
+  varTol = 1e-6#, emTol = 1e-3,
+  ){
 
   EM <- FALSE
+  emTol <- 1e-3
 
   #TO DO:
   #add "(ignored if classicalGLM_only = TRUE) to some params"
@@ -220,13 +240,13 @@ BayesGLM <- function(
     avg_sessions = avg_sessions,
     varTol = varTol,
     meanTol = meanTol,
-    emTol = emTol,
-    trim_INLA = trim_INLA
+    emTol = emTol
   )
   scale_BOLD <- argChecks$scale_BOLD
   do_Bayesian <- argChecks$do_Bayesian
   do_EM <- argChecks$do_EM
   do_pw <- argChecks$do_pw
+  return_INLA <- argChecks$return_INLA
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   ## Define a few return variables that may or may not be calculated. ----------
@@ -299,7 +319,7 @@ BayesGLM <- function(
   V <- sum(mask2)
   V_all <- length(mask2)
 
-  ## Beta names: check or make. ------------------------------------------------
+  ## Task names: check or make. ------------------------------------------------
   if (!is.null(task_names)) {
     if (length(task_names) != K) {
       stop(
@@ -458,10 +478,8 @@ BayesGLM <- function(
   y_all <- c()
   X_all_list <- NULL
   # Classical GLM
-  num_GLM <- n_sess
-  classical_session_names <- session_names
-  result_classical <- vector('list', length=num_GLM)
-  for (ss in seq(num_GLM)) {
+  result_classical <- vector('list', length=n_sess)
+  for (ss in seq(n_sess)) {
     #set up vectorized data and big sparse design matrix
     if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
@@ -496,6 +514,8 @@ BayesGLM <- function(
     SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = K) #each?
     SE_beta_hat_s[mask2==TRUE,] <- SE_beta_s
 
+    colnames(beta_hat_s) <- colnames(SE_beta_hat_s) <- task_names
+
     result_classical[[ss]] <- list(
       estimates = beta_hat_s,
       SE_estimates = SE_beta_hat_s,
@@ -504,7 +524,7 @@ BayesGLM <- function(
       mask = mask2
     )
   }
-  names(result_classical) <- classical_session_names
+  names(result_classical) <- session_names
 
   # Bayesian GLM. --------------------------------------------------------------
   if (do_Bayesian) {
@@ -630,22 +650,24 @@ BayesGLM <- function(
       task_estimates <- extract_estimates(object=INLA_model_obj, session_names=session_names, mask=mask2) #posterior means of latent task field
       hyperpar_posteriors <- get_posterior_densities(object=INLA_model_obj, spde, task_names) #hyperparameter posterior densities
 
-      #extract stuff needed for group analysis
-      mu.theta <- INLA_model_obj$misc$theta.mode
-      Q.theta <- solve(INLA_model_obj$misc$cov.intern) #not needed for EM version
-
       #construct object to be returned
-      if(!return_INLA){
-        INLA_model_obj <- NULL
-      } else {
-        if(trim_INLA) INLA_model_obj <- trim_INLA_model_obj(INLA_model_obj)
-      }
+      INLA_model_obj <- switch(return_INLA,
+        trimmed=trim_INLA_model_obj(INLA_model_obj),
+        full=INLA_model_obj,
+        minimal=list( # just what's needed for group analysis
+          mu.theta = INLA_model_obj$misc$theta.mode,
+          Q.theta = solve(INLA_model_obj$misc$cov.intern)
+        )
+      )
     }
+  } else {
+    task_estimates <- lapply(result_classical, function(x){ x$estimates })
+    attr(task_estimates, "GLM_type") <- "classical"
   }
 
   # Clean up and return. -------------------------------------------------------
   prewhiten_info <- NULL
-  if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC=max_AIC)
+  if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC = max_AIC)
 
   result <- list(
     task_estimates = task_estimates,
@@ -660,9 +682,7 @@ BayesGLM <- function(
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~
-    posterior_Sig_inv = Sig_inv,
-    mu.theta = mu.theta,
-    Q.theta = Q.theta,
+    #posterior_Sig_inv = Sig_inv,
     y = y_all,
     X = X_all_list,
     prewhiten_info = prewhiten_info,

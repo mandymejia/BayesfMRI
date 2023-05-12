@@ -91,7 +91,7 @@
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Default: \code{1e-6} for both.
-#' @inheritParams emTol_Param
+# @inheritParams emTol_Param
 #' @inheritParams trim_INLA_Param
 #'
 #' @return An object of class \code{"BayesGLM_cifti"}: a list with elements
@@ -137,16 +137,16 @@ BayesGLM_cifti <- function(
   ar_smooth = 5,
   aic = FALSE,
   num.threads = 4,
-  return_INLA = TRUE,
+  return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
   avg_sessions = TRUE,
   meanTol = 1e-6,
-  varTol = 1e-6,
-  emTol = 1e-3,
-  trim_INLA = TRUE){
+  varTol = 1e-6#,emTol = 1e-3,
+  ){
 
   EM <- FALSE
+  emTol <- 1e-3
 
   # Preliminary steps. ---------------------------------------------------------
   ## Check simple arguments.
@@ -167,13 +167,13 @@ BayesGLM_cifti <- function(
     avg_sessions = avg_sessions,
     meanTol = meanTol,
     varTol = varTol,
-    emTol = emTol,
-    trim_INLA = trim_INLA
+    emTol = emTol
   )
   scale_BOLD <- argChecks$scale_BOLD
   do_Bayesian <- argChecks$do_Bayesian
   do_EM <- argChecks$do_EM
   do_pw <- argChecks$do_pw
+  return_INLA <- argChecks$return_INLA
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   # Brain structures.
@@ -485,9 +485,7 @@ BayesGLM_cifti <- function(
       verbose = verbose,
       avg_sessions = avg_sessions,
       meanTol=meanTol,
-      varTol=varTol,
-      emTol=emTol,
-      trim_INLA = trim_INLA
+      varTol=varTol#,emTol=emTol,
     )
 
     BayesGLM_results[[bb]] <- BayesGLM_out
@@ -539,8 +537,10 @@ BayesGLM_cifti <- function(
   }
 
   result <- list(
-    task_estimates = task_cifti,
-    task_estimates_classical = task_cifti_classical,
+    task_estimates_xii = list(
+      Bayes = task_cifti,
+      classical = task_cifti_classical
+    ),
     BayesGLM_results = BayesGLM_results,
     session_names = session_names,
     n_sess_orig = n_sess_orig,
