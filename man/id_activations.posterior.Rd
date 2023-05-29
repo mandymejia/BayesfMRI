@@ -6,27 +6,20 @@
 \usage{
 id_activations.posterior(
   model_obj,
-  task_names = NULL,
-  session_name = NULL,
+  tasks = NULL,
+  session,
   alpha = 0.05,
   threshold
 )
 }
 \arguments{
-\item{model_obj}{An object of class ‘"BayesGLM"’, a result of a call to BayesGLM}
+\item{model_obj}{Result of \code{BayesGLM}, of class \code{"BayesGLM"}.}
 
-\item{task_names}{Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.}
-
-\item{session_name}{(character) The name of the session that should be examined.
-If \code{NULL} (default), the average across all sessions is used.}
-
-\item{alpha}{Significance level (e.g. 0.05)}
-
-\item{threshold}{Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)}
+\item{tasks, session, alpha, threshold}{See \code{\link{id_activations}}.}
 }
 \value{
 A list with two elements: \code{active}, which gives a matrix of zeros
-and ones of the same dimension as \code{model_obj$task_estimates${session_name}},
+and ones of the same dimension as \code{model_obj$task_estimates${session}},
 and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 more information).
 }
@@ -39,3 +32,4 @@ For a given latent field, identifies locations that exceed a certain activation
 threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
 posterior distribution of the latent field.
 }
+\keyword{internal}

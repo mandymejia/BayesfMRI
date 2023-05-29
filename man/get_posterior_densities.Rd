@@ -4,10 +4,10 @@
 \alias{get_posterior_densities}
 \title{Extracts posterior density estimates for hyperparameters}
 \usage{
-get_posterior_densities(object, spde, task_names)
+get_posterior_densities(INLA_model_obj, spde, task_names)
 }
 \arguments{
-\item{object}{An object of class \code{"inla"}, a result of a call to
+\item{INLA_model_obj}{An object of class \code{"inla"}, a result of a call to
 \code{inla()}}
 
 \item{spde}{The model used for the latent fields in the \code{inla()} call,

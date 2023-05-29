@@ -1,20 +1,43 @@
+#' Central derivative
+#' 
+#' Take the central derivative of numeric vectors by averaging the forward and
+#'  backward differences.
+#' @param x A numeric matrix, or a vector which will be converted to a
+#'  single-column matrix.
+#' @return \code{x} with the derivative taken for each column.
+#' @export
+#' 
+cderiv <- function(x){
+  x <- as.matrix(x)
+  dx <- diff(x)
+  (rbind(0, dx) + rbind(dx, 0)) / 2
+}
+
 #' Make HRFs
 #'
 #' Create HRF design matrix columns from onsets and durations
 #'
-#' @param onsets \eqn{K}-length list in which the name of each element is
-#'  the name of the corresponding task, and the value of each element is a
-#'  matrix of onsets (first column) and durations (second column) for each
-#'  stimuli (each row) of the corresponding task, in SECONDS. 
-#' @param TR Temporal resolution of fMRI data, in SECONDS.
-#' @param duration Length of fMRI timeseries, in SCANS.
+#' @param onsets \eqn{L}-length list in which the name of each element is the 
+#'  name of the corresponding task, and the value of each element is a matrix of
+#'  onsets (first column) and durations (second column) for each stimuli (each 
+#'  row) of the corresponding task.
+#'
+#' @param TR Temporal resolution of the data, in seconds.
+#' @param duration The number of volumes in the fMRI data. 
+#' @param dHRF Set to \code{1} to add the temporal derivative of each column
+#'  in the design matrix, \code{2} to add the second derivatives too, or
+#'  \code{0} to not add any columns. Default: \code{1}.
+#' @param dHRF_as Only applies if \code{dHRF > 0}. Model the temporal 
+#'  derivatives as \code{"nuisance"} signals to regress out, \code{"tasks"}, or 
+#'  \code{"auto"} to treat them as tasks unless the total number of columns in
+#'  the design matrix (i.e. the total number of tasks, times `dHRF+1`), would be 
+#'  \code{>=10}, the limit for INLA.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
-#' @param deriv \code{0} (default), \code{1}, or \code{2}, to use the HRF
-#'   function, the first derivative of the HRF, or the second derivative of the
-#'   HRF, respectively.
+#' @param verbose Print messages? Default: \code{FALSE}
 #'
-#' @return Design matrix containing one HRF column for each task
+#' @return List with the design matrix and/or the nuisance matrix containing the
+#'  HRF-convolved stimuli as columns, depending on \code{dHRF_as}.
 #'
 #' @importFrom stats convolve
 #' 
@@ -25,46 +48,86 @@
 #' make_HRFs(onsets, TR, duration)
 #'
 #' @export
-make_HRFs <- function(onsets, TR, duration, downsample=100, deriv = 0){
-  if(!deriv %in% c(0,1,2)) stop('Argument "deriv" must take the value 0, 1, or 2.')
+make_HRFs <- function(
+  onsets, TR, duration, 
+  dHRF=c(0, 1, 2),
+  dHRF_as=c("auto", "nuisance", "task"),
+  downsample=100, 
+  verbose=FALSE){
+  
+  dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
+  if (dHRF == 0) {
+    if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "task")) {
+      warning("`dHRF_as` is only applicable if `dHRF > 0`. If `dHRF == 0`, there's no need to specify `dHRF_as`.")
+    }
+  }
+  dHRF_as <- match.arg(dHRF_as, c("auto", "nuisance", "task"))
 
-  K <- length(onsets) #number of tasks
-  if(is.null(names(onsets))) task_names <- paste0('task', 1:K) else task_names <- names(onsets)
+  nK <- length(onsets) #number of tasks
+
+  if (dHRF > 0 && dHRF_as=="auto") {
+    nJ <- (dHRF+1) * nK # number of design matrix columns
+    if (nJ > 5) {
+      if (verbose) { 
+        message("Modeling the HRF derivatives as nuisance signals.\n")
+      }
+      dHRF_as <- "nuisance"
+    } else {
+      if (verbose) {
+        message("Modeling the HRF derivatives as tasks signals.\n")
+      }
+      dHRF_as <- "task"
+    }
+  }
+
+  task_names <- if (is.null(names(onsets))) {
+    task_names <- paste0('task', 1:nK)
+  } else {
+    names(onsets)
+  }
 
   nsec <- duration*TR; # Total time of experiment in seconds
   stimulus <- rep(0, nsec*downsample) # For stick function to be used in convolution
   inds <- seq(TR*downsample, nsec*downsample, by = TR*downsample) # Extract EVs in a function of TR
 
-  design <- vector("list", length=deriv+1)
+  design <- nuisance <- vector("list", length=dHRF+1)
 
-  for (dd in seq(deriv+1)) {
+  for (dd in seq(dHRF+1)) {
     dname_dd <- switch(dd, "HRF", "dHRF", "d2HRF")
-    design[[dd]] <- matrix(NA, nrow=duration, ncol=K)
-    colnames(design[[dd]]) <- paste0(task_names, "_", dname_dd)
+    theHRF_dd <- matrix(NA, nrow=duration, ncol=nK)
+    colnames(theHRF_dd) <- paste0(task_names, "_", dname_dd)
 
     HRF_fn <- switch(dd, HRF, dHRF, d2HRF)
     HRF_dd <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
 
-    for(k in 1:K){
-      onsets_k <- onsets[[k]][,1] #onset times in scans
-      durations_k <- onsets[[k]][,2] #durations in scans
+    for (kk in seq(nK)) {
+      onsets_k <- onsets[[kk]][,1] #onset times in scans
+      durations_k <- onsets[[kk]][,2] #durations in scans
 
       # Define stimulus function
       stimulus_k <- stimulus
-      for(ii in 1:length(onsets_k)){
+      for (ii in seq(length(onsets_k))) {
         start_ii <- round(onsets_k[ii]*downsample)
         end_ii <- round(onsets_k[ii]*downsample + durations_k[ii]*downsample)
         stimulus_k[start_ii:end_ii] <- 1
       }
 
-      # Convolve boxcar with canonical HRF & add to design[[ii]] matrix
+      # Convolve boxcar with canonical HRF & add to design2[[ii]] matrix
       HRF_k <- convolve(stimulus_k, rev(HRF_dd), type='open')
-      design[[dd]][,k] <- HRF_k[inds]
+      theHRF_dd[,kk] <- HRF_k[inds]
+    }
+
+    if (dd > 1 && dHRF_as == "nuisance") {
+      nuisance[[dd]] <- theHRF_dd
+    } else {
+      design[[dd]] <- theHRF_dd
     }
   }
-  design <- do.call(cbind, design)
 
-  return(design)
+  list(
+    design=do.call(cbind, design), 
+    nuisance=do.call(cbind, nuisance)
+  )
 }
 
 #' Calculate the canonical (double-gamma) HRF

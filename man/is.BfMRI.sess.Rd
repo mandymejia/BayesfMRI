@@ -35,8 +35,8 @@ onsets1 <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
 onsets2 <- list(taskA=cbind(c(1,18,25),4))
 TR <- .72 # .72 seconds per volume, or (1/.72) Hz
 duration <- nT # session is 300 volumes long (300*.72 seconds long)
-design1 <- make_HRFs(onsets1, TR, duration)
-design2 <- make_HRFs(onsets2, TR, duration)
+design1 <- make_HRFs(onsets1, TR, duration)$design
+design2 <- make_HRFs(onsets2, TR, duration)$design
 x <- list(
  sessionOne = list(BOLD=BOLD1, design=design1),
  sessionTwo = list(BOLD=BOLD2, design=design2)

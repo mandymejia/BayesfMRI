@@ -11,8 +11,9 @@ BayesGLM(
   mesh = NULL,
   mask = NULL,
   task_names = NULL,
-  session_names = NULL,
   contrasts = NULL,
+  session_names = NULL,
+  combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -23,7 +24,6 @@ BayesGLM(
   return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = TRUE,
   meanTol = 1e-06,
   varTol = 1e-06
 )
@@ -61,12 +61,15 @@ vertices to include.}
 
 \item{task_names}{(Optional) Names of tasks represented in design matrix.}
 
+\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
+
 \item{session_names}{(Optional, and only relevant for multi-session modeling)
 Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
 argument will overwrite the names of the list entries in \code{data}, if
 both exist.}
 
-\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
+\item{combine_sessions}{Average task estimates (betas) over multiple sessions?
+Default: \code{TRUE}.}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
@@ -81,7 +84,8 @@ is detected, in which case sd scaling will be used instead.
 }\if{html}{\out{</div>}}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}.}
+maximum and then subtracting the mean? Default: \code{TRUE}. If
+\code{FALSE}, the design matrix is centered but not scaled.}
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
 addition to the classical GLM. Classical GLM results are always returned.}
@@ -109,9 +113,6 @@ posterior quantities of group means or contrasts.}
 \code{BayesGLM2}).}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
-
-\item{avg_sessions}{Average task estimates (betas) over multiple sessions?
-Default: \code{TRUE}.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.

@@ -11,7 +11,7 @@
 #' @param return_INLA See \code{\link{BayesGLM}}.
 #' @param outfile See \code{\link{BayesGLM}}.
 #' @param verbose See \code{\link{BayesGLM}}.
-#' @param avg_sessions See \code{\link{BayesGLM}}.
+#' @param combine_sessions See \code{\link{BayesGLM}}.
 #' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
 #'
 #' @return The arguments that may have changed, in a list: \code{scale_BOLD},
@@ -19,6 +19,7 @@
 #'
 #' @keywords internal
 BayesGLM_argChecks <- function(
+  combine_sessions = FALSE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -30,11 +31,12 @@ BayesGLM_argChecks <- function(
   return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose=FALSE,
-  avg_sessions = FALSE,
   meanTol=1e-6,
   varTol=1e-6,
   emTol=1e-3
   ){
+
+  stopifnot(is_1(combine_sessions, "logical"))
 
   if (isTRUE(scale_BOLD)) {
     message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
@@ -80,7 +82,6 @@ BayesGLM_argChecks <- function(
   stopifnot(num.threads <= parallel::detectCores())
   stopifnot(is.null(outfile) || is_1(outfile, "character"))
   stopifnot(is_1(verbose, "logical"))
-  stopifnot(is_1(avg_sessions, "logical"))
   stopifnot(is_posNum(meanTol))
   stopifnot(is_posNum(varTol))
   stopifnot(is_posNum(emTol))
@@ -140,7 +141,7 @@ BayesGLM_argChecks <- function(
 #' @inheritParams return_INLA_Param
 #' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
-#' @inheritParams avg_sessions_Param
+#' @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Default: \code{1e-6} for both.
@@ -188,8 +189,9 @@ BayesGLM <- function(
   mask = NULL,
   # Below arguments shared with `BayesGLM_cifti`
   task_names = NULL,
-  session_names = NULL,
   contrasts = NULL,
+  session_names = NULL,
+  combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -201,7 +203,6 @@ BayesGLM <- function(
   return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = TRUE,
   meanTol = 1e-6,
   varTol = 1e-6#, emTol = 1e-3,
   ){
@@ -237,7 +238,7 @@ BayesGLM <- function(
     return_INLA = return_INLA,
     outfile = outfile,
     verbose = verbose,
-    avg_sessions = avg_sessions,
+    combine_sessions = combine_sessions,
     varTol = varTol,
     meanTol = meanTol,
     emTol = emTol
@@ -267,8 +268,8 @@ BayesGLM <- function(
       names(data) <- session_names
     }
   }
-  n_sess <- length(session_names)
-  if (n_sess == 1 && avg_sessions) avg_sessions <- FALSE
+  n_sess <- n_sess_orig <- length(session_names)
+  if (n_sess == 1 && combine_sessions) combine_sessions <- FALSE
   V <- ncol(data[[1]]$BOLD) #number of data locations
   ntime <- vapply(data, function(x){ nrow(x$BOLD) }, 0)
   K <- ncol(data[[1]]$design) #number of tasks
@@ -340,7 +341,7 @@ BayesGLM <- function(
   K2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
   for (ss in seq(n_sess)) {
     #scale data to represent % signal change (or just center if scale=FALSE)
-    data[[ss]]$BOLD <- scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD)
+    data[[ss]]$BOLD <- scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
     if (scale_design) {
       data[[ss]]$design <- scale_design_mat(data[[ss]]$design)
     } else {
@@ -357,26 +358,26 @@ BayesGLM <- function(
     }
   }
 
-  #concatenate sessions if avg_sessions=TRUE
-  if(avg_sessions){
+  #concatenate sessions if combine_sessions=TRUE
+  if(combine_sessions){
     #concatenate BOLD data across all sessions
     data <- list(
-      session_avg = list(
+      session_combined = list(
         BOLD = do.call(rbind, lapply(data, function(sess){ sess$BOLD })),
         design = do.call(rbind, lapply(data, function(sess){ sess$design }))
       )
     )
 
     #update ntime, n_sess, session_names
-    ntime <- nrow(data$session_avg$BOLD)
-    session_names <- 'session_avg'
-    n_sess_orig <- n_sess
+    ntime <- nrow(data$session_combined$BOLD)
+    sess_names_orig <- session_names
+    session_names <- 'session_combined'
     n_sess <- 1
   } else {
     # [TO DO]: allow different `ntime`.
     # Is this only problematic when `do_pw`?
     if (length(unique(ntime)) > 1) {
-      stop("Not supported yet: different BOLD time durations while `avg_sessions=FALSE`.")
+      stop("Not supported yet: different BOLD time durations while `combine_sessions=FALSE`.")
     }
     ntime <- ntime[1]
   }
@@ -609,7 +610,7 @@ BayesGLM <- function(
       task_estimates <- lapply(seq(n_sess), function(ns) task_estimates[,(seq(K) + K * (ns - 1))])
       names(task_estimates) <- session_names
       avg_task_estimates <- NULL
-      if(avg_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / n_sess
+      if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / n_sess
       theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
       names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
       #extract stuff needed for group analysis
@@ -647,8 +648,15 @@ BayesGLM <- function(
       if(verbose) cat("done!\n")
 
       #extract useful stuff from INLA model result
-      task_estimates <- extract_estimates(object=INLA_model_obj, session_names=session_names, mask=mask2) #posterior means of latent task field
-      hyperpar_posteriors <- get_posterior_densities(object=INLA_model_obj, spde, task_names) #hyperparameter posterior densities
+      task_estimates <- extract_estimates(
+        INLA_model_obj=INLA_model_obj,
+        session_names=session_names,
+        mask=mask2
+      ) #posterior means of latent task field
+      hyperpar_posteriors <- get_posterior_densities(
+        INLA_model_obj=INLA_model_obj,
+        spde, task_names
+      ) #hyperparameter posterior densities
 
       #construct object to be returned
       INLA_model_obj <- switch(return_INLA,
@@ -659,6 +667,7 @@ BayesGLM <- function(
           Q.theta = solve(INLA_model_obj$misc$cov.intern)
         )
       )
+      attr(INLA_model_obj, "format") <- return_INLA
     }
   } else {
     task_estimates <- lapply(result_classical, function(x){ x$estimates })
@@ -666,8 +675,11 @@ BayesGLM <- function(
   }
 
   # Clean up and return. -------------------------------------------------------
-  prewhiten_info <- NULL
-  if (do_pw) prewhiten_info <- list(phi = avg_AR, sigma_sq = avg_var, AIC = max_AIC)
+  prewhiten_info <- if (do_pw) {
+    list(phi = avg_AR, sigma_sq = avg_var, AIC = max_AIC)
+  } else {
+    NULL
+  }
 
   result <- list(
     task_estimates = task_estimates,
@@ -675,10 +687,11 @@ BayesGLM <- function(
     result_classical = result_classical,
     mesh = mesh,
     mesh_orig = mesh_orig,
-    mask = mask,
+    mask = mask2,
     design = design,
     task_names = task_names,
     session_names = session_names,
+    n_sess_orig = n_sess_orig,
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~
@@ -689,12 +702,9 @@ BayesGLM <- function(
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     call = match.call()
   )
-
   class(result) <- "BayesGLM"
 
-  if(!is.null(outfile)){
-    saveRDS(result, file=outfile)
-  }
+  if (!is.null(outfile)) { saveRDS(result, file=outfile) }
 
   result
 }

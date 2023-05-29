@@ -33,12 +33,12 @@ NULL
 #' @name ar_smooth_Param
 NULL
 
-#' avg_sessions
+#' combine_sessions
 #'
-#' @param avg_sessions Average task estimates (betas) over multiple sessions? 
+#' @param combine_sessions Average task estimates (betas) over multiple sessions? 
 #'  Default: \code{TRUE}.
 #'
-#' @name avg_sessions_Param
+#' @name combine_sessions_Param
 NULL
 
 #'  Bayes
@@ -160,7 +160,8 @@ NULL
 #' scale_design
 #'
 #' @param scale_design Scale the design matrix by dividing each column by its
-#'  maximum and then subtracting the mean? Default: \code{TRUE}.
+#'  maximum and then subtracting the mean? Default: \code{TRUE}. If 
+#'  \code{FALSE}, the design matrix is centered but not scaled. 
 #'
 #' @name scale_design_Param
 NULL

@@ -114,7 +114,7 @@ for(subject in subjects) {
            verbose = TRUE,
            outfile = outfile_svh,
            return_INLA = T,
-           avg_sessions = T)
+           combine_sessions = T)
   		fname_svh <- file.path(outdir, paste0(outfile_svh,'.Rdata'))
   		save(result_svh, file=fname_svh)
     }

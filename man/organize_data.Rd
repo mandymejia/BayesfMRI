@@ -4,16 +4,12 @@
 \alias{organize_data}
 \title{Organize data for Bayesian GLM}
 \usage{
-organize_data(y, X, transpose = TRUE)
+organize_data(y, X)
 }
 \arguments{
 \item{y}{the TxV data matrix containing the fMRI timeseries}
 
 \item{X}{the TxK design matrix with K task-related columns}
-
-\item{transpose}{Check orientation of data, which, if \code{TRUE}, will transpose
-the data when the number of time points is greater than the number of voxels.
-Note: this is not always true for subcortical regions.}
 }
 \value{
 A list containing fields \code{y} and \code{A} (see Details)

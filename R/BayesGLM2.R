@@ -1,33 +1,48 @@
 #' Group-level Bayesian GLM
 #'
 #' Performs group-level Bayesian GLM estimation and inference using the joint
-#'  approach described in Mejia et al. (2020)
+#'  approach described in Mejia et al. (2020).
 #'
-#' Each contrast vector specifies a group-level summary of interest. Let M be
-#'  the number of subjects and K be the number of tasks. For example, the
-#'  contrast vector `rep(rep(c(1/(M*num_sessions),rep(0, K-1)),num_sessions),M)` represents the group average
-#'  for the first task for M subjects; `c(rep(rep(c(1/(M1*num_sessions),rep(0, K-1)),num_sessions),M1),rep(rep(c(-1/(M2*num_sessions),rep(0, K-1)),num_sessions),M2))`
-#'  represents the difference between the first M1 subjects and the remaining M2
-#'  subjects (M1+M2=M) for the first task; `rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, K-2)), num_sessions),M)`
+#' Each contrast vector specifies a group-level summary of interest. Let \eqn{M}
+#'  be the number of subjects and \eqn{L} be the number of tasks. For example,
+#'  the contrast vector 
+#'  \code{rep(rep(c(1/(M*num_sessions),rep(0, L-1)),num_sessions),M)} 
+#'  represents the group average for the first task for \eqn{M} subjects; 
+#'  \code{c(rep(rep(c(1/(M1*num_sessions),rep(0, L-1)),num_sessions),M1), rep(rep(c(-1/(M2*num_sessions),rep(0, L-1)),num_sessions),M2))}
+#'  represents the difference between the first \eqn{M_1} subjects and the remaining \eqn{M_2}
+#'  subjects (M1+M2=M) for the first task; 
+#'  \code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, L-2)), num_sessions),M)}
 #'  represents the difference between the first two tasks, averaged over all
 #'  subjects.
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-#' @param results Either (1) a list of length M of objects of class BayesGLM,
-#'  or (2) a character vector of length M of file names output from the BayesGLM function.
-#'  M is the number of subjects.
-#' @param contrasts (Optional) A list of vectors, each length `M * K * num_sessions`, specifying the contrast(s)
-#'  of interest across subjects, where M is the number of subjects and K is the number of tasks.
-#'  See Details for more information. Default is to compute the average for each task across subjects.
-#' @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
-#' @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="),
-#'  or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.
-#' @param gamma (For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).
-#' @param alpha (For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).
-#' @param nsamp_theta Number of theta values to sample from posterior. Default is 50.
-#' @param nsamp_beta Number of beta vectors to sample conditional on each theta value sampled. Default is 100.
-#' @param no_cores The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.
+#' @param results Either (1) a length \eqn{M} list of \code{"BayesGLM"} objects,
+#'  or (2) a length \eqn{M} character vector of files storing \code{"BayesGLM"} 
+#'  objects saved with \code{\link{saveRDS}}. 
+#' @param contrasts (Optional) A list of vectors, each length 
+#'  \eqn{M \times L \times S}, specifying the contrast(s) of interest 
+#'  across subjects, where \eqn{M} is the number of subjects, \code{L} is the
+#'  number of tasks, and S is the number of sessions. See Details for more 
+#'  information. If \code{NULL} (default), the average for each task across 
+#'  subjects will be computed. 
+#' @param quantiles (Optional) Vector of posterior quantiles to return in 
+#'  addition to the posterior mean.
+#' @param excursion_type (For inference only) The type of excursion function for
+#'  the contrast (">", "<", "!="), or a vector thereof (each element 
+#'  corresponding to one contrast).  If \code{NULL}, no inference performed.
+#' @param gamma (For inference only) Activation threshold for the excursion set,
+#'  or a vector thereof (each element corresponding to one contrast). Default:
+#'  \code{0}.
+#' @param alpha (For inference only) Significance level for activation for the
+#'  excursion set, or a vector thereof (each element corresponding to one 
+#'  contrast). Default: \code{.05}.
+#' @param nsamp_theta Number of theta values to sample from posterior. Default: 
+#'  \code{50}.
+#' @param nsamp_beta Number of beta vectors to sample conditional on each theta
+#'  value sampled. Default: \code{100}.
+#' @param no_cores The number of cores to use for sampling betas in parallel. If 
+#'  \code{NULL} (default), do not run in parallel.
 #' @inheritParams verbose_Param_direct_TRUE
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
@@ -51,55 +66,34 @@ BayesGLM2 <- function(results,
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
   }
 
-  # Check to see that the INLA package is installed
-  # check_INLA(require_PARDISO=TRUE)
-
-  #Check if results are model objects or file paths
-  result_class <- sapply(results, class)
-  names(result_class) <- NULL
-  problem <- FALSE
-  is_RDS <- function(x){
-    if(!is.character(x)) {
-      return(FALSE)
-    } else {
-      # Damon: Replaced this line to reduce number of package dependencies:
-      #   stringr::str_sub(x, -3, -1)
-      # https://stackoverflow.com/questions/7963898/extracting-the-last-n-characters-from-a-string-in-r
-      last3 <- sub(".*(?=.{3}$)", "", x, perl=TRUE)
-      return(last3 %in% c('rds','RDS','Rds'))
+  # Check `results`, reading in the files if needed.
+  results_ok <- FALSE
+  if (is.character(results)) {
+    if (!all(file.exists(results))) {
+      stop("`results` is a character vector, but not all elements are existing files.")
     }
-  }
-  if(result_class[1] == 'character'){
-    if(any(!is_RDS(results))) problem <- TRUE
-  } else if(result_class[1] == 'BayesGLM'){
-    if(any(result_class != 'BayesGLM')) problem <- TRUE
-  } else {
-    problem <- TRUE
-  }
-  if(problem) stop('All elements of results argument must be BayesGLM or a character file path to an RDS object.')
-
-  #if using files, grab the first model result for checks. read all in.
-  M <- length(results)
-  use_files <- (result_class[1]=='character')
-  use_objects <- (result_class[1]=='BayesGLM')
-  if(use_files) {
-    fnames <- results
     results <- lapply(fnames, readRDS)
   }
-
-  result1 <- results[[1]]
-  if(inherits(result1, "BayesGLM_cifti")) {
-    which_BayesGLM <- which(sapply(result1$GLMs_Bayesian,class) == "BayesGLM")
-    nR <- length(which_BayesGLM)
-    results_names <- names(result1$GLMs_Bayesian[which_BayesGLM])
-  } else {
-    nR <- 1
-    results_names <- "BayesGLM"
+  if (!is.list(results)) {
+    stop("`results` must be a list of `'BayesGLM'` objects, or a character vector of files with `'BayesGLM'` results saved.")
   }
-  multi_result <- nR > 1
-  out <- vector("list", nR)
-  names(out) <- results_names
+  is_BayesGLM <- all(vapply(results, inherits, "BayesGLM", FALSE))
+  is_BayesGLM_cifti <- all(vapply(results, inherits, "BayesGLM_cifti", FALSE))
+  if (!is_BayesGLM && !is_BayesGLM_cifti) {
+    stop("`results` must be a list of all `'BayesGLM'` or all `'BayesGLM_cifti'` objects, or a character vector of files with `'BayesGLM(_cifti)'` results.")
+  }
 
+  model_names <- if (is_BayesGLM_cifti) {
+    names(results[[1]]$BayesGLM_result)[!vapply(is.null, results[[1]]$BayesGLM_result, FALSE)]
+  } else {
+    "BayesGLM"
+  }
+  nR <- length(model_names)
+  multi_result <- nR > 1
+
+  out <- vector("list", nR)
+  names(out) <- model_names
+  
   for (rr in seq(nR)) {
     results2 <- vector("list", length(results))
 

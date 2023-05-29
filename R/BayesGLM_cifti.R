@@ -2,6 +2,14 @@
 #'
 #' Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 #'
+#' @section INLA latent fields limit:
+#'  INLA computation times increase greatly when the number of columns in the
+#'  design matrix exceeds five. So if there are more than five tasks, or
+#'  three or more tasks each with its temporal derivative being modeled as a
+#'  task, \code{BayesGLM} will raise a warning. In cases like the latter, we
+#'  recommend modeling the temporal derivatives as nuisance signals using the
+#'  \code{nuisance} argument, rather than modeling them as tasks.
+#'
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @section Connectome Workbench Requirement:
@@ -30,29 +38,57 @@
 #'  to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
 #'  (right cortical surface). Default: \code{c("left","right")} (both
 #'  hemispheres). Note that the subcortical models have not yet been implemented.
-#' @param design,onsets,TR Either provide \code{design}, or provide both
-#'  \code{onsets} and \code{TR}.
+#' @param design,onsets,TR Either provide \code{design} directly, or provide
+#'  both \code{onsets} and \code{TR} from which the design matrix or matrices
+#'  will be constructed.
 #'
-#'   \code{design} is a \eqn{T \times K} task design matrix (or list of such
-#'   matrices, for multiple-session modeling) with column names representing
-#'   tasks. Each column represents the expected BOLD response due to each task,
-#'   a convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus. Note that the scale of the regressors will affect the scale and
-#'   interpretation of the beta coefficients, so imposing a proper scale (e.g.,
-#'   set maximum to 1) is recommended.
+#'   \code{design} is a \eqn{T \times K} task design matrix. Each column
+#'   represents the expected BOLD response due to each task, a convolution of
+#'   the hemodynamic response function (HRF) and the task stimulus. Note that
+#'   the scale of the regressors will affect the scale and interpretation of the
+#'   beta coefficients, so imposing a proper scale is recommended; see the
+#'   \code{scale_design} argument, which by default is \code{TRUE}. Task names
+#'   should be the column names, if not provided by the \code{task_names}
+#'   argument. For multi-session modeling, this argument should be a list of
+#'   such matrices. To model HRF derivatives, calculate the derivatives of the
+#'   task columns beforehand (see the helper function \code{\link{cderiv}} which
+#'   computes the discrete central derivative) and either add them to
+#'   \code{design} to model them as tasks, or \code{nuisance} to model them as
+#'   nuisance signals; it's recommended to then drop the first and last
+#'   timepoints because the discrete central derivative doesn't exist at the
+#'   time series boundaries. Do note that INLA computation times increase
+#'   greatly if the design matrix has more than five columns, so it might be
+#'   required to add these derivatives to \code{nuisance} rather than
+#'   \code{design}.
 #'
-#'   \code{onsets} is a \eqn{K}-length list in which the name of each element is
+#'   \code{onsets} is an \eqn{L}-length list in which the name of each element is
 #'   the name of the corresponding task, and the value of each element is a
 #'   matrix of onsets (first column) and durations (second column) for each
-#'   stimuli (each row) of the corresponding task. For multi-session modeling,
-#'   this argument should be a list of such lists.
+#'   stimuli (each row) of the corresponding task. The units of both columns
+#'   is seconds. For multi-session modeling, this argument should be a list of
+#'   such lists. To model HRF derivatives, use the arguments \code{dHRF} and
+#'   \code{dHRF_as}. If \code{dHRF==0} or \code{dHRF_as=="nuisance"}, the total
+#'   number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
+#'   If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
 #'
 #'   \code{TR} is the temporal resolution of the data, in seconds.
-#' @param nuisance (Optional) A \eqn{T \times J} matrix of nuisance signals
-#'  (or list of such matrices, for multiple-session modeling).
-#' @param dHRF Set to \code{1} to add the temporal derivative of each column
-#'  in the design matrix, \code{2} to add the second derivatives too, or
-#'  \code{0} to not add any columns. Default: \code{1}.
+#'
+#' @param nuisance (Optional) A \eqn{T \times J} matrix of nuisance signals.
+#'  These are regressed from the fMRI data and the design matrix prior to the
+#'  GLM computation. For multi-session modeling, this argument should be a list
+#'  of such matrices.
+#' @param dHRF,dHRF_as Only applicable if \code{onsets} and \code{TR} are
+#'  provided. These arguments enable the modeling of HRF derivatives.
+#'
+#'  Set \code{dHRF} to \code{1} to model the temporal derivatives of each task,
+#'  \code{2} to add the second derivatives too, or \code{0} to not model the
+#'  derivatives. Default: \code{1}.
+#'
+#'  If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
+#'  modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
+#'  \code{"auto"} (default) to treat them as tasks unless the total number of
+#'  columns in the design matrix would exceed five.
+#'
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
 #'  high-pass filter to the data? Only one of these arguments should be provided.
 #'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
@@ -87,7 +123,7 @@
 #' @inheritParams return_INLA_Param
 #' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
-#' @inheritParams avg_sessions_Param
+#' @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Default: \code{1e-6} for both.
@@ -122,13 +158,15 @@ BayesGLM_cifti <- function(
   TR=NULL,
   nuisance=NULL,
   dHRF=c(0, 1, 2),
+  dHRF_as=c("auto", "nuisance", "task"),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
   resamp_res=10000,
   # Below arguments shared with `BayesGLM`
   task_names = NULL,
-  session_names = NULL,
   contrasts = NULL,
+  session_names = NULL,
+  combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -140,7 +178,6 @@ BayesGLM_cifti <- function(
   return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = TRUE,
   meanTol = 1e-6,
   varTol = 1e-6#,emTol = 1e-3,
   ){
@@ -153,6 +190,7 @@ BayesGLM_cifti <- function(
   ## These checks are in a separate function because they are shared with
   ## `BayesGLM_cifti`.
   argChecks <- BayesGLM_argChecks(
+    combine_sessions = combine_sessions,
     scale_BOLD = scale_BOLD,
     scale_design = scale_design,
     Bayes = Bayes,
@@ -164,7 +202,6 @@ BayesGLM_cifti <- function(
     return_INLA = return_INLA,
     outfile = outfile,
     verbose = verbose,
-    avg_sessions = avg_sessions,
     meanTol = meanTol,
     varTol = varTol,
     emTol = emTol
@@ -194,6 +231,12 @@ BayesGLM_cifti <- function(
 
   # Nuisance arguments.
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
+  if (dHRF == 0) {
+    if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "task")) {
+      warning("`dHRF_as` is only applicable if `dHRF > 0`. If `dHRF == 0`, there's no need to specify `dHRF_as`.")
+    }
+  }
+  dHRF_as <- match.arg(dHRF_as, c("auto", "nuisance", "task"))
   if (!is.null(DCT)) {
     stopifnot(fMRItools::is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
@@ -228,9 +271,9 @@ BayesGLM_cifti <- function(
 
   ## Sessions. -----------------------------------------------------------------
   # Name sessions and check compatibility of multi-session arguments
-  n_sess <- length(cifti_fname)
+  n_sess <- n_sess_orig <- length(cifti_fname)
   if (n_sess==1) {
-    avg_sessions <- FALSE
+    combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
     if (!is.null(design)) design <- list(single_session = design)
     if (!is.null(onsets)) onsets <- list(single_session = onsets)
@@ -290,6 +333,7 @@ BayesGLM_cifti <- function(
   }
 
   ## `design`, `onsets`, `task_names`. -----------------------------------------
+  ## Also, determine if we are doing multi-session modeling.
   if (!xor(is.null(design), is.null(onsets))) { stop('`design` or `onsets` must be provided, but not both.') }
   if (!is.null(design)) {
     do_multisesh <- inherits(design, "list")
@@ -333,7 +377,8 @@ BayesGLM_cifti <- function(
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
-      if (!is.null(resamp_res) && infer_resolution(xii_ss)!=resamp_res) {
+      xii_ss_res <- infer_resolution(xii_ss)
+      if (!is.null(resamp_res) && any(infer_resolution(xii_ss)!=resamp_res)) {
         xii_ss <- resample_xifti(xii_ss, resamp_res=resamp_res)
       }
     } else {
@@ -385,8 +430,19 @@ BayesGLM_cifti <- function(
   if (is.null(design)) {
     cat(" MAKING DESIGN MATRICES \n")
     design <- vector("list", n_sess)
+
     for (ss in seq(n_sess)) {
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], deriv=dHRF)
+      HRF_ss <- make_HRFs(
+        onsets[[ss]], TR=TR, duration=ntime[ss],
+        dHRF=dHRF, dHRF_as=dHRF_as,
+        verbose=ss==1
+      )
+      design[[ss]] <- HRF_ss$design
+      if (!is.null(nuisance)) {
+        nuisance[[ss]] <- cbind(nuisance[[ss]], HRF_ss$nuisance)
+      } else {
+        nuisance[[ss]] <- HRF_ss$nuisance
+      }
     }
   }
 
@@ -400,6 +456,12 @@ BayesGLM_cifti <- function(
       num_names <- apply(tmp, 1, function(x) length(unique(x))) #number of unique names per row
       if (max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
     }
+  }
+
+  # Warn the user if the number of design matrix columns exceeds five.
+  if (ncol(design[[1]]) > 5) {
+    warning("The number of design matrix columns exceeds five. INLA computation may be very slow. To avoid stalling, you can quit this function call now and modify the analysis. For example, model some signals as nuisance rather than tasks.")
+    Sys.sleep(10)
   }
 
   task_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more task_names.
@@ -449,7 +511,7 @@ BayesGLM_cifti <- function(
     for (ss in seq(n_sess)) {
       session_data[[ss]] <- list(
         BOLD = t(BOLD_list[[bb]][[ss]]),
-        design=design[[ss]]
+        design = design[[ss]]
       )
       if (!is.null(nuisance)) {
         session_data[[ss]]$nuisance <- nuisance[[ss]]
@@ -472,9 +534,10 @@ BayesGLM_cifti <- function(
       vertices = surf_list[[bb]]$vertices,
       faces = surf_list[[bb]]$faces,
       mesh = NULL,
+      task_names = NULL, # in `session_data`
       contrasts = contrasts,
-      task_names = NULL, # because HRF
       session_names = session_names,
+      combine_sessions = combine_sessions,
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
@@ -486,37 +549,42 @@ BayesGLM_cifti <- function(
       return_INLA = return_INLA,
       outfile = outfile_name,
       verbose = verbose,
-      avg_sessions = avg_sessions,
       meanTol=meanTol,
       varTol=varTol#,emTol=emTol,
     )
 
     BayesGLM_results[[bb]] <- BayesGLM_out
 
+    # update session info if averaged over sessions
+    if (bb == brainstructures[1] && combine_sessions) {
+      session_names <- BayesGLM_out$session_names
+      n_sess <- 1
+    }
+
     rm(BayesGLM_out); gc()
   }
-
-  # update session info if averaged over sessions
-  if (avg_sessions) {
-    session_names <- 'session_avg'
-    n_sess_orig <- n_sess
-    n_sess <- 1
-  } else {
-    n_sess_orig <- NULL
-  }
+  names(BayesGLM_results)[names(BayesGLM_results)=="left"] <- "cortex_left"
+  names(BayesGLM_results)[names(BayesGLM_results)=="right"] <- "cortex_right"
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
 
   cat(' PUTTING RESULTS IN CIFTI FORMAT \n')
-
   task_cifti_classical <- task_cifti <- vector('list', n_sess)
   names(task_cifti_classical) <- names(task_cifti) <- session_names
   datL <- datR <- NULL
   for (ss in seq(n_sess)) {
 
     # CLASSICAL GLM
-    if (do_left) datL <- BayesGLM_results$left$result_classical[[ss]]$estimates[mwallL==1,]
-    if (do_right) datR <- BayesGLM_results$left$result_classical[[ss]]$estimates[mwallR==1,]
+    if (do_left) {
+      datL <- BayesGLM_results$cortex_left$result_classical[[ss]]$estimates
+      mwallL <- !is.na(datL[,1]) # update b/c mask2 can change the medial wall
+      datL <- datL[mwallL,]
+    }
+    if (do_right) {
+      datR <- BayesGLM_results$cortex_right$result_classical[[ss]]$estimates
+      mwallR <- !is.na(datR[,1])
+      datR <- datR[mwallR,]
+    }
     task_cifti_classical[[ss]] <- as.xifti(
       cortexL = datL,
       cortexL_mwall = mwallL,
@@ -526,9 +594,17 @@ BayesGLM_cifti <- function(
     task_cifti_classical[[ss]]$meta$cifti$names <- task_names
 
     # BAYESIAN GLM
-    if(do_Bayesian){
-      if(do_left) datL <- BayesGLM_results$left$task_estimates[[ss]][mwallL==1,]
-      if(do_right) datR <- BayesGLM_results$right$task_estimates[[ss]][mwallR==1,]
+    if (do_Bayesian) {
+      if (do_left) {
+        datL <- BayesGLM_results$cortex_left$task_estimates[[ss]]
+        mwallL <- !is.na(datL[,1])
+        datL <- datL[mwallL,]
+      }
+      if (do_right) {
+        datR <- BayesGLM_results$cortex_right$task_estimates[[ss]]
+        mwallR <- !is.na(datR[,1])
+        datR <- datR[mwallR,]
+      }
       task_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = mwallL,
@@ -544,13 +620,13 @@ BayesGLM_cifti <- function(
       Bayes = task_cifti,
       classical = task_cifti_classical
     ),
-    BayesGLM_results = BayesGLM_results,
+    task_names = task_names,
     session_names = session_names,
     n_sess_orig = n_sess_orig,
-    task_names = task_names,
     # task part of design matrix after centering/scaling but
     #   before nuisance regression and prewhitening.
-    design = design
+    design = design,
+    BayesGLM_results = BayesGLM_results
   )
 
   cat('\n DONE! \n')

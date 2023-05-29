@@ -26,44 +26,6 @@ check_INLA <- function(require_PARDISO=TRUE){
   invisible(NULL)
 }
 
-# Make Formula
-#
-# @param task_names char vector of the names of each bbeta object in the environment
-# @param repl_names char vector of the names of each replicate object in the environment
-# @param hyper_initial Optional vector of initial values for hyperparameters of each latent field OR a list with each element corresponding to one column of the X matrix
-#
-# @return A formula representing the Bayesian GLM to be passed to `inla()`
-#
-# @importFrom stats as.formula
-#
-# @keywords internal
-# make_formula <- function(task_names, repl_names, hyper_initial=NULL){
-#
-#   # Example:
-#   # task_names = bbeta1, bbeta2, ...
-#   # repl_names = repl1, repl2, ...
-#   # formula: y ~ -1 + f(bbeta1, model = spde, replicate = repl1) + f(bbeta2, model = spde_sh, replicate = repl2)
-#
-#   # check length of task_names, repl_names, hyper_initial
-#
-#   n_beta <- length(task_names)
-#
-#   if(!is.null(hyper_initial)){
-#     #if hyper_list provided is a vector, repeat it n_beta times as a list
-#     if(!is.list(hyper_initial)){
-#       hyper_initial <- rep(list(hyper_initial), n_beta)
-#     }
-#     hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
-#   } else {
-#     hyper_vec <- NULL
-#   }
-#
-#   formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
-#   formula_vec <- c('y ~ -1', formula_vec)
-#   formula_str <- paste(formula_vec, collapse=' + ')
-#   return(formula_str)
-# }
-
 #' Make data list for \code{estimate_model}
 #'
 #' Make data list to be passed to \code{estimate_model}
@@ -107,7 +69,7 @@ make_data_list <- function(y, X, betas, repls){
 #'
 #' Obtains the posterior mean or other summary statistic for each latent field
 #'
-#' @param object An object of class ‘"inla"’, a result of a call to inla
+#' @param INLA_model_obj An object of class ‘"inla"’, a result of a call to inla
 #' @param session_names Vector of fMRI session names
 #' @param mask (Optional) Original mask applied to data before model fitting
 #' @param stat A string representing the posterior summary statistic to be returned
@@ -115,11 +77,11 @@ make_data_list <- function(y, X, betas, repls){
 #' @return Estimates from inla model
 #'
 #' @keywords internal
-extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
+extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='mean'){
 
-  if (!inherits(object, "inla")) { stop("Object is not of class 'inla'") }
+  if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
-  res.beta <- object$summary.random
+  res.beta <- INLA_model_obj$summary.random
   nbeta <- length(res.beta)
   task_names <- names(res.beta)
 
@@ -161,7 +123,7 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-#' @param object An object of class \code{"inla"}, a result of a call to
+#' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
 #'  \code{inla()}
 #' @param spde The model used for the latent fields in the \code{inla()} call,
 #'  an object of class \code{"inla.spde"}
@@ -171,13 +133,13 @@ extract_estimates <- function(object, session_names, mask=NULL, stat='mean'){
 #'  hyperparameters associated with each latent field
 #'
 #' @keywords internal
-get_posterior_densities <- function(object, spde, task_names){
+get_posterior_densities <- function(INLA_model_obj, spde, task_names){
 
   numbeta <- length(task_names)
 
   for(b in 1:numbeta){
     name_b <- task_names[b]
-    result.spde.b <- INLA::inla.spde2.result(object, name_b, spde)
+    result.spde.b <- INLA::inla.spde2.result(INLA_model_obj, name_b, spde)
     # Kappa and Tau
     log_kappa.b <- as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
     log_tau.b <- as.data.frame(result.spde.b$marginals.log.tau$tau.1)
@@ -190,4 +152,114 @@ get_posterior_densities <- function(object, spde, task_names){
   }
 
   df[,c('beta','param','value','density')]
+}
+
+#' Summarize a \code{"BayesGLM"} object
+#'
+#' Summary method for class \code{"BayesGLM"}
+#'
+#' @param object Object of class \code{"BayesGLM"}.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary BayesGLM
+summary.BayesGLM <- function(object, ...) {
+
+  x <- list(
+    tasks = object$task_names,
+    sessions = object$session_names,
+    n_sess_orig = object$n_sess_orig,
+    n_loc_total = length(object$mask),
+    n_loc_modeled = sum(object$mask),
+    GLM_type = attr(object$task_estimates, "GLM_type")
+  )
+
+  class(x) <- "summary.BayesGLM"
+
+  return(x)
+}
+
+#' @rdname summary.BayesGLM
+#' @export
+#'
+#' @param x Object of class \code{"summary.BayesGLM"}.
+#' @method print summary.BayesGLM
+print.summary.BayesGLM <- function(x, ...) {
+  cat("====BayesGLM result====================\n")
+  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
+  if (x$sessions == "session_combined") {
+    cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
+  } else {
+    cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
+  }
+  cat("Locations:", x$n_loc_modeled, "modeled,", x$n_loc_total, "total", "\n")
+  cat("GLM type: ", x$GLM_type, "\n")
+  cat("\n")
+  invisible(NULL)
+}
+
+#' @rdname summary.BayesGLM
+#' @export
+#'
+#' @method print BayesGLM
+print.BayesGLM <- function(x, ...) {
+  print.summary.BayesGLM(summary(x))
+}
+
+#' Summarize a \code{"BayesGLM_cifti"} object
+#'
+#' Summary method for class \code{"BayesGLM_cifti"}
+#'
+#' @param object Object of class \code{"BayesGLM_cifti"}.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary BayesGLM_cifti
+summary.BayesGLM_cifti <- function(object, ...) {
+
+  x <- lapply(object$BayesGLM_results, summary)
+  x <- x[!vapply(object$BayesGLM_results, is.null, FALSE)]
+  x <- list(
+    tasks = x[[1]]$tasks,
+    sessions = x[[1]]$sessions,
+    n_sess_orig = x[[1]]$n_sess_orig,
+    n_loc_total = lapply(x, '[[', "n_loc_total"),
+    n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
+    #xii = summary(x$task_estimates_xii$classical[[1]]),
+    GLM_type = x[[1]]$GLM_type
+  )
+  class(x) <- "summary.BayesGLM_cifti"
+
+  return(x)
+}
+
+#' @rdname summary.BayesGLM_cifti
+#' @export
+#'
+#' @param x Object of class \code{"summary.BayesGLM_cifti"}.
+#' @method print summary.BayesGLM_cifti
+print.summary.BayesGLM_cifti <- function(x, ...) {
+  cat("====BayesGLM_cifti result==============\n")
+  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
+  if (x$sessions == "session_combined") {
+    cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
+  } else {
+    cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
+  }
+  cat("Locations:\n")
+  for (ii in seq(length(x$n_loc_total))) {
+    cat(
+      "          ", paste0(names(x$n_loc_total)[ii], ": ", x$n_loc_modeled[[ii]]),
+      "modeled,", x$n_loc_total[[ii]], "total", "\n"
+    )
+  }
+  cat("GLM type: ", x$GLM_type, "\n")
+  cat("\n")
+  invisible(NULL)
+}
+
+#' @rdname summary.BayesGLM_cifti
+#' @export
+#'
+#' @method print BayesGLM_cifti
+print.BayesGLM_cifti <- function(x, ...) {
+  print.summary.BayesGLM_cifti(summary(x))
 }

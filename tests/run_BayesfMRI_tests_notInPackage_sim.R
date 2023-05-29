@@ -5,7 +5,7 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 6000
+resamp_res <- 4000
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_results <- "tests/results_notInPackage"
@@ -35,7 +35,7 @@ bsim <- simulate_cifti_multiple(
   n_sessions=2,
   n_runs=1,
   ntasks=3,
-  ntime=400,
+  ntime=280,
   session_var=3,
   run_var=2,
   resamp_res=resamp_res
@@ -48,23 +48,25 @@ cat("BayesGLM\n~~~~~~~~~~~~~~~~\n")
 Bayes <- c(FALSE, TRUE)
 bs <- c("right", "both")
 # parameters w/ rising power
-params_pwr <- c("sess1-avgNo-pwYes", "sess2-avgNo-pwYes", "sess2-avgYes-pwYes", "sess2-avgYes-pwNo")
+params_pwr <- c("sess1-cmbNo-pwYes", "sess2-cmbNo-pwYes", "sess2-cmbYes-pwYes", "sess2-cmbYes-pwNo")
 params <- expand.grid(params_pwr=params_pwr, bs=bs, Bayes=Bayes, stringsAsFactors=FALSE)
-# add  no smoothing + no PW + avg for classical
+# add  no smoothing + no PW + cmb for classical
 params$smooth <- 5
 params <- rbind(
-  data.frame(bs="right", Bayes=FALSE, params_pwr="sess2-avgYes-pwNo", smooth=0),
+  data.frame(bs="right", Bayes=FALSE, params_pwr="sess2-cmbYes-pwYes", smooth=0),
   params
 )
 # convert `params_pwr` column to individual params
 params$sess <- as.numeric(gsub("sess", "", vapply(strsplit(params$params_pwr, "-"), '[[', "", 1)))
-params$avg <- "Yes" == gsub("avg", "", vapply(strsplit(params$params_pwr, "-"), '[[', "", 2))
+params$cmb <- "Yes" == gsub("cmb", "", vapply(strsplit(params$params_pwr, "-"), '[[', "", 2))
 params$pw <- "Yes" == gsub("pw", "", vapply(strsplit(params$params_pwr, "-"), '[[', "", 3))
 params$params_pwr <- NULL
 
 # Test each combination.
 for (ii in seq(nrow(params))) {
   print(params[ii,])
+  outf_ii <- file.path(dir_resultThis, paste0("bfmri", ii, ".rds"))
+  #if (file.exists(outf_ii)) { next }
 
   xii_ii <- bsim$simulated_cifti[seq(params$sess[ii])]
   # if (params$bs[ii] != "both") {
@@ -81,27 +83,30 @@ for (ii in seq(nrow(params))) {
     Bayes = params$Bayes[ii],
     ar_order = ifelse(params$pw[ii], 6, 0),
     ar_smooth = params$smooth[ii],
-    resamp_res = ifelse(params$Bayes[ii], resamp_res/2, resamp_res) / ifelse(params$bs[ii]=="both", 2, 1),
+    resamp_res = resamp_res / ((params$bs[ii]=="both") + 1), # / (params$Bayes[ii] + 1)
     verbose = FALSE,
     return_INLA = "trimmed",
-    avg_sessions = params$avg[ii]
+    combine_sessions = params$cmb[ii]
   ))
-  print(exec_time)
+
+  act_ii <- id_activations(
+    bfmri_ii,
+    threshold=.1,
+    method=ifelse(params$Bayes[ii], "Bayesian", "classical"),
+    correction="FDR",
+    alpha=0.05
+  )
 
   if (saveResults) {
     saveRDS(
-      bfmri_ii,
-      file.path(dir_resultThis, paste0("bfmri", ii, "_HCP.rds"))
+      list(bfmri=bfmri_ii, act=act_ii, exec_time=exec_time),
+      outf_ii
     )
   }
 }
 
 # # Activations and plot ---------------------------------------------------------
 # for (ii in seq(nrow(params))) {
-#   if (FALSE) {
-#     bgroup_fake <- list(bfmri_ii, bfmri_ii)
-#     z <- BayesGLM2(bgroup_fake)
-#   }
 #
 #   # Plot GLM results.
 #   if (saveResults) {
@@ -119,7 +124,6 @@ for (ii in seq(nrow(params))) {
 #   # plot(...)
 #
 #   # Identify the activations.
-#   act_ii <- id_activations_cifti(bfmri_ii, threshold=.01, method=ifelse(params$Bayes[ii], "Bayesian", "classical"), alpha=0.05)
 #   # plot(act_ii$activations_xifti)
 #   if (ii == 1) {
 #     # Test the other arguments too.
@@ -137,12 +141,6 @@ for (ii in seq(nrow(params))) {
 #     )
 #   }
 #
-#   if (saveResults) {
-#     saveRDS(
-#       list(bfmri=bfmri_ii, act=act_ii, exec_time=exec_time),
-#       file.path(dir_resultThis, paste0("params", ii, "_HCP.rds"))
-#     )
-#   }
 # }
 #
 # # BayesGLM2?

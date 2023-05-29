@@ -72,6 +72,7 @@ spatial_effects_cifti_cs <- function(
             mapply(function(hc,nvox) {
               if(is.null(hc)) return(NULL)
               hem_center_ijk <- hc + rpois(1, subject_var)
+              hem_center_ijk <- min(nvox, hem_center_ijk)
               hem_binary <- rep(0,nvox)
               hem_binary[hem_center_ijk] <- 1
               return(as.matrix(hem_binary))
@@ -339,8 +340,8 @@ simulate_cifti_multiple <-
       onsets=lapply(onsets, as.matrix),
       TR=TR,
       duration=ntime,
-      deriv=0
-    )
+      dHRF=0
+    )$design
     # neuRosim::specifydesign(
     #   onsets = onsets,
     #   durations = durations,

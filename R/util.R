@@ -89,49 +89,6 @@
 #   })
 # }
 
-
-# #' Summarise BayesGLM objects
-# #'
-# #' Summary method for class "BayesGLM"
-# #'
-# #' @param object an object of class "BayesGLM"
-# #' @param ... further arguments passed to or from other methods.
-# #' @export
-# #' @method summary BayesGLM
-# summary.BayesGLM <- function(object, ...)
-# {
-#   out <- list()
-#   class(out) <- "summary.BayesGLM"
-#   out$sessions <- object$session_names
-#   out$betas <- object$task_names
-#   out$call <- object$INLA_model_obj$call
-#   out$inla.summary <- summary(object$model)
-#   return(out)
-# }
-
-
-# #' @param x an object of class "summary.BayesGLM"
-# #' @param ... further arguments passed to or from other methods.
-# #' @export
-# #' @method print summary.BayesGLM
-# #' @rdname summary.BayesGLM
-# print.summary.BayesGLM <- function(x, ...)
-# {
-#   cat("Call:\n")
-#   print(x$call)
-#   cat("Sessions: ", x$sessions,"\n")
-#   cat("Time used:\n", x$inla.summary$cpu.used)
-# }
-
-# #' @export
-# #' @method print BayesGLM
-# #' @rdname summary.BayesGLM
-# print.BayesGLM <- function(x, ...) {
-#   print.summary.BayesGLM(summary(x))
-# }
-
-# TO DO: Add print and summary functions for session object (may need as.session function too, and move is.session here)
-
 #' Sequential 2-means variable selection
 #'
 #' @param x A vector consisting of all variables of interest for a single draw

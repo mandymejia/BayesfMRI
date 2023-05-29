@@ -32,28 +32,40 @@ BayesGLM_group(
 )
 }
 \arguments{
-\item{results}{Either (1) a list of length M of objects of class BayesGLM,
-or (2) a character vector of length M of file names output from the BayesGLM function.
-M is the number of subjects.}
+\item{results}{Either (1) a length \eqn{M} list of \code{"BayesGLM"} objects,
+or (2) a length \eqn{M} character vector of files storing \code{"BayesGLM"}
+objects saved with \code{\link{saveRDS}}.}
 
-\item{contrasts}{(Optional) A list of vectors, each length \code{M * K * num_sessions}, specifying the contrast(s)
-of interest across subjects, where M is the number of subjects and K is the number of tasks.
-See Details for more information. Default is to compute the average for each task across subjects.}
+\item{contrasts}{(Optional) A list of vectors, each length
+\eqn{M \times L \times S}, specifying the contrast(s) of interest
+across subjects, where \eqn{M} is the number of subjects, \code{L} is the
+number of tasks, and S is the number of sessions. See Details for more
+information. If \code{NULL} (default), the average for each task across
+subjects will be computed.}
 
-\item{quantiles}{(Optional) Vector of posterior quantiles to return in addition to the posterior mean}
+\item{quantiles}{(Optional) Vector of posterior quantiles to return in
+addition to the posterior mean.}
 
-\item{excursion_type}{(For inference only) The type of excursion function for the contrast (">", "<", "!="),
-or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.}
+\item{excursion_type}{(For inference only) The type of excursion function for
+the contrast (">", "<", "!="), or a vector thereof (each element
+corresponding to one contrast).  If \code{NULL}, no inference performed.}
 
-\item{gamma}{(For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).}
+\item{gamma}{(For inference only) Activation threshold for the excursion set,
+or a vector thereof (each element corresponding to one contrast). Default:
+\code{0}.}
 
-\item{alpha}{(For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).}
+\item{alpha}{(For inference only) Significance level for activation for the
+excursion set, or a vector thereof (each element corresponding to one
+contrast). Default: \code{.05}.}
 
-\item{nsamp_theta}{Number of theta values to sample from posterior. Default is 50.}
+\item{nsamp_theta}{Number of theta values to sample from posterior. Default:
+\code{50}.}
 
-\item{nsamp_beta}{Number of beta vectors to sample conditional on each theta value sampled. Default is 100.}
+\item{nsamp_beta}{Number of beta vectors to sample conditional on each theta
+value sampled. Default: \code{100}.}
 
-\item{no_cores}{The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.}
+\item{no_cores}{The number of cores to use for sampling betas in parallel. If
+\code{NULL} (default), do not run in parallel.}
 
 \item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
 }
@@ -62,15 +74,18 @@ A list containing the estimates, PPMs and areas of activation for each contrast.
 }
 \description{
 Performs group-level Bayesian GLM estimation and inference using the joint
-approach described in Mejia et al. (2020)
+approach described in Mejia et al. (2020).
 }
 \details{
-Each contrast vector specifies a group-level summary of interest. Let M be
-the number of subjects and K be the number of tasks. For example, the
-contrast vector \code{rep(rep(c(1/(M*num_sessions),rep(0, K-1)),num_sessions),M)} represents the group average
-for the first task for M subjects; \code{c(rep(rep(c(1/(M1*num_sessions),rep(0, K-1)),num_sessions),M1),rep(rep(c(-1/(M2*num_sessions),rep(0, K-1)),num_sessions),M2))}
-represents the difference between the first M1 subjects and the remaining M2
-subjects (M1+M2=M) for the first task; \code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, K-2)), num_sessions),M)}
+Each contrast vector specifies a group-level summary of interest. Let \eqn{M}
+be the number of subjects and \eqn{L} be the number of tasks. For example,
+the contrast vector
+\code{rep(rep(c(1/(M*num_sessions),rep(0, L-1)),num_sessions),M)}
+represents the group average for the first task for \eqn{M} subjects;
+\code{c(rep(rep(c(1/(M1*num_sessions),rep(0, L-1)),num_sessions),M1), rep(rep(c(-1/(M2*num_sessions),rep(0, L-1)),num_sessions),M2))}
+represents the difference between the first \eqn{M_1} subjects and the remaining \eqn{M_2}
+subjects (M1+M2=M) for the first task;
+\code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, L-2)), num_sessions),M)}
 represents the difference between the first two tasks, averaged over all
 subjects.
 }

@@ -123,7 +123,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
       BOLD_s <- data[[s]]$BOLD[,inds_grp]
 
       #scale data to represent % signal change (or just center if scale=="none")
-      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose = FALSE)
+      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose=FALSE)
       design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
 
       #regress nuisance parameters from BOLD data and design matrix
@@ -138,7 +138,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
       }
 
       #set up data and design matrix
-      data_org <- organize_data(y_reg, X_reg, transpose = FALSE)
+      data_org <- organize_data(y_reg, X_reg)
       y_vec <- data_org$y
       X_list <- list(data_org$A)
       names(X_list) <- session_names[s]
@@ -293,22 +293,41 @@ get_posterior_densities_vol3D <- function(object, spde){
 #' @param binary_mask (optional) a binary brain slice image used to mask
 #'   the BOLD data and make a more efficient network mesh for the
 #'   neighborhood definitions
-#' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
+#' @param design,onsets,TR Either provide \code{design} directly, or provide 
+#'  both \code{onsets} and \code{TR} from which the design matrix or matrices 
+#'  will be constructed.
 #'
-#'   \code{design} is a \eqn{T \times K} task design matrix (or list of such
-#'   matrices, for multiple-session modeling) with column names representing
-#'   tasks. Each column represents the expected BOLD response due to each task,
-#'   a convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus. Note that the scale of the regressors will affect the scale and
-#'   interpretation of the beta coefficients, so imposing a proper scale (e.g.,
-#'   set maximum to 1) is recommended.
+#'   \code{design} is a \eqn{T \times K} task design matrix. Each column 
+#'   represents the expected BOLD response due to each task, a convolution of 
+#'   the hemodynamic response function (HRF) and the task stimulus. Note that 
+#'   the scale of the regressors will affect the scale and interpretation of the
+#'   beta coefficients, so imposing a proper scale is recommended; see the
+#'   \code{scale_design} argument, which by default is \code{TRUE}. Task names
+#'   should be the column names, if not provided by the \code{task_names}
+#'   argument. For multi-session modeling, this argument should be a list of
+#'   such matrices. To model HRF derivatives, calculate the derivatives of the
+#'   task columns beforehand (see the helper function \code{\link{cderiv}} which 
+#'   computes the discrete central derivative) and either add them to 
+#'   \code{design} to model them as tasks, or \code{nuisance} to model them as 
+#'   nuisance signals; it's recommended to then drop the first and last 
+#'   timepoints because the discrete central derivative doesn't exist at the
+#'   time series boundaries. Do note that INLA computation times increase
+#'   greatly if the design matrix has more than five columns, so it might be
+#'   required to add these derivatives to \code{nuisance} rather than 
+#'   \code{design}.
 #'
-#'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
-#'   for each task in seconds, organized as a list where each element of the
-#'   list corresponds to one task. Names of list should be task names. (Or for
-#'   multi-session modeling, a list of such lists.)
+#'   \code{onsets} is an \eqn{L}-length list in which the name of each element is
+#'   the name of the corresponding task, and the value of each element is a
+#'   matrix of onsets (first column) and durations (second column) for each
+#'   stimuli (each row) of the corresponding task. The units of both columns
+#'   is seconds. For multi-session modeling, this argument should be a list of
+#'   such lists. To model HRF derivatives, use the arguments \code{dHRF} and 
+#'   \code{dHRF_as}. If \code{dHRF==0} or \code{dHRF_as=="nuisance"}, the total
+#'   number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
+#'   If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
 #'
-#'   \code{TR} is the temporal resolution of the data in seconds.
+#'   \code{TR} is the temporal resolution of the data, in seconds.
+#' 
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
 #'   matrices, for multiple-session modeling).
 #' @param dHRF Set to \code{1} to add the temporal derivative of each column
@@ -338,7 +357,7 @@ get_posterior_densities_vol3D <- function(object, spde){
 #'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param
-#' @inheritParams avg_sessions_Param
+#' @inheritParams combine_sessions_Param
 #' @inheritParams trim_INLA_Param
 #'
 #' @importFrom fMRItools dct_bases dct_convert
@@ -366,7 +385,7 @@ BayesGLM_slice <- function(
   outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
-  avg_sessions = TRUE,
+  combine_sessions = TRUE,
   trim_INLA = TRUE) {
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
@@ -393,7 +412,7 @@ BayesGLM_slice <- function(
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(BOLD)
-  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
+  if(n_sess == 1 & combine_sessions) combine_sessions <- FALSE
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
   } else {
@@ -415,7 +434,7 @@ BayesGLM_slice <- function(
   for(ss in 1:n_sess){
     if(make_design){
       cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], deriv=dHRF)
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], dHRF=dHRF)$design
     }
   }
 
@@ -497,7 +516,7 @@ BayesGLM_slice <- function(
                              return_INLA = return_INLA,
                              outfile = outfile,
                              verbose = verbose,
-                             avg_sessions = avg_sessions,
+                             combine_sessions = combine_sessions,
                              trim_INLA = trim_INLA)
 
     # Create a conversion matrix
@@ -508,7 +527,7 @@ BayesGLM_slice <- function(
     point_estimates <- sapply(session_names, function(sn){
       as.matrix(convert_mat_A %*% BayesGLM_out$task_estimates[[sn]])
     }, simplify = F)
-    if(avg_sessions)
+    if(combine_sessions)
       avg_point_estimates <- BayesGLM_out$avg_task_estimates
   }
 
@@ -532,7 +551,7 @@ BayesGLM_slice <- function(
         image_coef[binary_mask == 0] <- NA
         return(image_coef)
       },simplify = F)
-      if(n_sess > 1 & avg_sessions) {
+      if(n_sess > 1 & combine_sessions) {
         Bayes_slice$avg_over_sessions <- sapply(seq(num_tasks), function(tn) {
           image_coef <- binary_mask
           image_coef[image_coef == 1] <- avg_point_estimates[,tn]

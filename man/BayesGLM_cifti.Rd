@@ -14,6 +14,7 @@ BayesGLM_cifti(
   TR = NULL,
   nuisance = NULL,
   dHRF = c(0, 1, 2),
+  dHRF_as = c("auto", "nuisance", "task"),
   hpf = NULL,
   DCT = if (is.null(hpf)) {
      4
@@ -22,8 +23,9 @@ BayesGLM_cifti(
  },
   resamp_res = 10000,
   task_names = NULL,
-  session_names = NULL,
   contrasts = NULL,
+  session_names = NULL,
+  combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -34,7 +36,6 @@ BayesGLM_cifti(
   return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = TRUE,
   meanTol = 1e-06,
   varTol = 1e-06
 )
@@ -65,31 +66,57 @@ to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
 (right cortical surface). Default: \code{c("left","right")} (both
 hemispheres). Note that the subcortical models have not yet been implemented.}
 
-\item{design, onsets, TR}{Either provide \code{design}, or provide both
-\code{onsets} and \code{TR}.
+\item{design, onsets, TR}{Either provide \code{design} directly, or provide
+both \code{onsets} and \code{TR} from which the design matrix or matrices
+will be constructed.
 
-\code{design} is a \eqn{T \times K} task design matrix (or list of such
-matrices, for multiple-session modeling) with column names representing
-tasks. Each column represents the expected BOLD response due to each task,
-a convolution of the hemodynamic response function (HRF) and the task
-stimulus. Note that the scale of the regressors will affect the scale and
-interpretation of the beta coefficients, so imposing a proper scale (e.g.,
-set maximum to 1) is recommended.
+\code{design} is a \eqn{T \times K} task design matrix. Each column
+represents the expected BOLD response due to each task, a convolution of
+the hemodynamic response function (HRF) and the task stimulus. Note that
+the scale of the regressors will affect the scale and interpretation of the
+beta coefficients, so imposing a proper scale is recommended; see the
+\code{scale_design} argument, which by default is \code{TRUE}. Task names
+should be the column names, if not provided by the \code{task_names}
+argument. For multi-session modeling, this argument should be a list of
+such matrices. To model HRF derivatives, calculate the derivatives of the
+task columns beforehand (see the helper function \code{\link{cderiv}} which
+computes the discrete central derivative) and either add them to
+\code{design} to model them as tasks, or \code{nuisance} to model them as
+nuisance signals; it's recommended to then drop the first and last
+timepoints because the discrete central derivative doesn't exist at the
+time series boundaries. Do note that INLA computation times increase
+greatly if the design matrix has more than five columns, so it might be
+required to add these derivatives to \code{nuisance} rather than
+\code{design}.
 
-\code{onsets} is a \eqn{K}-length list in which the name of each element is
+\code{onsets} is an \eqn{L}-length list in which the name of each element is
 the name of the corresponding task, and the value of each element is a
 matrix of onsets (first column) and durations (second column) for each
-stimuli (each row) of the corresponding task. For multi-session modeling,
-this argument should be a list of such lists.
+stimuli (each row) of the corresponding task. The units of both columns
+is seconds. For multi-session modeling, this argument should be a list of
+such lists. To model HRF derivatives, use the arguments \code{dHRF} and
+\code{dHRF_as}. If \code{dHRF==0} or \code{dHRF_as=="nuisance"}, the total
+number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
+If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
 
 \code{TR} is the temporal resolution of the data, in seconds.}
 
-\item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals
-(or list of such matrices, for multiple-session modeling).}
+\item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals.
+These are regressed from the fMRI data and the design matrix prior to the
+GLM computation. For multi-session modeling, this argument should be a list
+of such matrices.}
 
-\item{dHRF}{Set to \code{1} to add the temporal derivative of each column
-in the design matrix, \code{2} to add the second derivatives too, or
-\code{0} to not add any columns. Default: \code{1}.}
+\item{dHRF, dHRF_as}{Only applicable if \code{onsets} and \code{TR} are
+provided. These arguments enable the modeling of HRF derivatives.
+
+Set \code{dHRF} to \code{1} to model the temporal derivatives of each task,
+\code{2} to add the second derivatives too, or \code{0} to not model the
+derivatives. Default: \code{1}.
+
+If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
+modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
+\code{"auto"} (default) to treat them as tasks unless the total number of
+columns in the design matrix would exceed five.}
 
 \item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
 high-pass filter to the data? Only one of these arguments should be provided.
@@ -115,12 +142,15 @@ feasibility, a value of \code{10000} or lower is recommended.}
 
 \item{task_names}{(Optional) Names of tasks represented in design matrix.}
 
+\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
+
 \item{session_names}{(Optional, and only relevant for multi-session modeling)
 Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
 argument will overwrite the names of the list entries in \code{data}, if
 both exist.}
 
-\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
+\item{combine_sessions}{Average task estimates (betas) over multiple sessions?
+Default: \code{TRUE}.}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
@@ -135,7 +165,8 @@ is detected, in which case sd scaling will be used instead.
 }\if{html}{\out{</div>}}}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}.}
+maximum and then subtracting the mean? Default: \code{TRUE}. If
+\code{FALSE}, the design matrix is centered but not scaled.}
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
 addition to the classical GLM. Classical GLM results are always returned.}
@@ -164,9 +195,6 @@ posterior quantities of group means or contrasts.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
-\item{avg_sessions}{Average task estimates (betas) over multiple sessions?
-Default: \code{TRUE}.}
-
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
 Default: \code{1e-6} for both.}
@@ -186,6 +214,16 @@ An object of class \code{"BayesGLM_cifti"}: a list with elements
 \description{
 Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
 }
+\section{INLA latent fields limit}{
+
+INLA computation times increase greatly when the number of columns in the
+design matrix exceeds five. So if there are more than five tasks, or
+three or more tasks each with its temporal derivative being modeled as a
+task, \code{BayesGLM} will raise a warning. In cases like the latter, we
+recommend modeling the temporal derivatives as nuisance signals using the
+\code{nuisance} argument, rather than modeling them as tasks.
+}
+
 \section{Connectome Workbench Requirement}{
 
 This function uses a system wrapper for the 'wb_command' executable. The

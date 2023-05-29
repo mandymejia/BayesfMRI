@@ -4,27 +4,44 @@
 \alias{make_HRFs}
 \title{Make HRFs}
 \usage{
-make_HRFs(onsets, TR, duration, downsample = 100, deriv = 0)
+make_HRFs(
+  onsets,
+  TR,
+  duration,
+  dHRF = c(0, 1, 2),
+  dHRF_as = c("auto", "nuisance", "task"),
+  downsample = 100,
+  verbose = FALSE
+)
 }
 \arguments{
-\item{onsets}{\eqn{K}-length list in which the name of each element is
-the name of the corresponding task, and the value of each element is a
-matrix of onsets (first column) and durations (second column) for each
-stimuli (each row) of the corresponding task, in SECONDS.}
+\item{onsets}{\eqn{L}-length list in which the name of each element is the
+name of the corresponding task, and the value of each element is a matrix of
+onsets (first column) and durations (second column) for each stimuli (each
+row) of the corresponding task.}
 
-\item{TR}{Temporal resolution of fMRI data, in SECONDS.}
+\item{TR}{Temporal resolution of the data, in seconds.}
 
-\item{duration}{Length of fMRI timeseries, in SCANS.}
+\item{duration}{The number of volumes in the fMRI data.}
+
+\item{dHRF}{Set to \code{1} to add the temporal derivative of each column
+in the design matrix, \code{2} to add the second derivatives too, or
+\code{0} to not add any columns. Default: \code{1}.}
+
+\item{dHRF_as}{Only applies if \code{dHRF > 0}. Model the temporal
+derivatives as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
+\code{"auto"} to treat them as tasks unless the total number of columns in
+the design matrix (i.e. the total number of tasks, times \code{dHRF+1}), would be
+\code{>=10}, the limit for INLA.}
 
 \item{downsample}{Downsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
-\item{deriv}{\code{0} (default), \code{1}, or \code{2}, to use the HRF
-function, the first derivative of the HRF, or the second derivative of the
-HRF, respectively.}
+\item{verbose}{Print messages? Default: \code{FALSE}}
 }
 \value{
-Design matrix containing one HRF column for each task
+List with the design matrix and/or the nuisance matrix containing the
+HRF-convolved stimuli as columns, depending on \code{dHRF_as}.
 }
 \description{
 Create HRF design matrix columns from onsets and durations

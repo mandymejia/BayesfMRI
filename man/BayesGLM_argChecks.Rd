@@ -5,6 +5,7 @@
 \title{Bayes GLM arg checks}
 \usage{
 BayesGLM_argChecks(
+  combine_sessions = FALSE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -16,13 +17,14 @@ BayesGLM_argChecks(
   return_INLA = c("trimmed", "full", "minimal"),
   outfile = NULL,
   verbose = FALSE,
-  avg_sessions = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06,
   emTol = 0.001
 )
 }
 \arguments{
+\item{combine_sessions}{See \code{\link{BayesGLM}}.}
+
 \item{scale_BOLD, scale_design}{See \code{\link{BayesGLM}}.}
 
 \item{Bayes, EM}{See \code{\link{BayesGLM}}.}
@@ -36,8 +38,6 @@ BayesGLM_argChecks(
 \item{outfile}{See \code{\link{BayesGLM}}.}
 
 \item{verbose}{See \code{\link{BayesGLM}}.}
-
-\item{avg_sessions}{See \code{\link{BayesGLM}}.}
 
 \item{meanTol, varTol, emTol}{See \code{\link{BayesGLM}}.}
 }
