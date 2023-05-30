@@ -43,7 +43,6 @@ check_INLA <- function(require_PARDISO=TRUE){
 make_data_list <- function(y, X, betas, repls){
 
   # Check length/dimensions of y, X, elements of betas and repls all match
-  n_sess <- length(X)
   nx <- length(betas) #check same as length(repls)
   #figure out nvox
   #check dim(X)
@@ -85,8 +84,8 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='me
   nbeta <- length(res.beta)
   task_names <- names(res.beta)
 
-  n_sess <- length(session_names)
-  n_loc <- length(res.beta[[1]]$mean)/n_sess #number of locations for which beta is estimated
+  nS <- length(session_names)
+  n_loc <- length(res.beta[[1]]$mean)/nS #number of locations for which beta is estimated
   if(!is.null(mask)) {
     V <- length(mask)
     if(sum(mask) != n_loc) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
@@ -94,7 +93,7 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='me
     V <- n_loc
     mask <- rep(1,V)
   }
-  betas <- vector('list', n_sess)
+  betas <- vector('list', nS)
   names(betas) <- session_names
 
   stat_names <- names(res.beta[[1]])
@@ -102,16 +101,16 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='me
   stat_ind <- which(stat_names==stat)
 
 
-  for(v in 1:n_sess){
-    inds_v <- (1:n_loc) + (v-1)*n_loc #indices of beta vector corresponding to session v
-    betas_v <- matrix(NA, nrow=n_loc, ncol=nbeta)
-    for(i in 1:nbeta){
-      est_iv <- res.beta[[i]][[stat_ind]][inds_v]
-      betas_v[,i] <- est_iv
+  for (ss in seq(nS)) {
+    inds_ss <- (1:n_loc) + (ss-1)*n_loc #indices of beta vector corresponding to session v
+    betas_ss <- matrix(NA, nrow=n_loc, ncol=nbeta)
+    for (bb in seq(nbeta)) {
+      est_iv <- res.beta[[bb]][[stat_ind]][inds_ss]
+      betas_ss[,bb] <- est_iv
     }
-    betas[[v]] <- matrix(NA, nrow=V, ncol=nbeta)
-    betas[[v]][mask==1,] <- betas_v
-    colnames(betas[[v]]) <- task_names
+    betas[[ss]] <- matrix(NA, nrow=V, ncol=nbeta)
+    betas[[ss]][mask==1,] <- betas_ss
+    colnames(betas[[ss]]) <- task_names
   }
 
   attr(betas, "GLM_type") <- "Bayesian"
@@ -186,7 +185,7 @@ summary.BayesGLM <- function(object, ...) {
 print.summary.BayesGLM <- function(x, ...) {
   cat("====BayesGLM result====================\n")
   cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
-  if (x$sessions == "session_combined") {
+  if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
   } else {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
@@ -239,7 +238,7 @@ summary.BayesGLM_cifti <- function(object, ...) {
 print.summary.BayesGLM_cifti <- function(x, ...) {
   cat("====BayesGLM_cifti result==============\n")
   cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
-  if (x$sessions == "session_combined") {
+  if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
   } else {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")

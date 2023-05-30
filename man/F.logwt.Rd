@@ -4,7 +4,7 @@
 \alias{F.logwt}
 \title{F logwt}
 \usage{
-F.logwt(theta, spde, mu_theta, Q_theta, M)
+F.logwt(theta, spde, mu_theta, Q_theta, nN)
 }
 \arguments{
 \item{theta}{A vector of hyperparameter values at which to compute the posterior log density}
@@ -15,7 +15,7 @@ F.logwt(theta, spde, mu_theta, Q_theta, M)
 
 \item{Q_theta}{Posterior precision matrix from combined subject-level models.}
 
-\item{M}{Number of subjects}
+\item{nN}{Number of subjects}
 }
 \value{
 A list containing...

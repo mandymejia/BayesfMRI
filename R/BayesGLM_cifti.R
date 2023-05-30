@@ -271,31 +271,31 @@ BayesGLM_cifti <- function(
 
   ## Sessions. -----------------------------------------------------------------
   # Name sessions and check compatibility of multi-session arguments
-  n_sess <- n_sess_orig <- length(cifti_fname)
-  if (n_sess==1) {
+  nS <- nS_orig <- length(cifti_fname)
+  if (nS==1) {
     combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
     if (!is.null(design)) design <- list(single_session = design)
     if (!is.null(onsets)) onsets <- list(single_session = onsets)
     if (!is.null(nuisance)) nuisance <- list(single_session = nuisance)
   } else {
-    if (is.null(session_names)) session_names <- paste0('session', 1:n_sess)
+    if (is.null(session_names)) session_names <- paste0('session', 1:nS)
     # if (length(session_names) == 1) { session_names <- paste0(session_names, 1:nsess) } # allow prefix?
-    if (!is.null(design) && (length(design) != n_sess)) {
+    if (!is.null(design) && (length(design) != nS)) {
       stop(paste(
         "If multiple sessions provided (because `cifti_fname` is a vector), ",
         "`design` must be a list of length equal to the number of sessions ",
         " (or `NULL`, if onsets provided)."
       ))
     }
-    if (!is.null(onsets) && (length(onsets) != n_sess)) {
+    if (!is.null(onsets) && (length(onsets) != nS)) {
       stop(paste(
         "If multiple sessions provided (because `cifti_fname` is a vector), ",
         "`onsets` must be a list of length equal to the number of sessions ",
         " (or `NULL`, if `design` provided)."
       ))
     }
-    if (!is.null(nuisance) && (length(nuisance) != n_sess)) {
+    if (!is.null(nuisance) && (length(nuisance) != nS)) {
       stop(paste(
         "If multiple sessions provided (because `cifti_fname` is a vector), ",
         "`nuisance` must be a list of length equal to the number of sessions ",
@@ -303,10 +303,10 @@ BayesGLM_cifti <- function(
       ))
     }
   }
-  if (length(session_names) != n_sess) {
+  if (length(session_names) != nS) {
     stop('The length of `session_names` must match the number of sessions in `cifti_fname`.')
   }
-  if(is.null(nuisance)) nuisance <- vector("list",length = n_sess)
+  if(is.null(nuisance)) nuisance <- vector("list",length = nS)
 
   ## Surfaces: check or get. ---------------------------------------------------
   surf_list <- list(left=NULL, right=NULL)
@@ -364,16 +364,16 @@ BayesGLM_cifti <- function(
   }
 
   # Data setup. ----------------------------------------------------------------
-  cat('\n SETTING UP DATA \n')
+  cat('Setting up data:\n')
 
   ## xifti things. -------------------------------------------------------------
   ### For each session, separate the CIFTI data into left/right/sub and read in files
   BOLD_list <- list(left=NULL, right=NULL)
   mwallL <- mwallR <- NULL
-  ntime <- vector("numeric", n_sess)
+  ntime <- vector("numeric", nS)
 
-  for (ss in seq(n_sess)) {
-    if (n_sess > 1) cat(paste0(' .. reading in data for session ', ss,'\n'))
+  for (ss in seq(nS)) {
+    if (nS > 1) cat(paste0('\tReading in data for session ', ss,'.\n'))
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
@@ -428,10 +428,10 @@ BayesGLM_cifti <- function(
 
   ## Design and nuisance matrices. ---------------------------------------------
   if (is.null(design)) {
-    cat(" MAKING DESIGN MATRICES \n")
-    design <- vector("list", n_sess)
+    cat("\tMaking design matrices.\n")
+    design <- vector("list", nS)
 
-    for (ss in seq(n_sess)) {
+    for (ss in seq(nS)) {
       HRF_ss <- make_HRFs(
         onsets[[ss]], TR=TR, duration=ntime[ss],
         dHRF=dHRF, dHRF_as=dHRF_as,
@@ -447,7 +447,7 @@ BayesGLM_cifti <- function(
   }
 
   # Check that design matrix names are consistent across sessions.
-  if (n_sess > 1) {
+  if (nS > 1) {
     tmp <- sapply(design, colnames)
     if(length(task_names) == 1) {
       num_names <- length(unique(tmp))
@@ -459,8 +459,8 @@ BayesGLM_cifti <- function(
   }
 
   # Warn the user if the number of design matrix columns exceeds five.
-  if (ncol(design[[1]]) > 5) {
-    warning("The number of design matrix columns exceeds five. INLA computation may be very slow. To avoid stalling, you can quit this function call now and modify the analysis. For example, model some signals as nuisance rather than tasks.")
+  if (Bayes && ncol(design[[1]]) > 5) {
+    message("The number of design matrix columns exceeds five. INLA computation may be very slow. To avoid stalling, you can quit this function call now and modify the analysis. For example, model some signals as nuisance rather than tasks.")
     Sys.sleep(10)
   }
 
@@ -474,8 +474,8 @@ BayesGLM_cifti <- function(
   }
 
   # Add DCT bases.
-  DCTs <- vector("numeric", n_sess)
-  for (ss in 1:n_sess) {
+  DCTs <- vector("numeric", nS)
+  for (ss in 1:nS) {
     # DCT highpass filter
     if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
@@ -497,18 +497,17 @@ BayesGLM_cifti <- function(
   }
 
   # Do GLM. --------------------------------------------------------------------
-  cat('RUNNING MODELS \n')
   BayesGLM_results <- list(left = NULL, right = NULL)
 
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
   for (bb in brainstructures) {
 
-    cat("\n ..",toupper(bb),"CORTEX ANALYSIS \n")
+    cat(paste0(toupper(bb)," cortex analysis:\n"))
 
     # set up session list
-    session_data <- vector('list', n_sess)
+    session_data <- vector('list', nS)
     names(session_data) <- session_names
-    for (ss in seq(n_sess)) {
+    for (ss in seq(nS)) {
       session_data[[ss]] <- list(
         BOLD = t(BOLD_list[[bb]][[ss]]),
         design = design[[ss]]
@@ -528,7 +527,6 @@ BayesGLM_cifti <- function(
     } else {
       outfile_name <- NULL
     }
-
     BayesGLM_out <- BayesGLM(
       data = session_data,
       vertices = surf_list[[bb]]$vertices,
@@ -558,7 +556,7 @@ BayesGLM_cifti <- function(
     # update session info if averaged over sessions
     if (bb == brainstructures[1] && combine_sessions) {
       session_names <- BayesGLM_out$session_names
-      n_sess <- 1
+      nS <- 1
     }
 
     rm(BayesGLM_out); gc()
@@ -567,12 +565,11 @@ BayesGLM_cifti <- function(
   names(BayesGLM_results)[names(BayesGLM_results)=="right"] <- "cortex_right"
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
-
-  cat(' PUTTING RESULTS IN CIFTI FORMAT \n')
-  task_cifti_classical <- task_cifti <- vector('list', n_sess)
+  cat("Formatting results.\n")
+  task_cifti_classical <- task_cifti <- vector('list', nS)
   names(task_cifti_classical) <- names(task_cifti) <- session_names
   datL <- datR <- NULL
-  for (ss in seq(n_sess)) {
+  for (ss in seq(nS)) {
 
     # CLASSICAL GLM
     if (do_left) {
@@ -622,14 +619,14 @@ BayesGLM_cifti <- function(
     ),
     task_names = task_names,
     session_names = session_names,
-    n_sess_orig = n_sess_orig,
+    n_sess_orig = nS_orig,
     # task part of design matrix after centering/scaling but
     #   before nuisance regression and prewhitening.
     design = design,
     BayesGLM_results = BayesGLM_results
   )
 
-  cat('\n DONE! \n')
+  cat('Done!\n')
 
   class(result) <- "BayesGLM_cifti"
   result

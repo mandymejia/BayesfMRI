@@ -383,10 +383,9 @@ BayesGLM <- function(
   }
 
   # Prewhitening. --------------------------------------------------------------
-  ## Estimate prewhitening parameters. -----------------------------------------
-
-  #compute AR coefficients and average over sessions
   if (do_pw) {
+    cat("\tPrewhitening.\n")
+    ## Estimate prewhitening parameters. ---------------------------------------
     AR_coeffs <- array(dim = c(V,ar_order,n_sess))
     AR_resid_var <- array(dim = c(V,n_sess))
     AR_AIC <- if (aic) { array(dim = c(V,n_sess)) } else { NULL }
@@ -415,12 +414,9 @@ BayesGLM <- function(
       avg_AR <- AR_smoothed_list$AR
       avg_var <- AR_smoothed_list$var
     }
-  }
 
-  ## Apply prewhitening. -------------------------------------------------------
-  if (do_pw) {
+    ## Apply prewhitening. -----------------------------------------------------
     # Create the sparse pre-whitening matrix
-    cat(".... prewhitening... ")
     if (is.null(num.threads) | num.threads < 2) {
       # Initialize the block diagonal covariance matrix
       template_pw <- Matrix::bandSparse(
@@ -428,7 +424,7 @@ BayesGLM <- function(
       )
       template_pw_list <- rep(list(template_pw), V)
       for(vv in 1:V) {
-        if(vv %% 100 == 0) cat("\n Location",vv,"of",V,"")
+        if(vv %% 100 == 0) cat("\tLocation",vv,"of",V,"\n")
         # template_pw_list[[vv]] <- prewhiten.v(AR_coeffs = avg_AR[vv,],
         #                                      ntime = ntime,
         #                                      AR_var = avg_var[vv])
@@ -458,7 +454,7 @@ BayesGLM <- function(
         )
       parallel::stopCluster(cl)
     }
-    cat("done!\n")
+    cat("\tDone!\n")
 
     #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
     sqrtInv_all <- Matrix::bdiag(template_pw_list)
@@ -542,7 +538,7 @@ BayesGLM <- function(
       }
       mesh$Amat <- spde$Amat
       mesh$spde <- spde$spde
-      cat('\n.... estimating model with EM')
+      cat('\tEstimating model with EM.\n')
       Psi_k <- spde$Amat
       Psi <- Matrix::bdiag(rep(list(Psi_k),K))
       A <- Matrix::crossprod(model_data$X %*% Psi)
@@ -550,7 +546,7 @@ BayesGLM <- function(
       kappa2 <- 4
       phi <- 1 / (4*pi*kappa2*4)
       # Using values based on the classical GLM
-      if(verbose) cat("... FINDING BEST GUESS INITIAL VALUES\n")
+      if(verbose) cat("\t\tFinding best guess initial values.\n")
       beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
       res_y <- (model_data$y - model_data$X %*% beta_hat)@x
       sigma2 <- stats::var(res_y)
@@ -575,11 +571,11 @@ BayesGLM <- function(
         verbose = FALSE
       )
       parallel::stopCluster(cl)
-      if(verbose) cat("...... DONE!\n")
+      if(verbose) cat("\t\tDone!\n")
       theta <- c(t(kappa2_phi_rcpp), sigma2)
       theta_init <- theta
       Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
-      if(verbose) cat("... STARTING EM ALGORITHM\n")
+      if(verbose) cat("\t\tStarting EM algorithm.\n")
       em_output <-
         .findTheta(
           theta = theta,
@@ -593,7 +589,7 @@ BayesGLM <- function(
           tol = emTol,
           verbose = verbose
         )
-      if(verbose) cat(".... EM algorithm complete!\n")
+      if(verbose) cat("\t\tEM algorithm complete!\n")
       kappa2_new <- phi_new <- sigma2_new <- mu <- NULL
       list2env(em_output, envir = environment())
       Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
@@ -618,12 +614,12 @@ BayesGLM <- function(
       mu.theta_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
       tau2 <- 1 / (4*pi*kappa2_new*phi_new)
       mu.theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
-      cat("... done!\n")
+      cat("\t\tDone!\n")
 
     ## INLA Model. -------------------------------------------------------------
     } else {
       #estimate model using INLA
-      cat('\n .... estimating model with INLA')
+      cat('\tEstimating model with INLA.\n')
       #organize the formula and data objects
       repl_names <- names(repls)
       hyper_initial <- c(-2,2)
@@ -645,7 +641,7 @@ BayesGLM <- function(
         control.family=list(hyper=list(prec=list(initial=1))),
         control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
       )
-      if(verbose) cat("done!\n")
+      if(verbose) cat("\t\tDone!\n")
 
       #extract useful stuff from INLA model result
       task_estimates <- extract_estimates(
