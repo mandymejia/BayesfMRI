@@ -5,7 +5,7 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 4000
+resamp_res <- 6000
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_results <- "tests/results_notInPackage"
@@ -35,11 +35,12 @@ bsim <- simulate_cifti_multiple(
   n_sessions=2,
   n_runs=1,
   ntasks=3,
-  ntime=280,
-  session_var=3,
-  run_var=2,
+  ntime=155,
   resamp_res=resamp_res
 )
+add_nze <- function(xii, sd=1){ xii + matrix(rnorm(prod(dim(xii)))*sd, nrow=nrow(xii)) }
+bsim$simulated_cifti$subj1_sess1_run1 <- add_nze(bsim$simulated_cifti$subj1_sess1_run1, sd=40)
+bsim$simulated_cifti$subj1_sess2_run1 <- add_nze(bsim$simulated_cifti$subj1_sess2_run1, sd=40)
 
 # BayesGLM ---------------------------------------------------------------------
 cat("BayesGLM\n~~~~~~~~~~~~~~~~\n")
@@ -67,11 +68,6 @@ for (ii in seq(nrow(params))) {
   print(params[ii,])
   outf_ii <- file.path(dir_resultThis, paste0("bfmri", ii, ".rds"))
   #if (file.exists(outf_ii)) { next }
-
-  xii_ii <- bsim$simulated_cifti[seq(params$sess[ii])]
-  # if (params$bs[ii] != "both") {
-  #   xii_ii <- lapply(xii_ii, remove_xifti, "cortex_left")
-  # }
 
   # Do BayesGLM_cifti
   exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
@@ -105,42 +101,42 @@ for (ii in seq(nrow(params))) {
   }
 }
 
-# # Activations and plot ---------------------------------------------------------
-# for (ii in seq(nrow(params))) {
-#
-#   # Plot GLM results.
-#   if (saveResults) {
-#     plot(
-#       bfmri_ii, idx=1,
-#       title=paste0("Win, params ", ii),
-#       fname=file.path(dir_resultThis, paste0("bglm_", ii))
-#     )
-#   }
-#
-#   # [Manual visual comparison if `resamp_res` was high enough]
-#   # stop()
-#   # contii <- read_xifti(file.path(dir_data, "derivatives surface_pipeline sub-MSC01 task_contrasts_cifti motor sub-MSC01-motor_contrasts_32k_fsLR.dscalar.nii"))
-#   # contii$meta$cifti$names
-#   # plot(...)
-#
-#   # Identify the activations.
-#   # plot(act_ii$activations_xifti)
-#   if (ii == 1) {
-#     # Test the other arguments too.
-#     act_ii_temp <- id_activations_cifti(
-#       bfmri_ii, threshold=.1, method='classical', alpha=0.1, correction='FWER'
-#       #, excur_method='QC'
-#     )
-#     rm(act_ii_temp)
-#   }
-#   if (saveResults) {
-#     plot(
-#       act_ii$activations_xifti, idx=1,
-#       title=paste0("Win activations, params ", ii),
-#       fname=file.path(dir_resultThis, paste0("act_", ii))
-#     )
-#   }
-#
-# }
-#
-# # BayesGLM2?
+for (ii in seq(nrow(params))) {
+  x_ii <- readRDS(file.path(dir_resultThis, paste0("bfmri", ii, ".rds")))
+  pfname_pre <- file.path(dir_resultThis, paste0("bfmri", ii))
+  ptitle <- if (ii==1) {
+    "sess2-cmbYes-pwYes-noSmooth"
+  } else {
+    params_pwr[((ii-2) %% 4) + 1]
+  }
+  ptitle <- gsub("-", ", ", ptitle, fixed=TRUE)
+  plot(
+    x_ii$bfmri,
+    idx=seq(3), together="idx", together_ncol=1, zlim=c(-10, 10),
+    together_title=ptitle, legend_fname=NULL, legend_embed=FALSE,
+    fname=paste0(pfname_pre, "_est.png")
+  )
+  plot(
+    x_ii$act,
+    idx=seq(3), together="idx", together_ncol=1,
+    together_title=ptitle, legend_fname=NULL, legend_embed=FALSE,
+    fname=paste0(pfname_pre, "_act.png")
+  )
+}
+
+pcomp <- params[seq(4)*4,seq(2)]
+pcomp$Bayes <- ifelse(pcomp$Bayes, "Bayes", "classical")
+pcomp_names <- apply(pcomp, 1, paste0, collapse="-")
+for (jj in seq(4)) {
+  idx <- seq(2,5) + (jj-1)*4
+  view_comp(
+    img = file.path(dir_resultThis, paste0("bfmri", idx, "_est.png")),
+    nrow=1, title=gsub("-", ", ", pcomp_names[jj], fixed=TRUE),
+    fname = file.path(dir_resultThis, paste0(pcomp_names[jj], "_est.png"))
+  )
+  view_comp(
+    img = file.path(dir_resultThis, paste0("bfmri", idx, "_act.png")),
+    nrow=1, title=gsub("-", ", ", pcomp_names[jj], fixed=TRUE),
+    fname = file.path(dir_resultThis, paste0(pcomp_names[jj], "_act.png"))
+  )
+}

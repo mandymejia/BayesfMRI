@@ -275,211 +275,215 @@ spatial_effects_cifti_cs <- function(
 #' @importFrom ciftiTools ciftiTools.setOption ciftiTools.files read_cifti merge_xifti resample_cifti remove_xifti
 #' @importFrom stats arima.sim rnorm
 #'
-simulate_cifti_multiple <-
-  function(wb_path,
-           brainstructures = c("left", "right"),
-           n_subjects = 1,
-           n_sessions = 1,
-           n_runs = 1,
-           ntasks = 2,
-           ntime = 300,
-           resamp_res = NULL,
-           max_amplitude = 1,
-           onsets = NULL,
-           durations = NULL,
-           TR = 1,
-           subject_var = NULL,
-           session_var = NULL,
-           run_var = NULL,
-           ar_error = NULL,
-           surfL = NULL,
-           surfR = NULL) {
-    # This is necessary for the cifti functions
-    ciftiTools::ciftiTools.setOption('wb_path',wb_path)
+simulate_cifti_multiple <- function(wb_path,
+  brainstructures = c("left", "right"),
+  n_subjects = 1,
+  n_sessions = 1,
+  n_runs = 1,
+  ntasks = 2,
+  ntime = 300,
+  resamp_res = NULL,
+  max_amplitude = 1,
+  onsets = NULL,
+  durations = NULL,
+  TR = 1,
+  subject_var = NULL,
+  session_var = NULL,
+  run_var = NULL,
+  ar_error = NULL,
+  surfL = NULL,
+  surfR = NULL) {
+  
+  # This is necessary for the cifti functions
+  ciftiTools::ciftiTools.setOption('wb_path',wb_path)
 
-    # Check brainstructures entry
-    brainstructures <- match_input(
-      brainstructures, c("left","right","subcortical","both"),
-      user_value_label="brainstructures"
-    )
-    if ("both" %in% brainstructures) {
-      brainstructures <- c("left","right")
-    }
-    if ("subcortical" %in% brainstructures) {
-      stop("Subcortical modeling not yet available.")
-    }
-    do_left <- "left" %in% brainstructures
-    do_right <- "right" %in% brainstructures
-    do_sub <- "subcortical" %in% brainstructures
+  # Check brainstructures entry
+  brainstructures <- match_input(
+    brainstructures, c("left","right","subcortical","both"),
+    user_value_label="brainstructures"
+  )
+  if ("both" %in% brainstructures) {
+    brainstructures <- c("left","right")
+  }
+  if ("subcortical" %in% brainstructures) {
+    stop("Subcortical modeling not yet available.")
+  }
+  do_left <- "left" %in% brainstructures
+  do_right <- "right" %in% brainstructures
+  do_sub <- "subcortical" %in% brainstructures
 
-    # Checks on the inputs
-    if(!is.null(onsets)) {
-      ntasks = length(onsets)
-      if(ntime < max(unlist(onsets))) ntime <- max(unlist(onsets))
-    }
-    if((is.null(onsets) + is.null(durations)) == 1) stop("Only onsets or durations were specified, but not both. Please give both onsets or durations, or give neither.")
-    if(do_sub & !is.null(resamp_res)) message("Subcortical data simulation is not compatible with resampling. No resampling will be done.\n")
-    # Make onsets and durations, if they are not supplied
-    if(is.null(onsets)) {
-      block_period <- round(ntime / 5)
-      onsets <- sapply(seq(ntasks), function(task_n) {
-        seq((block_period / ntasks)*task_n,
-            ntime - (block_period / ntasks)*(ntasks - task_n),
-            length.out = 5) - block_period / ntasks
-      }, simplify = FALSE)
-      durations <- sapply(onsets, function(onset_n) {
-        TR
-      }, simplify = FALSE)
-    }
+  # Checks on the inputs
+  if(!is.null(onsets)) {
+    ntasks = length(onsets)
+    if(ntime < max(unlist(onsets))) ntime <- max(unlist(onsets))
+  }
+  if((is.null(onsets) + is.null(durations)) == 1) stop("Only onsets or durations were specified, but not both. Please give both onsets or durations, or give neither.")
+  if(do_sub & !is.null(resamp_res)) message("Subcortical data simulation is not compatible with resampling. No resampling will be done.\n")
+  # Make onsets and durations, if they are not supplied
+  if(is.null(onsets)) {
+    block_period <- round(ntime / 5)
+    onsets <- sapply(seq(ntasks), function(task_n) {
+      seq((block_period / ntasks)*task_n,
+          ntime - (block_period / ntasks)*(ntasks - task_n),
+          length.out = 5) - block_period / ntasks
+    }, simplify = FALSE)
+    durations <- sapply(onsets, function(onset_n) {
+      TR
+    }, simplify = FALSE)
+  }
 
-    # Create the design matrix from the onsets and the durations
-    for (tt in seq(ntasks)) {
-      onsets[[tt]] <- cbind(onsets[[tt]], durations[[tt]])
-    }
-    design <- BayesfMRI::make_HRFs(
-      onsets=lapply(onsets, as.matrix),
-      TR=TR,
-      duration=ntime,
-      dHRF=0
-    )$design
-    # neuRosim::specifydesign(
-    #   onsets = onsets,
-    #   durations = durations,
-    #   totaltime = ntime,
-    #   TR = TR,
-    #   effectsize = lapply(1:length(onsets),function(x) 1),
-    #   accuracy = 0.1,
-    #   conv = "double-gamma",
-    #   cond.names = NULL,
-    #   param = NULL
-    # )
+  # Create the design matrix from the onsets and the durations
+  for (tt in seq(ntasks)) {
+    onsets[[tt]] <- cbind(onsets[[tt]], durations[[tt]])
+  }
+  design <- BayesfMRI::make_HRFs(
+    onsets=lapply(onsets, as.matrix),
+    TR=TR,
+    duration=ntime,
+    dHRF=0
+  )$design
+  # neuRosim::specifydesign(
+  #   onsets = onsets,
+  #   durations = durations,
+  #   totaltime = ntime,
+  #   TR = TR,
+  #   effectsize = lapply(1:length(onsets),function(x) 1),
+  #   accuracy = 0.1,
+  #   conv = "double-gamma",
+  #   cond.names = NULL,
+  #   param = NULL
+  # )
 
-    # Make a cifti for the coefficients
-    cifti_files <- ciftiTools::ciftiTools.files()
-    if (do_left | do_right) {
-      template_cifti <-
-        ciftiTools::read_cifti(
-          cifti_fname = cifti_files$cifti[[1]],
-          surfL_fname = cifti_files$surf[[1]],
-          surfR_fname = cifti_files$surf[[2]],
-          brainstructures = brainstructures,
-          resamp_res = resamp_res
-        )
-      spatial_effects_cifti <- spatial_effects_cifti_cs
-    }
-    if(do_sub) {
-      template_cifti <-
-        ciftiTools::read_cifti(
-          cifti_fname = cifti_files$cifti[[4]],
-          surfL_fname = NULL,
-          surfR_fname = NULL,
-          brainstructures = brainstructures,
-          resamp_res = NULL
-        )
-      spatial_effects_cifti <- spatial_effects_cifti_sub
-    }
-    true_coef_cifti <-
-      spatial_effects_cifti(
-        xii = template_cifti,
-        # How many distinct areas of activations is
-        # simulated from a Poisson(centers_lambda)
-        centers_lambda = 0.2,
-        smooth_FWHM = 20, # in mm
-        max_amplitude = max_amplitude,
-        n_tasks = ntasks,
-        n_subjects = n_subjects,
-        n_sessions = n_sessions,
-        n_runs = n_runs
+  # Make a cifti for the coefficients
+  cifti_files <- ciftiTools::ciftiTools.files()
+  if (do_left | do_right) {
+    template_cifti <-
+      ciftiTools::read_cifti(
+        cifti_fname = cifti_files$cifti[[1]],
+        surfL_fname = cifti_files$surf[[1]],
+        surfR_fname = cifti_files$surf[[2]],
+        brainstructures = brainstructures,
+        resamp_res = resamp_res
       )
-    # Make ciftis for the AR coefficients
-    if(is.null(ar_error)) ar_error <- 0
-    ar_coefs <- spatial_effects_cifti(
+    spatial_effects_cifti <- spatial_effects_cifti_cs
+  }
+  if(do_sub) {
+    template_cifti <-
+      ciftiTools::read_cifti(
+        cifti_fname = cifti_files$cifti[[4]],
+        surfL_fname = NULL,
+        surfR_fname = NULL,
+        brainstructures = brainstructures,
+        resamp_res = NULL
+      )
+    spatial_effects_cifti <- spatial_effects_cifti_sub
+  }
+  true_coef_cifti <-
+    spatial_effects_cifti(
       xii = template_cifti,
+      # How many distinct areas of activations is
+      # simulated from a Poisson(centers_lambda)
       centers_lambda = 0.2,
-      smooth_FWHM = 100,
-      max_amplitude = ar_error,
-      n_tasks = length(ar_error),
+      smooth_FWHM = 20, # in mm
+      max_amplitude = max_amplitude,
+      n_tasks = ntasks,
       n_subjects = n_subjects,
       n_sessions = n_sessions,
       n_runs = n_runs
     )
-    # Combine information from the AR coefficients and the coefficients
-    # to produce the final simulated data
-    final_output <- mapply(function(coef_i,ar_i) {
-      mapply(function(coef_ij,ar_ij) {
-        mapply(function(coef_ijk, ar_ijk) {
-          cifti_error <- ar_ijk
-          if(do_left) {
-            cifti_error$data$cortex_left <-
-              t(apply(ar_ijk$data$cortex_left, 1, function(cl_v)
-                if(cl_v == 0) {
-                  return(rnorm(ntime))
-                } else {
-                  return(arima.sim(model = list(ar = cl_v), n = ntime))
-                }))
-          }
-          if(do_right) {
-            cifti_error$data$cortex_right <-
-              t(apply(ar_ijk$data$cortex_right, 1, function(cl_v)
-                if(cl_v == 0) {
-                  return(rnorm(ntime))
-                } else {
-                  return(arima.sim(model = list(ar = cl_v), n = ntime))
-                }))
-          }
-          if(do_sub) {
-            cifti_error$data$subcort <-
-              t(apply(ar_ijk$data$subcort, 1, function(cl_v)
-                if(cl_v == 0) {
-                  return(rnorm(ntime))
-                } else {
-                  return(arima.sim(model = list(ar = cl_v), n = ntime))
-                }))
-          }
-          final_cifti <- cifti_error
-          if(do_left) {
-            final_cifti$data$cortex_left <- final_cifti$data$cortex_left +
-              tcrossprod(coef_ijk$data$cortex_left,design)
-          }
-          if(do_right) {
-            final_cifti$data$cortex_right <- final_cifti$data$cortex_right +
-              tcrossprod(coef_ijk$data$cortex_right,design)
-          }
-          if(do_sub) {
-            final_cifti$data$subcort <- final_cifti$data$subcort +
-              tcrossprod(coef_ijk$data$subcort,design)
-            # This next line is necessary in order to make a valid subcortical
-            # xifti object.
-            final_cifti$meta$cifti$names <- as.character(seq(ntime))
-          }
-          final_cifti <- final_cifti + 250 # This is done so that preprocessing does
-                                            # not artifically inflate values in locations
-                                            # with means close to zero.
-          return(final_cifti)
-        }, coef_ijk = coef_ij, ar_ijk = ar_ij, SIMPLIFY = FALSE)
-      }, coef_ij = coef_i, ar_ij = ar_i, SIMPLIFY = FALSE)
-    }, coef_i = true_coef_cifti, ar_i = ar_coefs, SIMPLIFY = FALSE)
+  # Make ciftis for the AR coefficients
+  if(is.null(ar_error)) ar_error <- 0
+  ar_coefs <- spatial_effects_cifti(
+    xii = template_cifti,
+    centers_lambda = 0.2,
+    smooth_FWHM = 100,
+    max_amplitude = ar_error,
+    n_tasks = length(ar_error),
+    n_subjects = n_subjects,
+    n_sessions = n_sessions,
+    n_runs = n_runs
+  )
+  # Combine information from the AR coefficients and the coefficients
+  # to produce the final simulated data
+  final_output <- mapply(function(coef_i,ar_i) {
+    mapply(function(coef_ij,ar_ij) {
+      mapply(function(coef_ijk, ar_ijk) {
+        cifti_error <- ar_ijk
+        if(do_left) {
+          cifti_error$data$cortex_left <-
+            t(apply(ar_ijk$data$cortex_left, 1, function(cl_v)
+              if(cl_v == 0) {
+                return(rnorm(ntime))
+              } else {
+                return(arima.sim(model = list(ar = cl_v), n = ntime))
+              }))
+        }
+        if(do_right) {
+          cifti_error$data$cortex_right <-
+            t(apply(ar_ijk$data$cortex_right, 1, function(cl_v)
+              if(cl_v == 0) {
+                return(rnorm(ntime))
+              } else {
+                return(arima.sim(model = list(ar = cl_v), n = ntime))
+              }))
+        }
+        if(do_sub) {
+          cifti_error$data$subcort <-
+            t(apply(ar_ijk$data$subcort, 1, function(cl_v)
+              if(cl_v == 0) {
+                return(rnorm(ntime))
+              } else {
+                return(arima.sim(model = list(ar = cl_v), n = ntime))
+              }))
+        }
+        final_cifti <- cifti_error
+        if(do_left) {
+          final_cifti$data$cortex_left <- final_cifti$data$cortex_left +
+            tcrossprod(coef_ijk$data$cortex_left,design)
+        }
+        if(do_right) {
+          final_cifti$data$cortex_right <- final_cifti$data$cortex_right +
+            tcrossprod(coef_ijk$data$cortex_right,design)
+        }
+        if(do_sub) {
+          final_cifti$data$subcort <- final_cifti$data$subcort +
+            tcrossprod(coef_ijk$data$subcort,design)
+          # This next line is necessary in order to make a valid subcortical
+          # xifti object.
+          final_cifti$meta$cifti$names <- as.character(seq(ntime))
+        }
+        final_cifti <- final_cifti + 250 # This is done so that preprocessing does
+                                          # not artifically inflate values in locations
+                                          # with means close to zero.
+        return(final_cifti)
+      }, coef_ijk = coef_ij, ar_ijk = ar_ij, SIMPLIFY = FALSE)
+    }, coef_ij = coef_i, ar_ij = ar_i, SIMPLIFY = FALSE)
+  }, coef_i = true_coef_cifti, ar_i = ar_coefs, SIMPLIFY = FALSE)
 
-    all_data_combos <- expand.grid(seq(n_subjects),seq(n_sessions),seq(n_runs))
-    final_return <- apply(all_data_combos,1,function(x) {
-      final_output[[x[1]]][[x[2]]][[x[3]]]
-    })
-    coef_return <- apply(all_data_combos,1,function(x) {
-      true_coef_cifti[[x[1]]][[x[2]]][[x[3]]]
-    })
-    ar_return <- apply(all_data_combos,1,function(x) {
-      ar_coefs[[x[1]]][[x[2]]][[x[3]]]
-    })
+  all_data_combos <- expand.grid(seq(n_subjects),seq(n_sessions),seq(n_runs))
+  final_return <- apply(all_data_combos,1,function(x) {
+    final_output[[x[1]]][[x[2]]][[x[3]]]
+  })
+  coef_return <- apply(all_data_combos,1,function(x) {
+    true_coef_cifti[[x[1]]][[x[2]]][[x[3]]]
+  })
+  ar_return <- apply(all_data_combos,1,function(x) {
+    ar_coefs[[x[1]]][[x[2]]][[x[3]]]
+  })
 
-    cifti_names <- apply(all_data_combos,1,function(x) paste0("subj",x[1],"_sess",x[2],"_run",x[3]))
-    names(final_return) <- names(coef_return) <- names(ar_return) <-  cifti_names
+  cifti_names <- apply(all_data_combos,1,function(x) paste0("subj",x[1],"_sess",x[2],"_run",x[3]))
+  names(final_return) <- names(coef_return) <- names(ar_return) <-  cifti_names
 
-    output <- list(
-      simulated_cifti = final_return,
-      coef_cifti = coef_return,
-      ar_cifti = ar_return,
-      design = design
-    )
-    class(output) <- "sim_cii"
-    output
-  }
+  output <- list(
+    simulated_cifti = final_return,
+    coef_cifti = coef_return,
+    ar_cifti = ar_return,
+    design = design
+  )
+  class(output) <- "sim_cii"
+  output
+}
+
+add_noise <- function(xii, sd=1){ 
+  xii + matrix(rnorm(prod(dim(xii)))*sd, nrow=nrow(xii))
+}
