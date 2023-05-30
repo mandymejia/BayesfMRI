@@ -281,7 +281,7 @@ print.BayesGLM2 <- function(x, ...) {
 #' @export
 #' @method summary BayesGLM2_cifti
 summary.BayesGLM2_cifti <- function(object, ...) {
-  x <- summary(object$BayesGLM2_results)
+  x <- summary.BayesGLM2(object$BayesGLM2_results)
   class(x) <- "summary.BayesGLM2_cifti"
   x
 }
@@ -292,7 +292,7 @@ summary.BayesGLM2_cifti <- function(object, ...) {
 #' @param x Object of class \code{"summary.BayesGLM2_cifti"}.
 #' @method print summary.BayesGLM2_cifti
 print.summary.BayesGLM2_cifti <- function(x, ...) {
-  print.summary.BayesGLM2(x)
+  print.summary.BayesGLM2(x, ...)
 }
 
 #' @rdname summary.BayesGLM2_cifti

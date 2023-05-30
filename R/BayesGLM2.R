@@ -374,6 +374,7 @@ BayesGLM2 <- function(
     nsamp_theta = nsamp_theta,
     nsamp_beta = nsamp_beta
   )
+  class(out) <- "BayesGLM2"
 
   if (is_cifti) {
     out <- list(
@@ -382,24 +383,22 @@ BayesGLM2 <- function(
         out$model_results$cortex_left$mask,
         out$model_results$cortex_right$estimates,
         out$model_results$cortex_right$mask
-      ), 
+      ),
       activations_xii = NULL,
       BayesGLM2_results = out
     )
     out$contrast_estimates_xii$meta$cifti$names <- names(contrasts)
     if (do_excur) {
       act_xii <- as.xifti(
-        out$model_results$cortex_left$active,
-        out$model_results$cortex_left$mask,
-        out$model_results$cortex_right$active,
-        out$model_results$cortex_right$mask
+        out$BayesGLM2_results$model_results$cortex_left$active,
+        out$BayesGLM2_results$model_results$cortex_left$mask,
+        out$BayesGLM2_results$model_results$cortex_right$active,
+        out$BayesGLM2_results$model_results$cortex_right$mask
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)
     }
     class(out) <- "BayesGLM2_cifti"
-  } else {
-    class(out) <- "BayesGLM2"
   }
 
   out
