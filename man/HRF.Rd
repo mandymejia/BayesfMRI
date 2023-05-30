@@ -2,12 +2,15 @@
 % Please edit documentation in R/make_HRFs.R
 \name{HRF}
 \alias{HRF}
-\title{Calculate the canonical (double-gamma) HRF}
+\title{Canonical (double-gamma) HRF}
 \usage{
-HRF(t, a1 = 6, b1 = 0.9, a2 = 12, b2 = 0.9, c = 0.35)
+HRF(t, deriv = 0, a1 = 6, b1 = 0.9, a2 = 12, b2 = 0.9, c = 0.35)
 }
 \arguments{
 \item{t}{time vector}
+
+\item{deriv}{\code{0} (default) for the HRF, \code{1} for the first derivative
+of the HRF, or \code{2} for the second derivative of the HRF.}
 
 \item{a1}{delay of response. Default: \code{6}}
 
@@ -20,10 +23,11 @@ HRF(t, a1 = 6, b1 = 0.9, a2 = 12, b2 = 0.9, c = 0.35)
 \item{c}{scale of undershoot. Default: \code{0.35}}
 }
 \value{
-HRF vector corresponding to time
+HRF vector (or dHRF, or d2HRF) corresponding to time
 }
 \description{
-Calculate the canonical (double-gamma) HRF
+Calculate the HRF from a time vector and parameters. Optionally compute the
+first or second derivative of the HRF instead.
 }
 \examples{
 downsample <- 100

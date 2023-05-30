@@ -69,12 +69,12 @@ make_HRFs <- function(
     nJ <- (dHRF+1) * nK # number of design matrix columns
     if (nJ > 5) {
       if (verbose) { 
-        message("Modeling the HRF derivatives as nuisance signals.\n")
+        message("Modeling the HRF derivatives as nuisance signals.")
       }
       dHRF_as <- "nuisance"
     } else {
       if (verbose) {
-        message("Modeling the HRF derivatives as tasks signals.\n")
+        message("Modeling the HRF derivatives as tasks signals.")
       }
       dHRF_as <- "task"
     }
@@ -92,13 +92,13 @@ make_HRFs <- function(
 
   design <- nuisance <- vector("list", length=dHRF+1)
 
-  for (dd in seq(dHRF+1)) {
-    dname_dd <- switch(dd, "HRF", "dHRF", "d2HRF")
+  for (dd in seq(0, dHRF)) {
+    dname_dd <- switch(dd+1, "HRF", "dHRF", "d2HRF")
     theHRF_dd <- matrix(NA, nrow=duration, ncol=nK)
     colnames(theHRF_dd) <- paste0(task_names, "_", dname_dd)
 
-    HRF_fn <- switch(dd, HRF, dHRF, d2HRF)
-    HRF_dd <- HRF_fn(seq(0, 30, by=1/downsample))[-1] #canonical HRF to be used in convolution
+    # canonical HRF to be used in convolution
+    HRF_dd <- HRF(seq(0, 30, by=1/downsample), deriv=dd)[-1]
 
     for (kk in seq(nK)) {
       onsets_k <- onsets[[kk]][,1] #onset times in scans
@@ -117,10 +117,10 @@ make_HRFs <- function(
       theHRF_dd[,kk] <- HRF_k[inds]
     }
 
-    if (dd > 1 && dHRF_as == "nuisance") {
-      nuisance[[dd]] <- theHRF_dd
+    if (dd > 0 && dHRF_as == "nuisance") {
+      nuisance[[dd+1]] <- theHRF_dd
     } else {
-      design[[dd]] <- theHRF_dd
+      design[[dd+1]] <- theHRF_dd
     }
   }
 
@@ -130,74 +130,63 @@ make_HRFs <- function(
   )
 }
 
-#' Calculate the canonical (double-gamma) HRF
+#' Canonical (double-gamma) HRF
+#' 
+#' Calculate the HRF from a time vector and parameters. Optionally compute the
+#'  first or second derivative of the HRF instead.
 #'
 #' @param t time vector
+#' @param deriv \code{0} (default) for the HRF, \code{1} for the first derivative
+#'  of the HRF, or \code{2} for the second derivative of the HRF. 
 #' @param a1 delay of response. Default: \code{6}
 #' @param b1 response dispersion. Default: \code{0.9}
 #' @param a2 delay of undershoot. Default: \code{12}
 #' @param b2 dispersion of undershoot. Default: \code{0.9}
 #' @param c scale of undershoot. Default: \code{0.35}
 #'
-#' @return HRF vector corresponding to time
+#' @return HRF vector (or dHRF, or d2HRF) corresponding to time
 #' 
 #' @examples
 #' downsample <- 100
 #' HRF(seq(0, 30, by=1/downsample))
 #' 
+#' @importFrom fMRItools is_1
 #' @export
-HRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
-  ((t/(a1*b1))^a1) * exp(-(t-a1*b1)/b1) - c * ((t/(a2*b2))^a2) * exp(-(t - a2*b2)/b2)
-}
+HRF <- function(t, deriv=0, a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
 
-#' Calculate first derivative of the canonical (double-gamma) HRF
-#'
-#' @param t time vector
-#' @param a1 delay of response. Default: \code{6}
-#' @param b1 response dispersion. Default: \code{0.9}
-#' @param a2 delay of undershoot. Default: \code{12}
-#' @param b2 dispersion of undershoot. Default: \code{0.9}
-#' @param c scale of undershoot. Default: \code{0.35}
-#'
-#' @return dHRF vector corresponding to time
-#' 
-#' @examples
-#' downsample <- 100
-#' dHRF(seq(0, 30, by=1/downsample))
-#' 
-#' @export
-dHRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
-  C1 <- (1/(a1*b1))^a1
-  C2 <- c*(1/(a2*b2))^a2
-  A1 <- a1*t^(a1 - 1)*exp(-(t - a1*b1)/b1)
-  A2 <- a2*t^(a2 - 1)*exp(-(t - a2*b2)/b2)
-  B1 <- t^a1 / b1 * exp(-(t - a1*b1)/b1)
-  B2 <- t^a2 / b2 * exp(-(t - a2*b2)/b2)
-  C1*(A1 - B1) - C2 * (A2 - B2)
-}
+  # Arg checks
+  stopifnot(is.numeric(t))
+  deriv <- as.numeric(match.arg(as.character(deriv), c("0", "1", "2")))
+  stopifnot(is_1(a1, "numeric"))
+  stopifnot(is_1(b1, "numeric"))
+  stopifnot(is_1(a2, "numeric"))
+  stopifnot(is_1(b2, "numeric"))
+  stopifnot(is_1(c, "numeric"))
 
-#' Calculate second derivative of the canonical (double-gamma) HRF
-#'
-#' @param t time vector
-#' @param a1 delay of response. Default: \code{6}
-#' @param b1 response dispersion. Default: \code{0.9}
-#' @param a2 delay of undershoot. Default: \code{12}
-#' @param b2 dispersion of undershoot. Default: \code{0.9}
-#' @param c scale of undershoot. Default: \code{0.35}
-#'
-#' @return d2HRF vector corresponding to time
-#' 
-#' @examples
-#' downsample <- 100
-#' d2HRF(seq(0, 30, by=1/downsample))
-#' 
-#' @export
-d2HRF <- function(t,a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
-  C1 <- (1/(a1*b1))^a1
-  C2 <- c*(1/(a2*b2))^a2
-  dA1 <- a1 * ((a1 - 1) - t/b1) * t^(a1-2) * exp(-(t - a1*b1)/b1)
-  dB1 <- (1/b1) * (a1 - (t / b1)) * t^(a1 - 1) * exp(-(t - a1*b1)/b1)
-  dA2 <- a2 * ((a2 - 1) - t/b2) * t^(a2-2) * exp(-(t - a2*b2)/b2)
-  dB2 <- (1/b2) * (a2 - (t / b2)) * t^(a2 - 1) * exp(-(t - a2*b2)/b2)
-  C1 * (dA1 - dB1) - C2 * (dA2 - dB2)
+  # HRF
+  if (deriv==0) {
+    out <- ((t/(a1*b1))^a1) * exp(-(t-a1*b1)/b1) - c * ((t/(a2*b2))^a2) * exp(-(t - a2*b2)/b2)
+
+  # dHRF
+  } else if (deriv==1) {
+    C1 <- (1/(a1*b1))^a1
+    C2 <- c*(1/(a2*b2))^a2
+    A1 <- a1*t^(a1 - 1)*exp(-(t - a1*b1)/b1)
+    A2 <- a2*t^(a2 - 1)*exp(-(t - a2*b2)/b2)
+    B1 <- t^a1 / b1 * exp(-(t - a1*b1)/b1)
+    B2 <- t^a2 / b2 * exp(-(t - a2*b2)/b2)
+    out <- C1*(A1 - B1) - C2 * (A2 - B2)
+
+  # ddHRF
+  } else if (deriv==2) {
+    C1 <- (1/(a1*b1))^a1
+    C2 <- c*(1/(a2*b2))^a2
+    dA1 <- a1 * ((a1 - 1) - t/b1) * t^(a1-2) * exp(-(t - a1*b1)/b1)
+    dB1 <- (1/b1) * (a1 - (t / b1)) * t^(a1 - 1) * exp(-(t - a1*b1)/b1)
+    dA2 <- a2 * ((a2 - 1) - t/b2) * t^(a2-2) * exp(-(t - a2*b2)/b2)
+    dB2 <- (1/b2) * (a2 - (t / b2)) * t^(a2 - 1) * exp(-(t - a2*b2)/b2)
+    out <- C1 * (dA1 - dB1) - C2 * (dA2 - dB2)
+  }
+
+  out
 }
