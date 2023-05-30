@@ -89,3 +89,30 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
   # Plot
   ciftiTools::view_xifti_surface(the_xii, idx=idx, ...)
 }
+
+#' S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM2_cifti"} object
+#'
+#' @param x An object of class "BayesGLM2_cifti"
+#' @param idx Which contrast should be plotted? Give the numeric index. 
+#'  \code{NULL} (default) will show all contrasts. This argument overrides 
+#'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti_surface}}.
+#' @param what Estimates of the \code{"contrasts"} (default), or their 
+#'  thresholded \code{"activations"}.
+#' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}
+#'
+#' @method plot BayesGLM2_cifti
+#'
+#' @importFrom ciftiTools view_xifti_surface
+#' @export
+#'
+plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations"), ...){
+  what <- match.arg(what, c("contrasts", "activations"))
+  what <- switch(what, contrasts="contrast_estimates_xii", activations="activations_xii")
+  the_xii <- x[[what]]
+  
+  # Column index
+  if (is.null(idx)) { idx <- seq_len(ncol(do.call(rbind, the_xii$data))) }
+
+  # Plot
+  ciftiTools::view_xifti_surface(the_xii, idx=idx, ...)
+}

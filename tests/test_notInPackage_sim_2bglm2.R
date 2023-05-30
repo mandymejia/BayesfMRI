@@ -61,12 +61,5 @@ saveRDS(bfmri_2sess, file.path(dir_resultsThis, "bfmri_2sess.rds"))
 
 # BayesGLM2 --------------------------------------------------------------------
 bfmri_1sess <- readRDS(file.path(dir_resultsThis, "bfmri_1sess.rds"))
-b2 <- BayesGLM2(bfmri_1sess)
+b2 <- BayesGLM2(bfmri_1sess, excursion_type = ">", quantiles=.7)
 saveRDS(b2, "~/Downloads/temp.rds")
-
-b2_xii <- as.xifti(
-  b2$cortex_left$estimates,
-  b2$cortex_left$mask[1,],
-  b2$cortex_right$estimates,
-  b2$cortex_right$mask[1,]
-)

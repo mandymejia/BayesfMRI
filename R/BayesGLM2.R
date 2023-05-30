@@ -31,6 +31,7 @@
 #' @param excursion_type (For inference only) The type of excursion function for
 #'  the contrast (">", "<", "!="), or a vector thereof (each element
 #'  corresponding to one contrast).  If \code{NULL}, no inference performed.
+#' @param contrast_names (Optional) Names of contrasts.
 #' @param gamma (For inference only) Activation threshold for the excursion set,
 #'  or a vector thereof (each element corresponding to one contrast). Default:
 #'  \code{0}.
@@ -56,6 +57,7 @@ BayesGLM2 <- function(
   contrasts = NULL,
   quantiles = NULL,
   excursion_type=NULL,
+  contrast_names = NULL,
   gamma = 0,
   alpha = 0.05,
   nsamp_theta = 50,
@@ -132,6 +134,14 @@ BayesGLM2 <- function(
     if(any(!sapply(contrasts, is.numeric))) {
       stop('each contrast vector must be numeric, but at least one is not')
     }
+    if (is.null(names(contrasts))) {
+      names(contrasts) <- paste0("contrast_", seq(length(contrasts)))
+    }
+  }
+  # Override `names(contrasts)` with `contrast_names` if provided.
+  if (!is.null(contrast_names)) {
+    stopifnot(length(contrast_names) == length(contrasts))
+    names(contrasts) <- contrast_names
   }
   nC <- length(contrasts)
 
@@ -311,6 +321,7 @@ BayesGLM2 <- function(
       betas.all, wt, SIMPLIFY=FALSE
     ) #apply weight to each element of betas.all (one for each theta sample)
     betas.summ <- apply(abind::abind(betas.wt, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+    dimnames(betas.summ) <- NULL
 
     ## Posterior quantiles of each contrast
     num_quantiles <- length(quantiles)
@@ -321,6 +332,7 @@ BayesGLM2 <- function(
         quantiles.all_iq <- lapply(beta.posteriors, function(x) return(x$quantiles[[iq]]))
         betas.wt_iq <- mapply(function(x, a){return(x*a)}, quantiles.all_iq, wt, SIMPLIFY=FALSE) #apply weight to each element of quantiles.all_iq (one for each theta sample)
         quantiles.summ[[iq]] <- apply(abind::abind(betas.wt_iq, along=3), MARGIN = c(1,2), sum)  #N x L (# of contrasts)
+        dimnames(quantiles.summ[[iq]]) <- NULL
       }
     } else {
       quantiles.summ <- NULL
@@ -331,8 +343,9 @@ BayesGLM2 <- function(
       ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
       ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
       ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
+      dimnames(ppm.summ) <- NULL
       active <- array(0, dim=dim(ppm.summ))
-      for (cc in nC) { active[ppm.summ[,cc] > (1-alpha[cc]),cc] <- 1 }
+      for (cc in seq(nC)) { active[ppm.summ[,cc] > (1-alpha[cc]),cc] <- 1 }
     } else {
       ppm.summ <- active <- NULL
     }
@@ -343,6 +356,7 @@ BayesGLM2 <- function(
       quantiles = quantiles.summ,
       ppm = ppm.summ,
       active = active,
+      mask = Mask,
       Amat = Amat # not Amat.final?
     )
 
@@ -355,7 +369,6 @@ BayesGLM2 <- function(
     excursion_type = excursion_type,
     task_names=task_names,
     session_names=session_names,
-    mask = Mask,
     gamma = gamma,
     alpha = alpha,
     nsamp_theta = nsamp_theta,
@@ -365,19 +378,25 @@ BayesGLM2 <- function(
   if (is_cifti) {
     out <- list(
       contrast_estimates_xii = as.xifti(
-        out$cortex_left$model_results$estimates,
-        out$cortex_left$mask,
-        out$cortex_right$model_results$estimates,
-        out$cortex_right$mask
+        out$model_results$cortex_left$estimates,
+        out$model_results$cortex_left$mask,
+        out$model_results$cortex_right$estimates,
+        out$model_results$cortex_right$mask
       ), 
-      activations_xii = as.xifti(
-        out$cortex_left$model_results$active,
-        out$cortex_left$mask,
-        out$cortex_right$model_results$active,
-        out$cortex_right$mask
-      ),
+      activations_xii = NULL,
       BayesGLM2_results = out
     )
+    out$contrast_estimates_xii$meta$cifti$names <- names(contrasts)
+    if (do_excur) {
+      act_xii <- as.xifti(
+        out$model_results$cortex_left$active,
+        out$model_results$cortex_left$mask,
+        out$model_results$cortex_right$active,
+        out$model_results$cortex_right$mask
+      )
+      out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
+      out$activations_xii$meta$cifti$names <- names(contrasts)
+    }
     class(out) <- "BayesGLM2_cifti"
   } else {
     class(out) <- "BayesGLM2"
