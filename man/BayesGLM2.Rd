@@ -80,12 +80,12 @@ approach described in Mejia et al. (2020).
 Each contrast vector specifies a group-level summary of interest. Let \eqn{M}
 be the number of subjects and \eqn{L} be the number of tasks. For example,
 the contrast vector
-\code{rep(rep(c(1/(M*num_sessions),rep(0, L-1)),num_sessions),M)}
+\code{rep(rep(c(1/(M*nS),rep(0, L-1)),nS),M)}
 represents the group average for the first task for \eqn{M} subjects;
-\code{c(rep(rep(c(1/(M1*num_sessions),rep(0, L-1)),num_sessions),M1), rep(rep(c(-1/(M2*num_sessions),rep(0, L-1)),num_sessions),M2))}
+\code{c(rep(rep(c(1/(M1*nS),rep(0, L-1)),nS),M1), rep(rep(c(-1/(M2*nS),rep(0, L-1)),nS),M2))}
 represents the difference between the first \eqn{M_1} subjects and the remaining \eqn{M_2}
 subjects (M1+M2=M) for the first task;
-\code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, L-2)), num_sessions),M)}
+\code{rep(rep(c(1/(M*nS),-1/(M*nS),rep(0, L-2)), nS),M)}
 represents the difference between the first two tasks, averaged over all
 subjects.
 }

@@ -11,9 +11,7 @@
 ^CRAN-SUBMISSION$
 # Tests ------------------------
 ^tests/simulate_cifti\.R$
-^tests/run_BayesfMRI_tests_notInPackage_MSC\.R$
-^tests/run_BayesfMRI_tests_notInPackage_HCP\.R$
-^tests/run_BayesfMRI_tests_notInPackage_sim\.R$
+^tests/test
 ^tests/data_notInPackage
 ^tests/results_notInPackage
 # Volumetric -------------------
@@ -31,4 +29,6 @@
 ^vignettes/BayesfMRI_HCP\.Rmd$
 # Others -----------------------
 ^R/boundary\.R$
+^R/excursions\.R$
+^R/create_spde_surf\.R$
 ^R/summarize_sessions\.R$

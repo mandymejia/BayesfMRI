@@ -129,7 +129,6 @@ for (ii in seq(nrow(params))) {
     resamp_res = ifelse(params$Bayes[ii], resamp_res/2, resamp_res) / ifelse(params$bs[ii]=="both", 2, 1),
     verbose = FALSE,
     return_INLA = TRUE,
-    outfile = file.path(dir_results, "bfmri_out"),
     combine_sessions = params$avg[ii]
   ))
   print(exec_time)

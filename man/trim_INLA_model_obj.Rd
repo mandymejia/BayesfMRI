@@ -4,10 +4,13 @@
 \alias{trim_INLA_model_obj}
 \title{Trim an INLA object to only include what is necessary for the id_activations function}
 \usage{
-trim_INLA_model_obj(INLA_model_obj)
+trim_INLA_model_obj(INLA_model_obj, minimal = FALSE)
 }
 \arguments{
 \item{INLA_model_obj}{an object of class 'inla' that will be trimmed}
+
+\item{minimal}{just keep the two parameters needed for \code{BayesGLM2}?
+Default: \code{FALSE}.}
 }
 \value{
 a trimmed object of class 'inla'

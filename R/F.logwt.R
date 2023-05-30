@@ -2,16 +2,16 @@
 #'
 #' @param theta A vector of hyperparameter values at which to compute the posterior log density
 #' @param spde A SPDE object from inla.spde2.matern() function, determines prior precision matrix
-#' @param mu.theta Posterior mean from combined subject-level models.
-#' @param Q.theta Posterior precision matrix from combined subject-level models.
+#' @param mu_theta Posterior mean from combined subject-level models.
+#' @param Q_theta Posterior precision matrix from combined subject-level models.
 #' @param M Number of subjects
 #' @return A list containing...
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-# F.logwt <- function(theta, spde, mu.theta, Q.theta, M){
-#   #mu.theta - posterior mean from combined subject-level models
-#   #Q.theta - posterior precision matrix from combined subject-level models
+# F.logwt <- function(theta, spde, mu_theta, Q_theta, M){
+#   #mu_theta - posterior mean from combined subject-level models
+#   #Q_theta - posterior precision matrix from combined subject-level models
 #   #M - number of subjects
 #   a <- 1; b <- 5e-5
 #   n.spde <- (length(theta) - 1)/2

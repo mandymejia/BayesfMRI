@@ -9,7 +9,6 @@
 #' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
 #' @param num.threads See \code{\link{BayesGLM}}.
 #' @param return_INLA See \code{\link{BayesGLM}}.
-#' @param outfile See \code{\link{BayesGLM}}.
 #' @param verbose See \code{\link{BayesGLM}}.
 #' @param combine_sessions See \code{\link{BayesGLM}}.
 #' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
@@ -29,7 +28,6 @@ BayesGLM_argChecks <- function(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  outfile = NULL,
   verbose=FALSE,
   meanTol=1e-6,
   varTol=1e-6,
@@ -55,9 +53,6 @@ BayesGLM_argChecks <- function(
   }
   if (Bayes) {
     if (!EM) { check_INLA(require_PARDISO=TRUE) }
-    if (is.null(outfile)) {
-      warning('No value supplied for `outfile`, which is required for post-hoc Bayesian group modeling.')
-    }
   }
 
   if (isTRUE(return_INLA)) {
@@ -80,7 +75,6 @@ BayesGLM_argChecks <- function(
   stopifnot(is_1(aic, "logical"))
   stopifnot(is_1(num.threads, "numeric"))
   stopifnot(num.threads <= parallel::detectCores())
-  stopifnot(is.null(outfile) || is_1(outfile, "character"))
   stopifnot(is_1(verbose, "logical"))
   stopifnot(is_posNum(meanTol))
   stopifnot(is_posNum(varTol))
@@ -139,7 +133,6 @@ BayesGLM_argChecks <- function(
 #' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_Param
-#' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
 #' @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
@@ -161,8 +154,8 @@ BayesGLM_argChecks <- function(
 #'    \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
 #'    \item{theta_estimates}{Theta estimates from the Bayesian model.}
 #'    \item{posterior_Sig_inv}{For joint group modelling.}
-#'    \item{mu.theta}{For joint group modelling.}
-#'    \item{Q.theta}{For joint group modelling.}
+#'    \item{mu_theta}{For joint group modelling.}
+#'    \item{Q_theta}{For joint group modelling.}
 #'    \item{y}{For joint group modelling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
 #'    \item{X}{For joint group modelling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
 #'    \item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
@@ -201,7 +194,6 @@ BayesGLM <- function(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  outfile = NULL,
   verbose = FALSE,
   meanTol = 1e-6,
   varTol = 1e-6#, emTol = 1e-3,
@@ -236,7 +228,6 @@ BayesGLM <- function(
     aic = aic,
     num.threads = num.threads,
     return_INLA = return_INLA,
-    outfile = outfile,
     verbose = verbose,
     combine_sessions = combine_sessions,
     varTol = varTol,
@@ -251,8 +242,8 @@ BayesGLM <- function(
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   ## Define a few return variables that may or may not be calculated. ----------
-  INLA_model_obj <- hyperpar_posteriors <- Q.theta <- NULL
-  task_estimates <- hyperpar_posteriors <- mu.theta <- y_all <- X_all_list <- NULL
+  INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
+  task_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- X_all_list <- NULL
   theta_estimates <- Sig_inv <- NULL
 
   ## Sessions and data dimensions. ---------------------------------------------
@@ -315,7 +306,10 @@ BayesGLM <- function(
     }
   }
   if (do_Bayesian && !do_EM) {spde <- INLA::inla.spde2.matern(mesh)}
-  if (do_EM) {spde <- create_spde_surf(mesh)}
+  if (do_EM) {
+    stop()
+    #spde <- create_spde_surf(mesh)
+  }
 
   V <- sum(mask2)
   V_all <- length(mask2)
@@ -533,88 +527,87 @@ BayesGLM <- function(
 
     ## EM Model. ---------------------------------------------------------------
     if(do_EM) {
-      if (!requireNamespace("MatrixModels", quietly = TRUE)) {
-        stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
-      }
-      mesh$Amat <- spde$Amat
-      mesh$spde <- spde$spde
-      cat('\tEstimating model with EM.\n')
-      Psi_k <- spde$Amat
-      Psi <- Matrix::bdiag(rep(list(Psi_k),K))
-      A <- Matrix::crossprod(model_data$X %*% Psi)
-      # Initial values for kappa and tau
-      kappa2 <- 4
-      phi <- 1 / (4*pi*kappa2*4)
-      # Using values based on the classical GLM
-      if(verbose) cat("\t\tFinding best guess initial values.\n")
-      beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
-      res_y <- (model_data$y - model_data$X %*% beta_hat)@x
-      sigma2 <- stats::var(res_y)
-      beta_hat <- matrix(beta_hat, ncol = K*n_sess)
-      rcpp_spde <- create_listRcpp(spde$spde)
-      if(n_sess > 1) {
-        task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
-        beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
-      }
-      n_threads <- parallel::detectCores()
-      n_threads <- min(n_threads,K,num.threads)
-      cl <- parallel::makeCluster(n_threads)
-      kappa2_phi_rcpp <- parallel::parApply(
-        cl = cl,
-        beta_hat,
-        2,
-        .initialKP,
-        theta = c(kappa2, phi),
-        spde = rcpp_spde,
-        n_sess = n_sess,
-        tol = emTol,
-        verbose = FALSE
-      )
-      parallel::stopCluster(cl)
-      if(verbose) cat("\t\tDone!\n")
-      theta <- c(t(kappa2_phi_rcpp), sigma2)
-      theta_init <- theta
-      Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
-      if(verbose) cat("\t\tStarting EM algorithm.\n")
-      em_output <-
-        .findTheta(
-          theta = theta,
-          spde = rcpp_spde,
-          y = model_data$y,
-          X = model_data$X,
-          QK = make_Q(theta, rcpp_spde, n_sess),
-          Psi = as(Psi, "dgCMatrix"),
-          A = as(A, "dgCMatrix"),
-          Ns = 50,
-          tol = emTol,
-          verbose = verbose
-        )
-      if(verbose) cat("\t\tEM algorithm complete!\n")
-      kappa2_new <- phi_new <- sigma2_new <- mu <- NULL
-      list2env(em_output, envir = environment())
-      Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
-                       MoreArgs = list(spde=rcpp_spde), SIMPLIFY = F)
-      Q <- Matrix::bdiag(Qk_new)
-      if(n_sess > 1) Q <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q))
-      Sig_inv <- Q + A/sigma2_new
-      m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
-      mu <- Matrix::solve(Sig_inv, m)
-      # Prepare results
-      task_estimates <- matrix(NA, nrow = length(mask2), ncol = K*n_sess)
-      task_estimates[mask2 == 1,] <- matrix(mu,nrow = V, ncol = K*n_sess)
-      colnames(task_estimates) <- rep(task_names, n_sess)
-      task_estimates <- lapply(seq(n_sess), function(ns) task_estimates[,(seq(K) + K * (ns - 1))])
-      names(task_estimates) <- session_names
-      avg_task_estimates <- NULL
-      if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / n_sess
-      theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
-      names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
-      #extract stuff needed for group analysis
-      tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
-      mu.theta_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
-      tau2 <- 1 / (4*pi*kappa2_new*phi_new)
-      mu.theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
-      cat("\t\tDone!\n")
+      stop()
+      # if (!requireNamespace("MatrixModels", quietly = TRUE)) {
+      #   stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
+      # }
+      # cat('\tEstimating model with EM.\n')
+      # Psi_k <- spde$Amat
+      # Psi <- Matrix::bdiag(rep(list(Psi_k),K))
+      # A <- Matrix::crossprod(model_data$X %*% Psi)
+      # # Initial values for kappa and tau
+      # kappa2 <- 4
+      # phi <- 1 / (4*pi*kappa2*4)
+      # # Using values based on the classical GLM
+      # if(verbose) cat("\t\tFinding best guess initial values.\n")
+      # beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
+      # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
+      # sigma2 <- stats::var(res_y)
+      # beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+      # rcpp_spde <- create_listRcpp(spde$spde)
+      # if(n_sess > 1) {
+      #   task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+      #   beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
+      # }
+      # n_threads <- parallel::detectCores()
+      # n_threads <- min(n_threads,K,num.threads)
+      # cl <- parallel::makeCluster(n_threads)
+      # kappa2_phi_rcpp <- parallel::parApply(
+      #   cl = cl,
+      #   beta_hat,
+      #   2,
+      #   .initialKP,
+      #   theta = c(kappa2, phi),
+      #   spde = rcpp_spde,
+      #   n_sess = n_sess,
+      #   tol = emTol,
+      #   verbose = FALSE
+      # )
+      # parallel::stopCluster(cl)
+      # if(verbose) cat("\t\tDone!\n")
+      # theta <- c(t(kappa2_phi_rcpp), sigma2)
+      # theta_init <- theta
+      # Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
+      # if(verbose) cat("\t\tStarting EM algorithm.\n")
+      # em_output <-
+      #   .findTheta(
+      #     theta = theta,
+      #     spde = rcpp_spde,
+      #     y = model_data$y,
+      #     X = model_data$X,
+      #     QK = make_Q(theta, rcpp_spde, n_sess),
+      #     Psi = as(Psi, "dgCMatrix"),
+      #     A = as(A, "dgCMatrix"),
+      #     Ns = 50,
+      #     tol = emTol,
+      #     verbose = verbose
+      #   )
+      # if(verbose) cat("\t\tEM algorithm complete!\n")
+      # kappa2_new <- phi_new <- sigma2_new <- mu_theta <- NULL
+      # list2env(em_output, envir = environment())
+      # Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
+      #                  MoreArgs = list(spde=rcpp_spde), SIMPLIFY = F)
+      # Q_theta <- Matrix::bdiag(Qk_new)
+      # if(n_sess > 1) Q_theta <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q_theta))
+      # Sig_inv <- Q_theta + A/sigma2_new
+      # m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
+      # mu_theta <- Matrix::solve(Sig_inv, m)
+      # # Prepare results
+      # task_estimates <- matrix(NA, nrow = length(mask2), ncol = K*n_sess)
+      # task_estimates[mask2 == 1,] <- matrix(mu_theta,nrow = V, ncol = K*n_sess)
+      # colnames(task_estimates) <- rep(task_names, n_sess)
+      # task_estimates <- lapply(seq(n_sess), function(ns) task_estimates[,(seq(K) + K * (ns - 1))])
+      # names(task_estimates) <- session_names
+      # avg_task_estimates <- NULL
+      # if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / n_sess
+      # theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
+      # names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
+      # #extract stuff needed for group analysis
+      # tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
+      # mu_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
+      # tau2 <- 1 / (4*pi*kappa2_new*phi_new)
+      # mu_theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
+      # cat("\t\tDone!\n")
 
     ## INLA Model. -------------------------------------------------------------
     } else {
@@ -656,12 +649,9 @@ BayesGLM <- function(
 
       #construct object to be returned
       INLA_model_obj <- switch(return_INLA,
-        trimmed=trim_INLA_model_obj(INLA_model_obj),
+        trimmed=trim_INLA_model_obj(INLA_model_obj, minimal=FALSE),
         full=INLA_model_obj,
-        minimal=list( # just what's needed for group analysis
-          mu.theta = INLA_model_obj$misc$theta.mode,
-          Q.theta = solve(INLA_model_obj$misc$cov.intern)
-        )
+        minimal=trim_INLA_model_obj(INLA_model_obj, minimal=TRUE)
       )
       attr(INLA_model_obj, "format") <- return_INLA
     }
@@ -699,8 +689,6 @@ BayesGLM <- function(
     call = match.call()
   )
   class(result) <- "BayesGLM"
-
-  if (!is.null(outfile)) { saveRDS(result, file=outfile) }
 
   result
 }

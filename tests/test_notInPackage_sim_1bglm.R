@@ -5,7 +5,7 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 6000
+resamp_res <- 9000
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_results <- "tests/results_notInPackage"
@@ -13,9 +13,9 @@ thisResultName <- gsub(
   ".", "_",
   as.character(packageVersion("BayesfMRI")[[1]]), fixed=TRUE
 )
-dir_resultThis <- file.path(dir_results, thisResultName, "sim")
-if (!overwriteResults && dir.exists(dir_resultThis)) { stop("Results exist already.") }
-if (!dir.exists(dir_resultThis)) { dir.create(dir_resultThis) }
+dir_resultsThis <- file.path(dir_results, thisResultName, "sim")
+if (!overwriteResults && dir.exists(dir_resultsThis)) { stop("Results exist already.") }
+if (!dir.exists(dir_resultsThis)) { dir.create(dir_resultsThis) }
 
 library(testthat)
 if (doINLA) { library(INLA) }
@@ -25,22 +25,7 @@ ciftiTools.setOption('wb_path', my_wb)
 library(BayesfMRI)
 
 # Simulate data ----------------------------------------------------------------
-cat("Simulating data\n~~~~~~~~~~~~~~~~\n")
-source("tests/simulate_cifti.R")
-set.seed(0)
-bsim <- simulate_cifti_multiple(
-  wb_path=my_wb,
-  brainstructures="both",
-  n_subjects=1,
-  n_sessions=2,
-  n_runs=1,
-  ntasks=3,
-  ntime=155,
-  resamp_res=resamp_res
-)
-add_nze <- function(xii, sd=1){ xii + matrix(rnorm(prod(dim(xii)))*sd, nrow=nrow(xii)) }
-bsim$simulated_cifti$subj1_sess1_run1 <- add_nze(bsim$simulated_cifti$subj1_sess1_run1, sd=40)
-bsim$simulated_cifti$subj1_sess2_run1 <- add_nze(bsim$simulated_cifti$subj1_sess2_run1, sd=40)
+bsim <- readRDS(file.path(dir_results, "simData/bsim.rds"))
 
 # BayesGLM ---------------------------------------------------------------------
 cat("BayesGLM\n~~~~~~~~~~~~~~~~\n")
@@ -66,7 +51,7 @@ params$params_pwr <- NULL
 # Test each combination.
 for (ii in seq(nrow(params))) {
   print(params[ii,])
-  outf_ii <- file.path(dir_resultThis, paste0("bfmri", ii, ".rds"))
+  outf_ii <- file.path(dir_resultsThis, paste0("bglm_p", ii, ".rds"))
   #if (file.exists(outf_ii)) { next }
 
   # Do BayesGLM_cifti
@@ -102,8 +87,8 @@ for (ii in seq(nrow(params))) {
 }
 
 for (ii in seq(nrow(params))) {
-  x_ii <- readRDS(file.path(dir_resultThis, paste0("bfmri", ii, ".rds")))
-  pfname_pre <- file.path(dir_resultThis, paste0("bfmri", ii))
+  x_ii <- readRDS(file.path(dir_resultsThis, paste0("bglm_p", ii, ".rds")))
+  pfname_pre <- file.path(dir_resultsThis, paste0("bglm_p", ii))
   ptitle <- if (ii==1) {
     "sess2-cmbYes-pwYes-noSmooth"
   } else {
@@ -130,13 +115,13 @@ pcomp_names <- apply(pcomp, 1, paste0, collapse="-")
 for (jj in seq(4)) {
   idx <- seq(2,5) + (jj-1)*4
   view_comp(
-    img = file.path(dir_resultThis, paste0("bfmri", idx, "_est.png")),
+    img = file.path(dir_resultsThis, paste0("bglm_p", idx, "_est.png")),
     nrow=1, title=gsub("-", ", ", pcomp_names[jj], fixed=TRUE),
-    fname = file.path(dir_resultThis, paste0(pcomp_names[jj], "_est.png"))
+    fname = file.path(dir_resultsThis, paste0(pcomp_names[jj], "_est.png"))
   )
   view_comp(
-    img = file.path(dir_resultThis, paste0("bfmri", idx, "_act.png")),
+    img = file.path(dir_resultsThis, paste0("bglm_p", idx, "_act.png")),
     nrow=1, title=gsub("-", ", ", pcomp_names[jj], fixed=TRUE),
-    fname = file.path(dir_resultThis, paste0(pcomp_names[jj], "_act.png"))
+    fname = file.path(dir_resultsThis, paste0(pcomp_names[jj], "_act.png"))
   )
 }

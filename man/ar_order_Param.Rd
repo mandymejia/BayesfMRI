@@ -6,7 +6,9 @@
 \arguments{
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
-for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
+for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
+multi-session models, note that a single AR model is used; the parameters
+are estimated by averaging the estimates from each session.}
 }
 \description{
 ar_order

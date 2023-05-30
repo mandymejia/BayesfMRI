@@ -22,7 +22,6 @@ BayesGLM(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  outfile = NULL,
   verbose = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06
@@ -92,7 +91,9 @@ addition to the classical GLM. Classical GLM results are always returned.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
-for prewhitening. If zero, do not prewhiten. Default: \code{6}.}
+for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
+multi-session models, note that a single AR model is used; the parameters
+are estimated by averaging the estimates from each session.}
 
 \item{ar_smooth}{(numeric) FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
@@ -108,9 +109,6 @@ for model estimation. Default: \code{4}.}
 Default: \code{TRUE}. Required for running \code{id_activations}
 after, but not for running BayesGLM2 after to get
 posterior quantities of group means or contrasts.}
-
-\item{outfile}{File name where results will be written (for use by
-\code{BayesGLM2}).}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 
@@ -133,8 +131,8 @@ A \code{"BayesGLM"} object: a list with elements
 \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
 \item{theta_estimates}{Theta estimates from the Bayesian model.}
 \item{posterior_Sig_inv}{For joint group modelling.}
-\item{mu.theta}{For joint group modelling.}
-\item{Q.theta}{For joint group modelling.}
+\item{mu}{For joint group modelling.}
+\item{Q}{For joint group modelling.}
 \item{y}{For joint group modelling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
 \item{X}{For joint group modelling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
 \item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}

@@ -32,7 +32,6 @@
 #'
 #' 	\code{"none"} will only center the data, not scale it.
 #' @inheritParams return_INLA_Param_FALSE
-#' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
 #' @param GLM If TRUE, classical GLM estimates will also be returned
 #' @inheritParams num.threads_Param
 #' @inheritParams verbose_Param_inla
@@ -43,7 +42,7 @@
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),
-  return_INLA=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
+  return_INLA=FALSE, GLM = TRUE, num.threads = 6, verbose=FALSE){
 
   check_INLA(FALSE)
 
@@ -61,10 +60,6 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-  }
-
-  if(is.null(outfile)){
-    warning('No value supplied for outfile, which is required for group modeling (see `help(BayesGLM2)`).')
   }
 
   if(nrow(locations) != V) stop('The locations argument should have V rows, the number of data locations in BOLD.')
@@ -227,18 +222,6 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
 
 
   class(result) <- "BayesGLM"
-
-  if(!is.null(outfile)){
-    if(!dir.exists(dirname(outfile))){dir.create(dirname(outfile))}
-    ext <- strsplit(outfile, split=".", fixed = TRUE)[[1]]
-    ext <- ext[length(ext)] #get last part of file name
-    if(ext != "RDS"){
-      outfile <- sub(ext, "RDS", outfile)
-    }
-    message('File saved at: ', outfile)
-    save(result, file = outfile)
-  }
-
   return(result)
 
 }
@@ -353,8 +336,6 @@ get_posterior_densities_vol3D <- function(object, spde){
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
 #' @inheritParams return_INLA_Param_TRUE
-#' @param outfile (Optional) File name (without extension) of output file for
-#'   BayesGLM result to use in Bayesian group modeling.
 #' @inheritParams verbose_Param_inla
 #' @inheritParams contrasts_Param
 #' @inheritParams combine_sessions_Param
@@ -382,7 +363,6 @@ BayesGLM_slice <- function(
   GLM_method = 'both',
   session_names = NULL,
   return_INLA = TRUE,
-  outfile = NULL,
   verbose = FALSE,
   contrasts = NULL,
   combine_sessions = TRUE,
@@ -514,7 +494,6 @@ BayesGLM_slice <- function(
                              scale_design = scale_design,
                              num.threads = num.threads,
                              return_INLA = return_INLA,
-                             outfile = outfile,
                              verbose = verbose,
                              combine_sessions = combine_sessions,
                              trim_INLA = trim_INLA)

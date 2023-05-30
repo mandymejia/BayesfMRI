@@ -77,11 +77,7 @@ spatial_effects_cifti_cs <- function(
               hem_binary[hem_center_ijk] <- 1
               return(as.matrix(hem_binary))
             }, hc = hem_centers_ij, nvox = n_vox, SIMPLIFY = F)
-          xii_out <- xii
-          for(hem_num in 1:2) {
-            if(!is.null(n_vox[[hem_num]]))
-              xii_out$data[[hem_num]] <- binary_act_ijk[[hem_num]]
-          }
+          xii_out <- newdata_xifti(xii, do.call(rbind, binary_act_ijk))
           # Smooth out the signal
           xii_sm <- ciftiTools::smooth_cifti(xii_out, surf_FWHM = smooth_FWHM)
           # Make sure the amplitude matches the maximum amplitude as input
@@ -287,13 +283,14 @@ simulate_cifti_multiple <- function(wb_path,
   onsets = NULL,
   durations = NULL,
   TR = 1,
-  subject_var = NULL,
-  session_var = NULL,
-  run_var = NULL,
+  # Damon changed below three to 4,2,1 rather than NULL
+  subject_var = 4,
+  session_var = 2,
+  run_var = 1,
   ar_error = NULL,
   surfL = NULL,
   surfR = NULL) {
-  
+
   # This is necessary for the cifti functions
   ciftiTools::ciftiTools.setOption('wb_path',wb_path)
 
@@ -359,7 +356,7 @@ simulate_cifti_multiple <- function(wb_path,
   if (do_left | do_right) {
     template_cifti <-
       ciftiTools::read_cifti(
-        cifti_fname = cifti_files$cifti[[1]],
+        cifti_fname = cifti_files$cifti[[2]],
         surfL_fname = cifti_files$surf[[1]],
         surfR_fname = cifti_files$surf[[2]],
         brainstructures = brainstructures,
@@ -389,7 +386,11 @@ simulate_cifti_multiple <- function(wb_path,
       n_tasks = ntasks,
       n_subjects = n_subjects,
       n_sessions = n_sessions,
-      n_runs = n_runs
+      n_runs = n_runs,
+      # Damon added below 3 lines
+      subject_var = subject_var,
+      session_var = session_var,
+      run_var = run_var
     )
   # Make ciftis for the AR coefficients
   if(is.null(ar_error)) ar_error <- 0
@@ -412,7 +413,7 @@ simulate_cifti_multiple <- function(wb_path,
         if(do_left) {
           cifti_error$data$cortex_left <-
             t(apply(ar_ijk$data$cortex_left, 1, function(cl_v)
-              if(cl_v == 0) {
+              if(all(cl_v == 0)) {
                 return(rnorm(ntime))
               } else {
                 return(arima.sim(model = list(ar = cl_v), n = ntime))
@@ -421,7 +422,7 @@ simulate_cifti_multiple <- function(wb_path,
         if(do_right) {
           cifti_error$data$cortex_right <-
             t(apply(ar_ijk$data$cortex_right, 1, function(cl_v)
-              if(cl_v == 0) {
+              if(all(cl_v == 0)) {
                 return(rnorm(ntime))
               } else {
                 return(arima.sim(model = list(ar = cl_v), n = ntime))
@@ -430,7 +431,7 @@ simulate_cifti_multiple <- function(wb_path,
         if(do_sub) {
           cifti_error$data$subcort <-
             t(apply(ar_ijk$data$subcort, 1, function(cl_v)
-              if(cl_v == 0) {
+              if(all(cl_v == 0)) {
                 return(rnorm(ntime))
               } else {
                 return(arima.sim(model = list(ar = cl_v), n = ntime))
@@ -448,10 +449,8 @@ simulate_cifti_multiple <- function(wb_path,
         if(do_sub) {
           final_cifti$data$subcort <- final_cifti$data$subcort +
             tcrossprod(coef_ijk$data$subcort,design)
-          # This next line is necessary in order to make a valid subcortical
-          # xifti object.
-          final_cifti$meta$cifti$names <- as.character(seq(ntime))
         }
+        final_cifti$meta$cifti$names <- as.character(seq(ntime))
         final_cifti <- final_cifti + 250 # This is done so that preprocessing does
                                           # not artifically inflate values in locations
                                           # with means close to zero.
@@ -465,10 +464,14 @@ simulate_cifti_multiple <- function(wb_path,
     final_output[[x[1]]][[x[2]]][[x[3]]]
   })
   coef_return <- apply(all_data_combos,1,function(x) {
-    true_coef_cifti[[x[1]]][[x[2]]][[x[3]]]
+    out <- true_coef_cifti[[x[1]]][[x[2]]][[x[3]]]
+    out$meta$cifti$names <- paste0("Task_", seq(ncol(out)))
+    out
   })
   ar_return <- apply(all_data_combos,1,function(x) {
-    ar_coefs[[x[1]]][[x[2]]][[x[3]]]
+    out <- ar_coefs[[x[1]]][[x[2]]][[x[3]]]
+    out$meta$cifti$names <- paste0("ARcoef_", seq(ncol(out)))
+    out
   })
 
   cifti_names <- apply(all_data_combos,1,function(x) paste0("subj",x[1],"_sess",x[2],"_run",x[3]))
@@ -484,6 +487,6 @@ simulate_cifti_multiple <- function(wb_path,
   output
 }
 
-add_noise <- function(xii, sd=1){ 
+add_noise <- function(xii, sd=1){
   xii + matrix(rnorm(prod(dim(xii)))*sd, nrow=nrow(xii))
 }

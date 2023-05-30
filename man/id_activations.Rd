@@ -25,7 +25,11 @@ analyze all tasks.}
 
 \item{sessions}{The session(s) to identify activations for. Give either the
 name(s) as a character vector, or the numerical indices. If \code{NULL}
-(default), analyze the first session.}
+(default), analyze the first session.
+
+Currently, if multiple sessions are provided, activations are identified
+separately for each session. (Information is not combined between the
+different sessions.)}
 
 \item{method}{\code{"Bayesian"} (default) or \code{"classical"}. If
 \code{model_obj} does not have Bayesian results because \code{Bayes} was set

@@ -121,7 +121,6 @@
 #' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_Param
-#' @inheritParams outfile_Param
 #' @inheritParams verbose_Param_inla
 #' @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
@@ -176,7 +175,6 @@ BayesGLM_cifti <- function(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  outfile = NULL,
   verbose = FALSE,
   meanTol = 1e-6,
   varTol = 1e-6#,emTol = 1e-3,
@@ -200,7 +198,6 @@ BayesGLM_cifti <- function(
     aic = aic,
     num.threads = num.threads,
     return_INLA = return_INLA,
-    outfile = outfile,
     verbose = verbose,
     meanTol = meanTol,
     varTol = varTol,
@@ -517,16 +514,6 @@ BayesGLM_cifti <- function(
       }
     }
 
-    # `outfile`
-    if (!is.null(outfile)) {
-      if (endsWith(outfile, ".rds")) {
-        outfile_name <- gsub(".rds$", paste0("_",bb,".rds"), outfile)
-      } else {
-        outfile_name <- paste0(outfile, "_",bb,".rds")
-      }
-    } else {
-      outfile_name <- NULL
-    }
     BayesGLM_out <- BayesGLM(
       data = session_data,
       vertices = surf_list[[bb]]$vertices,
@@ -545,7 +532,6 @@ BayesGLM_cifti <- function(
       aic = aic,
       num.threads = num.threads,
       return_INLA = return_INLA,
-      outfile = outfile_name,
       verbose = verbose,
       meanTol=meanTol,
       varTol=varTol#,emTol=emTol,

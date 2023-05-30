@@ -12,6 +12,10 @@
 #' @param sessions The session(s) to identify activations for. Give either the
 #'  name(s) as a character vector, or the numerical indices. If \code{NULL}
 #' (default), analyze the first session.
+#' 
+#'  Currently, if multiple sessions are provided, activations are identified
+#'  separately for each session. (Information is not combined between the
+#'  different sessions.)
 #' @param method \code{"Bayesian"} (default) or \code{"classical"}. If
 #'  \code{model_obj} does not have Bayesian results because \code{Bayes} was set
 #'  to \code{FALSE}, only the \code{"classical"} method can be used.
@@ -109,8 +113,8 @@ id_activations <- function(
   names(activations) <- names(model_obj)
 
   # TO DO: integrate
-  # mu.theta <- INLA_model_obj$misc$theta.mode
-  # Q.theta <- solve(INLA_model_obj$misc$cov.intern) #not needed for EM version
+  # mu_theta <- INLA_model_obj$misc$theta.mode
+  # Q_theta <- solve(INLA_model_obj$misc$cov.intern) #not needed for EM version
 
   actFUN <- switch(method,
     Bayesian = id_activations.posterior,

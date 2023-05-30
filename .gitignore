@@ -10,4 +10,4 @@ vignettes/output/*
 *.Rout
 R/summarize_sessions.R
 inst/doc
-tests/results_notInPackage/0_3_0
+tests/results_notInPackage

@@ -95,8 +95,6 @@ for(subject in subjects) {
       motion1 <- as.matrix(read.table(file.path(dir1_s,'Movement_Regressors.txt'), header=FALSE))
       motion2 <- as.matrix(read.table(file.path(dir2_s,'Movement_Regressors.txt'), header=FALSE))
 
-      # outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
-      outfile_svh <- file.path('~/Desktop/results_BayGLM',paste0(subject,'_visit',visit,'_',hem))
   		result_svh <- BayesGLM_cifti(cifti_fname = c(fname1_ts, fname2_ts),
            surfL_fname = fname_gifti_left,
            surfR_fname = fname_gifti_right,
@@ -112,10 +110,9 @@ for(subject in subjects) {
            resamp_res = 5000,
            num.threads = parallel::detectCores() - 2,
            verbose = TRUE,
-           outfile = outfile_svh,
            return_INLA = T,
            combine_sessions = T)
-  		fname_svh <- file.path(outdir, paste0(outfile_svh,'.Rdata'))
+  		fname_svh <- file.path(outdir, paste0("temp",'.Rdata'))
   		save(result_svh, file=fname_svh)
     }
   }

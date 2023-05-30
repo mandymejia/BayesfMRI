@@ -19,7 +19,9 @@ NULL
 #'
 #' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
 #'  should be a number indicating the order of the autoregressive model to use
-#'  for prewhitening. If zero, do not prewhiten. Default: \code{6}.
+#'  for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
+#'  multi-session models, note that a single AR model is used; the parameters
+#'  are estimated by averaging the estimates from each session.
 #'
 #' @name ar_order_Param
 NULL
@@ -121,14 +123,6 @@ NULL
 #'  for model estimation. Default: \code{4}.
 #'
 #' @name num.threads_Param
-NULL
-
-#' outfile
-#'
-#' @param outfile File name where results will be written (for use by
-#'  \code{BayesGLM2}).
-#'
-#' @name outfile_Param
 NULL
 
 #' return_INLA

@@ -15,7 +15,6 @@ BayesGLM_argChecks(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  outfile = NULL,
   verbose = FALSE,
   meanTol = 1e-06,
   varTol = 1e-06,
@@ -34,8 +33,6 @@ BayesGLM_argChecks(
 \item{num.threads}{See \code{\link{BayesGLM}}.}
 
 \item{return_INLA}{See \code{\link{BayesGLM}}.}
-
-\item{outfile}{See \code{\link{BayesGLM}}.}
 
 \item{verbose}{See \code{\link{BayesGLM}}.}
 
