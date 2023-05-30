@@ -115,6 +115,7 @@ prewhiten.v <- function(AR_coeffs, ntime, AR_var = 1) {
 #' @param hemisphere \code{"left"} or \code{"right"}.
 #' @param num.threads (scalar) The number of threads to use in parallelizing the
 #'   prewhitening. Default: \code{NULL}.
+#' @param verbose Print occasional updates? Default: \code{TRUE}.
 #'
 #' @return The prewhitened data (in a list), the smoothed, averaged AR
 #'   coefficient estimates used in the prewhitening, the smoothed, average
@@ -129,11 +130,13 @@ prewhiten_cifti <- function(data,
                             ar_smooth = 5,
                             cifti_data,
                             hemisphere,
-                            num.threads = NULL){
+                            num.threads = NULL,
+                            verbose=TRUE){
 
   if(missing(hemisphere)) stop('Please provide valid hemisphere argument.')
   if(!(hemisphere %in% c('left','right'))) stop('Please provide valid hemisphere argument.')
 
+  if (verbose) { cat("\tPrewhitening: estimating AR models.\n") }
   prewhiten_result <- prewhiten_prep(data = data,
                                      mask = mask,
                                      scale_BOLD = scale_BOLD,
@@ -142,19 +145,20 @@ prewhiten_cifti <- function(data,
   mask <- prewhiten_result$mask
   mask_orig <- prewhiten_result$mask_orig
 
+  if (verbose) { cat("\tPrewhitening: smoothing AR coefs.\n") }
   prewhiten_result <- prewhiten_smooth(prewhiten_result,
                                ar_smooth = ar_smooth,
                                cifti_data = cifti_data,
                                hemisphere = hemisphere)
 
+  if (verbose) { cat("\tPrewhitening: applying AR models.\n") }
   prewhiten_result <- prewhiten_do(prewhiten_result,
                                    num.threads = num.threads)
 
   prewhiten_result$mask <- mask
   prewhiten_result$mask_orig <- mask_orig
 
-  return(prewhiten_result)
-
+  prewhiten_result
 }
 
 #' Estimate residual autocorrelation for prewhitening
@@ -302,7 +306,6 @@ prewhiten_smooth <- function(prewhiten_result,
 
   if (is.null(ar_smooth)) { ar_smooth <- 0 }
   if((ar_smooth != 0) & !is.null(cifti_data)) {
-    cat("Smoothing AR coefficients and residual variance...")
     #set up template xifti object with only one brainstructure
     to_remove <- setdiff(c("cortex_left", "cortex_right", "subcortical"), paste0("cortex_", hemisphere))
     avg_xifti <- remove_xifti(cifti_data, to_remove)
@@ -348,7 +351,6 @@ prewhiten_do <- function(prewhiten_result,
   list2env(prewhiten_result, envir = environment())
 
   # Create the sparse pre-whitening matrix
-  cat("Prewhitening... ")
   if(is.null(num.threads) | num.threads < 2) {
     # Initialize the block diagonal covariance matrix
     template_pw <- Matrix::bandSparse(n = ntime,
@@ -357,7 +359,7 @@ prewhiten_do <- function(prewhiten_result,
     template_pw_list <- rep(list(template_pw),V)
     rows.rm <- numeric()
     for(v in 1:V) {
-      if(v %% 100 == 0) cat("\n Location",v,"of",V,"")
+      if(v %% 100 == 0) cat("\tLocation",v,"of",V,"\n")
       # template_pw_list[[v]] <- prewhiten.v(AR_coeffs = avg_AR[v,],
       #                                      ntime = ntime,
       #                                      AR_var = avg_var[v])
@@ -388,7 +390,6 @@ prewhiten_do <- function(prewhiten_result,
       )
     parallel::stopCluster(cl)
   }
-  cat("done!\n")
 
   #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
   sqrtInv_all <- Matrix::bdiag(template_pw_list)
