@@ -64,6 +64,9 @@ id_activations <- function(
     cifti_obj <- model_obj
     model_obj <- cifti_obj$BayesGLM_results
   } else {
+    if (!inherits(model_obj, "BayesGLM")) {
+      stop("`model_obj` is not a `'BayesGLM'` or 'BayesGLM_cifti' object.")
+    }
     model_obj <- list(obj=model_obj)
   }
   idx1 <- min(which(!vapply(model_obj, is.null, FALSE)))
@@ -79,7 +82,7 @@ id_activations <- function(
     tasks <- model_obj[[idx1]]$task_names[tasks]
   }
   if (is.null(tasks)) { tasks <- model_obj[[idx1]]$task_names }
-  stopifnot(is.null(sessions) || is.numeric(sessions))
+  stopifnot(is.null(sessions) || is.character(sessions) || is.numeric(sessions))
   if (is.character(sessions)) { stopifnot(all(sessions %in% model_obj[[idx1]]$session_names)) }
   if (is.numeric(sessions)) {
     stopifnot(identical(sessions, round(sessions)))
@@ -111,10 +114,6 @@ id_activations <- function(
   nModels <- length(model_obj)
   activations <- vector('list', length=nModels)
   names(activations) <- names(model_obj)
-
-  # TO DO: integrate
-  # mu_theta <- INLA_model_obj$misc$theta.mode
-  # Q_theta <- solve(INLA_model_obj$misc$cov.intern) #not needed for EM version
 
   actFUN <- switch(method,
     Bayesian = id_activations.posterior,
@@ -225,7 +224,7 @@ id_activations <- function(
 #' @keywords internal
 id_activations.posterior <- function(
   model_obj,
-  tasks=NULL, session,
+  tasks, session,
   alpha=0.05, threshold){
   #area.limit=NULL,
   #excur_method = c("EB","QC")
@@ -287,7 +286,7 @@ id_activations.posterior <- function(
 #'
 #' @keywords internal
 id_activations.classical <- function(model_obj,
-                                     tasks = NULL,
+                                     tasks,
                                      session,
                                      alpha = 0.05,
                                      threshold = 0,
