@@ -4,7 +4,7 @@ BayesfMRI_citations <- c(
   bibentry(
     bibtype      = "Article",
     title        = "A {B}ayesian general linear modeling approach to cortical surface {fMRI} data analysis",
-    author       = personList(
+    author       = c(
       as.person("Amanda F Mejia"),
       as.person("Yu Ryan Yue"),
       as.person("David Bolin"),
@@ -23,7 +23,7 @@ BayesfMRI_citations <- c(
   bibentry(
     bibtype      = "Article",
     title        = "Spatial {B}ayesian {GLM} on the cortical surface produces reliable task activations in individuals and groups",
-    author       = personList(
+    author       = c(
       as.person("Daniel Spencer"),
       as.person("Yu Ryan Yue"),
       as.person("David Bolin"),
