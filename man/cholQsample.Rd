@@ -14,7 +14,8 @@ cholQsample(n, mu, cholQ)
 \item{cholQ}{Cholesky decomposition of the precision (found via \code{Matrix::Cholesky(Q)})}
 }
 \value{
-an n x p matrix of samples from the MVN distribution
+An \eqn{n \times p} matrix of samples from the MVN distribution,
+where \eqn{p} is the length of \code{mu}.
 }
 \description{
 Sample from the multivariate normal distribution with Cholesky(Q)

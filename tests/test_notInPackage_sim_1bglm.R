@@ -52,7 +52,7 @@ params$params_pwr <- NULL
 for (ii in seq(nrow(params))) {
   print(params[ii,])
   outf_ii <- file.path(dir_resultsThis, paste0("bglm_p", ii, ".rds"))
-  #if (file.exists(outf_ii)) { next }
+  if (file.exists(outf_ii)) { next }
 
   # Do BayesGLM_cifti
   exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
@@ -86,6 +86,45 @@ for (ii in seq(nrow(params))) {
   }
 }
 
+# Outlines for activation
+oli <- lapply(bsim$coef_cifti, as.matrix)
+stopifnot(length(unique(oli))==1)
+oli1 <- readRDS(file.path(dir_resultsThis, paste0("bglm_p7.rds")))
+oli1 <- newdata_xifti(
+  oli1$act$activations_xii$session1,
+  as.matrix(1 * resample_cifti(bsim$coef_cifti[[1]], resamp_res=resamp_res/2)>0)
+)
+oli1 <- move_from_mwall(oli1, value=0)
+oli1 <- newdata_xifti(
+  oli1,
+  rbind(
+    do.call(cbind, lapply(seq(3), function(ii){
+      (parc_borders(as.matrix(oli1$data$cortex_left)[,ii], hemisphere="left"
+                    ) - as.matrix(oli1$data$cortex_left)[,ii]) > 0
+    })),
+    do.call(cbind, lapply(seq(3), function(ii){
+      (parc_borders(as.matrix(oli1$data$cortex_right)[,ii], hemisphere="right"
+                    ) - as.matrix(oli1$data$cortex_right)[,ii]) > 0
+    }))
+  )
+)
+oli2 <- readRDS(file.path(dir_resultsThis, paste0("bglm_p2.rds")))
+oli2 <- newdata_xifti(
+  oli2$act$activations_xii$single_session,
+  as.matrix(1 * remove_xifti(
+    resample_cifti(bsim$coef_cifti[[1]], resamp_res=resamp_res), "cortex_left")>0)
+)
+oli2 <- move_from_mwall(oli2, value=0)
+oli2 <- newdata_xifti(
+  oli2,
+  rbind(
+    do.call(cbind, lapply(seq(3), function(ii){
+      (parc_borders(as.matrix(oli2$data$cortex_right)[,ii], hemisphere="right"
+                    ) - as.matrix(oli2$data$cortex_right)[,ii]) > 0
+    }))
+  )
+)
+
 for (ii in seq(nrow(params))) {
   x_ii <- readRDS(file.path(dir_resultsThis, paste0("bglm_p", ii, ".rds")))
   pfname_pre <- file.path(dir_resultsThis, paste0("bglm_p", ii))
@@ -101,6 +140,20 @@ for (ii in seq(nrow(params))) {
     together_title=ptitle, legend_fname=NULL, legend_embed=FALSE,
     fname=paste0(pfname_pre, "_est.png")
   )
+
+  oli_ii <- if (is.null(x_ii$bfmri$task_estimates_xii$classical[[1]]$data$cortex_left)) {
+    oli2
+  } else {
+    oli1
+  }
+  x_ii$act$activations_xii[[1]] <- convert_xifti(
+    move_from_mwall(x_ii$act$activations_xii[[1]], 0),
+    "dscalar"
+  ) + (as.matrix(oli_ii)*2)
+  x_ii$act$activations_xii[[1]] <- convert_xifti(
+    x_ii$act$activations_xii[[1]], "dlabel", colors=c("red", "grey", "#aa1111"))
+
+  names(x_ii$act$activations_xii[[1]]$meta$cifti$labels) <- x_ii$bfmri$task_names
   plot(
     x_ii$act,
     idx=seq(3), together="idx", together_ncol=1,

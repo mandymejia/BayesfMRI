@@ -367,7 +367,8 @@ id_activations.classical <- function(model_obj,
 # #'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
 # #'  posterior distribution of the latent field.
 # #'
-# #' @param model_obj An object of class ‘"BayesGLM"’, a result of a call to BayesGLMEM
+# #' @param model_obj An object of class \code{"BayesGLM"}, a result of a call 
+# #'  to \code{BayesGLMEM}.
 # #' @param tasks Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
 # #' @param sessions (character) The name of the session that should be examined.
 # #' If \code{NULL} (default), the first session is used.

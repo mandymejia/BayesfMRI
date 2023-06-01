@@ -18,7 +18,7 @@
 #' @importFrom excursions excursions.mc
 #' @importFrom Matrix Diagonal
 #'
-#' @return A list containing...
+#' @return A list containing \code{mu}, \code{quantiles}, and \code{F}
 #'
 #' @keywords internal
 beta.posterior.thetasamp <- function(
@@ -102,21 +102,13 @@ beta.posterior.thetasamp <- function(
     num_quantiles <- 0
     quantiles.contr <- NULL
   }
-  for (cc in 1:nC) {
 
+  for (cc in 1:nC) {
     #Construct "A" matrix from paper (linear combinations)
     ctr.mat <- kronecker(t(contrasts[[cc]]), Diagonal(n.mesh, 1))
 
     #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
     samples_cc <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
-    # For multiple sessions, add the beta samples for the sessions together
-    # if(nS > 1) {
-    #   session_betas <- sapply(seq(nS), function(sess) {
-    #     session_inds <- seq(N) + (sess - 1)*N
-    #     return(samples_cc[session_inds,])
-    #   }, simplify = FALSE)
-    #   samples_cc <- Reduce(`+`, session_betas)
-    # }
     mu.contr[,cc] <- rowMeans(samples_cc) #compute mean over beta samples
     if(num_quantiles > 0){
       for(iq in 1:num_quantiles){
@@ -125,7 +117,7 @@ beta.posterior.thetasamp <- function(
     }
 
     # Estimate excursions set for current contrast
-    if(do_excur){
+    if (do_excur) {
       excur_cc <- excursions::excursions.mc(
         samples_cc, u = gamma[cc], type = excursion_type[cc], alpha = alpha[cc]
       )
@@ -152,7 +144,7 @@ beta.posterior.thetasamp <- function(
 #' @param mu_theta Posterior mean from combined subject-level models.
 #' @param Q_theta Posterior precision matrix from combined subject-level models.
 #' @param nN Number of subjects
-#' @return A list containing...
+#' @return The prior density
 #'
 #' @importFrom stats dgamma
 #'
@@ -182,7 +174,7 @@ F.logwt <- function(theta, spde, mu_theta, Q_theta, nN){
 #' @param mu mean vector (length = p)
 #' @param Q sparse p x p positive definite precision matrix (class = dgCMatrix)
 #'
-#' @return an n x p matrix of samples
+#' @return An n x p matrix of samples
 #'
 #' @importFrom Matrix solve
 #' @importFrom stats rnorm
@@ -203,7 +195,8 @@ qsample <- function(n, mu, Q) {
 #' @param mu mean vector
 #' @param cholQ Cholesky decomposition of the precision (found via \code{Matrix::Cholesky(Q)})
 #'
-#' @return an n x p matrix of samples from the MVN distribution
+#' @return An \eqn{n \times p} matrix of samples from the MVN distribution,
+#'  where \eqn{p} is the length of \code{mu}.
 #'
 #' @importFrom stats rnorm
 #' @importFrom Matrix solve

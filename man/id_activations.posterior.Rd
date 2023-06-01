@@ -4,13 +4,7 @@
 \alias{id_activations.posterior}
 \title{Identify activations using joint posterior probabilities}
 \usage{
-id_activations.posterior(
-  model_obj,
-  tasks = NULL,
-  session,
-  alpha = 0.05,
-  threshold
-)
+id_activations.posterior(model_obj, tasks, session, alpha = 0.05, threshold)
 }
 \arguments{
 \item{model_obj}{Result of \code{BayesGLM}, of class \code{"BayesGLM"}.}

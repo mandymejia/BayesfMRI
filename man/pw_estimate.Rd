@@ -14,7 +14,7 @@ If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{ai
 the order will be between zero and \code{ar_order}, as determined by the AIC.}
 }
 \value{
-Estimaed AR coefficients and residual variance at every vertex
+Estimated AR coefficients and residual variance at every vertex
 }
 \description{
 Estimate residual autocorrelation for prewhitening

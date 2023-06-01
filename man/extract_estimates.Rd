@@ -7,7 +7,8 @@
 extract_estimates(INLA_model_obj, session_names, mask = NULL, stat = "mean")
 }
 \arguments{
-\item{INLA_model_obj}{An object of class ‘"inla"’, a result of a call to inla}
+\item{INLA_model_obj}{An object of class \code{"inla"}, a result of a call to
+\code{inla}.}
 
 \item{session_names}{Vector of fMRI session names}
 

@@ -14,7 +14,7 @@ qsample(n, mu, Q)
 \item{Q}{sparse p x p positive definite precision matrix (class = dgCMatrix)}
 }
 \value{
-an n x p matrix of samples
+An n x p matrix of samples
 }
 \description{
 Sample from a multivariate normal with mean and precision

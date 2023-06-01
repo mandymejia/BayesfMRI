@@ -39,7 +39,7 @@ beta.posterior.thetasamp(
 \item{nsamp_beta}{The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))}
 }
 \value{
-A list containing...
+A list containing \code{mu}, \code{quantiles}, and \code{F}
 }
 \description{
 Internal function used in joint approach to group-analysis

@@ -18,7 +18,7 @@ F.logwt(theta, spde, mu_theta, Q_theta, nN)
 \item{nN}{Number of subjects}
 }
 \value{
-A list containing...
+The prior density
 }
 \description{
 Internal function used in joint approach to group-analysis for combining across models

@@ -3,29 +3,43 @@
 #' Performs group-level Bayesian GLM estimation and inference using the joint
 #'  approach described in Mejia et al. (2020).
 #'
-#' Each contrast vector specifies a group-level summary of interest. Let \eqn{M}
-#'  be the number of subjects and \eqn{L} be the number of tasks. For example,
-#'  the contrast vector
-#'  \code{rep(rep(c(1/(M*nS),rep(0, L-1)),nS),M)}
-#'  represents the group average for the first task for \eqn{M} subjects;
-#'  \code{c(rep(rep(c(1/(M1*nS),rep(0, L-1)),nS),M1), rep(rep(c(-1/(M2*nS),rep(0, L-1)),nS),M2))}
-#'  represents the difference between the first \eqn{M_1} subjects and the remaining \eqn{M_2}
-#'  subjects (M1+M2=M) for the first task;
-#'  \code{rep(rep(c(1/(M*nS),-1/(M*nS),rep(0, L-2)), nS),M)}
-#'  represents the difference between the first two tasks, averaged over all
-#'  subjects.
-#'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-#' @param results Either (1) a length \eqn{M} list of \code{"BayesGLM"} objects,
-#'  or (2) a length \eqn{M} character vector of files storing \code{"BayesGLM"}
+#' @param results Either (1) a length \eqn{N} list of \code{"BayesGLM"} objects,
+#'  or (2) a length \eqn{N} character vector of files storing \code{"BayesGLM"}
 #'  objects saved with \code{\link{saveRDS}}.
-#' @param contrasts (Optional) A list of vectors, each length
-#'  \eqn{M \times L \times S}, specifying the contrast(s) of interest
-#'  across subjects, where \eqn{M} is the number of subjects, \code{L} is the
-#'  number of tasks, and S is the number of sessions. See Details for more
-#'  information. If \code{NULL} (default), the average for each task across
-#'  subjects will be computed.
+#' @param contrasts (Optional) A list of contrast vectors that specify the
+#'  group-level summaries of interest. If \code{NULL}, use contrasts that compute
+#'  the average of each field (task HRF) across subjects and sessions.
+#'
+#'  Each contrast vector is length \eqn{K * S * N} vector specifying a
+#'  group-level summary of interest, where \eqn{K} is the number
+#'  of fields (task HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
+#'  number of subjects. For a single subject-session the contrast
+#'  for the first field would be:
+#'
+#'  \code{contrast1 <- c(1, rep(0, K-1))}
+#'
+#'  and so the full contrast vector representing the group average across
+#'  sessions and subjects for the first task would be:
+#'
+#'  \code{rep(rep(contrast1, S), N) /S /N}.
+#'
+#'  To obtain the group average for the first task, for just the first sessions
+#'  from each subject:
+#'
+#'  \code{rep(c(contrast1, rep(0, K*(S-1))), N) /N}.
+#'
+#'  To obtain the mean difference between the first and second sessions, for the
+#'  first task:
+#'
+#'  \code{rep(c(contrast1, -contrast1, rep(0, K-2)), N) /N}.
+#'
+#'  To obtain the mean across sessions of the first task, just for the first
+#'  subject:
+#'
+#'  \code{c(rep(contrast1, S-1), rep(0, K*S*(N-1)) /S}.
+#'
 #' @param quantiles (Optional) Vector of posterior quantiles to return in
 #'  addition to the posterior mean.
 #' @param excursion_type (For inference only) The type of excursion function for
@@ -106,15 +120,21 @@ BayesGLM2 <- function(
   # Check that every subject has the same models, sessions, tasks
   for (nn in seq(nN)) {
     sub_nn <- results[[nn]]
-    stopifnot(identical(model_names, names(sub_nn$BayesGLM_results)))
+    stopifnot(identical(
+      model_names,
+      names(sub_nn$BayesGLM_results)[!vapply(sub_nn$BayesGLM_results, is.null, FALSE)]
+    ))
     stopifnot(identical(session_names, sub_nn$session_names))
     stopifnot(identical(task_names, sub_nn$task_names))
   }
 
   # Check `contrasts`.
+  # `contrasts` should be fields * sessions * subjects
   if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
   if(is.null(contrasts)) {
-    if(verbose) cat('Using a contrast that computes the average across subjects for each task. If other contrasts are desired, provide `contrasts`.\n')
+    if(verbose) {
+      cat('Using a contrast that computes the average across subjects for each task. If other contrasts are desired, provide `contrasts`.\n')
+    }
     contrasts <- vector('list', length=nK)
     names(contrasts) <- paste0(task_names, '_avg')
     for (kk in 1:nK) {
@@ -123,16 +143,17 @@ BayesGLM2 <- function(
       # ...,
       # (0, 0, ..., 0, 1/J) for k=K
       # for each session, for each subject
+      # where J == S * N
       contrast_1 <- c(rep(0, kk-1), 1/(nS*nN), rep(0, nK-kk)) # length nK
       contrasts[[kk]] <- rep(rep(contrast_1, nS), nN)         # length nK*nS*nN
     }
   } else {
     #Check that each contrast vector is numeric and length J*K
     if(any(sapply(contrasts, length) != nK*nS*nN)) {
-      stop('each contrast vector must be of length nK*nS*nN')
+      stop('Each contrast vector must be of length K*S*N (fields times sessions times subjects).')
     }
     if(any(!sapply(contrasts, is.numeric))) {
-      stop('each contrast vector must be numeric, but at least one is not')
+      stop('Each contrast vector must be numeric, but at least one is not.')
     }
     if (is.null(names(contrasts))) {
       names(contrasts) <- paste0("contrast_", seq(length(contrasts)))
@@ -147,10 +168,11 @@ BayesGLM2 <- function(
 
   #Check `quantiles`
   if(!is.null(quantiles)){
+    stopifnot(is.numeric(quantiles))
     if(any(quantiles > 1 | quantiles < 0)) stop('All elements of `quantiles` must be between 0 and 1.')
   }
 
-  do_excur <- !is.null(excursion_type) && (excursion_type != "none")
+  do_excur <- !is.null(excursion_type) && (!identical(excursion_type, "none"))
   if (do_excur) {
     if(length(excursion_type) == 1) excursion_type <- rep(excursion_type, nC)
     if(length(gamma) == 1) gamma <- rep(gamma, nC)
@@ -172,7 +194,9 @@ BayesGLM2 <- function(
 
     # `Mask`
     Mask <- lapply(results_mm, function(x){ x$mask })
-    if (length(unique(vapply(Mask, length, 0))) != 1) { stop("Unequal mask lengths--check that the input files are in the same resolution.") }
+    if (length(unique(vapply(Mask, length, 0))) != 1) { 
+      stop("Unequal mask lengths--check that the input files are in the same resolution.") 
+    }
     Mask <- do.call(rbind, Mask)
     Mask_sums <- colSums(Mask)
     need_Mask <- !all(Mask_sums %in% c(0, nrow(Mask)))
@@ -396,7 +420,7 @@ BayesGLM2 <- function(
         out$BayesGLM2_results$model_results$cortex_right$mask
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
-      out$activations_xii$meta$cifti$names <- names(contrasts)
+      names(out$activations_xii$meta$cifti$labels) <- names(contrasts)
     }
     class(out) <- "BayesGLM2_cifti"
   }

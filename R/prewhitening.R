@@ -6,7 +6,7 @@
 #'  the order will be between zero and \code{ar_order}, as determined by the AIC.
 #' @importFrom stats ar.yw
 #'
-#' @return Estimaed AR coefficients and residual variance at every vertex
+#' @return Estimated AR coefficients and residual variance at every vertex
 pw_estimate <- function(resids, ar_order, aic=FALSE){
 
   V <- ncol(resids)

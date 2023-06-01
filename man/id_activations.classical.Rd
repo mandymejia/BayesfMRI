@@ -6,7 +6,7 @@
 \usage{
 id_activations.classical(
   model_obj,
-  tasks = NULL,
+  tasks,
   session,
   alpha = 0.05,
   threshold = 0,

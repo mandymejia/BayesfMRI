@@ -68,7 +68,8 @@ make_data_list <- function(y, X, betas, repls){
 #'
 #' Obtains the posterior mean or other summary statistic for each latent field
 #'
-#' @param INLA_model_obj An object of class ‘"inla"’, a result of a call to inla
+#' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
+#'  \code{inla}.
 #' @param session_names Vector of fMRI session names
 #' @param mask (Optional) Original mask applied to data before model fitting
 #' @param stat A string representing the posterior summary statistic to be returned

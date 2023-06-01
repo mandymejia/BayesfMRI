@@ -109,6 +109,15 @@ plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations")
   what <- match.arg(what, c("contrasts", "activations"))
   what <- switch(what, contrasts="contrast_estimates_xii", activations="activations_xii")
   the_xii <- x[[what]]
+  if (what=="activations_xii") {
+    if (is.null(the_xii)) {
+      stop("No activations in `'BayesGLM2'` object. Specify `excursion_type` in the `BayesGLM2` call and re-run.")
+    }
+    names(the_xii$meta$cifti$labels) <- paste0(
+      names(the_xii$meta$cifti$labels), ", '",
+      x$BayesGLM2_results$excursion_type, "'"
+    )
+  }
   
   # Column index
   if (is.null(idx)) { idx <- seq_len(ncol(do.call(rbind, the_xii$data))) }
