@@ -28,7 +28,8 @@ NULL
 
 #' ar_smooth
 #'
-#' @param ar_smooth (numeric) FWHM parameter for smoothing. Remember that
+#' @param ar_smooth (numeric) FWHM parameter for smoothing the AR model 
+#'  coefficient estimates for prewhitening. Remember that
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 #'  to not do any smoothing. Default: \code{5}.
 #'
@@ -37,16 +38,22 @@ NULL
 
 #' combine_sessions
 #'
-#' @param combine_sessions Average task estimates (betas) over multiple sessions? 
-#'  Default: \code{TRUE}.
-#'
+#' @param combine_sessions If multiple sessions are provided, should their data
+#'  be combined and analyzed as a single session?
+#' 
+#'  If \code{TRUE} (default), the multiple sessions will be concatenated along
+#'  time after scaling and nuisance regression, but before prewhitening. If 
+#'  \code{FALSE}, each session will be analyzed separately, except that a single
+#'  estimate of the AR model coefficients for prewhitening is used, estimated 
+#'  across all sessions. 
+#' 
 #' @name combine_sessions_Param
 NULL
 
 #'  Bayes
 #'
 #' @param Bayes If \code{TRUE} (default), will fit a spatial Bayesian GLM in 
-#'  addition to the classical GLM. Classical GLM results are always returned. 
+#'  addition to the classical GLM. (The classical GLM is always returned.)
 #'
 #' @name Bayes_Param
 NULL
@@ -119,18 +126,20 @@ NULL
 
 #' num.threads
 #'
-#' @param num.threads The maximum number of threads to use in the inla-program
-#'  for model estimation. Default: \code{4}.
+#' @param num.threads The maximum number of threads to use for parallel
+#'  computations: prewhitening parameter estimation, and the inla-program model
+#'  estimation. Default: \code{4}. Note that parallel prewhitening requires the
+#'  \code{parallel} package.
 #'
 #' @name num.threads_Param
 NULL
 
 #' return_INLA
 #'
-#' @param return_INLA Return the INLA model object? (It can be large.)
-#'  Default: \code{TRUE}. Required for running \code{id_activations}
-#'  after, but not for running BayesGLM2 after to get
-#'  posterior quantities of group means or contrasts.
+#' @param return_INLA Return the INLA model object? (It can be large.) Use 
+#'  \code{"trimmed"} (default) to return only the more relevant results, 
+#'  \code{"minimal"} to return just enough for \code{\link{id_activations}}, or
+#'  \code{"full"} to return the full output of \code{inla}.
 #'
 #' @name return_INLA_Param
 NULL
@@ -138,15 +147,16 @@ NULL
 #' scale_BOLD
 #'
 #' @param scale_BOLD Option for scaling the BOLD response.
-#' 
-#' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
-#' 	is detected, in which case sd scaling will be used instead.
-#' 
-#' 	\code{"mean"} scaling will scale the data to percent local signal change.
-#' 
-#' 	\code{"sd"} scaling will scale the data by local standard deviation.
-#' 
-#' 	\code{"none"} will only center the data, not scale it. 
+#' 	
+#' \code{"auto"} (default) will use \code{"mean"} scaling except if demeaned 
+#'  data is detected (if any mean is less than one), in which case \code{"sd"}
+#'  scaling will be used instead.
+#' 	
+#' \code{"mean"} scaling will scale the data to percent local signal change.
+#' 	
+#' \code{"sd"} scaling will scale the data by local standard deviation.
+#' 	
+#' \code{"none"} will only center the data, not scale it. 
 #'
 #' @name scale_BOLD_Param
 NULL

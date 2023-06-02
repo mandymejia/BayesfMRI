@@ -4,10 +4,10 @@
 \alias{return_INLA_Param}
 \title{return_INLA}
 \arguments{
-\item{return_INLA}{Return the INLA model object? (It can be large.)
-Default: \code{TRUE}. Required for running \code{id_activations}
-after, but not for running BayesGLM2 after to get
-posterior quantities of group means or contrasts.}
+\item{return_INLA}{Return the INLA model object? (It can be large.) Use
+\code{"trimmed"} (default) to return only the more relevant results,
+\code{"minimal"} to return just enough for \code{\link{id_activations}}, or
+\code{"full"} to return the full output of \code{inla}.}
 }
 \description{
 return_INLA

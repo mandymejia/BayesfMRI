@@ -23,7 +23,7 @@
 organize_data <- function(y, X){
 
   if (ncol(y) == nrow(X)) {
-    warning('More columns than rows. Transposing matrix so rows are data locations and columns are time points.')
+    warning('Transposing fMRI data (`y`) so rows are time points and columns are locations.')
     y <- t(y)
   }
 	nT <- nrow(y)

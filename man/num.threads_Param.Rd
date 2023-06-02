@@ -4,8 +4,10 @@
 \alias{num.threads_Param}
 \title{num.threads}
 \arguments{
-\item{num.threads}{The maximum number of threads to use in the inla-program
-for model estimation. Default: \code{4}.}
+\item{num.threads}{The maximum number of threads to use for parallel
+computations: prewhitening parameter estimation, and the inla-program model
+estimation. Default: \code{4}. Note that parallel prewhitening requires the
+\code{parallel} package.}
 }
 \description{
 num.threads

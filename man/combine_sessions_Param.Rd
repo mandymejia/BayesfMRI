@@ -4,8 +4,14 @@
 \alias{combine_sessions_Param}
 \title{combine_sessions}
 \arguments{
-\item{combine_sessions}{Average task estimates (betas) over multiple sessions?
-Default: \code{TRUE}.}
+\item{combine_sessions}{If multiple sessions are provided, should their data
+be combined and analyzed as a single session?
+
+If \code{TRUE} (default), the multiple sessions will be concatenated along
+time after scaling and nuisance regression, but before prewhitening. If
+\code{FALSE}, each session will be analyzed separately, except that a single
+estimate of the AR model coefficients for prewhitening is used, estimated
+across all sessions.}
 }
 \description{
 combine_sessions
