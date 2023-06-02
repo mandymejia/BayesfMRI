@@ -10,12 +10,19 @@
 #' @keywords internal
 retro_mask_BGLM <- function(x, mask){
   stopifnot(inherits(x, "BayesGLM"))
-  stopifnot(is.logical(mask))
+  nS <- length(x$session_names)
+  nK <- length(x$task_names)
   nV <- sum(x$mask)
+  nT <- length(x$y) / nV / nS
+  stopifnot(nT == round(nT))
+
+  stopifnot(is.logical(mask))
   stopifnot(nV == length(mask))
   stopifnot(sum(mask) > 0)
 
-  mask2 <- x$mask; x$mask[x$mask][!mask] <- FALSE
+  mask2 <- x$mask
+  x$mask[x$mask][!mask] <- FALSE
+  x$mask[!mask2] <- FALSE
 
   for (ii in seq(length(x$task_estimates))) {
     x$task_estimates[[ii]][!mask2,] <- NA
@@ -32,15 +39,9 @@ retro_mask_BGLM <- function(x, mask){
 
   x$mesh <- retro_mask_mesh(x$mesh, mask)
 
-  x$mask[!mask2] <- FALSE
-
-  nT <- length(x$y) / nV
-  nB <- ncol(x$task_estimates[[1]])
-  stopifnot(nT == round(nT))
   x$y <- c(matrix(x$y, ncol=nV)[,mask])
-
   for (ii in seq(length(x$X))) {
-    x$X[[1]] <- x$X[[1]][rep(mask, each=nT),rep(mask, each=nB)]
+    x$X[[ii]] <- x$X[[ii]][rep(mask, each=nT),rep(mask, each=nK)]
   }
 
   x
