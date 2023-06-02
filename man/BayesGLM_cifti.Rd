@@ -23,7 +23,6 @@ BayesGLM_cifti(
  },
   resamp_res = 10000,
   task_names = NULL,
-  contrasts = NULL,
   session_names = NULL,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
@@ -140,8 +139,6 @@ should be resampled, or \code{NULL} to not resample. For computational
 feasibility, a value of \code{10000} or lower is recommended.}
 
 \item{task_names}{(Optional) Names of tasks represented in design matrix.}
-
-\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{session_names}{(Optional, and only relevant for multi-session modeling)
 Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this

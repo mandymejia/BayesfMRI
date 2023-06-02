@@ -111,7 +111,6 @@
 #'  feasibility, a value of \code{10000} or lower is recommended.
 #' @inheritParams task_names_Param
 #' @inheritParams session_names_Param
-#' @inheritParams contrasts_Param
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
@@ -163,7 +162,6 @@ BayesGLM_cifti <- function(
   resamp_res=10000,
   # Below arguments shared with `BayesGLM`
   task_names = NULL,
-  contrasts = NULL,
   session_names = NULL,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
@@ -520,7 +518,6 @@ BayesGLM_cifti <- function(
       faces = surf_list[[bb]]$faces,
       mesh = NULL,
       task_names = NULL, # in `session_data`
-      contrasts = contrasts,
       session_names = session_names,
       combine_sessions = combine_sessions,
       scale_BOLD = scale_BOLD,

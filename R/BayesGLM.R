@@ -124,7 +124,6 @@ BayesGLM_argChecks <- function(
 #'  vertices to include.
 #' @inheritParams task_names_Param
 #' @inheritParams session_names_Param
-#' @inheritParams contrasts_Param
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
@@ -182,7 +181,6 @@ BayesGLM <- function(
   mask = NULL,
   # Below arguments shared with `BayesGLM_cifti`
   task_names = NULL,
-  contrasts = NULL,
   session_names = NULL,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),

@@ -11,7 +11,6 @@ BayesGLM(
   mesh = NULL,
   mask = NULL,
   task_names = NULL,
-  contrasts = NULL,
   session_names = NULL,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
@@ -60,8 +59,6 @@ data using \code{\link{make_mesh}}.}
 vertices to include.}
 
 \item{task_names}{(Optional) Names of tasks represented in design matrix.}
-
-\item{contrasts}{List of contrast vectors to be passed to \code{inla::inla}.}
 
 \item{session_names}{(Optional, and only relevant for multi-session modeling)
 Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
