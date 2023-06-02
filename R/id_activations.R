@@ -12,7 +12,7 @@
 #' @param sessions The session(s) to identify activations for. Give either the
 #'  name(s) as a character vector, or the numerical indices. If \code{NULL}
 #' (default), analyze the first session.
-#' 
+#'
 #'  Currently, if multiple sessions are provided, activations are identified
 #'  separately for each session. (Information is not combined between the
 #'  different sessions.)
@@ -129,6 +129,9 @@ id_activations <- function(
   # Loop over model objects (brain structures, if `is_cifti`).
   for (mm in seq(nModels)) {
     if (is.null(model_obj[[mm]])) { next }
+    if (identical(attr(model_obj[[mm]]$INLA_model_obj, "format"), "minimal")) {
+      stop("`return_INLA` cannot have been `'minimal' for `id_activations`; `BayesGLM` needs to be re-run.")
+    }
     name_obj_mm <- names(model_obj)[mm]
     if (method=="Bayesian" && verbose && name_obj_mm!="obj") {
       cat(paste0("Identifying Bayesian GLM activations in ",name_obj_mm,'\n'))
@@ -367,7 +370,7 @@ id_activations.classical <- function(model_obj,
 # #'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
 # #'  posterior distribution of the latent field.
 # #'
-# #' @param model_obj An object of class \code{"BayesGLM"}, a result of a call 
+# #' @param model_obj An object of class \code{"BayesGLM"}, a result of a call
 # #'  to \code{BayesGLMEM}.
 # #' @param tasks Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
 # #' @param sessions (character) The name of the session that should be examined.

@@ -2,20 +2,23 @@
 % Please edit documentation in R/trim_INLA_model_obj.R
 \name{trim_INLA_model_obj}
 \alias{trim_INLA_model_obj}
-\title{Trim an INLA object to only include what is necessary for the id_activations function}
+\title{Trim INLA object}
 \usage{
 trim_INLA_model_obj(INLA_model_obj, minimal = FALSE)
 }
 \arguments{
-\item{INLA_model_obj}{an object of class 'inla' that will be trimmed}
+\item{INLA_model_obj}{An object of class \code{"inla"}.}
 
-\item{minimal}{just keep the two parameters needed for \code{BayesGLM2}?
-Default: \code{FALSE}.}
+\item{minimal}{Just keep the two parameters needed for \code{BayesGLM2}?
+Default: \code{FALSE}. \code{!minimal} is required for
+\code{id_activations}, but \code{minimal} is sufficient for
+\code{BayesGLM2}.}
 }
 \value{
-a trimmed object of class 'inla'
+A trimmed \code{"inla"} object.
 }
 \description{
-Trim an INLA object to only include what is necessary for the id_activations function
+Trim an INLA object to only include what is necessary for
+\code{id_activations} or \code{BayesGLM2}.
 }
 \keyword{internal}

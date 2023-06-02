@@ -1,10 +1,15 @@
-#' Trim an INLA object to only include what is necessary for the id_activations function
+#' Trim INLA object
+#' 
+#' Trim an INLA object to only include what is necessary for 
+#'  \code{id_activations} or \code{BayesGLM2}.
 #'
-#' @param INLA_model_obj an object of class 'inla' that will be trimmed
-#' @param minimal just keep the two parameters needed for \code{BayesGLM2}?
-#'  Default: \code{FALSE}.
+#' @param INLA_model_obj An object of class \code{"inla"}.
+#' @param minimal Just keep the two parameters needed for \code{BayesGLM2}?
+#'  Default: \code{FALSE}. \code{!minimal} is required for 
+#'  \code{id_activations}, but \code{minimal} is sufficient for 
+#'  \code{BayesGLM2}.
 #'
-#' @return a trimmed object of class 'inla'
+#' @return A trimmed \code{"inla"} object.
 #' @keywords internal
 trim_INLA_model_obj <- function(INLA_model_obj, minimal=FALSE) {
   if (!inherits(INLA_model_obj, "inla")) {
