@@ -433,10 +433,12 @@ BayesGLM_cifti <- function(
         verbose=ss==1
       )
       design[[ss]] <- HRF_ss$design
-      if (!is.null(nuisance)) {
-        nuisance[[ss]] <- cbind(nuisance[[ss]], HRF_ss$nuisance)
-      } else {
-        nuisance[[ss]] <- HRF_ss$nuisance
+      if (!is.null(HRF_ss$nuisance)) {
+        if (!is.null(nuisance[[ss]])) {
+          nuisance[[ss]] <- cbind(nuisance[[ss]], HRF_ss$nuisance)
+        } else {
+          nuisance[[ss]] <- HRF_ss$nuisance
+        }
       }
     }
   }
@@ -482,7 +484,7 @@ BayesGLM_cifti <- function(
       # Generate the bases and add them.
       DCTb_ss <- fMRItools::dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
-        if (!is.null(nuisance)) {
+        if (!is.null(nuisance[[ss]])) {
           nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
         } else {
           nuisance[[ss]] <- DCTb_ss
@@ -507,7 +509,7 @@ BayesGLM_cifti <- function(
         BOLD = t(BOLD_list[[bb]][[ss]]),
         design = design[[ss]]
       )
-      if (!is.null(nuisance)) {
+      if (!is.null(nuisance[[ss]])) {
         session_data[[ss]]$nuisance <- nuisance[[ss]]
       }
     }
