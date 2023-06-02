@@ -1,7 +1,5 @@
 # [Build --> Install and Restart]
 
-# TO DO: diff plot names for HCP vs MSC
-
 # Setup ------------------------------------------------------------------------
 # [Edit these]
 doINLA <- TRUE
@@ -80,3 +78,27 @@ bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
 # Expect same classical model results, where they exist.
+n_sess <- 1
+BayesGLM_cifti_args <- list(
+  cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
+  surfL_fname=ciftiTools.files()$surf["left"],
+  surfR_fname=ciftiTools.files()$surf["right"],
+  brainstructures = "left",
+  onsets = switch(n_sess, events[rev(seq(3))], list(events[rev(seq(3))], events[rev(seq(4,6))])),
+  TR = 2.2,
+  dHRF=2,
+  nuisance=switch(n_sess, nuis$rp_1, nuis),
+  Bayes = TRUE,
+  ar_order = 0,
+  ar_smooth = 3,
+  resamp_res = 800,
+  verbose = TRUE,
+  return_INLA = "full",
+  meanTol=9999,
+  combine_sessions = FALSE
+)
+bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+
+z <- bglm$BayesGLM_results$cortex_left$result_classical
+y <- bglm2$BayesGLM_results$cortex_left$result_classical
+q <- y$single_session$estimates - z$session1$estimates[,c(3,2,1)]

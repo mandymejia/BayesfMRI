@@ -16,10 +16,10 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
   for (v in seq(V)) {
     if (is.na(resids[1,v])) { next }
 
-    # If `AIC`, overwrite the model order with the one selected by `cAIC`.
-    if (aic) { ar_order <- which.min(cAIC(resids, order.max=ar_order)) - 1 }
+    # # If `AIC`, overwrite the model order with the one selected by `cAIC`.
+    # if (aic) { ar_order <- which.min(cAIC(resids, order.max=ar_order)) - 1 }
 
-    ar_v <- ar.yw(resids[,v], aic = FALSE, order.max = ar_order)
+    ar_v <- ar.yw(resids[,v], aic = aic, order.max = ar_order)
     aic_order <- ar_v$order # same as length(ar_v$ar)
     AR_coefs[v,] <- c(ar_v$ar, rep(0, ar_order-aic_order)) # The AR parameter estimates
     AR_resid_var[v] <- ar_v$var.pred # Residual variance

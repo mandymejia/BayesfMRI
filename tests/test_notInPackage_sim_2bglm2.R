@@ -164,6 +164,13 @@ plot(
   together="idx", together_ncol=length(contrasts)
 )
 
+##### umm -----
+b2$d <- BayesGLM2(
+  readRDS(file.path(dir_resultsThis, "bfmri_1sess.rds")),
+  contrasts=contrasts, excursion_type = ">", quantiles=.7,
+  nsamp_theta=10, nsamp_beta=20, gamma=1, alpha=.05
+)
+
 nS <- 2; nN <- 3
 ### bfmri_2sess ----
 contrasts <- list(

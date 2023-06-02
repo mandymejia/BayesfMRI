@@ -15,7 +15,7 @@ BayesGLM2(
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
-  no_cores = NULL,
+  num_cores = NULL,
   verbose = TRUE
 )
 
@@ -28,7 +28,7 @@ BayesGLM_group(
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
-  no_cores = NULL,
+  num_cores = NULL,
   verbose = TRUE
 )
 }
@@ -92,7 +92,7 @@ contrast). Default: \code{.05}.}
 \item{nsamp_beta}{Number of beta vectors to sample conditional on each theta
 value sampled. Default: \code{100}.}
 
-\item{no_cores}{The number of cores to use for sampling betas in parallel. If
+\item{num_cores}{The number of cores to use for sampling betas in parallel. If
 \code{NULL} (default), do not run in parallel.}
 
 \item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}

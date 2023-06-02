@@ -137,9 +137,11 @@ NULL
 #' return_INLA
 #'
 #' @param return_INLA Return the INLA model object? (It can be large.) Use 
-#'  \code{"trimmed"} (default) to return only the more relevant results, 
-#'  \code{"minimal"} to return just enough for \code{\link{id_activations}}, or
-#'  \code{"full"} to return the full output of \code{inla}.
+#'  \code{"trimmed"} (default) to return only the more relevant results, which
+#'  is enough for both \code{\link{id_activations}} and \code{BayesGLM2}, 
+#'  \code{"minimal"} to return just enough for \code{\link{BayesGLM2}} but not
+#'  \code{id_activations}, or \code{"full"} to return the full output of 
+#'  \code{inla}.
 #'
 #' @name return_INLA_Param
 NULL

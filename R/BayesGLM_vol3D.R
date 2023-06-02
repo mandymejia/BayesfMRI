@@ -178,7 +178,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     print(Sys.time() - t0)
 
     #extract beta estimates and project back to data locations for current group
-    task_estimates_grp <- extract_estimates(object=INLA_model_obj_grp, session_names=session_names) #posterior means of latent task field
+    task_estimates_grp <- extract_estimates(INLA_model_obj=INLA_model_obj_grp, session_names=session_names) #posterior means of latent task field
     for(s in 1:n_sess){
       task_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% task_estimates_grp[[s]])
     }

@@ -56,7 +56,7 @@
 #'  \code{50}.
 #' @param nsamp_beta Number of beta vectors to sample conditional on each theta
 #'  value sampled. Default: \code{100}.
-#' @param no_cores The number of cores to use for sampling betas in parallel. If
+#' @param num_cores The number of cores to use for sampling betas in parallel. If
 #'  \code{NULL} (default), do not run in parallel.
 #' @inheritParams verbose_Param_direct_TRUE
 #'
@@ -76,7 +76,7 @@ BayesGLM2 <- function(
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
-  no_cores = NULL,
+  num_cores = NULL,
   verbose = TRUE){
 
   use_INLA <- TRUE # alternative: use EM model, but it's been removed.
@@ -289,7 +289,7 @@ BayesGLM2 <- function(
     if (verbose) {
       cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
     }
-    if (is.null(no_cores)) {
+    if (is.null(num_cores)) {
       #6 minutes in simuation
       beta.posteriors <- apply(
         theta.samp,
@@ -314,9 +314,9 @@ BayesGLM2 <- function(
       }
 
       #2 minutes in simulation (4 cores)
-      max_no_cores <- min(parallel::detectCores() - 1, 25)
-      no_cores <- min(max_no_cores, no_cores)
-      cl <- parallel::makeCluster(no_cores)
+      max_num_cores <- min(parallel::detectCores() - 1, 25)
+      num_cores <- min(max_num_cores, num_cores)
+      cl <- parallel::makeCluster(num_cores)
       beta.posteriors <- parallel::parApply(
         cl, theta.samp,
         MARGIN=2,
@@ -439,7 +439,7 @@ BayesGLM_group <- function(
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
-  no_cores = NULL,
+  num_cores = NULL,
   verbose = TRUE){
 
   BayesGLM2(
@@ -449,6 +449,6 @@ BayesGLM_group <- function(
     excursion_type=excursion_type,
     gamma=gamma, alpha=alpha,
     nsamp_theta=nsamp_theta, nsamp_beta=nsamp_beta,
-    no_cores=no_cores, verbose=verbose
+    num_cores=num_cores, verbose=verbose
   )
 }

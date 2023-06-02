@@ -129,15 +129,16 @@ id_activations <- function(
   # Loop over model objects (brain structures, if `is_cifti`).
   for (mm in seq(nModels)) {
     if (is.null(model_obj[[mm]])) { next }
-    if (identical(attr(model_obj[[mm]]$INLA_model_obj, "format"), "minimal")) {
-      stop("`return_INLA` cannot have been `'minimal' for `id_activations`; `BayesGLM` needs to be re-run.")
+    if (method=="Bayesian" && identical(attr(model_obj[[mm]]$INLA_model_obj, "format"), "minimal")) {
+      stop("Bayesian activations are not available because `return_INLA` was set to `'minimal'` in the `BayesGLM` call. Request the classical activations, or re-run `BayesGLM`.")
     }
     name_obj_mm <- names(model_obj)[mm]
     if (method=="Bayesian" && verbose && name_obj_mm!="obj") {
       cat(paste0("Identifying Bayesian GLM activations in ",name_obj_mm,'\n'))
     }
     # Loop over sessions
-    activations[[mm]] <- setNames(vector("list", length(sessions)), sessions)
+    activations[[mm]] <- vector("list", length(sessions))
+    names(activations[[mm]]) <- sessions
     for (session in sessions) {
       actArgs_ms <- c(actArgs, list(model_obj=model_obj[[mm]], session=session))
       activations[[mm]][[session]] <- do.call(actFUN, actArgs_ms)
@@ -192,7 +193,10 @@ id_activations <- function(
     #   }
     #   act_xii_ss$data$subcort <- matrix(datS, ncol=length(tasks))
     # }
-    act_xii_ss <- convert_xifti(act_xii_ss, "dlabel", colors='red')
+    act_xii_ss <- convert_xifti(
+      act_xii_ss, "dlabel", 
+      values=c(Inactive=0, Active=1), colors='red'
+    )
     act_xii[[session]] <- act_xii_ss
   }
 
