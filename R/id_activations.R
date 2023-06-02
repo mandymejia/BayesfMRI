@@ -75,7 +75,7 @@ id_activations <- function(
   stopifnot(is.null(tasks) || is.character(tasks) || is.numeric(tasks))
   if (is.character(tasks)) { stopifnot(all(tasks %in% model_obj[[idx1]]$task_names)) }
   if (is.numeric(tasks)) {
-    stopifnot(identical(tasks, round(tasks)))
+    stopifnot(all.equal(tasks, round(tasks))==TRUE)
     stopifnot(min(tasks) >= 1)
     stopifnot(max(tasks) <= length(model_obj[[idx1]]$task_names))
     stopifnot(length(tasks) == length(unique(tasks)))
@@ -85,7 +85,7 @@ id_activations <- function(
   stopifnot(is.null(sessions) || is.character(sessions) || is.numeric(sessions))
   if (is.character(sessions)) { stopifnot(all(sessions %in% model_obj[[idx1]]$session_names)) }
   if (is.numeric(sessions)) {
-    stopifnot(identical(sessions, round(sessions)))
+    stopifnot(all.equal(sessions, round(sessions))==TRUE)
     stopifnot(min(sessions) >= 1)
     stopifnot(max(sessions) <= length(model_obj[[idx1]]$session_names))
     stopifnot(length(sessions) == length(unique(sessions)))
@@ -136,11 +136,11 @@ id_activations <- function(
     if (method=="Bayesian" && verbose && name_obj_mm!="obj") {
       cat(paste0("Identifying Bayesian GLM activations in ",name_obj_mm,'\n'))
     }
-    actArgs_mm <- c(actArgs, list(model_obj=model_obj[[mm]]))
     # Loop over sessions
+    activations[[mm]] <- setNames(vector("list", length(sessions)), sessions)
     for (session in sessions) {
-      actArgs_mm <- c(actArgs_mm, list(session=session))
-      activations[[mm]] <- do.call(actFUN, actArgs_mm)
+      actArgs_ms <- c(actArgs, list(model_obj=model_obj[[mm]], session=session))
+      activations[[mm]][[session]] <- do.call(actFUN, actArgs_ms)
     }
   }
 
@@ -171,7 +171,7 @@ id_activations <- function(
     for (bs in names(the_xii$data)) {
       if (bs=="subcort") { next }
       if (!is.null(the_xii$data[[bs]])) {
-        dat <- 1*activations[[bs]]$active
+        dat <- 1*activations[[bs]][[session]]$active
         colnames(dat) <- NULL
         if (method=="classical") { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
         act_xii_ss$data[[bs]] <- dat
@@ -357,7 +357,6 @@ id_activations.classical <- function(model_obj,
     areas_all = areas_all,
     areas_act = areas_act
   )
-  class(result) <- "act_BayesGLM_cifti"
   result
 }
 
