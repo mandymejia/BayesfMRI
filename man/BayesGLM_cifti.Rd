@@ -148,27 +148,33 @@ Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
 argument will overwrite the names of the list entries in \code{data}, if
 both exist.}
 
-\item{combine_sessions}{Average task estimates (betas) over multiple sessions?
-Default: \code{TRUE}.}
+\item{combine_sessions}{If multiple sessions are provided, should their data
+be combined and analyzed as a single session?
+
+If \code{TRUE} (default), the multiple sessions will be concatenated along
+time after scaling and nuisance regression, but before prewhitening. If
+\code{FALSE}, each session will be analyzed separately, except that a single
+estimate of the AR model coefficients for prewhitening is used, estimated
+across all sessions.}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{If \code{"auto"} (default), will use mean scaling except if demeaned data
-is detected, in which case sd scaling will be used instead.
+\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
+data is detected (if any mean is less than one), in which case \code{"sd"}
+scaling will be used instead.
 
 \code{"mean"} scaling will scale the data to percent local signal change.
 
 \code{"sd"} scaling will scale the data by local standard deviation.
 
-\code{"none"} will only center the data, not scale it.
-}\if{html}{\out{</div>}}}
+\code{"none"} will only center the data, not scale it.}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}. If
 \code{FALSE}, the design matrix is centered but not scaled.}
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
-addition to the classical GLM. Classical GLM results are always returned.}
+addition to the classical GLM. (The classical GLM is always returned.)}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use
@@ -176,20 +182,23 @@ for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
 multi-session models, note that a single AR model is used; the parameters
 are estimated by averaging the estimates from each session.}
 
-\item{ar_smooth}{(numeric) FWHM parameter for smoothing. Remember that
+\item{ar_smooth}{(numeric) FWHM parameter for smoothing the AR model
+coefficient estimates for prewhitening. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
 to not do any smoothing. Default: \code{5}.}
 
 \item{aic}{Use the AIC to select AR model order between \code{0} and
 \code{ar_order}? Default: \code{FALSE}.}
 
-\item{num.threads}{The maximum number of threads to use in the inla-program
-for model estimation. Default: \code{4}.}
+\item{num.threads}{The maximum number of threads to use for parallel
+computations: prewhitening parameter estimation, and the inla-program model
+estimation. Default: \code{4}. Note that parallel prewhitening requires the
+\code{parallel} package.}
 
-\item{return_INLA}{Return the INLA model object? (It can be large.)
-Default: \code{TRUE}. Required for running \code{id_activations}
-after, but not for running BayesGLM2 after to get
-posterior quantities of group means or contrasts.}
+\item{return_INLA}{Return the INLA model object? (It can be large.) Use
+\code{"trimmed"} (default) to return only the more relevant results,
+\code{"minimal"} to return just enough for \code{\link{id_activations}}, or
+\code{"full"} to return the full output of \code{inla}.}
 
 \item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
 

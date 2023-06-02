@@ -5,7 +5,7 @@
 \title{Bayes}
 \arguments{
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
-addition to the classical GLM. Classical GLM results are always returned.}
+addition to the classical GLM. (The classical GLM is always returned.)}
 }
 \description{
 Bayes

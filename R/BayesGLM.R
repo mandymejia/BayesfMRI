@@ -97,8 +97,9 @@ BayesGLM_argChecks <- function(
 #'
 #' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
 #'  session is a list with elements \code{"BOLD"}, \code{"design"}, and
-#'  optionally \code{"nuisance"}. The name of each element in \code{data} is the
-#'  name of that session. See \code{?is.BfMRI.sess} for details.
+#'  optionally \code{"nuisance"}. Each element should be a numeric matrix with
+#'  \eqn{T} rows. The name of each element in \code{data} is the name of that 
+#'  session. See \code{?is.BfMRI.sess} for details.
 #'
 #'  Note that the argument \code{session_names} can be used instead of providing
 #'  the session names as the names of the elements in \code{data}.
@@ -162,7 +163,6 @@ BayesGLM_argChecks <- function(
 #'    \item{call}{match.call() for this function call.}
 #'  }
 #'
-#'
 #' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
@@ -212,7 +212,7 @@ BayesGLM <- function(
   #check whether each element of data is a session (use is.session)
   # V = number of data locations
   # T = length of time series for each session (vector)
-  # K = number of unique tasks in all sessions
+  # K = number of tasks
 
   # Preliminary steps. ---------------------------------------------------------
   ## Check simple arguments.
@@ -259,11 +259,14 @@ BayesGLM <- function(
       names(data) <- session_names
     }
   }
-  n_sess <- n_sess_orig <- length(session_names)
-  if (n_sess == 1 && combine_sessions) combine_sessions <- FALSE
-  V <- ncol(data[[1]]$BOLD) #number of data locations
-  ntime <- vapply(data, function(x){ nrow(x$BOLD) }, 0)
-  K <- ncol(data[[1]]$design) #number of tasks
+
+  nS <- nS_orig <- length(session_names) # number of sessions
+  nK <- ncol(data[[1]]$design) # number of fields
+  nV <- ncol(data[[1]]$BOLD) # number of data locations
+  nT <- vapply(data, function(x){ nrow(x$BOLD) }, 0) # numbers of timepoints
+
+  if (nS == 1 && combine_sessions) combine_sessions <- FALSE
+
 
   ## Mesh: check or make. ------------------------------------------------------
   # We need a mesh if doing spatial Bayesian modeling or any AR smoothing.
@@ -275,7 +278,7 @@ BayesGLM <- function(
       stop('Must supply EITHER mesh OR vertices and faces.')
     }
     if (is.null(mesh)) mesh <- make_mesh(vertices, faces) # This function has been modified to no longer require INLA (2022-03-24)
-    if (mesh$n != V) { stop("Mesh has ", mesh$n, " locations, but the data has ", V, " locations.") }
+    if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
   } else {
     mesh <- NULL
   }
@@ -301,7 +304,7 @@ BayesGLM <- function(
       mesh$idx$loc <- mesh$idx$loc[mask2]
     }
     # `data`
-    for (ss in 1:n_sess) {
+    for (ss in 1:nS) {
       data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
     }
   }
@@ -311,14 +314,15 @@ BayesGLM <- function(
     #spde <- create_spde_surf(mesh)
   }
 
-  V <- sum(mask2)
-  V_all <- length(mask2)
+  # Update number of locations after masking
+  nV <- sum(mask2)
+  nV_all <- length(mask2)
 
   ## Task names: check or make. ------------------------------------------------
   if (!is.null(task_names)) {
-    if (length(task_names) != K) {
+    if (length(task_names) != nK) {
       stop(
-        'I detect ', K,
+        'I detect ', nK,
         ' task based on the design matrix, but the length of task_names is ',
         length(task_names), '.  Please fix task_names.'
       )
@@ -326,16 +330,26 @@ BayesGLM <- function(
   } else {
     # Grab beta names from design (if provided)
     task_names <- colnames(data[[1]]$design)
-    if (is.null(task_names)) { task_names <- paste0("beta", seq(K)) }
+    if (is.null(task_names)) { task_names <- paste0("beta", seq(nK)) }
   }
 
   ## Scale, nuisance regress, and/or concatenate session data. -----------------
   #collect data and design matrices
-  design <- vector('list', length=n_sess)
-  K2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
-  for (ss in seq(n_sess)) {
-    #scale data to represent % signal change (or just center if scale=FALSE)
+  design <- vector('list', length=nS)
+  nK2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
+  for (ss in seq(nS)) {
+    # Scale data
+    # TEMPORARY FOR fMRItools < 3.0 -----
+    # `scale_timeseries` used to always transpose the matrix before returning.
+    # In 3.0 Damon got rid of this t(), so we will need it here (four lines below this one).
+    # Later, require fMRItools > 3.0.
+    dBOLD <- dim(data[[ss]]$BOLD)
     data[[ss]]$BOLD <- scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
+    if (!(all.equal(dBOLD, dim(data[[ss]]$BOLD), check.attributes=FALSE)==TRUE)) {
+      data[[ss]]$BOLD <- t(data[[ss]]$BOLD)
+    }
+    # ---------------------------------
+    # Scale design matrix
     if (scale_design) {
       data[[ss]]$design <- scale_design_mat(data[[ss]]$design)
     } else {
@@ -362,30 +376,30 @@ BayesGLM <- function(
       )
     )
 
-    #update ntime, n_sess, session_names
-    ntime <- nrow(data$session_combined$BOLD)
+    # Update nT, nS, session_names
+    nT <- nrow(data$session_combined$BOLD)
     sess_names_orig <- session_names
     session_names <- 'session_combined'
-    n_sess <- 1
+    nS <- 1
   } else {
-    # [TO DO]: allow different `ntime`.
+    # [TO DO]: allow different `nT`.
     # Is this only problematic when `do_pw`?
-    if (length(unique(ntime)) > 1) {
+    if (length(unique(nT)) > 1) {
       stop("Not supported yet: different BOLD time durations while `combine_sessions=FALSE`.")
     }
-    ntime <- ntime[1]
+    nT <- nT[1]
   }
 
   # Prewhitening. --------------------------------------------------------------
   if (do_pw) {
     cat("\tPrewhitening.\n")
     ## Estimate prewhitening parameters. ---------------------------------------
-    AR_coeffs <- array(dim = c(V,ar_order,n_sess))
-    AR_resid_var <- array(dim = c(V,n_sess))
-    AR_AIC <- if (aic) { array(dim = c(V,n_sess)) } else { NULL }
+    AR_coeffs <- array(dim = c(nV,ar_order,nS))
+    AR_resid_var <- array(dim = c(nV,nS))
+    AR_AIC <- if (aic) { array(dim = c(nV,nS)) } else { NULL }
 
     #estimate prewhitening parameters for each session
-    for (ss in 1:n_sess) {
+    for (ss in 1:nS) {
       resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design)
       AR_est <- pw_estimate(resids, ar_order, aic=aic)
       AR_coeffs[,,ss] <- AR_est$phi
@@ -414,18 +428,16 @@ BayesGLM <- function(
     if (is.null(num.threads) | num.threads < 2) {
       # Initialize the block diagonal covariance matrix
       template_pw <- Matrix::bandSparse(
-        n = ntime, k = 0:(ar_order + 1), symmetric = TRUE
+        n = nT, k = 0:(ar_order + 1), symmetric = TRUE
       )
-      template_pw_list <- rep(list(template_pw), V)
-      for(vv in 1:V) {
-        if(vv %% 100 == 0) cat("\tLocation",vv,"of",V,"\n")
-        # template_pw_list[[vv]] <- prewhiten.v(AR_coeffs = avg_AR[vv,],
-        #                                      ntime = ntime,
-        #                                      AR_var = avg_var[vv])
-        # This is a more efficient prewhitening function written in C++
-        template_pw_list[[vv]] <- .getSqrtInvCpp(AR_coeffs = avg_AR[vv,],
-                                              nTime = ntime,
-                                              avg_var = avg_var[vv])
+      template_pw_list <- rep(list(template_pw), nV)
+      for (vv in 1:nV) {
+        if(vv %% 100 == 0) cat("\tLocation",vv,"of",nV,"\n")
+        template_pw_list[[vv]] <- .getSqrtInvCpp(
+          AR_coeffs = avg_AR[vv,],
+          nTime = nT,
+          avg_var = avg_var[vv]
+        )
       }
     } else {
       if (!requireNamespace("parallel", quietly = TRUE)) {
@@ -434,18 +446,14 @@ BayesGLM <- function(
       max_threads <- max(parallel::detectCores(), 25)
       num_threads <- min(max_threads,num.threads)
       cl <- parallel::makeCluster(num_threads)
-      template_pw_list <-
-        parallel::clusterMap(
-          cl,
-          # prewhiten.v,
-          .getSqrtInvCpp,
-          AR_coeffs = split(avg_AR, row(avg_AR)),
-          # ntime = ntime,
-          nTime = ntime,
-          # AR_var = avg_var,
-          avg_var = avg_var,
-          SIMPLIFY = FALSE
-        )
+      template_pw_list <- parallel::clusterMap(
+        cl,
+        .getSqrtInvCpp,
+        AR_coeffs = split(avg_AR, row(avg_AR)),
+        nTime = nT,
+        avg_var = avg_var,
+        SIMPLIFY = FALSE
+      )
       parallel::stopCluster(cl)
     }
     cat("\tDone!\n")
@@ -455,7 +463,7 @@ BayesGLM <- function(
 
     #apply prewhitening matrix to BOLD and design for each session
     data <- sapply(data, function(data_s) {
-      #bold_out <- matrix(NA, ntime, V)
+      #bold_out <- matrix(NA, nT, nV)
       bold_out <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
       #bold_out[,mask] <- pw_BOLD
       all_design <- organize_data(data_s$BOLD, data_s$design)$design
@@ -469,8 +477,8 @@ BayesGLM <- function(
   y_all <- c()
   X_all_list <- NULL
   # Classical GLM
-  result_classical <- vector('list', length=n_sess)
-  for (ss in seq(n_sess)) {
+  result_classical <- vector('list', length=nS)
+  for (ss in seq(nS)) {
     #set up vectorized data and big sparse design matrix
     if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
@@ -483,26 +491,26 @@ BayesGLM <- function(
     X_reg <- data_s$design
 
     #perform classical GLM after any prewhitening
-    beta_hat_s <- SE_beta_hat_s <- matrix(NA, V_all, K)
+    beta_hat_s <- SE_beta_hat_s <- matrix(NA, nV_all, nK)
     XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
     if (inherits(XTX_inv, "try-error")) {
       stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     }
     coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
-    coef_s_mat <- matrix(coef_s, nrow = V, ncol = K)
+    coef_s_mat <- matrix(coef_s, nrow = nV, ncol = nK)
     beta_hat_s[mask2==TRUE,] <- coef_s_mat
-    resid_s <- t(matrix(y_reg - X_reg %*% coef_s, nrow = ntime))
+    resid_s <- t(matrix(y_reg - X_reg %*% coef_s, nrow = nT))
 
     # ESTIMATE STANDARD ERRORS OF ESTIMATES
     #compute residual SD
-    #using length(y_reg)/V instead of ntime here because we want ntime for single session case and ntime*n_sess for multi-session case
-    DOF_true <- (length(y_reg)/V) - K - K2 - 1
-    DOF_false <- (length(y_reg)/V - 1)
+    #using length(y_reg)/nV instead of nT here because we want nT for single session case and nT*nS for multi-session case
+    DOF_true <- (length(y_reg)/nV) - nK - nK2 - 1
+    DOF_false <- (length(y_reg)/nV - 1)
     var_error <- matrixStats::rowVars(resid_s) * DOF_false / DOF_true #correct DOF
     if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
     sd_error <- sqrt(var_error)
     #compute SE of betas
-    SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = K) #each?
+    SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = nK) #each?
     SE_beta_hat_s[mask2==TRUE,] <- SE_beta_s
 
     colnames(beta_hat_s) <- colnames(SE_beta_hat_s) <- task_names
@@ -520,7 +528,7 @@ BayesGLM <- function(
   # Bayesian GLM. --------------------------------------------------------------
   if (do_Bayesian) {
     #construct betas and repls objects
-    replicates_list <- organize_replicates(n_sess=n_sess, task_names=task_names, mesh=mesh)
+    replicates_list <- organize_replicates(n_sess=nS, task_names=task_names, mesh=mesh)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
@@ -533,7 +541,7 @@ BayesGLM <- function(
       # }
       # cat('\tEstimating model with EM.\n')
       # Psi_k <- spde$Amat
-      # Psi <- Matrix::bdiag(rep(list(Psi_k),K))
+      # Psi <- Matrix::bdiag(rep(list(Psi_k),nK))
       # A <- Matrix::crossprod(model_data$X %*% Psi)
       # # Initial values for kappa and tau
       # kappa2 <- 4
@@ -543,14 +551,14 @@ BayesGLM <- function(
       # beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
       # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
       # sigma2 <- stats::var(res_y)
-      # beta_hat <- matrix(beta_hat, ncol = K*n_sess)
+      # beta_hat <- matrix(beta_hat, ncol = nK*nS)
       # rcpp_spde <- create_listRcpp(spde$spde)
-      # if(n_sess > 1) {
-      #   task_cols <- sapply(seq(n_sess), function(j) seq(K) + K *(j - 1))
+      # if(nS > 1) {
+      #   task_cols <- sapply(seq(nS), function(ss) seq(nK) + nK *(ss - 1))
       #   beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
       # }
       # n_threads <- parallel::detectCores()
-      # n_threads <- min(n_threads,K,num.threads)
+      # n_threads <- min(n_threads,nK,num.threads)
       # cl <- parallel::makeCluster(n_threads)
       # kappa2_phi_rcpp <- parallel::parApply(
       #   cl = cl,
@@ -559,7 +567,7 @@ BayesGLM <- function(
       #   .initialKP,
       #   theta = c(kappa2, phi),
       #   spde = rcpp_spde,
-      #   n_sess = n_sess,
+      #   n_sess = nS,
       #   tol = emTol,
       #   verbose = FALSE
       # )
@@ -575,7 +583,7 @@ BayesGLM <- function(
       #     spde = rcpp_spde,
       #     y = model_data$y,
       #     X = model_data$X,
-      #     QK = make_Q(theta, rcpp_spde, n_sess),
+      #     QK = make_Q(theta, rcpp_spde, nS),
       #     Psi = as(Psi, "dgCMatrix"),
       #     A = as(A, "dgCMatrix"),
       #     Ns = 50,
@@ -588,23 +596,23 @@ BayesGLM <- function(
       # Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
       #                  MoreArgs = list(spde=rcpp_spde), SIMPLIFY = F)
       # Q_theta <- Matrix::bdiag(Qk_new)
-      # if(n_sess > 1) Q_theta <- Matrix::bdiag(lapply(seq(n_sess), function(x) Q_theta))
+      # if(nS > 1) Q_theta <- Matrix::bdiag(lapply(seq(nS), function(x) Q_theta))
       # Sig_inv <- Q_theta + A/sigma2_new
       # m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
       # mu_theta <- Matrix::solve(Sig_inv, m)
       # # Prepare results
-      # task_estimates <- matrix(NA, nrow = length(mask2), ncol = K*n_sess)
-      # task_estimates[mask2 == 1,] <- matrix(mu_theta,nrow = V, ncol = K*n_sess)
-      # colnames(task_estimates) <- rep(task_names, n_sess)
-      # task_estimates <- lapply(seq(n_sess), function(ns) task_estimates[,(seq(K) + K * (ns - 1))])
+      # task_estimates <- matrix(NA, nrow = length(mask2), ncol = nK*nS)
+      # task_estimates[mask2 == 1,] <- matrix(mu_theta,nrow = nV, ncol = nK*nS)
+      # colnames(task_estimates) <- rep(task_names, nS)
+      # task_estimates <- lapply(seq(nS), function(ss) task_estimates[,(seq(nK) + nK * (ss - 1))])
       # names(task_estimates) <- session_names
       # avg_task_estimates <- NULL
-      # if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / n_sess
+      # if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / nS
       # theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
-      # names(theta_estimates) <- c("sigma2",paste0("phi_",seq(K)),paste0("kappa2_",seq(K)))
+      # names(theta_estimates) <- c("sigma2",paste0("phi_",seq(nK)),paste0("kappa2_",seq(nK)))
       # #extract stuff needed for group analysis
-      # tau2_init <- 1 / (4*pi*theta_init[seq(K)]*theta_init[(seq(K) + K)])
-      # mu_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(K)])))))
+      # tau2_init <- 1 / (4*pi*theta_init[seq(nK)]*theta_init[(seq(nK) + nK)])
+      # mu_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(nK)])))))
       # tau2 <- 1 / (4*pi*kappa2_new*phi_new)
       # mu_theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
       # cat("\t\tDone!\n")
@@ -616,7 +624,7 @@ BayesGLM <- function(
       #organize the formula and data objects
       repl_names <- names(repls)
       hyper_initial <- c(-2,2)
-      hyper_initial <- rep(list(hyper_initial), K)
+      hyper_initial <- rep(list(hyper_initial), nK)
       hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
       formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
@@ -677,7 +685,7 @@ BayesGLM <- function(
     design = design,
     task_names = task_names,
     session_names = session_names,
-    n_sess_orig = n_sess_orig,
+    n_sess_orig = nS_orig,
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~
