@@ -692,7 +692,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
                        const Eigen::VectorXd XpsiY, const Eigen::SparseMatrix<double> Xpsi,
                        const int Ns, const Eigen::VectorXd y, const double yy,
                        const List spde, double tol, bool verbose){
-  double res,parnorm,kres, theta_length=par.size();
+  double res,parnorm,kres;;//, theta_length=par.size(); //unused
   Eigen::VectorXd pcpp,p1cpp,p2cpp,pnew,ptmp;
   Eigen::VectorXd q1,q2,sr2,sq2,sv2,srv;
   double sr2_scalar,sq2_scalar,sv2_scalar,srv_scalar,alpha,stepmin,stepmax;
