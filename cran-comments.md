@@ -1,3 +1,7 @@
+## New submission
+
+This is the first submission of `BayesfMRI` to CRAN.
+
 ## Test environments
 
 * Windows x86_64-w64-mingw32/x64, R 4.2.2
