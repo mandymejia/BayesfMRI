@@ -2,6 +2,27 @@
 
 This is the first submission of `BayesfMRI` to CRAN.
 
+## Previous submission results
+
+  Possibly misspelled words in DESCRIPTION:
+    INLA (35:44, 36:75, 37:35, 38:5)
+    dep (38:56)
+    getOption (37:50)
+    repos (37:42, 37:61)
+
+We've removed the statement about INLA to avoid this warning.
+
+  Suggests or Enhances not in mainstream repositories:
+    INLA
+
+Our package does require INLA for certain functionality. We've added the `Additional_repositories` statement for INLA to the DESCRIPTION.
+
+  The Description field contains
+    INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
+  Please enclose URLs in angle brackets (<...>).
+
+We've removed the statement about INLA to avoid this warning.
+
 ## Test environments
 
 * Windows x86_64-w64-mingw32/x64, R 4.2.2

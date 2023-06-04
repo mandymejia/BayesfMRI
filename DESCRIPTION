@@ -1,7 +1,7 @@
 Package: BayesfMRI
 Type: Package
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -32,12 +32,12 @@ Authors@R: c(
     )
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: Performs a spatial Bayesian general linear model (GLM) for task 
-    fMRI data on the cortical surface. The INLA package is required, which, due
-    to a CRAN policy, will not be installed automatically. You can obtain INLA 
-    by running `install.packages("INLA", repos=c(getOption("repos"), 
-    INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
+    fMRI data on the cortical surface. Additional models include group analysis
+    and inference to detect thresholded areas of activation. Includes direct 
+    support for the 'CIFTI' neuroimaging file format.
 Depends: R (>= 3.6.0)
 License: GPL-3
+Additional_repositories: https://inla.r-inla-download.org/R/testing
 Encoding: UTF-8
 Imports: 
     ciftiTools (>= 0.8.0),
