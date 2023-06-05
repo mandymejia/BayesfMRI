@@ -2,7 +2,7 @@
 
 This is the first submission of `BayesfMRI` to CRAN.
 
-## Previous submission results
+## Previous submission results (0.3.1)
 
   Possibly misspelled words in DESCRIPTION:
     INLA (35:44, 36:75, 37:35, 38:5)
@@ -23,6 +23,15 @@ Our package does require INLA for certain functionality. We've added the `Additi
 
 We've removed the statement about INLA to avoid this warning.
 
+## Previous submission results (0.3.2)
+
+  Non-portable flags in variable 'PKG_CPPFLAGS':
+    -O3
+  Non-portable flags in variable 'PKG_CXXFLAGS':
+    -O3
+
+We've removed `PKG_CPPFLAGS` and `PKG_CXXFLAGS` from `src/Makevars`.
+
 ## Test environments
 
 * Windows x86_64-w64-mingw32/x64, R 4.2.2
@@ -30,15 +39,7 @@ We've removed the statement about INLA to avoid this warning.
 
 ## R CMD check results
 
-❯ checking compilation flags in Makevars ... WARNING
-  Non-portable flags in variable 'PKG_CPPFLAGS':
-    -O3
-  Non-portable flags in variable 'PKG_CXXFLAGS':
-    -O3
-
-0 errors ✔ | 1 warning ✖ | 0 notes ✔
-
-I'm sorry, I don't know what these mean. I can't find a "-03" flag in our package?
+0 errors ✔ | 0 warnings ✔ | 0 notes ✔
 
 ## Tests
 
