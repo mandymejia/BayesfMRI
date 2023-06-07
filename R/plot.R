@@ -16,6 +16,8 @@
 #'
 #' @importFrom ciftiTools view_xifti_surface
 #' @export
+#' 
+#' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
 #'
 plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-1, 1), ...){
 
@@ -66,6 +68,8 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
 #'
 #' @importFrom ciftiTools view_xifti_surface
 #' @export
+#' 
+#' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
 #'
 plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
 
@@ -104,6 +108,8 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
 #'
 #' @importFrom ciftiTools view_xifti_surface
 #' @export
+#' 
+#' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
 #'
 plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations"), ...){
   what <- match.arg(what, c("contrasts", "activations"))

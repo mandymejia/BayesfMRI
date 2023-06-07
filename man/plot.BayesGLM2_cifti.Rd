@@ -18,6 +18,9 @@ thresholded \code{"activations"}.}
 
 \item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}}
 }
+\value{
+Result of the call to \code{ciftiTools::view_cifti_surface}.
+}
 \description{
 S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM2_cifti"} object
 }

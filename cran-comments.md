@@ -90,6 +90,16 @@ Wrapped the calls to `cat()` with `if (verbose)`.
 
 No example uses more than two cores, and we don't have vignettes at this point.
 
+## Previous submission results (0.3.4)
+
+  We still see no \value in:
+  Missing Rd-tags:
+        plot.act_BayesGLM_cifti.Rd: \value
+        plot.BayesGLM_cifti.Rd: \value
+        plot.BayesGLM2_cifti.Rd: \value
+
+Fixed!
+
 ## Test environments
 
 * Windows x86_64-w64-mingw32/x64, R 4.2.2
