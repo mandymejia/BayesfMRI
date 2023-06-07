@@ -5,6 +5,8 @@
 #' @param object Object of class \code{"act_BayesGLM"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A \code{"summary.act_BayesGLM"} object, a list summarizing the 
+#'  properties of \code{object}.
 #' @method summary act_BayesGLM
 summary.act_BayesGLM <- function(object, ...) {
   act <- object$activations[!vapply(object$activations, is.null, 0)]
@@ -37,6 +39,7 @@ summary.act_BayesGLM <- function(object, ...) {
 #' @export
 #'
 #' @param x Object of class \code{"summary.act_BayesGLM"}.
+#' @return \code{NULL}, invisibly.
 #' @method print summary.act_BayesGLM
 print.summary.act_BayesGLM <- function(x, ...) {
   cat("====BayesGLM Activations====================\n")
@@ -67,6 +70,7 @@ print.summary.act_BayesGLM <- function(x, ...) {
 #' @rdname summary.act_BayesGLM
 #' @export
 #'
+#' @return \code{NULL}, invisibly.
 #' @method print act_BayesGLM
 print.act_BayesGLM <- function(x, ...) {
   print.summary.act_BayesGLM(summary(x))
@@ -79,6 +83,8 @@ print.act_BayesGLM <- function(x, ...) {
 #' @param object Object of class \code{"act_BayesGLM_cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A \code{"summary.act_BayesGLM_cifti"} object, a list summarizing the 
+#'  properties of \code{object}.
 #' @method summary act_BayesGLM_cifti
 summary.act_BayesGLM_cifti <- function(object, ...) {
   x <- summary.act_BayesGLM(object, ...)
@@ -90,6 +96,7 @@ summary.act_BayesGLM_cifti <- function(object, ...) {
 #' @export
 #'
 #' @param x Object of class \code{"summary.act_BayesGLM_cifti"}.
+#' @return \code{NULL}, invisibly.
 #' @method print summary.act_BayesGLM_cifti
 print.summary.act_BayesGLM_cifti <- function(x, ...) {
   cat("====BayesGLM_cifti Activations==============\n")
@@ -128,6 +135,7 @@ print.summary.act_BayesGLM_cifti <- function(x, ...) {
 #' @rdname summary.act_BayesGLM_cifti
 #' @export
 #'
+#' @return \code{NULL}, invisibly.
 #' @method print act_BayesGLM_cifti
 print.act_BayesGLM_cifti <- function(x, ...) {
   print.summary.act_BayesGLM_cifti(summary(x))

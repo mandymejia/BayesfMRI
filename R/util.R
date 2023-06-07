@@ -150,6 +150,7 @@ s2m_B <- function(B,sigma){
 #'  Locations which do not meet these thresholds are masked out of the analysis. 
 #'  Defaults: \code{1e-6}.
 #' @param verbose Print messages counting how many locations are removed?
+#'  Default: \code{TRUE}.
 #'
 #' @importFrom matrixStats colVars
 #' @return A logical vector indicating locations that are valid across all sessions.

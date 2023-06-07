@@ -34,7 +34,7 @@
 #' @inheritParams return_INLA_Param_FALSE
 #' @param GLM If TRUE, classical GLM estimates will also be returned
 #' @inheritParams num.threads_Param
-#' @inheritParams verbose_Param_inla
+#' @inheritParams verbose_Param
 #'
 #' @return A list containing...
 #' @importFrom stats as.formula
@@ -42,7 +42,7 @@
 #'
 #' @export
 BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),
-  return_INLA=FALSE, GLM = TRUE, num.threads = 6, verbose=FALSE){
+  return_INLA=FALSE, GLM = TRUE, num.threads = 6, verbose=1){
 
   check_INLA(FALSE)
 
@@ -102,7 +102,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     locs_grp <- locations[inds_grp,]
     labels_grp <- labels[inds_grp]
 
-    cat(paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')'),"\n")
+    if (verbose>0) cat(paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')'),"\n")
 
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     #plot(spde_grp)
@@ -169,7 +169,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "
     check_INLA(require_PARDISO=FALSE)
     INLA_model_obj_grp <- INLA::inla(
       formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
-      verbose = FALSE, keep = FALSE, num.threads = 4,
+      verbose = verbose>1, keep = FALSE, num.threads = 4,
       inla.mode = "experimental", .parent.frame = parent.frame(),
       control.inla = list(strategy = "gaussian", int.strategy = "eb"),
       control.family=list(hyper=list(prec=list(initial=1))),
@@ -336,7 +336,7 @@ get_posterior_densities_vol3D <- function(object, spde){
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
 #' @inheritParams return_INLA_Param_TRUE
-#' @inheritParams verbose_Param_inla
+#' @inheritParams verbose_Param
 #' @inheritParams contrasts_Param
 #' @inheritParams combine_sessions_Param
 #' @inheritParams trim_INLA_Param
@@ -363,7 +363,7 @@ BayesGLM_slice <- function(
   GLM_method = 'both',
   session_names = NULL,
   return_INLA = TRUE,
-  verbose = FALSE,
+  verbose = 1,
   contrasts = NULL,
   combine_sessions = TRUE,
   trim_INLA = TRUE) {
@@ -401,7 +401,7 @@ BayesGLM_slice <- function(
   if(length(session_names) != n_sess)
     stop('If session_names is provided, it must be of the same length as BOLD')
 
-  cat('\n SETTING UP DATA \n')
+  if (verbose>0) cat('\n SETTING UP DATA \n')
 
   if(is.null(design)) {
     make_design <- TRUE
@@ -413,7 +413,7 @@ BayesGLM_slice <- function(
   ntime <- vapply(BOLD, function(x){ dim(BOLD)[length(dim(BOLD))] }, 0)
   for(ss in 1:n_sess){
     if(make_design){
-      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
+      if (verbose>0) cat(paste0('    Constructing design matrix for session ', ss, '\n'))
       design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], dHRF=dHRF)$design
     }
   }
@@ -426,7 +426,7 @@ BayesGLM_slice <- function(
       stop('task names must match across sessions for multi-session modeling')
   }
 
-  cat('\n RUNNING MODEL \n')
+  if (verbose>0) cat('\n RUNNING MODEL \n')
 
   classicalGLM <- NULL
   BayesGLM <- NULL

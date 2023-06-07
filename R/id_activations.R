@@ -35,7 +35,7 @@
 #  depending on the method that should be used to find the excursions set. Note that to ID
 #  activations for averages across sessions, the method chosen must be \code{EB}. The difference
 #  in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
-#' @param verbose Print progress updates? Default: \code{TRUE}.
+#' @inheritParams verbose_Param
 # @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
 # @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
 #'
@@ -44,6 +44,8 @@
 #' @importFrom ciftiTools convert_xifti
 #' @importFrom fMRItools is_posNum is_1
 #'
+#' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a 
+#'  list which indicates the activated locations along with related information.
 #' @export
 #'
 id_activations <- function(
@@ -56,7 +58,7 @@ id_activations <- function(
   #area.limit=NULL,
   correction = c("FWER", "FDR", "none"),
   #excur_method = c("EB", "QC"),
-  verbose = TRUE){
+  verbose = 1){
 
   # If 'BayesGLM_cifti', we will loop over the brain structures.
   is_cifti <- inherits(model_obj, "BayesGLM_cifti")
@@ -96,7 +98,7 @@ id_activations <- function(
   stopifnot(is_posNum(alpha) && alpha < 1)
   stopifnot(is.null(threshold) || is_posNum(threshold, zero_ok=TRUE))
   correction <- match.arg(correction, c("FWER", "FDR", "none"))
-  stopifnot(is_1(verbose, "logical"))
+  stopifnot(is_posNum(verbose, zero_ok=TRUE))
 
   # Check that Bayesian results are available, if requested.
   if (method=="Bayesian" && is.null(model_obj[[idx1]]$INLA_model_obj)) {
@@ -133,8 +135,8 @@ id_activations <- function(
       stop("Bayesian activations are not available because `return_INLA` was set to `'minimal'` in the `BayesGLM` call. Request the classical activations, or re-run `BayesGLM`.")
     }
     name_obj_mm <- names(model_obj)[mm]
-    if (method=="Bayesian" && verbose && name_obj_mm!="obj") {
-      cat(paste0("Identifying Bayesian GLM activations in ",name_obj_mm,'\n'))
+    if (method=="Bayesian" && name_obj_mm!="obj") {
+      if (verbose>0) cat(paste0("Identifying Bayesian GLM activations in ",name_obj_mm,'\n'))
     }
     # Loop over sessions
     activations[[mm]] <- vector("list", length(sessions))

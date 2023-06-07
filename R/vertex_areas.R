@@ -10,10 +10,10 @@
 #' 
 #' @export
 vertex_areas <- function(mesh) {
-  if(missing(mesh)) { print("This needs a valid mesh! Input a mesh now")}
+  if(missing(mesh)) { stop("`mesh` input is required.")}
 
   if (!inherits(mesh, "inla.mesh")) {
-    stop("`mesh`` needs to be of class `'inla.mesh'`.")
+    stop("`mesh` needs to be of class `'inla.mesh'`.")
   }
 
   diag(INLA::inla.fmesher.smorg(

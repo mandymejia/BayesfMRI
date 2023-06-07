@@ -205,28 +205,16 @@ NULL
 #' @name trim_INLA_Param
 NULL
 
-#' verbose: INLA only
+#' verbose
 #'
-#' @param verbose Should INLA be run in verbose mode? Default: \code{FALSE}.
+#' @param verbose Should updates be printed? Use \code{1} (default) for
+#'  occasional updates, \code{2} for occasional updates as well as running INLA
+#'  in verbose mode (if applicable), or \code{0} for no updates.
 #'
-#' @name verbose_Param_inla
+#' @name verbose_Param
 NULL
 
-#' verbose: direct only, TRUE
-#'
-#' @param verbose Should occasional updates be printed? Default: \code{TRUE}.
-#'
-#' @name verbose_Param_direct_TRUE
-NULL
-
-#' verbose: direct only, FALSE
-#'
-#' @param verbose Should occasional updates be printed? Default: \code{FALSE}.
-#'
-#' @name verbose_Param_direct_FALSE
-NULL
-
-#'  vertices
+#' vertices
 #'
 #' @param vertices A \eqn{V \times 3} matrix, where each row contains the Euclidean
 #'  coordinates at which a given vertex in the mesh is located. \eqn{V} is the

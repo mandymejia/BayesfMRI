@@ -12,7 +12,7 @@ id_activations(
   alpha = 0.05,
   threshold = NULL,
   correction = c("FWER", "FDR", "none"),
-  verbose = TRUE
+  verbose = 1
 )
 }
 \arguments{
@@ -46,7 +46,13 @@ will use a \code{threshold} of zero for the classical method.}
 correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
 (Benjamini Hochberg), or \code{"none"}.}
 
-\item{verbose}{Print progress updates? Default: \code{TRUE}.}
+\item{verbose}{Should updates be printed? Use \code{1} (default) for
+occasional updates, \code{2} for occasional updates as well as running INLA
+in verbose mode (if applicable), or \code{0} for no updates.}
+}
+\value{
+An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
+list which indicates the activated locations along with related information.
 }
 \description{
 Identify areas of activation for each task from the result of \code{BayesGLM}

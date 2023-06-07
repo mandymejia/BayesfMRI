@@ -3,7 +3,7 @@
 ^README\.Rmd$
 ^\.github$
 ^appveyor\.yml$
-^vignettes$
+^vignettes
 ^LICENSE\.md$
 ^CRAN-RELEASE$
 ^cran-comments\.md
@@ -11,7 +11,6 @@
 ^CRAN-SUBMISSION$
 # Tests ------------------------
 ^tests/simulate_cifti\.R$
-^tests/test
 ^tests/data_notInPackage
 ^tests/results_notInPackage
 # below: was going to add to pkg, but didn't

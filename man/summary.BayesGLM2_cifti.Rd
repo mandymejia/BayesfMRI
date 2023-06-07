@@ -19,6 +19,14 @@
 
 \item{x}{Object of class \code{"summary.BayesGLM2_cifti"}.}
 }
+\value{
+A \code{"summary.BayesGLM2_cifti"} object, a list summarizing the
+properties of \code{object}.
+
+\code{NULL}, invisibly.
+
+\code{NULL}, invisibly.
+}
 \description{
 Summary method for class \code{"BayesGLM2_cifti"}
 }

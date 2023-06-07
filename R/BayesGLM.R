@@ -28,7 +28,7 @@ BayesGLM_argChecks <- function(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  verbose=FALSE,
+  verbose=1,
   meanTol=1e-6,
   varTol=1e-6,
   emTol=1e-3
@@ -75,7 +75,9 @@ BayesGLM_argChecks <- function(
   stopifnot(is_1(aic, "logical"))
   stopifnot(is_1(num.threads, "numeric"))
   stopifnot(num.threads <= parallel::detectCores())
-  stopifnot(is_1(verbose, "logical"))
+  if (isTRUE(verbose)) { verbose <- 2 }
+  if (isFALSE(verbose)) { verbose <- 0 }
+  stopifnot(is_posNum(verbose, zero_ok=TRUE))
   stopifnot(is_posNum(meanTol))
   stopifnot(is_posNum(varTol))
   stopifnot(is_posNum(emTol))
@@ -98,7 +100,7 @@ BayesGLM_argChecks <- function(
 #' @param data A list of sessions in the \code{"BfMRI.sess"} object format. Each
 #'  session is a list with elements \code{"BOLD"}, \code{"design"}, and
 #'  optionally \code{"nuisance"}. Each element should be a numeric matrix with
-#'  \eqn{T} rows. The name of each element in \code{data} is the name of that 
+#'  \eqn{T} rows. The name of each element in \code{data} is the name of that
 #'  session. See \code{?is.BfMRI.sess} for details.
 #'
 #'  Note that the argument \code{session_names} can be used instead of providing
@@ -133,7 +135,7 @@ BayesGLM_argChecks <- function(
 #' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_Param
-#' @inheritParams verbose_Param_inla
+#' @inheritParams verbose_Param
 #' @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
@@ -192,7 +194,7 @@ BayesGLM <- function(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  verbose = FALSE,
+  verbose = 1,
   meanTol = 1e-6,
   varTol = 1e-6#, emTol = 1e-3,
   ){
@@ -390,7 +392,7 @@ BayesGLM <- function(
 
   # Prewhitening. --------------------------------------------------------------
   if (do_pw) {
-    cat("\tPrewhitening.\n")
+    if (verbose>0) cat("\tPrewhitening.\n")
     ## Estimate prewhitening parameters. ---------------------------------------
     AR_coeffs <- array(dim = c(nV,ar_order,nS))
     AR_resid_var <- array(dim = c(nV,nS))
@@ -430,7 +432,7 @@ BayesGLM <- function(
       )
       template_pw_list <- rep(list(template_pw), nV)
       for (vv in 1:nV) {
-        if(vv %% 100 == 0) cat("\tLocation",vv,"of",nV,"\n")
+        if(vv %% 100 == 0) if (verbose>0) cat("\tLocation",vv,"of",nV,"\n")
         template_pw_list[[vv]] <- .getSqrtInvCpp(
           AR_coeffs = avg_AR[vv,],
           nTime = nT,
@@ -454,7 +456,7 @@ BayesGLM <- function(
       )
       parallel::stopCluster(cl)
     }
-    cat("\tDone!\n")
+    if (verbose>0) cat("\tDone!\n")
 
     #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
     sqrtInv_all <- Matrix::bdiag(template_pw_list)
@@ -537,7 +539,7 @@ BayesGLM <- function(
       # if (!requireNamespace("MatrixModels", quietly = TRUE)) {
       #   stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
       # }
-      # cat('\tEstimating model with EM.\n')
+      # if (verbose>0) cat('\tEstimating model with EM.\n')
       # Psi_k <- spde$Amat
       # Psi <- Matrix::bdiag(rep(list(Psi_k),nK))
       # A <- Matrix::crossprod(model_data$X %*% Psi)
@@ -545,7 +547,7 @@ BayesGLM <- function(
       # kappa2 <- 4
       # phi <- 1 / (4*pi*kappa2*4)
       # # Using values based on the classical GLM
-      # if(verbose) cat("\t\tFinding best guess initial values.\n")
+      # if (verbose>0) cat("\t\tFinding best guess initial values.\n")
       # beta_hat <- MatrixModels:::lm.fit.sparse(model_data$X, model_data$y)
       # res_y <- (model_data$y - model_data$X %*% beta_hat)@x
       # sigma2 <- stats::var(res_y)
@@ -570,11 +572,11 @@ BayesGLM <- function(
       #   verbose = FALSE
       # )
       # parallel::stopCluster(cl)
-      # if(verbose) cat("\t\tDone!\n")
+      # if (verbose>0) cat("\t\tDone!\n")
       # theta <- c(t(kappa2_phi_rcpp), sigma2)
       # theta_init <- theta
       # Ns <- 50 # This is a level of approximation used for the Hutchinson trace estimator
-      # if(verbose) cat("\t\tStarting EM algorithm.\n")
+      # if(verbose>0) cat("\t\tStarting EM algorithm.\n")
       # em_output <-
       #   .findTheta(
       #     theta = theta,
@@ -586,9 +588,9 @@ BayesGLM <- function(
       #     A = as(A, "dgCMatrix"),
       #     Ns = 50,
       #     tol = emTol,
-      #     verbose = verbose
+      #     verbose = verbose>0
       #   )
-      # if(verbose) cat("\t\tEM algorithm complete!\n")
+      # if(verbose>0) cat("\t\tEM algorithm complete!\n")
       # kappa2_new <- phi_new <- sigma2_new <- mu_theta <- NULL
       # list2env(em_output, envir = environment())
       # Qk_new <- mapply(spde_Q_phi,kappa2 = kappa2_new, phi = phi_new,
@@ -613,12 +615,12 @@ BayesGLM <- function(
       # mu_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(nK)])))))
       # tau2 <- 1 / (4*pi*kappa2_new*phi_new)
       # mu_theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
-      # cat("\t\tDone!\n")
+      # if (verbose>0) cat("\t\tDone!\n")
 
     ## INLA Model. -------------------------------------------------------------
     } else {
       #estimate model using INLA
-      cat('\tEstimating model with INLA.\n')
+      if (verbose>0) cat('\tEstimating model with INLA.\n')
       #organize the formula and data objects
       repl_names <- names(repls)
       hyper_initial <- c(-2,2)
@@ -635,12 +637,12 @@ BayesGLM <- function(
         data=model_data,
         #data=INLA::inla.stack.data(model_data, spde=spde),
         control.predictor=list(A=model_data$X, compute = TRUE),
-        verbose = verbose, keep = FALSE, num.threads = num.threads,
+        verbose = verbose>1, keep = FALSE, num.threads = num.threads,
         control.inla = list(strategy = "gaussian", int.strategy = "eb"),
         control.family=list(hyper=list(prec=list(initial=1))),
         control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
       )
-      if(verbose) cat("\t\tDone!\n")
+      if (verbose>0) cat("\t\tDone!\n")
 
       #extract useful stuff from INLA model result
       task_estimates <- extract_estimates(

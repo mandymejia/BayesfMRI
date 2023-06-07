@@ -16,7 +16,7 @@ BayesGLM2(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = TRUE
+  verbose = 1
 )
 
 BayesGLM_group(
@@ -29,7 +29,7 @@ BayesGLM_group(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = TRUE
+  verbose = 1
 )
 }
 \arguments{
@@ -95,7 +95,9 @@ value sampled. Default: \code{100}.}
 \item{num_cores}{The number of cores to use for sampling betas in parallel. If
 \code{NULL} (default), do not run in parallel.}
 
-\item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
+\item{verbose}{Should updates be printed? Use \code{1} (default) for
+occasional updates, \code{2} for occasional updates as well as running INLA
+in verbose mode (if applicable), or \code{0} for no updates.}
 }
 \value{
 A list containing the estimates, PPMs and areas of activation for each contrast.

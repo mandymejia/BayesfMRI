@@ -19,6 +19,14 @@
 
 \item{x}{Object of class \code{"summary.act_BayesGLM"}.}
 }
+\value{
+A \code{"summary.act_BayesGLM"} object, a list summarizing the
+properties of \code{object}.
+
+\code{NULL}, invisibly.
+
+\code{NULL}, invisibly.
+}
 \description{
 Summary method for class \code{"act_BayesGLM"}
 }

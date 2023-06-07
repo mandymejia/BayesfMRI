@@ -37,7 +37,8 @@ the design matrix (i.e. the total number of tasks, times \code{dHRF+1}), would b
 \item{downsample}{Downsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
-\item{verbose}{Print messages? Default: \code{FALSE}}
+\item{verbose}{If applicable, print a message saying how the HRF derivatives
+will be modeled? Default: \code{FALSE}.}
 }
 \value{
 List with the design matrix and/or the nuisance matrix containing the

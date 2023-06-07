@@ -15,7 +15,7 @@ BayesGLM_argChecks(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  verbose = FALSE,
+  verbose = 1,
   meanTol = 1e-06,
   varTol = 1e-06,
   emTol = 0.001

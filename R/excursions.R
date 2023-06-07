@@ -159,7 +159,7 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #'       \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}
 #' @param ind Indices of the nodes that should be analyzed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
-#' @inheritParams verbose_Param_direct_FALSE
+#' @inheritParams verbose_Param
 #' @inheritParams max.threads_Param
 #' @inheritParams seed_Param
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
@@ -178,27 +178,28 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' @import excursions
 #' 
 #' @keywords internal
-excursions.no.spurious <- function(alpha,
-                                   u,
-                                   mu,
-                                   Q,
-                                   type,
-                                   n.iter=10000,
-                                   Q.chol,
-                                   F.limit,
-                                   vars,
-                                   rho=NULL,
-                                   method='EB',
-                                   ind,
-                                   max.size,
-                                   verbose=FALSE,
-                                   max.threads=0,
-                                   seed,
-                                   area.limit,
-                                   use.continuous = FALSE,
-                                   factor = 0, #1/2 for removing area.limit around each point
-                                   plot.progress = FALSE,
-                                   mesh)
+excursions.no.spurious <- function(
+  alpha,
+  u,
+  mu,
+  Q,
+  type,
+  n.iter=10000,
+  Q.chol,
+  F.limit,
+  vars,
+  rho=NULL,
+  method='EB',
+  ind,
+  max.size,
+  verbose=1,
+  max.threads=0,
+  seed,
+  area.limit,
+  use.continuous = FALSE,
+  factor = 0, #1/2 for removing area.limit around each point
+  plot.progress = FALSE,
+  mesh)
 
 {
   if (method == 'QC') {
@@ -266,8 +267,7 @@ excursions.no.spurious <- function(alpha,
   if (!missing(ind))
     ind <- excursions:::private.as.vector(ind)
 
-  if (verbose)
-    cat("Calculate marginals\n")
+  if (verbose>0) cat("Calculate marginals\n")
   if(is.null(rho)){
     marg <- excursions:::excursions.marginals(type = type, vars = vars,
                                               mu = mu, u = u, QC = qc)
@@ -359,8 +359,7 @@ excursions.no.spurious <- function(alpha,
                               call = match.call())))
   class(res.marg) <- "excurobj"
   res.marg <- crop.lists(res.marg)
-  if (verbose)
-    cat("Calculate sizes\n")
+  if (verbose>0) cat("Calculate sizes\n")
   if(use.continuous){
     sets.marg <- excursions::continuous(ex = res.marg, geometry = mesh, alpha = alpha)
     areas <- find.smallest.activation(sets.marg,mesh,area.limit = area.limit,factor = factor)
@@ -381,7 +380,7 @@ excursions.no.spurious <- function(alpha,
   }
   ###########
   if(is.null(ind.rem)){
-    cat("Calculated excursion set\n")
+    if (verbose>0) cat("Calculated excursion set\n")
     res.exc <-  excursions(mu = mu,
                            Q = Q,
                            alpha = alpha,
@@ -395,12 +394,11 @@ excursions.no.spurious <- function(alpha,
                            method = method,
                            vars = vars,
                            max.size,
-                           verbose = FALSE,
+                           verbose = verbose>1,
                            max.threads = max.threads,
                            seed = seed)
     res.exc <- crop.lists(res.exc)
-    if (verbose)
-      cat("Calculate sizes\n")
+    if (verbose>0) cat("Calculate sizes\n")
     if(use.continuous){
       sets <- excursions::continuous(ex = res.exc, geometry = mesh, alpha = alpha)
       areas <- find.smallest.activation(sets, mesh, area.limit = area.limit, factor = factor)
@@ -409,7 +407,7 @@ excursions.no.spurious <- function(alpha,
                                         area.el= area.el)
     }
     ind.rem <- areas$ind.rem
-    cat(sprintf("smallest area = %f (limit = %f)\n", areas$smallest.area, area.limit))
+    if (verbose>0) cat(sprintf("smallest area = %f (limit = %f)\n", areas$smallest.area, area.limit))
     if (plot.progress) {
       # if(use.continuous){
       #   plot(mesh, vertex.color = rgb(0.8, 0.8, 0.8), draw.segments = FALSE,
@@ -427,11 +425,10 @@ excursions.no.spurious <- function(alpha,
 
   #############
   while (!is.null(ind.rem)) {
-    cat(sprintf("smallest area = %f (limit = %f)\n", areas$smallest.area,area.limit))
+    if (verbose>0) cat(sprintf("smallest area = %f (limit = %f)\n", areas$smallest.area,area.limit))
     rho.crop[ind.rem] <- 0
     rho[ind] <- rho.crop
-    if (verbose)
-      cat("Update excursion set\n")
+    if (verbose>0) cat("Update excursion set\n")
     res.exc <-  excursions(mu = mu,
                            Q = Q,
                            alpha = alpha,
@@ -445,12 +442,11 @@ excursions.no.spurious <- function(alpha,
                            method = method,
                            vars = vars,
                            max.size,
-                           verbose = FALSE,
+                           verbose = verbose>1,
                            max.threads = max.threads,
                            seed = seed)
     res.exc <- crop.lists(res.exc)
-    if (verbose)
-      cat("Calculate sizes\n")
+    if (verbose>0) cat("Calculate sizes\n")
     if(use.continuous){
       sets <- excursions::continuous(ex = res.exc, geometry = mesh, alpha = alpha)
       areas <- find.smallest.activation(sets, mesh, area.limit = area.limit, factor = factor)
@@ -512,7 +508,7 @@ excursions.no.spurious <- function(alpha,
 #'       \item{'QC' }{Quantile correction, rho must be provided if QC is used.}}
 #' @param ind Indices of the nodes that should be analyzed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
-#' @inheritParams verbose_Param_direct_FALSE
+#' @inheritParams verbose_Param
 #' @inheritParams max.threads_Param
 #' @inheritParams seed_Param
 #' @param mesh The mesh on which the model is defined.
@@ -540,7 +536,7 @@ excursions.inla.no.spurious <- function(result.inla,
                             method,
                             ind=NULL,
                             max.size,
-                            verbose=FALSE,
+                            verbose=1,
                             max.threads=0,
                             seed=NULL,
                             mesh,
@@ -555,7 +551,7 @@ excursions.inla.no.spurious <- function(result.inla,
   if (missing(result.inla))
     stop('Must supply INLA result object')
   if (missing(method)) {
-    cat('No method selected, using EB\n')
+    if (verbose>0) cat('No method selected, using EB\n')
     method = 'EB'
   }
   if (missing(mesh))
@@ -613,8 +609,7 @@ excursions.inla.no.spurious <- function(result.inla,
   #If stack and tag are provided, we are interested in the predictor
   #Otherwise, we are interested in some of the effects
 
-  if (verbose)
-    cat('Calculating marginal probabilities\n')
+  if (verbose>0) cat('Calculating marginal probabilities\n')
 
   #Are we interested in a random effect?
   random.effect = FALSE
@@ -650,8 +645,7 @@ excursions.inla.no.spurious <- function(result.inla,
       break
   }
 
-  if (verbose)
-    cat('Calculating excursion function using the ', method, ' method\n')
+  if (verbose>0) cat('Calculating excursion function using the ', method, ' method\n')
 
   if (method == 'EB' || method == 'QC') {
     res <- excursions.no.spurious(alpha = alpha,
@@ -670,7 +664,7 @@ excursions.inla.no.spurious <- function(result.inla,
                                   n.iter = n.iter,
                                   max.threads = max.threads,
                                   seed = seed,
-                                  verbose = verbose,
+                                  verbose = verbose>1,
                                   plot.progress = plot.progress)
 
   } else {

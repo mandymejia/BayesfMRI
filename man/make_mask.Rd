@@ -15,7 +15,8 @@ make_mask(data, meanTol = 1e-06, varTol = 1e-06, verbose = TRUE)
 Locations which do not meet these thresholds are masked out of the analysis.
 Defaults: \code{1e-6}.}
 
-\item{verbose}{Print messages counting how many locations are removed?}
+\item{verbose}{Print messages counting how many locations are removed?
+Default: \code{TRUE}.}
 }
 \value{
 A logical vector indicating locations that are valid across all sessions.

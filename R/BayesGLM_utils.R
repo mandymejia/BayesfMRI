@@ -161,6 +161,8 @@ get_posterior_densities <- function(INLA_model_obj, spde, task_names){
 #' @param object Object of class \code{"BayesGLM"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A \code{"summary.BayesGLM"} object, a list summarizing the properties
+#'  of \code{object}.
 #' @method summary BayesGLM
 summary.BayesGLM <- function(object, ...) {
 
@@ -182,6 +184,7 @@ summary.BayesGLM <- function(object, ...) {
 #' @export
 #'
 #' @param x Object of class \code{"summary.BayesGLM"}.
+#' @return \code{NULL}, invisibly.
 #' @method print summary.BayesGLM
 print.summary.BayesGLM <- function(x, ...) {
   cat("====BayesGLM result====================\n")
@@ -200,6 +203,7 @@ print.summary.BayesGLM <- function(x, ...) {
 #' @rdname summary.BayesGLM
 #' @export
 #'
+#' @return \code{NULL}, invisibly.
 #' @method print BayesGLM
 print.BayesGLM <- function(x, ...) {
   print.summary.BayesGLM(summary(x))
@@ -212,6 +216,8 @@ print.BayesGLM <- function(x, ...) {
 #' @param object Object of class \code{"BayesGLM_cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A \code{"summary.BayesGLM_cifti"} object, a list summarizing the 
+#'  properties of \code{object}.
 #' @method summary BayesGLM_cifti
 summary.BayesGLM_cifti <- function(object, ...) {
 
@@ -235,6 +241,7 @@ summary.BayesGLM_cifti <- function(object, ...) {
 #' @export
 #'
 #' @param x Object of class \code{"summary.BayesGLM_cifti"}.
+#' @return \code{NULL}, invisibly.
 #' @method print summary.BayesGLM_cifti
 print.summary.BayesGLM_cifti <- function(x, ...) {
   cat("====BayesGLM_cifti result==============\n")
@@ -259,6 +266,7 @@ print.summary.BayesGLM_cifti <- function(x, ...) {
 #' @rdname summary.BayesGLM_cifti
 #' @export
 #'
+#' @return \code{NULL}, invisibly.
 #' @method print BayesGLM_cifti
 print.BayesGLM_cifti <- function(x, ...) {
   print.summary.BayesGLM_cifti(summary(x))

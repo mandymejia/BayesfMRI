@@ -29,7 +29,6 @@ beta.posterior.thetasamp <- function(
 
   n.mesh <- spde$n.spde
 
-  # print('contructing joint precision')
   prec.error <- exp(theta[1])
   theta_spde <- matrix(theta[-1], nrow=2) #2xK matrix of the hyperparameters (2 per task)
   K <- ncol(theta_spde)
@@ -64,7 +63,6 @@ beta.posterior.thetasamp <- function(
 
   beta.samples <- NULL
   # ~5 seconds per subject with PARDISO
-  # print('Looping over subjects or sessions')
   nS <- 1
   Q_nn <- Q
   for(nn in 1:M){
@@ -217,6 +215,8 @@ cholQsample <- function(n, mu, cholQ) {
 #' @param object Object of class \code{"BayesGLM2"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A \code{"summary.BayesGLM2"} object, a list summarizing the 
+#'  properties of \code{object}.
 #' @method summary BayesGLM2
 summary.BayesGLM2 <- function(object, ...) {
 
@@ -236,6 +236,7 @@ summary.BayesGLM2 <- function(object, ...) {
 #' @export
 #'
 #' @param x Object of class \code{"summary.BayesGLM2"}.
+#' @return \code{NULL}, invisibly.
 #' @method print summary.BayesGLM2
 print.summary.BayesGLM2 <- function(x, ...) {
   cat("====BayesGLM2 result===================\n")
@@ -260,6 +261,7 @@ print.summary.BayesGLM2 <- function(x, ...) {
 #' @rdname summary.BayesGLM2
 #' @export
 #'
+#' @return \code{NULL}, invisibly.
 #' @method print BayesGLM2
 print.BayesGLM2 <- function(x, ...) {
   print.summary.BayesGLM2(summary(x))
@@ -272,6 +274,8 @@ print.BayesGLM2 <- function(x, ...) {
 #' @param object Object of class \code{"BayesGLM2_cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A \code{"summary.BayesGLM2_cifti"} object, a list summarizing the 
+#'  properties of \code{object}.
 #' @method summary BayesGLM2_cifti
 summary.BayesGLM2_cifti <- function(object, ...) {
   x <- summary.BayesGLM2(object$BayesGLM2_results)
@@ -283,6 +287,7 @@ summary.BayesGLM2_cifti <- function(object, ...) {
 #' @export
 #'
 #' @param x Object of class \code{"summary.BayesGLM2_cifti"}.
+#' @return \code{NULL}, invisibly.
 #' @method print summary.BayesGLM2_cifti
 print.summary.BayesGLM2_cifti <- function(x, ...) {
   print.summary.BayesGLM2(x, ...)
@@ -291,6 +296,7 @@ print.summary.BayesGLM2_cifti <- function(x, ...) {
 #' @rdname summary.BayesGLM2_cifti
 #' @export
 #'
+#' @return \code{NULL}, invisibly.
 #' @method print BayesGLM2_cifti
 print.BayesGLM2_cifti <- function(x, ...) {
   print.summary.BayesGLM2_cifti(summary(x))

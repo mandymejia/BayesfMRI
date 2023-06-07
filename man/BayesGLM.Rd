@@ -21,7 +21,7 @@ BayesGLM(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  verbose = FALSE,
+  verbose = 1,
   meanTol = 1e-06,
   varTol = 1e-06
 )
@@ -119,7 +119,9 @@ is enough for both \code{\link{id_activations}} and \code{BayesGLM2},
 \code{id_activations}, or \code{"full"} to return the full output of
 \code{inla}.}
 
-\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
+\item{verbose}{Should updates be printed? Use \code{1} (default) for
+occasional updates, \code{2} for occasional updates as well as running INLA
+in verbose mode (if applicable), or \code{0} for no updates.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.

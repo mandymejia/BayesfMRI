@@ -4,8 +4,14 @@
 #'  backward differences.
 #' @param x A numeric matrix, or a vector which will be converted to a
 #'  single-column matrix.
-#' @return \code{x} with the derivative taken for each column.
+#' @return A matrix or vector the same dimensions as \code{x}, with the 
+#'  derivative taken for each column of \code{x}. The first and last rows may
+#'  need to be deleted, depending on the application.
 #' @export
+#' 
+#' @examples
+#' x <- cderiv(seq(5))
+#' stopifnot(all(x == c(.5, 1, 1, 1, .5)))
 #' 
 cderiv <- function(x){
   x <- as.matrix(x)
@@ -34,7 +40,8 @@ cderiv <- function(x){
 #'  \code{>=10}, the limit for INLA.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
-#' @param verbose Print messages? Default: \code{FALSE}
+#' @param verbose If applicable, print a message saying how the HRF derivatives
+#'  will be modeled? Default: \code{FALSE}.
 #'
 #' @return List with the design matrix and/or the nuisance matrix containing the
 #'  HRF-convolved stimuli as columns, depending on \code{dHRF_as}.

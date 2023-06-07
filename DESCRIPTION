@@ -1,7 +1,7 @@
 Package: BayesfMRI
 Type: Package
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.3.2
+Version: 0.3.3
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -32,9 +32,13 @@ Authors@R: c(
     )
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: Performs a spatial Bayesian general linear model (GLM) for task 
-    fMRI data on the cortical surface. Additional models include group analysis
-    and inference to detect thresholded areas of activation. Includes direct 
-    support for the 'CIFTI' neuroimaging file format.
+    functional magnetic resonance imaging (fMRI) data on the cortical surface. 
+    Additional models include group analysis and inference to detect thresholded
+    areas of activation. Includes direct support for the 'CIFTI' neuroimaging 
+    file format. For more information see A. F. Mejia, Y. R. Yue, D. Bolin, F. 
+    Lindgren, M. A. Lindquist (2020) <doi:10.1080/01621459.2019.1611582> and D. 
+    Spencer, Y. R. Yue, D. Bolin, S. Ryan, A. F. Mejia (2022) 
+    <doi:10.1016/j.neuroimage.2022.118908>.
 Depends: R (>= 3.6.0)
 License: GPL-3
 Additional_repositories: https://inla.r-inla-download.org/R/testing

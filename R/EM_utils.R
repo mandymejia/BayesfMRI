@@ -34,7 +34,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
   Sig_inv <- Q_new + A/theta[sigma2_ind]
   m <- Matrix::crossprod(model_data$X%*%Psi,model_data$y) / theta[sigma2_ind]
   mu <- Matrix::solve(Sig_inv, m)
-  # cat("First 6 values of mu:", head(mu@x), "\n")
+  # if (verbose>0) cat("First 6 values of mu:", head(mu@x), "\n")
   X_Psi_mu <- model_data$X%*%Psi%*%mu
   cp_X_Psi_mu <- Matrix::crossprod(X_Psi_mu)
   # >> Update sigma2 ----
@@ -53,7 +53,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
     traceAEww <-
       as.numeric(Matrix::crossprod(mu,A %*% mu)) +
       TrSigB(P,A,Vh)
-    # cat("TrAEww =",traceAEww,"\n")
+    # if (verbose>0) cat("TrAEww =",traceAEww,"\n")
     kappa_fn <- neg_kappa_fn2
   }
   sigma2_new <-
@@ -109,8 +109,8 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
       #     lower = 0,
       #     upper = 50
       #   )
-      # cat("k =",k,"a_star =",prep_optim$a_star,"b_star =",prep_optim$b_star,"\n")
-      # cat("objective =",optim_output_k$objective,", new_kappa2 =", optim_output_k$minimum,"\n")
+      # if (verbose>0) cat("k =",k,"a_star =",prep_optim$a_star,"b_star =",prep_optim$b_star,"\n")
+      # if (verbose>0) cat("objective =",optim_output_k$objective,", new_kappa2 =", optim_output_k$minimum,"\n")
       optim_output_k <-
         stats::optimize(
           f = neg_kappa_fn4,
@@ -136,7 +136,7 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
       # >> Update phi ----
       Tr_QEww <-
         TrQEww(kappa2 = kappa2_new, spde = spde, P = P[k_inds,], mu = mu[k_inds,],Vh = Vh[k_inds,])
-      # cat("TrQEww =", Tr_QEww, "\n")
+      # if (verbose>0) cat("TrQEww =", Tr_QEww, "\n")
       phi_new <-
         Tr_QEww / (4 * pi * big_N * n_sess_em)
       return(c(kappa2_new, phi_new))
@@ -374,8 +374,8 @@ prep_kappa2_optim <- function(spde, mu, phi, P, vh) {
   diagPGCGV <- Matrix::diag(Matrix::crossprod(P, GtCinvG %*% vh))
   TrGCGSig <- sum(diagPGCGV) / ncol(vh)
   b_star <- (muGCGmu + TrGCGSig) / (4*pi*phi)
-  # cat("muCmu =", muCmu, ", muGCGmu =",muGCGmu,", TrCSig =",TrCSig,", TrGCGSig =",TrGCGSig,"\n")
-  # cat("head(diagPCV) =",head(diagPCV), ", head(diagPGCGV) =", head(diagPGCGV),"\n")
+  # if (verbose>0) cat("muCmu =", muCmu, ", muGCGmu =",muGCGmu,", TrCSig =",TrCSig,", TrGCGSig =",TrGCGSig,"\n")
+  # if (verbose>0) cat("head(diagPCV) =",head(diagPCV), ", head(diagPGCGV) =", head(diagPGCGV),"\n")
   return(
     list(a_star = as.numeric(a_star),
          b_star = as.numeric(b_star))
@@ -516,7 +516,7 @@ kappa_init_fn <- function(kappa2, phi, spde, beta_hat) {
   # log_det_Q <- sum(2*log(Matrix::diag(Rt)))
   log_det_Q <- .logDetQt(kappa2,in_list = spde,n_sess = KK)
   bQb <- as.numeric(Matrix::crossprod(beta_hat, Qt %*% beta_hat))
-  # cat("log_det_Q =", log_det_Q, ", bQb =",bQb,"\n")
+  # if (verbose>0) cat("log_det_Q =", log_det_Q, ", bQb =",bQb,"\n")
   # out <- log_det_Q / 2 - TrQbb(kappa2,beta_hat,spde) / (8*pi*phi)
   out <- log_det_Q / 2 - bQb / (8*pi*phi)
   return(-out)

@@ -120,7 +120,7 @@
 #' @inheritParams aic_Param
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_Param
-#' @inheritParams verbose_Param_inla
+#' @inheritParams verbose_Param
 #' @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
@@ -173,7 +173,7 @@ BayesGLM_cifti <- function(
   aic = FALSE,
   num.threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
-  verbose = FALSE,
+  verbose = 1,
   meanTol = 1e-6,
   varTol = 1e-6#,emTol = 1e-3,
   ){
@@ -308,14 +308,14 @@ BayesGLM_cifti <- function(
   if (need_mesh) {
     if (do_left) {
       if (is.null(surfL_fname)) {
-        cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
+        if (verbose>0) cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
         surfL_fname <- ciftiTools.files()$surf["left"]
       }
       surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
     }
     if (do_right) {
       if (is.null(surfR_fname)) {
-        cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
+        if (verbose>0) cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
         surfR_fname <- ciftiTools.files()$surf["right"]
       }
       surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
@@ -359,7 +359,7 @@ BayesGLM_cifti <- function(
   }
 
   # Data setup. ----------------------------------------------------------------
-  cat('Setting up data:\n')
+  if (verbose>0) cat('Setting up data:\n')
 
   ## xifti things. -------------------------------------------------------------
   ### For each session, separate the CIFTI data into left/right/sub and read in files
@@ -368,7 +368,7 @@ BayesGLM_cifti <- function(
   ntime <- vector("numeric", nS)
 
   for (ss in seq(nS)) {
-    if (nS > 1) cat(paste0('\tReading in data for session ', ss,'.\n'))
+    if (nS > 1) if (verbose>0) cat(paste0('\tReading in data for session ', ss,'.\n'))
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
@@ -423,7 +423,7 @@ BayesGLM_cifti <- function(
 
   ## Design and nuisance matrices. ---------------------------------------------
   if (is.null(design)) {
-    cat("\tMaking design matrices.\n")
+    if (verbose>0) cat("\tMaking design matrices.\n")
     design <- vector("list", nS)
 
     for (ss in seq(nS)) {
@@ -499,7 +499,7 @@ BayesGLM_cifti <- function(
   # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
   for (bb in brainstructures) {
 
-    cat(paste0(toupper(bb)," cortex analysis:\n"))
+    if (verbose>0) cat(paste0(toupper(bb)," cortex analysis:\n"))
 
     # set up session list
     session_data <- vector('list', nS)
@@ -550,7 +550,7 @@ BayesGLM_cifti <- function(
   names(BayesGLM_results)[names(BayesGLM_results)=="right"] <- "cortex_right"
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
-  cat("Formatting results.\n")
+  if (verbose>0) cat("Formatting results.\n")
   task_cifti_classical <- task_cifti <- vector('list', nS)
   names(task_cifti_classical) <- names(task_cifti) <- session_names
   datL <- datR <- NULL
@@ -611,7 +611,7 @@ BayesGLM_cifti <- function(
     BayesGLM_results = BayesGLM_results
   )
 
-  cat('Done!\n')
+  if (verbose>0) cat('Done!\n')
 
   class(result) <- "BayesGLM_cifti"
   result

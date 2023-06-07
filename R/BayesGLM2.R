@@ -58,7 +58,7 @@
 #'  value sampled. Default: \code{100}.
 #' @param num_cores The number of cores to use for sampling betas in parallel. If
 #'  \code{NULL} (default), do not run in parallel.
-#' @inheritParams verbose_Param_direct_TRUE
+#' @inheritParams verbose_Param
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
 #'
@@ -77,7 +77,7 @@ BayesGLM2 <- function(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = TRUE){
+  verbose = 1){
 
   use_INLA <- TRUE # alternative: use EM model, but it's been removed.
 
@@ -132,9 +132,7 @@ BayesGLM2 <- function(
   # `contrasts` should be fields * sessions * subjects
   if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
   if(is.null(contrasts)) {
-    if(verbose) {
-      cat('Using a contrast that computes the average across subjects for each task. If other contrasts are desired, provide `contrasts`.\n')
-    }
+    if (verbose>0) cat('Using a contrast that computes the average across subjects for each task. If other contrasts are desired, provide `contrasts`.\n')
     contrasts <- vector('list', length=nK)
     names(contrasts) <- paste0(task_names, '_avg')
     for (kk in 1:nK) {
@@ -189,7 +187,7 @@ BayesGLM2 <- function(
 
   for (mm in seq(nM)) {
 
-    if (nM>1) { cat(model_names[mm], " ~~~~~~~~~~~\n") }
+    if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
     results_mm <- lapply(results, function(x){ x$BayesGLM_results[[mm]] })
 
     # `Mask`
@@ -267,10 +265,10 @@ BayesGLM2 <- function(
       mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
       #### DRAW SAMPLES FROM q(theta|y)
       #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
-      if (verbose) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+      if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
       theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
       #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
-      if(verbose) cat('Computing weights for each theta sample \n')
+      if (verbose>0) cat('Computing weights for each theta sample \n')
       logwt <- rep(NA, nsamp_theta)
       for (tt in seq(nsamp_theta)) {
         logwt[tt] <- F.logwt(theta.samp[,tt], spde, mu_theta, Q_theta, nN)
@@ -286,9 +284,7 @@ BayesGLM2 <- function(
     }
 
     #get posterior quantities of beta, conditional on a value of theta
-    if (verbose) {
-      cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
-    }
+    if (verbose>0) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
     if (is.null(num_cores)) {
       #6 minutes in simuation
       beta.posteriors <- apply(
@@ -336,7 +332,7 @@ BayesGLM2 <- function(
 
     ## Sum over samples using weights
 
-    if(verbose) cat('Computing weighted summaries over beta samples \n')
+    if (verbose>0) cat('Computing weighted summaries over beta samples \n')
 
     ## Posterior mean of each contrast
     betas.all <- lapply(beta.posteriors, function(x) return(x$mu))
@@ -440,7 +436,7 @@ BayesGLM_group <- function(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = TRUE){
+  verbose = 1){
 
   BayesGLM2(
     results=results,

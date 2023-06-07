@@ -11,9 +11,16 @@ cderiv(x)
 single-column matrix.}
 }
 \value{
-\code{x} with the derivative taken for each column.
+A matrix or vector the same dimensions as \code{x}, with the
+derivative taken for each column of \code{x}. The first and last rows may
+need to be deleted, depending on the application.
 }
 \description{
 Take the central derivative of numeric vectors by averaging the forward and
 backward differences.
+}
+\examples{
+x <- cderiv(seq(5))
+stopifnot(all(x == c(.5, 1, 1, 1, .5)))
+
 }
