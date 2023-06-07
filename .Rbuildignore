@@ -13,6 +13,7 @@
 ^tests/simulate_cifti\.R$
 ^tests/data_notInPackage
 ^tests/results_notInPackage
+^tests/test_notInPackage
 # below: was going to add to pkg, but didn't
 ^tests/data
 # Volumetric -------------------
