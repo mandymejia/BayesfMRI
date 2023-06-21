@@ -38,15 +38,15 @@
 # #' @method plot BayesGLM
 # plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
 # {
-#   session_names <- names(object$beta_estimates)
+#   session_names <- names(object$task_estimates)
 #
 #   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
 #   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
 #
 #   if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
 #
-#   ind <- which(names(object$beta_estimates) == session_name) #which element of list
-#   est <- (object$beta_estimates)[[ind]]
+#   ind <- which(names(object$task_estimates) == session_name) #which element of list
+#   est <- (object$task_estimates)[[ind]]
 #   K <- ncol(est)
 #
 #
@@ -89,88 +89,17 @@
 #   })
 # }
 
-
-# #' Summarise BayesGLM objects
-# #'
-# #' Summary method for class "BayesGLM"
-# #'
-# #' @param object an object of class "BayesGLM"
-# #' @param ... further arguments passed to or from other methods.
-# #' @export
-# #' @method summary BayesGLM
-# summary.BayesGLM <- function(object, ...)
-# {
-#   out <- list()
-#   class(out) <- "summary.BayesGLM"
-#   out$sessions <- object$session_names
-#   out$betas <- object$beta_names
-#   out$call <- object$INLA_result$call
-#   out$inla.summary <- summary(object$model)
-#   return(out)
-# }
-
-
-# #' @param x an object of class "summary.BayesGLM"
-# #' @param ... further arguments passed to or from other methods.
-# #' @export
-# #' @method print summary.BayesGLM
-# #' @rdname summary.BayesGLM
-# print.summary.BayesGLM <- function(x, ...)
-# {
-#   cat("Call:\n")
-#   print(x$call)
-#   cat("Sessions: ", x$sessions,"\n")
-#   cat("Time used:\n", x$inla.summary$cpu.used)
-# }
-
-# #' @export
-# #' @method print BayesGLM
-# #' @rdname summary.BayesGLM
-# print.BayesGLM <- function(x, ...) {
-#   print.summary.BayesGLM(summary(x))
-# }
-
-# TO DO: Add print and summary functions for session object (may need as.session function too, and move is.session here)
-
-
-
-#' Find nonzero elements in matrix
-#' 
-#' Find nonzero element in a matrix using 2-means clustering
-#'
-#' @importFrom stats kmeans
-#' 
-#' @param beta_est A vector or matrix of values from which values close to zero
-#'  should be assigned a value of zero.
-#'
-#' @return A vector or matrix of the same dimension as beta_est in which values
-#'  close to zero are assigned the value of zero. The closeness of a value to 
-#'  zero is found by performing two-means clustering on the absolute values of
-#'  beta_est, and ...
-#' 
-#' @export
-#'
-find_nonzero <- function(beta_est) {
-  vector_beta <- c(beta_est)
-  if(any(is.na(vector_beta))) vector_beta <- vector_beta[!is.na(vector_beta)]
-  km_beta <- kmeans(abs(vector_beta),2)
-  which_nonzero <- which.max(km_beta$centers[,1])
-  keep_nonzero <- as.numeric(km_beta$cluster == which_nonzero)
-  out <- beta_est
-  out[!is.na(out)] <- out[!is.na(out)] * keep_nonzero
-  return(out)
-}
-
 #' Sequential 2-means variable selection
 #'
-#' @param x A vector consisting of all variables of interest for a single draw 
+#' @param x A vector consisting of all variables of interest for a single draw
 #'  from a posterior distribution
 #' @param b A scale parameter used to determine at what distance cluster centers
 #'  are considered to be the same.
 #'
 #' @return The number of nonzero values detected within x
-#' 
-#' @export
+#'
+#' @importFrom stats kmeans
+#' @keywords internal
 s2m <- function(x,b){
   two_means <- kmeans(abs(x),2)
   zero_idx <- which(two_means$cluster == which.min(two_means$centers))
@@ -193,10 +122,10 @@ s2m <- function(x,b){
 #' @param sigma  A scale parameter used to determine at what distance cluster centers are considered to be the same.
 #'
 #' @return An array of dimension `head(dim(B),-1)` with a point estimate of B based on the sequential 2-means method
-#' 
+#'
 #' @importFrom stats quantile median
-#' 
-#' @export
+#'
+#' @keywords internal
 #'
 #' @md
 s2m_B <- function(B,sigma){
@@ -209,112 +138,79 @@ s2m_B <- function(B,sigma){
   return(out)
 }
 
-#' Boundary Mask
-#'
-#' Identify the vertices within `boundary_width` edges of the input mask. The
-#'  faces must be triangular.
-#'
-#' @param faces a V x 3 matrix of integers. Each row defines a face by the index
-#'  of three vertices.
-#' @inheritParams mask_Param_vertices
-#' @param boundary_width a positive integer. Vertices no more than this number
-#'  of edges from any vertex in the input mask will be placed in the boundary mask.
+#' Mask out invalid data
 #' 
-#' @return The boundary mask, a length-V logical vector. TRUE indicates vertices
-#'  within the boundary mask.
+#' Mask out data locations that are invalid (missing data, low mean, or low
+#'  variance) for any session.
 #'
-#' @keywords internal 
-boundary_mask <- function(faces, mask, boundary_width){
-  s <- ncol(faces)
-  v <- max(faces)
-  # For quads, boundary_mask() would count opposite vertices on a face as
-  #   adjacent--that's probably not desired.
-  stopifnot(s == 3)
+#' @param data A list of sessions, where each session is a list with elements
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{?is.BfMRI.sess} for details.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. 
+#'  Locations which do not meet these thresholds are masked out of the analysis. 
+#'  Defaults: \code{1e-6}.
+#' @param verbose Print messages counting how many locations are removed?
+#'  Default: \code{TRUE}.
+#'
+#' @importFrom matrixStats colVars
+#' @return A logical vector indicating locations that are valid across all sessions.
+#' 
+#' @examples
+#' nT <- 30
+#' nV <- 400
+#' BOLD1 <- matrix(rnorm(nT*nV), nrow=nT)
+#' BOLD1[,seq(30,50)] <- NA
+#' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
+#' BOLD2[,65] <- BOLD2[,65] / 1e10
+#' data <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
+#' make_mask(data)
+#'
+#' @export
+make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 
-  stopifnot(boundary_width > 0)
-
-  boundary_mask <- rep(FALSE, v)
-  # Begin with the input mask.
-  verts_adj_previous <- which(mask)
-  for (ii in seq(1, boundary_width)) {
-    # Identify vertices not in the mask, but adjacent to it.
-    # Adjacency is defined by sharing a face.
-    faces_nmask <- rowSums(matrix(faces %in% verts_adj_previous, ncol=s))
-    faces_adj <- faces_nmask > 0 & faces_nmask < s
-    verts_adj <- unique(as.vector(faces[faces_adj,]))
-    verts_adj <- verts_adj[!(verts_adj %in% verts_adj_previous)]
-    # Add those vertices to the boundary mask, and use them as the mask in
-    #   the next iteration.
-    boundary_mask[verts_adj] <- TRUE
-    verts_adj_previous <- verts_adj
+  # For each BOLD data matrix,
+  mask_na <- mask_mean <- mask_var <- rep(TRUE, ncol(data[[1]]$BOLD))
+  for (ss in seq(length(data))) {
+    dss <- data[[ss]]$BOLD
+    # Mark columns with any NA or NaN values for removal.
+    dss_na <- is.na(dss) | is.nan(dss)
+    mask_na[apply(dss_na, 2, any)] <- FALSE
+    # Calculate means and variances of columns, except those with any NA or NaN.
+    # Mark columns with mean/var falling under the thresholds for removal.
+    mask_mean[mask_na][colMeans(dss[,mask_na,drop=FALSE]) < meanTol] <- FALSE
+    mask_var[mask_na][matrixStats::colVars(dss[,mask_na,drop=FALSE]) < varTol] <- FALSE
   }
 
-  boundary_mask
-}
-
-#' Match user inputs to expected values
-#'
-#' Match each user input to an expected/allowed value. Raise a warning if either
-#'  several user inputs match the same expected value, or at least one could not
-#'  be matched to any expected value. \code{ciftiTools} uses this function to
-#'  match keyword arguments for a function call. Another use is to match
-#'  brainstructure labels ("left", "right", or "subcortical").
-#'
-#' @param user Character vector of user input. These will be matched to
-#'  \code{expected} using \code{match.arg()}.
-#' @param expected Character vector of expected/allowed values.
-#' @param fail_action If any value in \code{user} could not be
-#'  matched, or repeated matches occurred, what should happen? Possible values
-#'  are \code{"stop"} (default; raises an error), \code{"warning"}, and
-#'  \code{"nothing"}.
-#' @param user_value_label How to refer to the user input in a stop or warning
-#'  message. If \code{NULL}, no label is used.
-#'
-#' @return The matched user inputs.
-#'
-#' @keywords internal
-match_input <- function(
-  user, expected,
-  fail_action=c("stop", "warning", "message", "nothing"),
-  user_value_label=NULL) {
-
-  fail_action <- match.arg(
-    fail_action,
-    c("stop", "warning", "message", "nothing")
-  )
-  unrecognized_FUN <- switch(fail_action,
-                             stop=stop,
-                             warning=warning,
-                             message=message,
-                             nothing=invisible
-  )
-
-  if (!is.null(user_value_label)) {
-    user_value_label <- paste0("\"", user_value_label, "\" ")
-  }
-  msg <- paste0(
-    "The user-input values ", user_value_label,
-    "did not match their expected values. ",
-    "Either several matched the same value, ",
-    "or at least one did not match any.\n\n",
-    "The user inputs were:\n",
-    "\t\"", paste0(user, collapse="\", \""), "\".\n",
-    "The expected values were:\n",
-    "\t\"", paste0(expected, collapse="\", \""), "\".\n"
-  )
-
-  tryCatch(
-    {
-      matched <- match.arg(user, expected, several.ok=TRUE)
-      if (length(matched) != length(user)) { stop() }
-      return(matched)
-    },
-    error = function(e) {
-      unrecognized_FUN(msg)
-    },
-    finally = {
+  # Print counts of locations removed, for each reason.
+  if (verbose) {
+    warn_part1 <- " locations"
+    warn_part2 <- if (length(data) > 1) { " in at least one session.\n" } else { ".\n" }
+    if (any(!mask_na)) {
+      cat(paste0(
+        "\t", sum(!mask_na), warn_part1, 
+        " removed due to NA/NaN values", warn_part2
+      ))
+      warn_part1 <- " additional locations"
     }
-  )
+    # Do not include NA locations in count.
+    mask_mean2 <- mask_mean | (!mask_na)
+    if (any(!mask_mean2)) {
+      cat(paste0(
+        "\t", sum(!mask_mean2), warn_part1, 
+        " removed due to low mean", warn_part2
+      ))
+      warn_part1 <- " additional locations"
+    }
+    # Do not include NA or low-mean locations in count.
+    mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
+    if (any(!mask_var2)) {
+      cat(paste0(
+        "\t", sum(!mask_var2), warn_part1, 
+        " removed due to low variance", warn_part2
+      ))
+    }
+  }
 
-  invisible(NULL)
+  # Return composite mask.
+  mask_na & mask_mean & mask_var
 }

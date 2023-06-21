@@ -6,83 +6,152 @@
 \usage{
 BayesGLM(
   data,
-  beta_names = NULL,
   vertices = NULL,
   faces = NULL,
   mesh = NULL,
   mask = NULL,
-  scale_BOLD = TRUE,
+  task_names = NULL,
+  session_names = NULL,
+  combine_sessions = TRUE,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
+  Bayes = TRUE,
+  ar_order = 6,
+  ar_smooth = 5,
+  aic = FALSE,
   num.threads = 4,
-  return_INLA_result = TRUE,
-  outfile = NULL,
-  verbose = FALSE,
-  contrasts = NULL,
-  avg_sessions = TRUE,
-  trim_INLA = TRUE,
-  keep = keep,
-  twostage = twostage
+  return_INLA = c("trimmed", "full", "minimal"),
+  verbose = 1,
+  meanTol = 1e-06,
+  varTol = 1e-06
 )
 }
 \arguments{
-\item{data}{A list of sessions, where each session is a list with elements
-BOLD, design and nuisance. See \code{?create.session} and \code{?is.session}
-for more details.
-List element names represent session names.}
+\item{data}{A list of sessions in the \code{"BfMRI.sess"} object format. Each
+session is a list with elements \code{"BOLD"}, \code{"design"}, and
+optionally \code{"nuisance"}. Each element should be a numeric matrix with
+\eqn{T} rows. The name of each element in \code{data} is the name of that
+session. See \code{?is.BfMRI.sess} for details.
 
-\item{beta_names}{(Optional) Names of tasks represented in design matrix}
+Note that the argument \code{session_names} can be used instead of providing
+the session names as the names of the elements in \code{data}.}
 
-\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
-coordinates at which a given vertex in the mesh is located. \eqn{V} is the
-number of vertices in the mesh}
+\item{vertices, faces}{If \code{Bayes}, the geometry data can be provided
+with either both the \code{vertices} and \code{faces} arguments, or with the
+\code{mesh} argument.
 
-\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
-indices for a given triangular face in the mesh. \eqn{F} is the number of
-faces in the mesh.}
+\code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
+Euclidean coordinates at which a given vertex in the mesh is located.
+\eqn{V} is the number of vertices in the mesh.
 
-\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
-surface data).}
+\code{faces} is a \eqn{F \times 3} matrix, where each row contains the
+vertex indices for a given triangular face in the mesh. \eqn{F} is the
+number of faces in the mesh.}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating if each
-vertex is to be included.}
+\item{mesh}{If \code{Bayes}, the geometry data can be provided
+with either both the \code{vertices} and \code{faces} arguments, or with the
+\code{mesh} argument.
 
-\item{scale_BOLD}{Scale timeseries data so estimates represent percent signal
-change? Default: \code{TRUE}. If \code{FALSE}, the data will just be
-centered.}
+\code{mesh} is an \code{"inla.mesh"} object. This can be created for surface
+data using \code{\link{make_mesh}}.}
+
+\item{mask}{(Optional) A length \eqn{V} logical vector indicating the
+vertices to include.}
+
+\item{task_names}{(Optional) Names of tasks represented in design matrix.}
+
+\item{session_names}{(Optional, and only relevant for multi-session modeling)
+Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
+argument will overwrite the names of the list entries in \code{data}, if
+both exist.}
+
+\item{combine_sessions}{If multiple sessions are provided, should their data
+be combined and analyzed as a single session?
+
+If \code{TRUE} (default), the multiple sessions will be concatenated along
+time after scaling and nuisance regression, but before prewhitening. If
+\code{FALSE}, each session will be analyzed separately, except that a single
+estimate of the AR model coefficients for prewhitening is used, estimated
+across all sessions.}
+
+\item{scale_BOLD}{Option for scaling the BOLD response.
+
+\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
+data is detected (if any mean is less than one), in which case \code{"sd"}
+scaling will be used instead.
+
+\code{"mean"} scaling will scale the data to percent local signal change.
+
+\code{"sd"} scaling will scale the data by local standard deviation.
+
+\code{"none"} will only center the data, not scale it.}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}.}
+maximum and then subtracting the mean? Default: \code{TRUE}. If
+\code{FALSE}, the design matrix is centered but not scaled.}
 
-\item{num.threads}{The maximum number of threads to use in the inla-program
-for model estimation. Default: \code{4}.}
+\item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
+addition to the classical GLM. (The classical GLM is always returned.)}
 
-\item{return_INLA_result}{Return the INLA model object? (It can be large.)
-Default: \code{TRUE}. Required for running \code{id_activations}
-after, but not for running BayesGLM_joint after to get
-posterior quantities of group means or contrasts.}
+\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
+should be a number indicating the order of the autoregressive model to use
+for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
+multi-session models, note that a single AR model is used; the parameters
+are estimated by averaging the estimates from each session.}
 
-\item{outfile}{File name where results will be written (for use by
-\code{BayesGLM2}).}
+\item{ar_smooth}{(numeric) FWHM parameter for smoothing the AR model
+coefficient estimates for prewhitening. Remember that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
+to not do any smoothing. Default: \code{5}.}
 
-\item{verbose}{Should INLA be run in verbose mode? Default: \code{FALSE}.}
+\item{aic}{Use the AIC to select AR model order between \code{0} and
+\code{ar_order}? Default: \code{FALSE}.}
 
-\item{contrasts}{List of contrast vectors to be passed to \code{\link{inla}}.}
+\item{num.threads}{The maximum number of threads to use for parallel
+computations: prewhitening parameter estimation, and the inla-program model
+estimation. Default: \code{4}. Note that parallel prewhitening requires the
+\code{parallel} package.}
 
-\item{avg_sessions}{Average estimates for betas over multiple
-sessions? Default: \code{TRUE}.}
+\item{return_INLA}{Return the INLA model object? (It can be large.) Use
+\code{"trimmed"} (default) to return only the more relevant results, which
+is enough for both \code{\link{id_activations}} and \code{BayesGLM2},
+\code{"minimal"} to return just enough for \code{\link{BayesGLM2}} but not
+\code{id_activations}, or \code{"full"} to return the full output of
+\code{inla}.}
 
-\item{trim_INLA}{(logical) should the \code{INLA_result} objects within the
-result be trimmed to only what is necessary to use \code{id_activations()}? Default: \code{TRUE}.}
+\item{verbose}{Should updates be printed? Use \code{1} (default) for
+occasional updates, \code{2} for occasional updates as well as running INLA
+in verbose mode (if applicable), or \code{0} for no updates.}
 
-\item{keep}{FALSE}
-
-\item{twostage}{Not used}
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
+Locations which do not meet these thresholds are masked out of the analysis.
+Default: \code{1e-6} for both.}
 }
 \value{
-A list containing...
+A \code{"BayesGLM"} object: a list with elements
+\describe{
+\item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
+\item{task_estimates}{The task coefficients for the Bayesian model.}
+\item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
+\item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
+\item{mesh_orig}{The original mesh provided.}
+\item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+\item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
+\item{task_names}{The names of the tasks.}
+\item{session_names}{The names of the sessions.}
+\item{hyperpar_posteriors}{Hyperparameter posterior densities.}
+\item{theta_estimates}{Theta estimates from the Bayesian model.}
+\item{posterior_Sig_inv}{For joint group modelling.}
+\item{mu_theta}{For joint group modelling.}
+\item{Q_theta}{For joint group modelling.}
+\item{y}{For joint group modelling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
+\item{X}{For joint group modelling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
+\item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
+\item{call}{match.call() for this function call.}
+}
 }
 \description{
-Applies spatial Bayesian GLM to task fMRI data
+Performs spatial Bayesian GLM for fMRI task activation
 }
 \section{INLA Requirement}{
 

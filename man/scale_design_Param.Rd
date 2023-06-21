@@ -5,7 +5,8 @@
 \title{scale_design}
 \arguments{
 \item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}.}
+maximum and then subtracting the mean? Default: \code{TRUE}. If
+\code{FALSE}, the design matrix is centered but not scaled.}
 }
 \description{
 scale_design

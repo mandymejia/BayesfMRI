@@ -16,38 +16,35 @@
 #' @inheritSection INLA_Description INLA Requirement
 #'
 #' @param data A list of sessions, where each session is a list with elements
-#'  BOLD, design and nuisance.  See \code{?create.session} and \code{?is.session} for more details.
-#'  List element names represent session names.
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{?is.BfMRI.sess} for details.
 #' @param locations Vx3 matrix of x,y,z coordinates of each voxel
 #' @param labels Vector of length V of region labels
 #' @param groups_df Data frame indicating the name and model group of each region.  See Details.
-#' @param scale If TRUE, scale timeseries data so estimates represent percent signal change.  If FALSE, just center the data and design to exclude the baseline field.
-#' @inheritParams return_INLA_result_Param_FALSE
-#' @param outfile File name where results will be written (for use by \code{BayesGLM_grp}).
+#' @param scale Option for scaling the BOLD response.
+#'
+#' 	If \code{"auto"} (default), will use mean scaling except if demeaned data
+#' 	is detected, in which case sd scaling will be used instead.
+#'
+#' 	\code{"mean"} scaling will scale the data to percent local signal change.
+#'
+#' 	\code{"sd"} scaling will scale the data by local standard deviation.
+#'
+#' 	\code{"none"} will only center the data, not scale it.
+#' @inheritParams return_INLA_Param_FALSE
 #' @param GLM If TRUE, classical GLM estimates will also be returned
 #' @inheritParams num.threads_Param
-#' @inheritParams verbose_Param_inla
+#' @inheritParams verbose_Param
 #'
 #' @return A list containing...
-#'
-#' @importFrom INLA inla.spde2.matern inla.pardiso.check
+#' @importFrom stats as.formula
+#' @importFrom fMRItools nuisance_regression scale_timeseries
 #'
 #' @export
-BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, return_INLA_result=FALSE, outfile = NULL, GLM = TRUE, num.threads = 6, verbose=FALSE){
+BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=c("auto", "mean", "sd", "none"),
+  return_INLA=FALSE, GLM = TRUE, num.threads = 6, verbose=1){
 
-  # Check to see that the INLA package is installed
-  if (!requireNamespace("INLA", quietly = TRUE))
-    stop("This function requires the `INLA` package (see www.r-inla.org/download)")
-
-
-  # Check to see if PARDISO is installed
-  if(!exists("inla.pardiso.check", mode = "function")){
-    warning("Please update to the latest version of INLA for full functionality and PARDISO compatibility (see www.r-inla.org/download)")
-  }else{
-    if(inla.pardiso.check() == "FAILURE: PARDISO IS NOT INSTALLED OR NOT WORKING"){
-      warning("Consider enabling PARDISO for faster computation (see inla.pardiso())")}
-    #inla.pardiso()
-  }
+  check_INLA(FALSE)
 
   #check that all elements of the data list are valid sessions and have the same number of locations and tasks
   session_names <- names(data)
@@ -63,10 +60,6 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
     if(! is.session(data[[s]])) stop('I expect each element of data to be a session object, but at least one is not (see `is.session`).')
     if(ncol(data[[s]]$BOLD) != V) stop('All sessions must have the same number of data locations, but they do not.')
     if(ncol(data[[s]]$design) != K) stop('All sessions must have the same number of tasks (columns of the design matrix), but they do not.')
-  }
-
-  if(is.null(outfile)){
-    warning('No value supplied for outfile, which is required for group modeling (see `help(BayesGLM2)`).')
   }
 
   if(nrow(locations) != V) stop('The locations argument should have V rows, the number of data locations in BOLD.')
@@ -85,7 +78,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
   regions_set <- unique(labels)
   num_regions <- length(regions_set)
-  if(class(groups_df) != 'data.frame') stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
+  if(!inherits(groups_df, 'data.frame')) stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
   if(!all.equal(sort(names(groups_df)), sort(c('label','region','group')))) stop('The groups_df argument should be a data frame with the following columns: label, region, group.')
   if(nrow(groups_df) != num_regions) stop('The groups_df argument should contain one row for each region represented in the labels vector.')
 
@@ -95,11 +88,11 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
   groups_df <- groups_df[!is.na(groups_df$group),]
   group_set <- unique(groups_df$group)
 
-  beta_estimates_all <- matrix(NA, nrow=V, ncol=K)
-  beta_estimates_all <- rep(list(beta_estimates_all), n_sess)
-  INLA_result_all <- vector('list', length=length(group_set))
+  task_estimates_all <- matrix(NA, nrow=V, ncol=K)
+  task_estimates_all <- rep(list(task_estimates_all), n_sess)
+  INLA_model_obj_all <- vector('list', length=length(group_set))
   spde_all <- vector('list', length=length(group_set))
-  names(INLA_result_all) <- paste0('model_group_',group_set)
+  names(INLA_model_obj_all) <- paste0('model_group_',group_set)
   names(spde_all) <- paste0('model_group_',group_set)
 
   for(grp in group_set){
@@ -109,7 +102,7 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
     locs_grp <- locations[inds_grp,]
     labels_grp <- labels[inds_grp]
 
-    paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')')
+    if (verbose>0) cat(paste0('Estimating Model 1 (', paste(name_set_grp, collapse = ', '), ')'),"\n")
 
     spde_grp <- create_spde_vol3D(locs=locs_grp, labs=labels_grp, lab_set=label_set_grp)
     #plot(spde_grp)
@@ -124,23 +117,23 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
       #extract and mask BOLD data for current session
       BOLD_s <- data[[s]]$BOLD[,inds_grp]
 
-      #scale data to represent % signal change (or just center if scale=FALSE)
-      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose = FALSE)
+      #scale data to represent % signal change (or just center if scale=="none")
+      BOLD_s <- scale_timeseries(t(BOLD_s), scale=scale, transpose=FALSE)
       design_s <- scale(data[[s]]$design, scale=FALSE) #center design matrix to eliminate baseline
 
       #regress nuisance parameters from BOLD data and design matrix
       if('nuisance' %in% names(data[[s]])){
         design_s <- data[[s]]$design
         nuisance_s <- data[[s]]$nuisance
-        y_reg <- nuisance_regress(BOLD_s, nuisance_s)
-        X_reg <- nuisance_regress(design_s, nuisance_s)
+        y_reg <- nuisance_regression(BOLD_s, nuisance_s)
+        X_reg <- nuisance_regression(design_s, nuisance_s)
       } else {
         y_reg <- BOLD_s
         X_reg <- data[[s]]$design
       }
 
       #set up data and design matrix
-      data_org <- organize_data(y_reg, X_reg, transpose = FALSE)
+      data_org <- organize_data(y_reg, X_reg)
       y_vec <- data_org$y
       X_list <- list(data_org$A)
       names(X_list) <- session_names[s]
@@ -151,21 +144,21 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
 
     #construct betas and repls objects
-    replicates_list <- organize_replicates(n_sess=n_sess, beta_names = beta_names, mesh = spde_grp)
+    replicates_list <- organize_replicates(n_sess=n_sess, task_names = task_names, mesh = spde_grp)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
 
-    beta_names <- names(betas)
+    task_names <- names(betas)
     repl_names <- names(repls)
     n_beta <- length(names(betas))
     hyper_initial <- c(-2,2)
     hyper_initial <- rep(list(hyper_initial), n_beta)
     hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-    formula_vec <- paste0('f(',beta_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+    formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
     formula_vec <- c('y ~ -1', formula_vec)
     formula_str <- paste(formula_vec, collapse=' + ')
-    formula <- as.formula(formula_str, env = globalenv())
+    formula <- as.formula(formula_str)
 
     model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
@@ -173,23 +166,31 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 
     # estimate model using INLA
     t0 <- Sys.time()
-    INLA_result_grp <- estimate_model(formula=formula, data=model_data, A=model_data$X, spde=spde, prec_initial=1, num.threads = num.threads, verbose=verbose)
+    check_INLA(require_PARDISO=FALSE)
+    INLA_model_obj_grp <- INLA::inla(
+      formula, data=model_data, control.predictor=list(A=model_data$X, compute = TRUE),
+      verbose = verbose>1, keep = FALSE, num.threads = 4,
+      inla.mode = "experimental", .parent.frame = parent.frame(),
+      control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+      control.family=list(hyper=list(prec=list(initial=1))),
+      control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
+    )
     print(Sys.time() - t0)
 
     #extract beta estimates and project back to data locations for current group
-    beta_estimates_grp <- extract_estimates(object=INLA_result_grp, session_names=session_names) #posterior means of latent task field
+    task_estimates_grp <- extract_estimates(INLA_model_obj=INLA_model_obj_grp, session_names=session_names) #posterior means of latent task field
     for(s in 1:n_sess){
-      beta_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% beta_estimates_grp[[s]])
+      task_estimates_all[[s]][inds_grp,] <- as.matrix(spde_grp$Amat %*% task_estimates_grp[[s]])
     }
 
     #extract theta posteriors
-    theta_posteriors_grp <- get_posterior_densities_vol3D(object=INLA_result_grp, spde) #hyperparameter posterior densities
-    theta_posteriors_grp$model_group <- grp
-    if(grp == group_set[1]) theta_posteriors_all <- theta_posteriors_grp else theta_posteriors_all <- rbind(theta_posteriors_all, theta_posteriors_grp)
+    hyperpar_posteriors_grp <- get_posterior_densities_vol3D(object=INLA_model_obj_grp, spde) #hyperparameter posterior densities
+    hyperpar_posteriors_grp$model_group <- grp
+    if(grp == group_set[1]) hyperpar_posteriors_all <- hyperpar_posteriors_grp else hyperpar_posteriors_all <- rbind(hyperpar_posteriors_all, hyperpar_posteriors_grp)
 
     #save spde and INLA objects
     spde_all[[which(group_set == grp)]] <- spde_grp
-    if(return_INLA_result) INLA_result_all[[which(group_set == grp)]] <- INLA_result_grp
+    if(return_INLA) INLA_model_obj_all[[which(group_set == grp)]] <- INLA_model_obj_grp
   }
 
   # for testing/debugging
@@ -197,42 +198,30 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
   #ggplot(betas_df, aes(x=classical, y=Bayesian)) + facet_grid(region ~ task) + geom_point() + geom_smooth() + geom_abline(intercept=0, slope=1, col='red')
 
   #construct object to be returned
-  if(return_INLA_result){
-    result <- list(INLA_result = INLA_result_all,
+  if(return_INLA){
+    result <- list(INLA_model_obj = INLA_model_obj_all,
                    spde_obj = spde_all,
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
-                   beta_names = beta_names,
-                   beta_estimates = beta_estimates,
-                   theta_posteriors = theta_posteriors,
+                   task_names = task_names,
+                   task_estimates = task_estimates,
+                   hyperpar_posteriors = hyperpar_posteriors,
                    call = match.call(),
                    GLM_result = GLM_result)
   } else {
-    result <- list(INLA_result = NULL,
+    result <- list(INLA_model_obj = NULL,
                    spde_obj = spde_obj,
                    mesh = list(n = spde_obj$spde$n.spde),
                    session_names = session_names,
-                   beta_names = beta_names,
-                   beta_estimates = beta_estimates,
-                   theta_posteriors = theta_posteriors,
+                   task_names = task_names,
+                   task_estimates = task_estimates,
+                   hyperpar_posteriors = hyperpar_posteriors,
                    call = match.call(),
                    GLM_result = GLM_result)
   }
 
 
   class(result) <- "BayesGLM"
-
-  if(!is.null(outfile)){
-    if(!dir.exists(dirname(outfile))){dir.create(dirname(outfile))}
-    ext <- strsplit(outfile, split=".", fixed = TRUE)[[1]]
-    ext <- ext[length(ext)] #get last part of file name
-    if(ext != "RDS"){
-      outfile <- sub(ext, "RDS", outfile)
-    }
-    message('File saved at: ', outfile)
-    save(result, file = outfile)
-  }
-
   return(result)
 
 }
@@ -249,15 +238,15 @@ BayesGLM_vol3D <- function(data, locations, labels, groups_df, scale=TRUE, retur
 #' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
-#' @importFrom INLA inla.spde2.result inla.extract.el
-#'
 #' @export
 get_posterior_densities_vol3D <- function(object, spde){
+
+  check_INLA(FALSE)
 
   hyper_names <- names(object$marginals.hyperpar)
 
   for(h in hyper_names){
-    df.h <- inla.extract.el(object$marginals.hyperpar, h)
+    df.h <- INLA::inla.extract.el(object$marginals.hyperpar, h)
     df.h <- as.data.frame(df.h)
     names(df.h) <- c('x','y')
     df.h$hyper_name <- h
@@ -287,27 +276,57 @@ get_posterior_densities_vol3D <- function(object, spde){
 #' @param binary_mask (optional) a binary brain slice image used to mask
 #'   the BOLD data and make a more efficient network mesh for the
 #'   neighborhood definitions
-#' @param design,onsets,TR Either provide \code{design}, or provide both \code{onsets} and \code{TR}.
+#' @param design,onsets,TR Either provide \code{design} directly, or provide 
+#'  both \code{onsets} and \code{TR} from which the design matrix or matrices 
+#'  will be constructed.
 #'
-#'   \code{design} is a \eqn{T x K} task design matrix (or list of such
-#'   matrices, for multiple-session modeling) with column names representing
-#'   tasks. Each column represents the expected BOLD response due to each task,
-#'   a convolution of the hemodynamic response function (HRF) and the task
-#'   stimulus. Note that the scale of the regressors will affect the scale and
-#'   interpretation of the beta coefficients, so imposing a proper scale (e.g.,
-#'   set maximum to 1) is recommended.
+#'   \code{design} is a \eqn{T \times K} task design matrix. Each column 
+#'   represents the expected BOLD response due to each task, a convolution of 
+#'   the hemodynamic response function (HRF) and the task stimulus. Note that 
+#'   the scale of the regressors will affect the scale and interpretation of the
+#'   beta coefficients, so imposing a proper scale is recommended; see the
+#'   \code{scale_design} argument, which by default is \code{TRUE}. Task names
+#'   should be the column names, if not provided by the \code{task_names}
+#'   argument. For multi-session modeling, this argument should be a list of
+#'   such matrices. To model HRF derivatives, calculate the derivatives of the
+#'   task columns beforehand (see the helper function \code{\link{cderiv}} which 
+#'   computes the discrete central derivative) and either add them to 
+#'   \code{design} to model them as tasks, or \code{nuisance} to model them as 
+#'   nuisance signals; it's recommended to then drop the first and last 
+#'   timepoints because the discrete central derivative doesn't exist at the
+#'   time series boundaries. Do note that INLA computation times increase
+#'   greatly if the design matrix has more than five columns, so it might be
+#'   required to add these derivatives to \code{nuisance} rather than 
+#'   \code{design}.
 #'
-#'   \code{onsets} is a matrix of onsets (first column) and durations (second column)
-#'   for each task in seconds, organized as a list where each element of the
-#'   list corresponds to one task. Names of list should be task names. (Or for
-#'   multi-session modeling, a list of such lists.)
+#'   \code{onsets} is an \eqn{L}-length list in which the name of each element is
+#'   the name of the corresponding task, and the value of each element is a
+#'   matrix of onsets (first column) and durations (second column) for each
+#'   stimuli (each row) of the corresponding task. The units of both columns
+#'   is seconds. For multi-session modeling, this argument should be a list of
+#'   such lists. To model HRF derivatives, use the arguments \code{dHRF} and 
+#'   \code{dHRF_as}. If \code{dHRF==0} or \code{dHRF_as=="nuisance"}, the total
+#'   number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
+#'   If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
 #'
-#'   \code{TR} is the temporal resolution of the data in seconds.
+#'   \code{TR} is the temporal resolution of the data, in seconds.
+#' 
 #' @param nuisance (Optional) A TxJ matrix of nuisance signals (or list of such
 #'   matrices, for multiple-session modeling).
-#' @param nuisance_include (Optional) Additional nuisance covariates to include.
-#'   Default is 'drift' (linear and quadratic drift terms) and 'dHRF' (temporal
-#'   derivative of each column of design matrix).
+#' @param dHRF Set to \code{1} to add the temporal derivative of each column
+#'  in the design matrix, \code{2} to add the second derivatives too, or
+#'  \code{0} to not add any columns. Default: \code{1}.
+#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal 
+#'  high-pass filter to the data? Only one of these arguments should be provided.
+#'  \code{hpf} should be the filter frequency; if it is provided, \code{TR}
+#'  must be provided too. The number of DCT bases to include will be computed
+#'  to yield a filter with as close a frequency to \code{hpf} as possible.
+#'  Alternatively, \code{DCT} can be provided to directly specify the number 
+#'  of DCT bases to include.
+#'  
+#'  Default: \code{DCT=4} (use four DCT bases for high-pass filtering; for
+#'  typical \code{TR} this amounts to lower filter frequency than the
+#'  approximately .01 Hz used in most studies.)
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams num.threads_Param
@@ -316,15 +335,13 @@ get_posterior_densities_vol3D <- function(object, spde){
 #'   and Bayesian estimates of task activation.
 #' @param session_names (Optional) A vector of names corresponding to each
 #'   session.
-#' @inheritParams return_INLA_result_Param_TRUE
-#' @param outfile (Optional) File name (without extension) of output file for
-#'   BayesGLM result to use in Bayesian group modeling.
-#' @inheritParams verbose_Param_inla
-#' @inheritParams contrasts_Param_inla
-#' @inheritParams avg_sessions_Param
-#' @param trim_INLA (logical) should the \code{INLA_result} objects within the
-#'   result be trimmed to only what is necessary to use `id_activations()`? Default: `TRUE`.
+#' @inheritParams return_INLA_Param_TRUE
+#' @inheritParams verbose_Param
+#' @inheritParams contrasts_Param
+#' @inheritParams combine_sessions_Param
+#' @inheritParams trim_INLA_Param
 #'
+#' @importFrom fMRItools dct_bases dct_convert
 #' @importFrom utils head
 #'
 #' @return An object of class \code{"BayesGLM"}, a list containing...
@@ -336,24 +353,36 @@ BayesGLM_slice <- function(
   onsets=NULL,
   TR=NULL,
   nuisance=NULL,
-  nuisance_include=c('drift','dHRF'),
+  dHRF=c(0, 1, 2),
+  hpf=NULL,
+  DCT=if(is.null(hpf)) {4} else {NULL},
   binary_mask = NULL,
-  scale_BOLD = TRUE,
+  scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   num.threads = 4,
   GLM_method = 'both',
   session_names = NULL,
-  return_INLA_result = TRUE,
-  outfile = NULL,
-  verbose = FALSE,
+  return_INLA = TRUE,
+  verbose = 1,
   contrasts = NULL,
-  avg_sessions = TRUE,
+  combine_sessions = TRUE,
   trim_INLA = TRUE) {
 
   do_Bayesian <- (GLM_method %in% c('both','Bayesian'))
   do_classical <- (GLM_method %in% c('both','classical'))
 
-  check_BayesGLM(require_PARDISO=do_Bayesian)
+  # Check nuisance arguments.
+  stopifnot(length(dHRF)==1 & dHRF %in% c(0, 1, 2))
+  if (!is.null(DCT)) { 
+    stopifnot(is.numeric(DCT) && length(DCT)==1 && DCT>=0 && DCT==round(DCT)) 
+    if (DCT==0) { DCT <- NULL }
+  }
+  if (!is.null(hpf)) { 
+    stopifnot(is.numeric(hpf) && length(hpf)==1 && hpf>=0)
+    if (hpf==0) { hpf <- NULL }
+  }
+
+  check_INLA(require_PARDISO=do_Bayesian)
 
   image_dims <- head(dim(BOLD[[1]]),-1)
   if (is.null(binary_mask))
@@ -363,7 +392,7 @@ BayesGLM_slice <- function(
 
   # Name sessions and check compatibility of multi-session arguments
   n_sess <- length(BOLD)
-  if(n_sess == 1 & avg_sessions) avg_sessions <- FALSE
+  if(n_sess == 1 & combine_sessions) combine_sessions <- FALSE
   if(n_sess==1){
     if(is.null(session_names)) session_names <- 'single_session'
   } else {
@@ -372,7 +401,7 @@ BayesGLM_slice <- function(
   if(length(session_names) != n_sess)
     stop('If session_names is provided, it must be of the same length as BOLD')
 
-  cat('\n SETTING UP DATA \n')
+  if (verbose>0) cat('\n SETTING UP DATA \n')
 
   if(is.null(design)) {
     make_design <- TRUE
@@ -381,10 +410,11 @@ BayesGLM_slice <- function(
     make_design <- FALSE
   }
 
+  ntime <- vapply(BOLD, function(x){ dim(BOLD)[length(dim(BOLD))] }, 0)
   for(ss in 1:n_sess){
     if(make_design){
-      cat(paste0('    Constructing design matrix for session ', ss, '\n'))
-      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime)
+      if (verbose>0) cat(paste0('    Constructing design matrix for session ', ss, '\n'))
+      design[[ss]] <- make_HRFs(onsets[[ss]], TR=TR, duration=ntime[ss], dHRF=dHRF)$design
     }
   }
 
@@ -396,7 +426,7 @@ BayesGLM_slice <- function(
       stop('task names must match across sessions for multi-session modeling')
   }
 
-  cat('\n RUNNING MODEL \n')
+  if (verbose>0) cat('\n RUNNING MODEL \n')
 
   classicalGLM <- NULL
   BayesGLM <- NULL
@@ -412,31 +442,24 @@ BayesGLM_slice <- function(
   }
 
   ### ADD ADDITIONAL NUISANCE REGRESSORS
-  if(!is.null(nuisance)) {
-    for (ss in 1:n_sess) {
-      ntime <- nrow(design[[ss]])
-      if ('drift' %in% nuisance_include) {
-        drift <- (1:ntime) / ntime
-        nuisance[[ss]] <-
-          cbind(nuisance[[ss]], drift, drift ^ 2)
+  DCTs <- vector("numeric", n_sess)
+  for (ss in 1:n_sess) {
+    # DCT highpass filter
+    if (!is.null(hpf) || !is.null(DCT)) {
+      # Get the num. of bases for this session.
+      if (!is.null(hpf)) {
+        DCTs[ss] <- round(fMRItools::dct_convert(ntime[ss], TR, f=hpf))
+      } else {
+        DCTs[ss] <- DCT
       }
-      if ('dHRF' %in% nuisance_include) {
-        dHRF <- gradient(design[[ss]])
-        nuisance[[ss]] <-
-          cbind(nuisance[[ss]], dHRF)
-      }
-    }
-  } else {
-    nuisance <- list()
-    for (ss in 1:n_sess) {
-      ntime <- nrow(design[[ss]])
-      if ('drift' %in% nuisance_include) {
-        drift <- (1:ntime) / ntime
-        nuisance[[ss]] <- cbind(drift, drift ^ 2)
-      }
-      if ('dHRF' %in% nuisance_include) {
-        dHRF <- gradient(design[[ss]])
-        nuisance[[ss]] <- dHRF
+      # Generate the bases and add them.
+      DCTb_ss <- fMRItools::dct_bases(ntime[ss], DCTs[ss])
+      if (DCTs[ss] > 0) {
+        if (!is.null(nuisance)) {
+          nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
+        } else {
+          nuisance[[ss]] <- DCTb_ss
+        }
       }
     }
   }
@@ -470,10 +493,9 @@ BayesGLM_slice <- function(
                              scale_BOLD=scale_BOLD,
                              scale_design = scale_design,
                              num.threads = num.threads,
-                             return_INLA_result = return_INLA_result,
-                             outfile = outfile,
+                             return_INLA = return_INLA,
                              verbose = verbose,
-                             avg_sessions = avg_sessions,
+                             combine_sessions = combine_sessions,
                              trim_INLA = trim_INLA)
 
     # Create a conversion matrix
@@ -482,10 +504,10 @@ BayesGLM_slice <- function(
     convert_mat_A <- INLA::inla.spde.make.A(mesh = mesh, loc = in_binary_mask)
     # Extract the point estimates
     point_estimates <- sapply(session_names, function(sn){
-      as.matrix(convert_mat_A %*% BayesGLM_out$beta_estimates[[sn]])
+      as.matrix(convert_mat_A %*% BayesGLM_out$task_estimates[[sn]])
     }, simplify = F)
-    if(avg_sessions)
-      avg_point_estimates <- BayesGLM_out$avg_beta_estimates
+    if(combine_sessions)
+      avg_point_estimates <- BayesGLM_out$avg_task_estimates
   }
 
   classical_slice <- Bayes_slice <- vector('list', n_sess)
@@ -508,7 +530,7 @@ BayesGLM_slice <- function(
         image_coef[binary_mask == 0] <- NA
         return(image_coef)
       },simplify = F)
-      if(n_sess > 1 & avg_sessions) {
+      if(n_sess > 1 & combine_sessions) {
         Bayes_slice$avg_over_sessions <- sapply(seq(num_tasks), function(tn) {
           image_coef <- binary_mask
           image_coef[image_coef == 1] <- avg_point_estimates[,tn]
@@ -520,9 +542,9 @@ BayesGLM_slice <- function(
   }
 
   if (do_Bayesian) {
-    beta_names <- BayesGLM_out$beta_names
+    task_names <- BayesGLM_out$task_names
   } else {
-    beta_names <- NULL
+    task_names <- NULL
     BayesGLM_out <- NULL
   }
 
@@ -530,7 +552,7 @@ BayesGLM_slice <- function(
     classicalGLM_out <- NULL
 
   result <- list(session_names = session_names,
-                 beta_names = beta_names,
+                 task_names = task_names,
                  betas_Bayesian = Bayes_slice,
                  betas_classical = classical_slice,
                  GLMs_Bayesian = BayesGLM_out,

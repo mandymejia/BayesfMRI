@@ -1,28 +1,39 @@
-citHeader("To cite BayesfMRI in publications, please use:")
+citHeader("To cite {BayesfMRI} in publications use:")
 
-bibentry(
-    bibtype = "Article",
-    title =    "A {B}ayesian general linear modeling approach to cortical surface {fMRI} data analysis",
-    author = c(person(given = "Amanda F.",
-                          family = "Mejia"),
-                   person(given = "Yu (Ryan)",
-                          family = "Yue"),
-                   person(given = "David",
-                          family = "Bolin"),
-                   person(given = "Finn",
-                          family = "Lindgren"),
-                   person(given = "Martin A.",
-                          family = "Lindquist")),
+BayesfMRI_citations <- c(
+  bibentry(
+    bibtype      = "Article",
+    title        = "A {B}ayesian general linear modeling approach to cortical surface {fMRI} data analysis",
+    author       = c(
+      as.person("Amanda F Mejia"),
+      as.person("Yu Ryan Yue"),
+      as.person("David Bolin"),
+      as.person("Finn Lindgren"),
+      as.person("Martin A Lindquist")
+    ),
     year        = "2020",
     journal     = "Journal of the American Statistical Association",
     pages       = "501-520",
-    volume	= "115",
-    number	= "530",
+    volume	  = "115",
+    number	  = "530",
     publisher   = "Taylor and Francis",
-    doi         = "https://doi.org/10.1080/01621459.2019.1611582",
-    header      = "For the spatial Bayesian GLM for task fMRI on the cortical surface, please cite:",
-    textVersion  = "Mejia, A. F., Yue, Y., Bolin, D., Lindgren, F., & Lindquist, M. A. (2020). A Bayesian general linear modeling approach to cortical surface fMRI data analysis. Journal of the American Statistical Association, 115(530), 501-520."
+    doi         = "10.1080/01621459.2019.1611582"
+  ),
+
+  bibentry(
+    bibtype      = "Article",
+    title        = "Spatial {B}ayesian {GLM} on the cortical surface produces reliable task activations in individuals and groups",
+    author       = c(
+      as.person("Daniel Spencer"),
+      as.person("Yu Ryan Yue"),
+      as.person("David Bolin"),
+      as.person("Sarah Ryan"),
+      as.person("Amanda F Mejia")
+    ),
+    year        = "2022",
+    journal     = "NeuroImage",
+    pages       = "118908",
+    volume	  = "249",
+    doi         = "10.1016/j.neuroimage.2022.118908"
+  )
 )
-
-
-

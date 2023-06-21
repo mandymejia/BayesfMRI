@@ -10,12 +10,13 @@ BayesGLM2(
   contrasts = NULL,
   quantiles = NULL,
   excursion_type = NULL,
+  contrast_names = NULL,
   gamma = 0,
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
-  no_cores = NULL,
-  verbose = TRUE
+  num_cores = NULL,
+  verbose = 1
 )
 
 BayesGLM_group(
@@ -27,52 +28,83 @@ BayesGLM_group(
   alpha = 0.05,
   nsamp_theta = 50,
   nsamp_beta = 100,
-  no_cores = NULL,
-  verbose = TRUE
+  num_cores = NULL,
+  verbose = 1
 )
 }
 \arguments{
-\item{results}{Either (1) a list of length M of objects of class BayesGLM,
-or (2) a character vector of length M of file names output from the BayesGLM function.
-M is the number of subjects.}
+\item{results}{Either (1) a length \eqn{N} list of \code{"BayesGLM"} objects,
+or (2) a length \eqn{N} character vector of files storing \code{"BayesGLM"}
+objects saved with \code{\link{saveRDS}}.}
 
-\item{contrasts}{(Optional) A list of vectors, each length \code{M * K * num_sessions}, specifying the contrast(s)
-of interest across subjects, where M is the number of subjects and K is the number of tasks.
-See Details for more information. Default is to compute the average for each task across subjects.}
+\item{contrasts}{(Optional) A list of contrast vectors that specify the
+group-level summaries of interest. If \code{NULL}, use contrasts that compute
+the average of each field (task HRF) across subjects and sessions.
 
-\item{quantiles}{(Optional) Vector of posterior quantiles to return in addition to the posterior mean}
+Each contrast vector is length \eqn{K * S * N} vector specifying a
+group-level summary of interest, where \eqn{K} is the number
+of fields (task HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
+number of subjects. For a single subject-session the contrast
+for the first field would be:
 
-\item{excursion_type}{(For inference only) The type of excursion function for the contrast (">", "<", "!="),
-or a vector thereof (each element corresponding to one contrast).  If NULL, no inference performed.}
+\code{contrast1 <- c(1, rep(0, K-1))}
 
-\item{gamma}{(For inference only) Activation threshold for the excursion set, or a vector thereof (each element corresponding to one contrast).}
+and so the full contrast vector representing the group average across
+sessions and subjects for the first task would be:
 
-\item{alpha}{(For inference only) Significance level for activation for the excursion set, or a vector thereof (each element corresponding to one contrast).}
+\code{rep(rep(contrast1, S), N) /S /N}.
 
-\item{nsamp_theta}{Number of theta values to sample from posterior. Default is 50.}
+To obtain the group average for the first task, for just the first sessions
+from each subject:
 
-\item{nsamp_beta}{Number of beta vectors to sample conditional on each theta value sampled. Default is 100.}
+\code{rep(c(contrast1, rep(0, K*(S-1))), N) /N}.
 
-\item{no_cores}{The number of cores to use for sampling betas in parallel. If NULL, do not run in parallel.}
+To obtain the mean difference between the first and second sessions, for the
+first task:
 
-\item{verbose}{Should occasional updates be printed? Default: \code{TRUE}.}
+\code{rep(c(contrast1, -contrast1, rep(0, K-2)), N) /N}.
+
+To obtain the mean across sessions of the first task, just for the first
+subject:
+
+\code{c(rep(contrast1, S-1), rep(0, K*S*(N-1)) /S}.}
+
+\item{quantiles}{(Optional) Vector of posterior quantiles to return in
+addition to the posterior mean.}
+
+\item{excursion_type}{(For inference only) The type of excursion function for
+the contrast (">", "<", "!="), or a vector thereof (each element
+corresponding to one contrast).  If \code{NULL}, no inference performed.}
+
+\item{contrast_names}{(Optional) Names of contrasts.}
+
+\item{gamma}{(For inference only) Activation threshold for the excursion set,
+or a vector thereof (each element corresponding to one contrast). Default:
+\code{0}.}
+
+\item{alpha}{(For inference only) Significance level for activation for the
+excursion set, or a vector thereof (each element corresponding to one
+contrast). Default: \code{.05}.}
+
+\item{nsamp_theta}{Number of theta values to sample from posterior. Default:
+\code{50}.}
+
+\item{nsamp_beta}{Number of beta vectors to sample conditional on each theta
+value sampled. Default: \code{100}.}
+
+\item{num_cores}{The number of cores to use for sampling betas in parallel. If
+\code{NULL} (default), do not run in parallel.}
+
+\item{verbose}{Should updates be printed? Use \code{1} (default) for
+occasional updates, \code{2} for occasional updates as well as running INLA
+in verbose mode (if applicable), or \code{0} for no updates.}
 }
 \value{
 A list containing the estimates, PPMs and areas of activation for each contrast.
 }
 \description{
 Performs group-level Bayesian GLM estimation and inference using the joint
-approach described in Mejia et al. (2020)
-}
-\details{
-Each contrast vector specifies a group-level summary of interest. Let M be
-the number of subjects and K be the number of tasks. For example, the
-contrast vector \code{rep(rep(c(1/(M*num_sessions),rep(0, K-1)),num_sessions),M)} represents the group average
-for the first task for M subjects; \code{c(rep(rep(c(1/(M1*num_sessions),rep(0, K-1)),num_sessions),M1),rep(rep(c(-1/(M2*num_sessions),rep(0, K-1)),num_sessions),M2))}
-represents the difference between the first M1 subjects and the remaining M2
-subjects (M1+M2=M) for the first task; \code{rep(rep(c(1/(M*num_sessions),-1/(M*num_sessions),rep(0, K-2)), num_sessions),M)}
-represents the difference between the first two tasks, averaged over all
-subjects.
+approach described in Mejia et al. (2020).
 }
 \section{INLA Requirement}{
 

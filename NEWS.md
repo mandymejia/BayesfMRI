@@ -1,3 +1,9 @@
+# 3.0 
+
+* Rehaul
+
+...
+
 # 1.5
 
 * Added group-level BayesGLM function

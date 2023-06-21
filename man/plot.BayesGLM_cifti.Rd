@@ -4,25 +4,28 @@
 \alias{plot.BayesGLM_cifti}
 \title{S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_cifti"} object}
 \usage{
-\method{plot}{BayesGLM_cifti}(x, session = NULL, method = NULL, idx = NULL, zlim = c(-1, 1), ...)
+\method{plot}{BayesGLM_cifti}(x, idx = NULL, session = NULL, method = NULL, zlim = c(-1, 1), ...)
 }
 \arguments{
 \item{x}{An object of class "BayesGLM_cifti"}
 
+\item{idx}{Which task should be plotted? Give the numeric indices or the
+names. \code{NULL} (default) will show all tasks. This argument overrides
+the \code{idx} argument to \code{\link[ciftiTools]{view_xifti_surface}}.}
+
 \item{session}{Which session should be plotted? \code{NULL} (default) will
 use the first.}
 
-\item{method}{"Bayesian" or "classical". \code{NULL} (default) will use
+\item{method}{"Bayes" or "classical". \code{NULL} (default) will use
 the Bayesian results if available, and the classical results if not.}
-
-\item{idx}{The data columns to plot. Overrides the \code{idx} argument to
-\code{\link[ciftiTools]{view_xifti_surface}}. \code{NULL} (default) will
-use all the data columns.}
 
 \item{zlim}{Overrides the \code{zlim} argument for
 \code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-1, 1)}.}
 
 \item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}}
+}
+\value{
+Result of the call to \code{ciftiTools::view_cifti_surface}.
 }
 \description{
 S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_cifti"} object

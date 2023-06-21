@@ -11,8 +11,8 @@ galerkin_db(FV, P, surface = FALSE)
 
 \item{P}{Matrix of vertex locations in triangularization}
 
-\item{surface}{Are the matrices being created for a surface (TRUE) or a
-volume (FALSE)}
+\item{surface}{(logical) Will this create the SPDE matrices for a surface
+or not?}
 }
 \value{
 A list of matrices C and G appearing in sparse SPDE precision
@@ -20,3 +20,4 @@ A list of matrices C and G appearing in sparse SPDE precision
 \description{
 Create FEM matrices
 }
+\keyword{internal}

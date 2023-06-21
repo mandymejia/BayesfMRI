@@ -11,8 +11,8 @@ using namespace std;
 //' @param AR_coeffs a length-p vector where p is the AR order
 //' @param nTime (integer) the length of the time series that is being prewhitened
 //' @param avg_var a scalar value of the residual variances of the AR model
-//' @export
-// [[Rcpp::export]]
+//' 
+// [[Rcpp::export(.getSqrtInvCpp)]]
 Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var) {
   double sqrt_var = sqrt(avg_var);
   int p = AR_coeffs.size();

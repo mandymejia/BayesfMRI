@@ -19,3 +19,4 @@ The number of nonzero values detected within x
 \description{
 Sequential 2-means variable selection
 }
+\keyword{internal}

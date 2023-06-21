@@ -1,19 +1,36 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^vignettes$
-^tests$
-^R/summarize_sessions\.R$
+^README\.Rmd$
+^\.github$
+^appveyor\.yml$
+^vignettes
+^LICENSE\.md$
+^CRAN-RELEASE$
+^cran-comments\.md
+^codecov\.yml$
+^CRAN-SUBMISSION$
+# Tests ------------------------
+^tests/simulate_cifti\.R$
+^tests/data_notInPackage
+^tests/results_notInPackage
+^tests/test_notInPackage
+# below: was going to add to pkg, but didn't
+^tests/data
+# Volumetric -------------------
 ^R/BayesGLM_vol3D\.R$
+#^R/create_spde_vol3D\.R$
 ^R/vol2mesh\.R$
-^R/boundary\.R$
-^R/plot_BayesGLM_slice\.R$
-^R/BayesGLM2_old\.R$
-^vignettes/BayesfMRI_HCP\.Rmd$
-^R/simulate_slice_data_1\.R$
-^R/EM_functions\.R$
-^R/id_activations_2means\.R$
-^R/classicalGLM_pw\.R$
+^R/make_slice_mesh\.R$
+^R/plot_slice\.R$
+# EM ---------------------------
+# ^R/EM_utils\.R$
+# Vignettes (TO-DO) ------------
 ^vignettes/BayesfMRI_simulation\.Rmd$
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
-^LICENSE\.md$
+^vignettes/BayesfMRI_HCP\.Rmd$
+# Others -----------------------
+^R/boundary\.R$
+^R/excursions\.R$
+^R/create_spde_surf\.R$
+^R/summarize_sessions\.R$

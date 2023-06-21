@@ -4,22 +4,26 @@
 \alias{make_mesh}
 \title{Make Mesh}
 \usage{
-make_mesh(vertices, faces)
+make_mesh(vertices, faces, use_INLA = FALSE)
 }
 \arguments{
-\item{vertices}{A \eqn{V x 3} matrix, where each row contains the Euclidean
+\item{vertices}{A \eqn{V \times 3} matrix, where each row contains the Euclidean
 coordinates at which a given vertex in the mesh is located. \eqn{V} is the
 number of vertices in the mesh}
 
-\item{faces}{An \eqn{F x 3} matrix, where each row contains the vertex
+\item{faces}{An \eqn{F \times 3} matrix, where each row contains the vertex
 indices for a given triangular face in the mesh. \eqn{F} is the number of
 faces in the mesh.}
+
+\item{use_INLA}{(logical) Use the INLA package to make the mesh? Default:
+\code{FALSE}. Otherwise, mesh construction is based on an internal function,
+\code{galerkin_db}.}
 }
 \value{
-Triangular mesh from matrices and vertices
+INLA triangular mesh
 }
 \description{
-Make triangular mesh from faces and vertices.
+Make INLA triangular mesh from faces and vertices
 }
 \section{INLA Requirement}{
 

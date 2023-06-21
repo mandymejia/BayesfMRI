@@ -1,55 +1,79 @@
 Package: BayesfMRI
-Title: Bayesian Methods for Functional MRI
-Version: 0.1.8
+Type: Package
+Title: Spatial Bayesian Methods for Task Functional MRI Studies
+Version: 0.3.5
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
            email = "mandy.mejia@gmail.com",
            role = c("aut", "cre")),
+    person(given = "Daniel",
+           family = "Spencer",
+           email = "danieladamspencer@gmail.com",
+           role = c("aut"),
+           comment = c(ORCID = "0000-0002-9705-3605")),
     person(given = "Damon",
            family = "Pham",
            email = "damondpham@gmail.com",
            role = c("ctb"),
            comment = c(ORCID = "0000-0001-7563-4727")),
-    person(given = "Daniel",
-           family = "Spencer",
-           email = "danieladamspencer@gmail.com",
-           role = "ctb",
-           comment = c(ORCID = "0000-0002-9705-3605")))
-Description: The main function is BayesGLM, which performs a spatial Bayesian general linear model (GLM) for task fMRI data on the cortical surface. The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain the two packages by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
-License: GPL (>= 3)
-Depends: 
-    R (>= 3.6.0)
+    person(given = "David",
+           family = "Bolin",
+           email = "david.bolin@kaust.edu.sa",
+           role = c("ctb")),
+    person(given = "Sarah",
+           family = "Ryan",
+           email = "sarahryan320@gmail.com",
+           role = c("ctb")),
+    person(given = "Yu (Ryan)",
+           family = "Yue",
+           email = "yybaruch@gmail.com",
+           role = c("ctb"))
+    )
+Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
+Description: Performs a spatial Bayesian general linear model (GLM) for task 
+    functional magnetic resonance imaging (fMRI) data on the cortical surface. 
+    Additional models include group analysis and inference to detect thresholded
+    areas of activation. Includes direct support for the 'CIFTI' neuroimaging 
+    file format. For more information see A. F. Mejia, Y. R. Yue, D. Bolin, F. 
+    Lindgren, M. A. Lindquist (2020) <doi:10.1080/01621459.2019.1611582> and D. 
+    Spencer, Y. R. Yue, D. Bolin, S. Ryan, A. F. Mejia (2022) 
+    <doi:10.1016/j.neuroimage.2022.118908>.
+Depends: R (>= 3.6.0)
+License: GPL-3
+Additional_repositories: https://inla.r-inla-download.org/R/testing
 Encoding: UTF-8
 Imports: 
-    ciftiTools,
+    ciftiTools (>= 0.8.0),
     excursions,
     foreach,
-    INLA (>= 0.0-1468840039),
+    fMRItools,
     MASS,
     Matrix,
     matrixStats,
-    neuRosim,
+    methods,
+    Rcpp,
     stats,
     sp,
-    utils,
-    Rcpp,
-    RcppEigen
+    utils
 Suggests:
+    covr,
     abind,
     dplyr,
     geometry,
     ggplot2,
     grDevices,
+    INLA (>= 0.0-1468840039),
     knitr,
+    MatrixModels,
     parallel,
     purrr,
     rdist,
     rmarkdown,
-    testthat (>= 2.1.0)
-LazyData: true
+    SQUAREM,
+    testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 URL: https://github.com/mandymejia/BayesfMRI
 BugReports: https://github.com/mandymejia/BayesfMRI/issues
 LinkingTo:
