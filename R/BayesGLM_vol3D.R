@@ -382,7 +382,7 @@ BayesGLM_slice <- function(
     if (hpf==0) { hpf <- NULL }
   }
 
-  check_INLA(require_PARDISO=do_Bayesian)
+  check_INLA(require_PARDISO=FALSE)
 
   image_dims <- head(dim(BOLD[[1]]),-1)
   if (is.null(binary_mask))

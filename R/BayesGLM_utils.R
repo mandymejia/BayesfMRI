@@ -1,6 +1,6 @@
 #' Check INLA and PARDISO
 #'
-#' @param require_PARDISO Is PARDISO required? Default: \code{TRUE}.
+#' @param require_PARDISO Is PARDISO required? Default: \code{FALSE}.
 #' @return \code{NULL}, invisibly
 #'
 #' @keywords internal

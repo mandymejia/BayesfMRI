@@ -198,9 +198,9 @@ summarize_sessions <- function(result,
                                nsamp_theta = 50,
                                nsamp_beta = 100){
 
-  flag <- inla.pardiso.check()
-  if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
-  inla.setOption(smtp='pardiso')
+  #flag <- inla.pardiso.check()
+  #if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
+  #inla.setOption(smtp='pardiso')
 
   # Find the numnber of sessions and tasks
   session_names <- result$session_names # TO DO: have BayesGLM_surface return the design matrix.
