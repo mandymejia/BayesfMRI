@@ -7,7 +7,7 @@
 check_INLA(require_PARDISO = TRUE)
 }
 \arguments{
-\item{require_PARDISO}{Is PARDISO required? Default: \code{TRUE}.}
+\item{require_PARDISO}{Is PARDISO required? Default: \code{FALSE}.}
 }
 \value{
 \code{NULL}, invisibly

@@ -519,6 +519,7 @@ BayesGLM_cifti <- function(
       vertices = surf_list[[bb]]$vertices,
       faces = surf_list[[bb]]$faces,
       mesh = NULL,
+      mask = NULL,
       task_names = NULL, # in `session_data`
       session_names = session_names,
       combine_sessions = combine_sessions,
