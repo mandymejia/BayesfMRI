@@ -20,10 +20,10 @@
 #'  \code{model_obj} does not have Bayesian results because \code{Bayes} was set
 #'  to \code{FALSE}, only the \code{"classical"} method can be used.
 #' @param alpha Significance level. Default: \code{0.05}.
-#' @param threshold Activation threshold, for example \code{1} for 1\% signal
-#'  change if \code{scale_BOLD=="mean"} during model estimation. Setting a
-#'  \code{threshold} is required for the Bayesian method; \code{NULL} (default)
-#'  will use a \code{threshold} of zero for the classical method.
+#' @param threshold Activation threshold, for example \code{1} for 1 percent 
+#'  signal change if \code{scale_BOLD=="mean"} during model estimation. Setting 
+#'  a \code{threshold} is required for the Bayesian method; \code{NULL} 
+#'  (default) will use a \code{threshold} of zero for the classical method.
 # @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile Correction), depending on the method that should be used to find the
 #   excursions set. Note that if any contrasts (including averages across sessions) are used in the modeling, the method chosen must be \code{EB}.
 #   The difference in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
