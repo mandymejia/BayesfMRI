@@ -291,10 +291,9 @@ BayesGLM <- function(
 
   # If any masked locations, apply to `mesh` and `data`.
   mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
+  # `mask2` is in case `need_mesh==FALSE`
+  mask <- mask2 <- as.logical(mask)
   if (!all(mask)) {
-    # `mask2` is in case `need_mesh==FALSE`
-    mask <- mask2 <- as.logical(mask)
-
     # `mesh`
     if (need_mesh) {
       mesh_orig <- mesh #for later plotting
@@ -314,7 +313,7 @@ BayesGLM <- function(
     #spde <- create_spde_surf(mesh)
   }
 
-  # Update number of locations after masking
+  # Update number of locations (after masking)
   nV <- sum(mask2)
   nV_all <- length(mask2)
 
@@ -392,7 +391,7 @@ BayesGLM <- function(
 
   # Prewhitening. --------------------------------------------------------------
   if (do_pw) {
-    if (verbose>0) cat("\tPrewhitening.\n")
+    if (verbose>0) cat("\tPrewhitening...")
     ## Estimate prewhitening parameters. ---------------------------------------
     AR_coeffs <- array(dim = c(nV,ar_order,nS))
     AR_resid_var <- array(dim = c(nV,nS))
@@ -479,6 +478,8 @@ BayesGLM <- function(
   # Classical GLM
   result_classical <- vector('list', length=nS)
   for (ss in seq(nS)) {
+    if (verbose>0) cat("\tClassical model.\n")
+    
     #set up vectorized data and big sparse design matrix
     if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
@@ -620,7 +621,7 @@ BayesGLM <- function(
     ## INLA Model. -------------------------------------------------------------
     } else {
       #estimate model using INLA
-      if (verbose>0) cat('\tEstimating model with INLA.\n')
+      if (verbose>0) cat('\tEstimating model with INLA...')
       #organize the formula and data objects
       repl_names <- names(repls)
       hyper_initial <- c(-2,2)
@@ -642,7 +643,7 @@ BayesGLM <- function(
         control.family=list(hyper=list(prec=list(initial=1))),
         control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
       )
-      if (verbose>0) cat("\t\tDone!\n")
+      if (verbose>0) cat("\tDone!\n")
 
       #extract useful stuff from INLA model result
       task_estimates <- extract_estimates(

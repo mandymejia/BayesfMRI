@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.BayesGLM2_cifti}
 \alias{plot.BayesGLM2_cifti}
-\title{S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM2_cifti"} object}
+\title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM2_cifti"} object}
 \usage{
 \method{plot}{BayesGLM2_cifti}(x, idx = NULL, what = c("contrasts", "activations"), ...)
 }
@@ -11,16 +11,16 @@
 
 \item{idx}{Which contrast should be plotted? Give the numeric index.
 \code{NULL} (default) will show all contrasts. This argument overrides
-the \code{idx} argument to \code{\link[ciftiTools]{view_xifti_surface}}.}
+the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
 
 \item{what}{Estimates of the \code{"contrasts"} (default), or their
 thresholded \code{"activations"}.}
 
-\item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}}
+\item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti}}}
 }
 \value{
 Result of the call to \code{ciftiTools::view_cifti_surface}.
 }
 \description{
-S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM2_cifti"} object
+S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM2_cifti"} object
 }

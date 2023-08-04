@@ -20,9 +20,9 @@
 #'  \code{model_obj} does not have Bayesian results because \code{Bayes} was set
 #'  to \code{FALSE}, only the \code{"classical"} method can be used.
 #' @param alpha Significance level. Default: \code{0.05}.
-#' @param threshold Activation threshold, for example \code{1} for 1 percent 
-#'  signal change if \code{scale_BOLD=="mean"} during model estimation. Setting 
-#'  a \code{threshold} is required for the Bayesian method; \code{NULL} 
+#' @param threshold Activation threshold, for example \code{1} for 1 percent
+#'  signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
+#'  a \code{threshold} is required for the Bayesian method; \code{NULL}
 #'  (default) will use a \code{threshold} of zero for the classical method.
 # @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile Correction), depending on the method that should be used to find the
 #   excursions set. Note that if any contrasts (including averages across sessions) are used in the modeling, the method chosen must be \code{EB}.
@@ -44,7 +44,7 @@
 #' @importFrom ciftiTools convert_xifti
 #' @importFrom fMRItools is_posNum is_1
 #'
-#' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a 
+#' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
 #'  list which indicates the activated locations along with related information.
 #' @export
 #'
@@ -172,7 +172,6 @@ id_activations <- function(
     the_xii <- cifti_obj$task_estimates_xii$classical[[session]]
     act_xii_ss <- 0*select_xifti(the_xii, match(tasks, the_xii$meta$cifti$names))
     for (bs in names(the_xii$data)) {
-      if (bs=="subcort") { next }
       if (!is.null(the_xii$data[[bs]])) {
         dat <- 1*activations[[bs]][[session]]$active
         colnames(dat) <- NULL
@@ -196,7 +195,7 @@ id_activations <- function(
     #   act_xii_ss$data$subcort <- matrix(datS, ncol=length(tasks))
     # }
     act_xii_ss <- convert_xifti(
-      act_xii_ss, "dlabel", 
+      act_xii_ss, "dlabel",
       values=c(Inactive=0, Active=1), colors='red'
     )
     act_xii[[session]] <- act_xii_ss
@@ -352,11 +351,16 @@ id_activations.classical <- function(model_obj,
   }
 
   na_pvalues <- which(is.na(p_values[,1]))
+  if (length(na_pvalues) > 0) {
+    p_values <- p_values[-na_pvalues,, drop = F]
+    p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
+    active <- active[-na_pvalues,, drop = F]
+  }
 
   result <- list(
-    p_values = p_values[-na_pvalues,, drop = F],
-    p_values_adj = p_values_adj[-na_pvalues,, drop = F],
-    active = active[-na_pvalues,, drop = F],
+    p_values = p_values,
+    p_values_adj = p_values_adj,
+    active = active,
     correction = correction,
     alpha = alpha,
     threshold = threshold,

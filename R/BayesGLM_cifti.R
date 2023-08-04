@@ -211,18 +211,20 @@ BayesGLM_cifti <- function(
   # Brain structures.
   if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
   if ("all" %in% brainstructures) {
-    message(
-      "`brainstructures` is `all`, so using both left and right cortex. ",
-      "Skipping subcortex (not implemented yet)."
-    )
-    brainstructures <- c("left","right") # "subcortical"
+    brainstructures <- c("left","right","subcortical")
   }
   brainstructures <- fMRItools::match_input(
-    brainstructures, c("left","right"),
+    brainstructures, c("left","right","subcortical"),
     user_value_label="brainstructures"
   )
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
+  do_sub <- ('subcortical' %in% brainstructures)
+
+  # Temporary
+  if (need_mesh && do_sub) {
+    stop("Bayesian modeling and AR smoothing both require spatial modeling, which is currently not availble for the subcortex.")
+  }
 
   # Nuisance arguments.
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
@@ -363,7 +365,7 @@ BayesGLM_cifti <- function(
 
   ## xifti things. -------------------------------------------------------------
   ### For each session, separate the CIFTI data into left/right/sub and read in files
-  BOLD_list <- list(left=NULL, right=NULL)
+  BOLD_list <- list(left=NULL, right=NULL, subcortical=NULL)
   mwallL <- mwallR <- NULL
   ntime <- vector("numeric", nS)
 
@@ -385,6 +387,7 @@ BayesGLM_cifti <- function(
 
     mwallL_ss <- xii_ss$meta$cortex$medial_wall_mask$left
     mwallR_ss <- xii_ss$meta$cortex$medial_wall_mask$right
+    submeta_ss <- xii_ss$meta$subcort
     ntime[ss] <- ncol(xii_ss)
 
     # Get medial wall mask, or check that it matches.
@@ -415,6 +418,12 @@ BayesGLM_cifti <- function(
         stop("No right cortex data for session ", ss, ".")
       }
       BOLD_list[["right"]][[ss]] <- fMRItools::unmask_mat(xii_ss$data$cortex_right, mwallR)
+    }
+    if (do_sub) {
+      if (is.null(xii_ss$data$subcort)) {
+        stop("No subcortical data for session ", ss, ".")
+      }
+      BOLD_list[["subcortical"]][[ss]] <- xii_ss$data$subcort
     }
   }
 
@@ -496,10 +505,11 @@ BayesGLM_cifti <- function(
   # Do GLM. --------------------------------------------------------------------
   BayesGLM_results <- list(left = NULL, right = NULL)
 
-  # >> Loop through brainstructures to complete the analyses on the different hemispheres ----
+  # >> Loop through brainstructures ----
   for (bb in brainstructures) {
+    bname <- list(left="left cortex", right="right cortex", subcortical="subcort")[[bb]]
 
-    if (verbose>0) cat(paste0(toupper(bb)," cortex analysis:\n"))
+    if (verbose>0) cat(paste0(toupper(bname)," analysis:\n"))
 
     # set up session list
     session_data <- vector('list', nS)
@@ -548,12 +558,13 @@ BayesGLM_cifti <- function(
   }
   names(BayesGLM_results)[names(BayesGLM_results)=="left"] <- "cortex_left"
   names(BayesGLM_results)[names(BayesGLM_results)=="right"] <- "cortex_right"
+  names(BayesGLM_results)[names(BayesGLM_results)=="subcortical"] <- "subcort"
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
   if (verbose>0) cat("Formatting results.\n")
   task_cifti_classical <- task_cifti <- vector('list', nS)
   names(task_cifti_classical) <- names(task_cifti) <- session_names
-  datL <- datR <- NULL
+  datL <- datR <- datSub <- NULL
   for (ss in seq(nS)) {
 
     # CLASSICAL GLM
@@ -561,18 +572,29 @@ BayesGLM_cifti <- function(
       datL <- BayesGLM_results$cortex_left$result_classical[[ss]]$estimates
       mwallL <- !is.na(datL[,1]) # update b/c mask2 can change the medial wall
       datL <- datL[mwallL,]
+      colnames(datL) <- NULL
     }
     if (do_right) {
       datR <- BayesGLM_results$cortex_right$result_classical[[ss]]$estimates
       mwallR <- !is.na(datR[,1])
       datR <- datR[mwallR,]
+      colnames(datR) <- NULL
+    }
+    if (do_sub) {
+      datSub <- BayesGLM_results$subcort$result_classical[[ss]]$estimates
+      colnames(datSub) <- NULL
     }
     task_cifti_classical[[ss]] <- as.xifti(
       cortexL = datL,
       cortexL_mwall = mwallL,
       cortexR = datR,
-      cortexR_mwall = mwallR
+      cortexR_mwall = mwallR,
+      subcortVol = datSub,
+      subcortLabs = submeta_ss$labels,
+      subcortMask = submeta_ss$mask
     )
+    task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+    task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
     task_cifti_classical[[ss]]$meta$cifti$names <- task_names
 
     # BAYESIAN GLM
@@ -581,18 +603,29 @@ BayesGLM_cifti <- function(
         datL <- BayesGLM_results$cortex_left$task_estimates[[ss]]
         mwallL <- !is.na(datL[,1])
         datL <- datL[mwallL,]
+        colnames(datL) <- NULL
       }
       if (do_right) {
         datR <- BayesGLM_results$cortex_right$task_estimates[[ss]]
         mwallR <- !is.na(datR[,1])
         datR <- datR[mwallR,]
+        colnames(datR) <- NULL
+      }
+      if (do_sub) {
+        datSub <- BayesGLM_results$subcort$result_classical[[ss]]$estimates
+        colnames(datSub) <- NULL
       }
       task_cifti[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = mwallL,
         cortexR = datR,
-        cortexR_mwall = mwallR
+        cortexR_mwall = mwallR,
+        subcortVol = datSub,
+        subcortLabs = submeta_ss$labels,
+        subcortMask = submeta_ss$mask
       )
+      task_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      task_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
       task_cifti[[ss]]$meta$cifti$names <- task_names
     }
   }
