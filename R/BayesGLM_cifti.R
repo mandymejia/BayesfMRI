@@ -387,7 +387,7 @@ BayesGLM_cifti <- function(
 
     mwallL_ss <- xii_ss$meta$cortex$medial_wall_mask$left
     mwallR_ss <- xii_ss$meta$cortex$medial_wall_mask$right
-    submeta_ss <- xii_ss$meta$subcort
+    submeta_ss <- if (do_sub) { xii_ss$meta$subcort } else { NULL }
     ntime[ss] <- ncol(xii_ss)
 
     # Get medial wall mask, or check that it matches.
