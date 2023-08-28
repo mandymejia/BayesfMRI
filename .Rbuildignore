@@ -29,6 +29,8 @@
 ^vignettes/BayesfMRI_simulation\.html$
 ^vignettes/BayesfMRI_simulation_files$
 ^vignettes/BayesfMRI_HCP\.Rmd$
+# For next ciftiTools version
+^R/surf_area_forBfMRI\.R$
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
