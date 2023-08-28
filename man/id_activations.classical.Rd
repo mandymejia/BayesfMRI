@@ -23,7 +23,7 @@ id_activations.classical(
 family-wise error rate with Bonferroni correction, and 'FDR' refers to the
 false discovery rate using Benjamini-Hochberg.}
 
-\item{mesh}{(Optional) An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+\item{mesh}{(Optional) A \code{"BfMRI.mesh"} object (see \code{\link{make_mesh}} for
 surface data). Only necessary for computing surface areas of identified activations.}
 }
 \value{

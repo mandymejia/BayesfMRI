@@ -4,7 +4,7 @@
 #' 
 #' @param mask A matrix of 0s and 1s representing a volumetric mask
 #'
-#' @return An inla.mesh object.  See \code{\link{inla.mesh.2d}} for details.
+#' @return A BfMRI.mesh object.  See \code{\link{inla.mesh.2d}} for details.
 #' 
 #' @export
 #'

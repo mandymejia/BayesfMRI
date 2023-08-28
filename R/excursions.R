@@ -1,14 +1,14 @@
 #' Find connected indices on mesh
 #' 
 #' @param ind indices
-#' @param mesh The inla.mesh
+#' @param mesh The BfMRI.mesh
 #' 
 #' @return list of connected components in \code{ind}
 #' 
 #' @keywords internal 
 find.connected <- function(ind,mesh){
-  if (!inherits(mesh, "inla.mesh")) {
-    stop("mesh should be of class inla.mesh")
+  if (!inherits(mesh, "BfMRI.mesh")) {
+    stop("mesh should be of class BfMRI.mesh")
   }
 
   sets <- list()

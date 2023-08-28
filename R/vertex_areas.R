@@ -12,8 +12,8 @@
 vertex_areas <- function(mesh) {
   if(missing(mesh)) { stop("`mesh` input is required.")}
 
-  if (!inherits(mesh, "inla.mesh")) {
-    stop("`mesh` needs to be of class `'inla.mesh'`.")
+  if (!inherits(mesh, "BfMRI.mesh")) {
+    stop("`mesh` needs to be of class `'BfMRI.mesh'`.")
   }
 
   diag(INLA::inla.fmesher.smorg(

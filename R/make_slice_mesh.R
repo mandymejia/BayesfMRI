@@ -3,7 +3,7 @@
 #' @param mask A binary (0/1) matrix that should be used to make a mesh for 
 #'  two-dimensional data
 #'
-#' @return  A \code{inla.mesh} object that can be used to run the 
+#' @return  A \code{BfMRI.mesh} object that can be used to run the 
 #'  \code{BayesGLM_surface} function with two-dimensional data
 #' 
 #' @export

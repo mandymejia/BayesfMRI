@@ -100,7 +100,7 @@ NULL
 
 #' mesh: INLA only
 #'
-#' @param mesh An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+#' @param mesh A \code{"BfMRI.mesh"} object (see \code{\link{make_mesh}} for
 #'  surface data).
 #'
 #' @name mesh_Param_inla
@@ -108,7 +108,7 @@ NULL
 
 #' mesh: either
 #'
-#' @param mesh An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+#' @param mesh A \code{"BfMRI.mesh"} object (see \code{\link{make_mesh}} for
 #'  surface data)
 #  or \code{"BayesfMRI.spde"} object (see \code{\link{create_spde_vol3D}} for subcortical data).
 #'

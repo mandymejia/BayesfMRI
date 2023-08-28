@@ -7,7 +7,7 @@
 vertex_areas(mesh)
 }
 \arguments{
-\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+\item{mesh}{A \code{"BfMRI.mesh"} object (see \code{\link{make_mesh}} for
 surface data).}
 }
 \value{

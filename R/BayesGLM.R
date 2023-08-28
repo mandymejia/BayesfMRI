@@ -120,7 +120,7 @@ BayesGLM_argChecks <- function(
 #'  with either both the \code{vertices} and \code{faces} arguments, or with the
 #'  \code{mesh} argument.
 #'
-#'  \code{mesh} is an \code{"inla.mesh"} object. This can be created for surface
+#'  \code{mesh} is a \code{"BfMRI.mesh"} object. This can be created for surface
 #'  data using \code{\link{make_mesh}}.
 #' @param mask (Optional) A length \eqn{V} logical vector indicating the
 #'  vertices to include.

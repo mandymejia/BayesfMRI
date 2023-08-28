@@ -36,8 +36,8 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
       graph = list(tv = faces),
       idx = list(loc = seq(nrow(gal_mesh$C)))
     )
-    class(mesh) <- "inla.mesh"
   }
+  class(mesh) <- "BfMRI.mesh"
   return(mesh)
 }
 
@@ -63,6 +63,6 @@ submesh <- function(mask, mesh) {
   idx <- rep(as.integer(NA), length(idx))
   idx[v] <- mesh$idx$loc
   mesh$idx$loc <- idx
-  class(mesh) <- "inla.mesh"
+  class(mesh) <- "BfMRI.mesh"
   return(mesh)
 }

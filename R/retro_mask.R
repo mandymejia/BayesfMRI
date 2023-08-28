@@ -58,7 +58,7 @@ retro_mask_BGLM <- function(x, mask){
 #'
 #' @keywords internal
 retro_mask_mesh <- function(x, mask){
-  stopifnot(inherits(x, "inla.mesh"))
+  stopifnot(inherits(x, "BfMRI.mesh"))
   stopifnot(is.logical(mask))
 
   # Determine which faces to keep.

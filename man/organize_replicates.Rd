@@ -11,7 +11,7 @@ organize_replicates(n_sess, task_names, mesh)
 
 \item{task_names}{Vector of names for each task}
 
-\item{mesh}{An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
+\item{mesh}{A \code{"BfMRI.mesh"} object (see \code{\link{make_mesh}} for
 surface data).}
 }
 \value{
