@@ -19,7 +19,6 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
     stop("`make_mesh` requires the `INLA` package. Please install it.", call. = FALSE)
   }
 
-
   # Check index of faces
   if(min(faces) == 0){
     faces <- faces + 1
@@ -39,6 +38,26 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
   }
   class(mesh) <- "BfMRI.mesh"
   return(mesh)
+}
+
+#' Convert mesh to surface.
+#' 
+#' Convert \code{"BfMRI.mesh"} object to \code{"surf"} object.
+#' 
+#' @param mesh The \code{"BfMRI.mesh"} object
+#' @param hemisphere The hemisphere (\code{"left"} or \code{"right"}), if known.
+#'  Default: \code{NULL} (unknown).
+#' @return The \code{"surf"} object.
+#' @keywords internal
+#' @importFrom ciftiTools make_surf
+#' 
+mesh_to_surf <- function(mesh, hemisphere=NULL){
+  stopifnot(inherits(mesh, "BfMRI.mesh"))
+
+  surf <- ciftiTools::make_surf(
+    surf=list(pointset=mesh$loc, triangle=mesh$graph$tv),
+    expected_hemisphere=hemisphere
+  )
 }
 
 #' Remove part of a mesh without using INLA functions

@@ -5,7 +5,7 @@
 #' @rdname surf_area
 #' @importFrom INLA inla.mesh.create inla.fmesher.smorg
 #' @keywords internal
-surf_area_INLA <- function(surf, by=c("vertex", "face")) {
+surf_area_INLA <- function(surf, by=c("vertex", "face")) {  
   mesh <- inla.mesh.create(
     loc = as.matrix(surf$vertices), 
     tv = as.matrix(surf$faces)
@@ -19,7 +19,7 @@ surf_area_INLA <- function(surf, by=c("vertex", "face")) {
 #' 
 #' Calculate surface area of a \code{"surf"} object by vertex or face.
 #' 
-#' @param surf The \code{"surf"} object.
+#' @param mesh The \code{"BfMRI.mesh"} object.
 #' @param by \code{"vertex"} or \code{"face"}. For \code{"vertex"}, the result
 #'  is the area associated with each vertex: the sum the area of each triangular
 #'  face it is a part of, divided by three. For \code{"face"}, the result is
@@ -30,10 +30,11 @@ surf_area_INLA <- function(surf, by=c("vertex", "face")) {
 #'  the units of \code{surf$vertices}. 
 #' @importFrom ciftiTools surf_area
 #' @keywords internal
-surf_area_forBfMRI <- function(surf, by=c("vertex", "face")) {
+surf_area_forBfMRImesh <- function(mesh, by=c("vertex", "face")) {
+  surf <- mesh_to_surf(mesh)
   if (requireNamespace("INLA", quietly = TRUE)) {
     surf_area_INLA(surf, by)
   } else {
-    surf_area(surf, by)
+    ciftiTools::surf_area(surf, by)
   }
 }
