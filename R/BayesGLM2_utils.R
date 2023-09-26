@@ -71,7 +71,6 @@ beta.posterior.thetasamp <- function(
     }
     # compute posterior mean and precision of beta|theta
     Q_mm <- prec.error*Xcros[[mm]] + Q_theta #Q_m in paper
-    print(mean(attr(Q_mm, "x")))
     cholQ_mm <- Matrix::Cholesky(Q_mm)
     if (use_INLA) {
       mu_mm <- INLA::inla.qsolve(Q_mm, prec.error*Xycros[[mm]]) #mu_m in paper
