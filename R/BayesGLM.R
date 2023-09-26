@@ -277,7 +277,11 @@ BayesGLM <- function(
     if (!xor(has_mesh, has_verts_faces)) {
       stop('Must supply EITHER mesh OR vertices and faces.')
     }
-    if (is.null(mesh)) mesh <- make_mesh(vertices, faces) # This function has been modified to no longer require INLA (2022-03-24)
+
+    # This function has been modified to no longer require INLA (2022-03-24)
+    # But `BayesGLM2` stopped working, so the INLA version is back as the default (2023-09-25)
+    if (is.null(mesh)) mesh <- make_mesh(vertices, faces, use_INLA=TRUE)
+
     if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
   } else {
     mesh <- NULL
