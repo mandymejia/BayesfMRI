@@ -280,7 +280,7 @@ BayesGLM <- function(
 
     # This function has been modified to no longer require INLA (2022-03-24)
     # But `BayesGLM2` stopped working, so the INLA version is back as the default (2023-09-25)
-    if (is.null(mesh)) mesh <- make_mesh(vertices, faces, use_INLA=TRUE)
+    if (is.null(mesh)) mesh <- make_mesh(vertices, faces)
 
     if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
   } else {
@@ -301,6 +301,8 @@ BayesGLM <- function(
     # `mesh`
     if (need_mesh) {
       mesh_orig <- mesh #for later plotting
+      # [TO DO]: bring back line below & comment line two below.
+      # this was from when we were moving away from INLA, but now we're not.
       # mesh <- excursions::submesh.mesh(mask, mesh) # This is commented out because we now have our own submesh function!
       mesh <- submesh(mask, mesh)
       mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)

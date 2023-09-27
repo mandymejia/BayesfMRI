@@ -79,8 +79,6 @@ BayesGLM2 <- function(
   num_cores = NULL,
   verbose = 1){
 
-  use_INLA <- TRUE # alternative: use EM model, but it's been removed.
-
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
   }
@@ -205,13 +203,9 @@ BayesGLM2 <- function(
     if (need_Mask) {
       mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
     }
-    if (use_INLA) {
-      spde <- INLA::inla.spde2.matern(mesh)
-      Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
-      Amat <- Amat[mesh$idx$loc,]
-    } else {
-      stop()
-    }
+    spde <- INLA::inla.spde2.matern(mesh)
+    Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
+    Amat <- Amat[mesh$idx$loc,]
     Amat.tot <- bdiag(rep(list(Amat), nK)) #Psi_m from paper (VKxNK)
 
     # Collecting theta posteriors from subject models
@@ -261,27 +255,26 @@ BayesGLM2 <- function(
     }
     rm(results_mm, y_vec, X_list, Xmat) # save memory
 
-    if (use_INLA) {
-      mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
-      #### DRAW SAMPLES FROM q(theta|y)
-      #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
-      if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
-      theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
-      #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
-      if (verbose>0) cat('Computing weights for each theta sample \n')
-      logwt <- rep(NA, nsamp_theta)
-      for (tt in seq(nsamp_theta)) {
-        logwt[tt] <- F.logwt(theta.samp[,tt], spde, mu_theta, Q_theta, nN)
-      }
-      #weights to apply to each posterior sample of theta
-      wt.tmp <- exp(logwt - max(logwt))
-      wt <- wt.tmp/(sum(wt.tmp))
-    } else {
-      # theta.samp <- qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta) # ?
-      mu_theta <- mu_theta / nN
-      theta.samp <- as.matrix(mu_theta)
-      wt <- 1
+    mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+    #### DRAW SAMPLES FROM q(theta|y)
+    #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
+    if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+    theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+    #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
+    if (verbose>0) cat('Computing weights for each theta sample \n')
+    logwt <- rep(NA, nsamp_theta)
+    for (tt in seq(nsamp_theta)) {
+      logwt[tt] <- F.logwt(theta.samp[,tt], spde, mu_theta, Q_theta, nN)
     }
+    #weights to apply to each posterior sample of theta
+    wt.tmp <- exp(logwt - max(logwt))
+    wt <- wt.tmp/(sum(wt.tmp))
+
+    # # Above, but trying to not use INLA.
+    # # theta.samp <- qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta) # ?
+    # mu_theta <- mu_theta / nN
+    # theta.samp <- as.matrix(mu_theta)
+    # wt <- 1
 
     #get posterior quantities of beta, conditional on a value of theta
     if (verbose>0) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))

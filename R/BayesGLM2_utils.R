@@ -25,8 +25,6 @@ beta.posterior.thetasamp <- function(
   theta, spde, Xcros, Xycros, contrasts,
   quantiles, excursion_type, gamma, alpha, nsamp_beta=100){
 
-  use_INLA <- TRUE
-
   n.mesh <- spde$n.spde
 
   prec.error <- exp(theta[1])
@@ -72,14 +70,12 @@ beta.posterior.thetasamp <- function(
     # compute posterior mean and precision of beta|theta
     Q_mm <- prec.error*Xcros[[mm]] + Q_theta #Q_m in paper
     cholQ_mm <- Matrix::Cholesky(Q_mm)
-    if (use_INLA) {
-      mu_mm <- INLA::inla.qsolve(Q_mm, prec.error*Xycros[[mm]]) #mu_m in paper
-      # draw samples from pi(beta_m|theta,y)
-      beta_samp_mm <- INLA::inla.qsample(n = nsamp_beta, Q = Q_mm, mu = mu_mm)
-    } else {
-      mu_mm <- Matrix::solve(cholQ_mm, prec.error*Xycros[[mm]], system = "A")
-      beta_samp_mm <- cholQsample(n = nsamp_beta, cholQ = Q_mm, mu = mu_mm)
-    }
+    mu_mm <- INLA::inla.qsolve(Q_mm, prec.error*Xycros[[mm]]) #mu_m in paper
+    # draw samples from pi(beta_m|theta,y)
+    beta_samp_mm <- INLA::inla.qsample(n = nsamp_beta, Q = Q_mm, mu = mu_mm)
+    # # Same as above, but trying to avoid INLA.
+    # mu_mm <- Matrix::solve(cholQ_mm, prec.error*Xycros[[mm]], system = "A")
+    # beta_samp_mm <- cholQsample(n = nsamp_beta, cholQ = Q_mm, mu = mu_mm)
 
     # concatenate samples over models
     beta.samples <- rbind(beta.samples, beta_samp_mm)
