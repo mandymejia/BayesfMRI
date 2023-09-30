@@ -16,6 +16,7 @@ BayesGLM(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
+  EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
@@ -92,6 +93,9 @@ maximum and then subtracting the mean? Default: \code{TRUE}. If
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
 addition to the classical GLM. (The classical GLM is always returned.)}
+
+\item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
+Default: \code{FALSE}. This method is still in development.}
 
 \item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
 should be a number indicating the order of the autoregressive model to use

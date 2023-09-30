@@ -114,7 +114,7 @@
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
-# @inheritParams EM_Param
+#' @inheritParams EM_Param
 #' @inheritParams ar_order_Param
 #' @inheritParams ar_smooth_Param
 #' @inheritParams aic_Param
@@ -167,7 +167,7 @@ BayesGLM_cifti <- function(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
-  #EM = FALSE,
+  EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
@@ -178,7 +178,6 @@ BayesGLM_cifti <- function(
   varTol = 1e-6#,emTol = 1e-3,
   ){
 
-  EM <- FALSE
   emTol <- 1e-3
 
   # Preliminary steps. ---------------------------------------------------------
@@ -535,7 +534,7 @@ BayesGLM_cifti <- function(
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
-      #EM = do_EM,
+      EM = do_EM,
       ar_order = ar_order,
       ar_smooth = ar_smooth,
       aic = aic,

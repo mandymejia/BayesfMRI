@@ -75,6 +75,7 @@ BayesGLM_cifti_args <- list(
   combine_sessions = FALSE
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+bglm2 <- do.call(BayesGLM_cifti, c(list(EM=TRUE), BayesGLM_cifti_args))
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
 # Expect same classical model results, where they exist.
