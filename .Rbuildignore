@@ -33,5 +33,4 @@
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
-^R/create_spde_surf\.R$
 ^R/summarize_sessions\.R$

@@ -58,13 +58,13 @@ Eigen::MatrixXd makeV(int n_spde, int Ns) {
   return V;
 }
 
-double kappa2Obj(double kappa2, const Rcpp::List &spde, double a_star, double b_star, double c, double n_sess) {
+double kappa2Obj(double kappa2, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess) {
   double lDQ = logDetQt(kappa2, spde, n_sess);
-  double out = log(a_star * kappa2 + b_star / kappa2 + c) - lDQ;
+  double out = log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ;
   return out;
 }
 
-double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c, double n_sess) {
+double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess) {
   // Define squared inverse of the golden ratio
   const double c = (3. - std::sqrt(5.)) / 2.;
   // Initialize local variables
@@ -84,7 +84,7 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
   d = 0.;
   e = 0.;
   
-  fx = kappa2Obj(x, spde, a_star, b_star, c, n_sess);
+  fx = kappa2Obj(x, spde, a_star, b_star, c_star, n_sess);
   fv = fx;
   fw = fx;
   tol3 = tol / 3.;
@@ -137,7 +137,7 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
       u = x - tol1;
 
     // fu = (*f)(u, info);
-    fu = kappa2Obj(u, spde, a_star, b_star, c, n_sess);
+    fu = kappa2Obj(u, spde, a_star, b_star, c_star, n_sess);
 
     /*  update  a, b, v, w, and x */
 
@@ -251,14 +251,14 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   Eigen::VectorXd diagPGVkn(Ns), GCGmu(n_spde), diagPGCGVkn(Ns);
   Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
   Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
-  double a_star, b_star, c, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
+  double a_star, b_star, c_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
   double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
   double phi_denom = 4.0 * M_PI * n_spde * n_sess;
   int idx_start;
   time_setup = clock();
 
   Rcpp::List Q_list(K * n_sess);
-  int list_idx;sparseBdiagem
+  int list_idx;
   for(int ns=0;ns<n_sess;ns++) {
     for(int k = 0; k < K ; k++) {
       list_idx = ns*K + k;
@@ -295,7 +295,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   for(int k = 0; k < K; k++) {
     a_star = 0.0;
     b_star = 0.0;
-    c = 0.0
+    c_star = 0.0;
     muCmu = 0.0;
     muGmu = 0.0;
     muGCGmu = 0.0;
@@ -340,8 +340,8 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     // Update kappa2
     a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
     b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
-    c = 2 * (sumDiagPGVkn + muGmu)
-    new_kappa2 = kappa2Brent(0., 3000., spde, a_star, b_star, c, n_sess);
+    c_star = 2 * (sumDiagPGVkn + muGmu);
+    new_kappa2 = kappa2Brent(0., 3000., spde, a_star, b_star, c_star, n_sess);
     theta_new[k] = new_kappa2;
     // Update phi
     phi_partA = sumDiagPCVkn + muCmu;
