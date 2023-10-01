@@ -42,6 +42,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// initialKP
+Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w, double n_sess, double tol, bool verbose);
+RcppExport SEXP _BayesfMRI_initialKP(SEXP thetaSEXP, SEXP spdeSEXP, SEXP wSEXP, SEXP n_sessSEXP, SEXP tolSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< List >::type spde(spdeSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type w(wSEXP);
+    Rcpp::traits::input_parameter< double >::type n_sess(n_sessSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(initialKP(theta, spde, w, n_sess, tol, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 // getSqrtInvCpp
 Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var);
 RcppExport SEXP _BayesfMRI_getSqrtInvCpp(SEXP AR_coeffsSEXP, SEXP nTimeSEXP, SEXP avg_varSEXP) {
@@ -59,6 +74,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_BayesfMRI_logDetQt", (DL_FUNC) &_BayesfMRI_logDetQt, 3},
     {"_BayesfMRI_findTheta", (DL_FUNC) &_BayesfMRI_findTheta, 10},
+    {"_BayesfMRI_initialKP", (DL_FUNC) &_BayesfMRI_initialKP, 6},
     {"_BayesfMRI_getSqrtInvCpp", (DL_FUNC) &_BayesfMRI_getSqrtInvCpp, 3},
     {NULL, NULL, 0}
 };

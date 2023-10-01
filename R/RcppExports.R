@@ -7,7 +7,7 @@
 #' @param in_list a list with elements Cmat, Gmat, and GtCinvG
 #' @param n_sess the integer number of sessions
 #' @export
-logDetQt <- function(kappa2, in_list, n_sess) {
+.logDetQt <- function(kappa2, in_list, n_sess) {
     .Call(`_BayesfMRI_logDetQt`, kappa2, in_list, n_sess)
 }
 
@@ -25,8 +25,22 @@ logDetQt <- function(kappa2, in_list, n_sess) {
 #'   the squared norm of the differences between \code{theta(s)} and \code{theta(s-1)})
 #' @param verbose (logical) Should intermediate output be displayed?
 #' @export
-findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
+.findTheta <- function(theta, spde, y, X, QK, Psi, A, Ns, tol, verbose = FALSE) {
     .Call(`_BayesfMRI_findTheta`, theta, spde, y, X, QK, Psi, A, Ns, tol, verbose)
+}
+
+#' Find the initial values of kappa2 and phi
+#'
+#' @param theta a vector of length two containing the range and scale parameters
+#'   kappa2 and phi, in that order
+#' @param spde a list containing the sparse matrix elements Cmat, Gmat, and GtCinvG
+#' @param w the beta_hat estimates for a single task
+#' @param n_sess the number of sessions
+#' @param tol the stopping rule tolerance
+#' @param verbose (logical) Should intermediate output be displayed?
+#' 
+.initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
+    .Call(`_BayesfMRI_initialKP`, theta, spde, w, n_sess, tol, verbose)
 }
 
 #' Get the prewhitening matrix for a single data location
