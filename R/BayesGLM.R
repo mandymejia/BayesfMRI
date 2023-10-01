@@ -544,7 +544,6 @@ BayesGLM <- function(
       if (verbose>0) cat('\tEstimating model with EM.\n')
       Psi_k <- spde$Amat
       Psi <- Matrix::bdiag(rep(list(Psi_k),nK))
-      browser()
       A <- Matrix::crossprod(model_data$X %*% Psi) # [DAMON: error w/ two-session]
       # Initial values for kappa and tau
       kappa2 <- 4
@@ -607,15 +606,22 @@ BayesGLM <- function(
       colnames(task_estimates) <- rep(task_names, nS)
       task_estimates <- lapply(seq(nS), function(ss) task_estimates[,(seq(nK) + nK * (ss - 1))])
       names(task_estimates) <- session_names
+      attr(task_estimates, "GLM_type") <- "Bayesian EM"
+
+      # [Damon: `avg_task_estimates` is never used!]
       avg_task_estimates <- NULL
       if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / nS
+
       theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
       names(theta_estimates) <- c("sigma2",paste0("phi_",seq(nK)),paste0("kappa2_",seq(nK)))
       #extract stuff needed for group analysis
       tau2_init <- 1 / (4*pi*theta_init[seq(nK)]*theta_init[(seq(nK) + nK)])
+
+      # [Damon: these are never used!]
       mu_init <- c(log(1/tail(theta_init,1)), c(rbind(log(sqrt(tau2_init)),log(sqrt(theta_init[seq(nK)])))))
       tau2 <- 1 / (4*pi*kappa2_new*phi_new)
       mu_theta <- c(log(1/sigma2_new),c(rbind(log(sqrt(tau2)),log(sqrt(kappa2_new)))))
+
       if (verbose>0) cat("\t\tDone!\n")
 
     ## INLA Model. -------------------------------------------------------------

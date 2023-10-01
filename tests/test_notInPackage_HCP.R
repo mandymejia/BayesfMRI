@@ -56,7 +56,7 @@ nuis <- lapply(fnames[grepl("rp", names(fnames))], read.table, header=FALSE)
 nuis <- lapply(nuis, as.matrix)
 
 # BayesGLM ---------------------------------------------------------------------
-n_sess <- 2
+n_sess <- 1
 BayesGLM_cifti_args <- list(
   cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
   surfL_fname=ciftiTools.files()$surf["left"],
@@ -76,6 +76,8 @@ BayesGLM_cifti_args <- list(
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
 bglm2 <- do.call(BayesGLM_cifti, c(list(EM=TRUE), BayesGLM_cifti_args))
+
+# stop here
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
 # Expect same classical model results, where they exist.
