@@ -52,7 +52,7 @@ BayesGLM_argChecks <- function(
     Bayes <- TRUE
   }
   if (Bayes) {
-    if (!EM) { check_INLA(require_PARDISO=TRUE) }
+    if (!EM) { check_INLA(require_PARDISO=FALSE) }
   }
 
   if (isTRUE(return_INLA)) {
