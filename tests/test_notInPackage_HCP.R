@@ -6,7 +6,6 @@ doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
 resamp_res <- 4000
-my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
@@ -20,11 +19,7 @@ if (!overwriteResults && dir.exists(dir_resultThis)) { stop("Results exist alrea
 if (!dir.exists(dir_resultThis)) { dir.create(dir_resultThis) }
 
 library(testthat)
-if (doINLA) {
-  library(INLA)
-  inla.setOption(pardiso.license = my_pardiso)
-  inla.pardiso.check()
-}
+if (doINLA) { library(INLA) }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
 library(BayesfMRI)
@@ -74,10 +69,10 @@ BayesGLM_cifti_args <- list(
   return_INLA = "trim",
   combine_sessions = FALSE
 )
-#bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
-bglm2 <- do.call(BayesGLM_cifti, c(list(EM=TRUE), BayesGLM_cifti_args))
+bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+bglm2 <- do.call(BayesGLM_cifti, c(list(EM=TRUE), BayesGLM_cifti_args)) # broken
+#   error in evaluating the argument 'x' in selecting a method for function 'crossprod': Cholmod error 'A and B inner dimensions must match' at file ../MatrixOps/cholmod_ssmult.c, line 80
 
-# stop here
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
 # Expect same classical model results, where they exist.
@@ -100,8 +95,11 @@ BayesGLM_cifti_args <- list(
   meanTol=9999,
   combine_sessions = FALSE
 )
-bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+bglm3 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
 
-z <- bglm$BayesGLM_results$cortex_left$result_classical
-y <- bglm2$BayesGLM_results$cortex_left$result_classical
+# stop here
+
+# Confirm that the classical results match
+z <- bglm2$BayesGLM_results$cortex_left$result_classical
+y <- bglm3$BayesGLM_results$cortex_left$result_classical
 q <- y$single_session$estimates - z$session1$estimates[,c(3,2,1)]

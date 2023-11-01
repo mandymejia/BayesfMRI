@@ -542,9 +542,10 @@ BayesGLM <- function(
         stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
       }
       if (verbose>0) cat('\tEstimating model with EM.\n')
-      Psi_k <- spde$Amat
-      Psi <- Matrix::bdiag(rep(list(Psi_k),nK))
-      A <- Matrix::crossprod(model_data$X %*% Psi) # [DAMON: error w/ two-session]
+      Psi <- spde$Amat
+      if (nK > 1) { Psi <- Matrix::bdiag(rep(list(Psi),nK)) }
+      if (nS > 1) { Psi <- Matrix::bdiag(rep(list(Psi),nS)) }
+      A <- Matrix::crossprod(model_data$X %*% Psi)
       # Initial values for kappa and tau
       kappa2 <- 4
       phi <- 1 / (4*pi*kappa2*4)
