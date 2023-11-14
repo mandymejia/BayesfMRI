@@ -24,7 +24,7 @@ double logDetQt(double kappa2, const Rcpp::List &in_list, double n_sess) {
   // Create SparseMatrix Q
   Eigen::SparseMatrix<double> Q= kappa2 * Cmat + 2.0 * Gmat + GtCinvG / kappa2;
   SimplicialLDLT<Eigen::SparseMatrix<double>> cholQ(Q);
-  double lDQ = n_sess * cholQ.vectorD().array().log().sum();
+  double lDQ = 2 * n_sess * cholQ.vectorD().array().log().sum();
   return lDQ;
 }
 
@@ -175,13 +175,13 @@ double kappa2BrentInit(double lower, double upper, double phi, const List &spde,
   return x;
 }
 
-double kappa2Obj(double kappa2, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess) {
+double kappa2Obj(double kappa2, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
   double lDQ = logDetQt(kappa2, spde, n_sess);
-  double out = log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ;
+  double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ; // times -1 to minimize instead of maximize
   return out;
 }
 
-double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess) {
+double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
   // Define squared inverse of the golden ratio
   const double c = (3. - std::sqrt(5.)) / 2.;
   // Initialize local variables
@@ -196,12 +196,11 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
   b = upper;
   v = a + c*(b-a);
   x = v;
-  x = v;
 
   d = 0.;
   e = 0.;
-  
-  fx = kappa2Obj(x, spde, a_star, b_star, c_star, n_sess);
+
+  fx = kappa2Obj(x, spde, a_star, b_star, c_star, n_sess, n_spde); // Initialize f at x=kappa^2
   fv = fx;
   fw = fx;
   tol3 = tol / 3.;
@@ -254,7 +253,7 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
       u = x - tol1;
 
     // fu = (*f)(u, info);
-    fu = kappa2Obj(u, spde, a_star, b_star, c_star, n_sess);
+    fu = kappa2Obj(u, spde, a_star, b_star, c_star, n_sess, n_spde);
 
     /*  update  a, b, v, w, and x */
 
@@ -281,7 +280,7 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
 struct SquaremControl{
   int K=1;
   int method=3;
-  //1,2,3 indicates the types of step length to be used in squarem1,squarem2, 
+  //1,2,3 indicates the types of step length to be used in squarem1,squarem2,
   // 4,5 for "rre" and "mpe" in cyclem1 and cyclem2,  standing for reduced-rank ("rre") or minimal-polynomial ("mpe") extrapolation.
   // K=1 must go with method=1,2 or 3
   // K>1 must go with method=4 or 5
@@ -455,10 +454,10 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     sumDiagPGVkn = sumDiagPGVkn / Ns;
     sumDiagPGCGVkn = sumDiagPGCGVkn / Ns;
     // Update kappa2
-    a_star = (muCmu + sumDiagPCVkn) / (4.0 * M_PI * theta[k + K]);
-    b_star = (muGCGmu + sumDiagPGCGVkn) / (4.0 * M_PI * theta[k + K]);
+    a_star = (muCmu + sumDiagPCVkn) ;
+    b_star = (muGCGmu + sumDiagPGCGVkn) ;
     c_star = 2 * (sumDiagPGVkn + muGmu);
-    new_kappa2 = kappa2Brent(0., 3000., spde, a_star, b_star, c_star, n_sess);
+    new_kappa2 = kappa2Brent(0., 3000., spde, a_star, b_star, c_star, n_sess, n_spde);
     theta_new[k] = new_kappa2;
     // Update phi
     phi_partA = sumDiagPCVkn + muCmu;
@@ -824,7 +823,7 @@ SquaremOutput init_squarem2(Eigen::VectorXd par, Eigen::VectorXd w, List spde, d
 //' @param n_sess the number of sessions
 //' @param tol the stopping rule tolerance
 //' @param verbose (logical) Should intermediate output be displayed?
-//' 
+//'
 // [[Rcpp::export(.initialKP, rng = false)]]
 Eigen::VectorXd initialKP(Eigen::VectorXd theta, List spde, Eigen::VectorXd w,
                           double n_sess, double tol, bool verbose) {

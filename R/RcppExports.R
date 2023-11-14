@@ -38,7 +38,7 @@
 #' @param n_sess the number of sessions
 #' @param tol the stopping rule tolerance
 #' @param verbose (logical) Should intermediate output be displayed?
-#' 
+#'
 .initialKP <- function(theta, spde, w, n_sess, tol, verbose) {
     .Call(`_BayesfMRI_initialKP`, theta, spde, w, n_sess, tol, verbose)
 }
