@@ -175,7 +175,8 @@ double kappa2BrentInit(double lower, double upper, double phi, const List &spde,
   return x;
 }
 
-double kappa2Obj(double kappa2, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
+double kappa2Obj(double logKappa, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
+  double kappa2 = exp(2*logKappa);
   double lDQ = logDetQt(kappa2, spde, n_sess);
   double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ; // times -1 to minimize instead of maximize
   return out;
@@ -200,7 +201,7 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
   d = 0.;
   e = 0.;
 
-  fx = kappa2Obj(x, spde, a_star, b_star, c_star, n_sess, n_spde); // Initialize f at x=kappa^2
+  fx = kappa2Obj(x, spde, a_star, b_star, c_star, n_sess, n_spde); // Initialize f at x=logKappa
   fv = fx;
   fw = fx;
   tol3 = tol / 3.;
@@ -368,7 +369,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   Eigen::MatrixXd Pkn(n_spde, Ns), Vkn(n_spde, Ns), CVkn(n_spde, Ns), PCVkn(Ns, Ns);
   Eigen::MatrixXd GVkn(n_spde, Ns), PGVkn(Ns, Ns), GCGVkn(n_spde, Ns), PGCGVkn(Ns,Ns);
   double a_star, b_star, c_star, muCmu, muGmu, sumDiagPCVkn, sumDiagPGVkn, muGCGmu;
-  double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC, new_kappa2, phi_new;
+  double sumDiagPGCGVkn, phi_partA, phi_partB, phi_partC,new_logKappa, new_kappa2, phi_new;
   double phi_denom = 4.0 * M_PI * n_spde * n_sess;
   int idx_start;
   time_setup = clock();
@@ -457,7 +458,8 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     a_star = (muCmu + sumDiagPCVkn) ;
     b_star = (muGCGmu + sumDiagPGCGVkn) ;
     c_star = 2 * (sumDiagPGVkn + muGmu);
-    new_kappa2 = kappa2Brent(0., 3000., spde, a_star, b_star, c_star, n_sess, n_spde);
+    new_logKappa = kappa2Brent(-3., -1., spde, a_star, b_star, c_star, n_sess, n_spde);
+    new_kappa2 = exp(2*new_logKappa);
     theta_new[k] = new_kappa2;
     // Update phi
     phi_partA = sumDiagPCVkn + muCmu;
