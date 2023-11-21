@@ -105,17 +105,18 @@ BayesGLM_argChecks <- function(
 #'
 #'  Note that the argument \code{session_names} can be used instead of providing
 #'  the session names as the names of the elements in \code{data}.
-#' @param vertices,faces If \code{Bayes}, the geometry data can be provided
-#'  with either both the \code{vertices} and \code{faces} arguments, or with the
-#'  \code{mesh} argument.
-#'
-#'  \code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
-#'  Euclidean coordinates at which a given vertex in the mesh is located.
-#'  \eqn{V} is the number of vertices in the mesh.
-#'
-#'  \code{faces} is a \eqn{F \times 3} matrix, where each row contains the
-#'  vertex indices for a given triangular face in the mesh. \eqn{F} is the
-#'  number of faces in the mesh.
+#'@param surf TO DO
+# @param vertices,faces If \code{Bayes}, the geometry data can be provided
+#  with either both the \code{vertices} and \code{faces} arguments, or with the
+#  \code{mesh} argument.
+#
+#  \code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
+#  Euclidean coordinates at which a given vertex in the mesh is located.
+#  \eqn{V} is the number of vertices in the mesh.
+#
+#  \code{faces} is a \eqn{F \times 3} matrix, where each row contains the
+#  vertex indices for a given triangular face in the mesh. \eqn{F} is the
+#  number of faces in the mesh.
 #' @param mesh If \code{Bayes}, the geometry data can be provided
 #'  with either both the \code{vertices} and \code{faces} arguments, or with the
 #'  \code{mesh} argument.
@@ -177,16 +178,17 @@ BayesGLM_argChecks <- function(
 #' @export
 BayesGLM <- function(
   data,
-  vertices = NULL,
-  faces = NULL,
-  mesh = NULL,
+  surf = NULL,
+  #vertices = NULL,
+  #faces = NULL,
+  mesh = NULL, #[TO DO] Remove this? Let's have a single surf or mesh argument.
   mask = NULL,
   # Below arguments shared with `BayesGLM_cifti`
-  task_names = NULL,
+  task_names = NULL, #[TO DO] Delete this?  This can be encoded in data formatted as sessions. BayesGLM_cifti does this.
   session_names = NULL,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  scale_design = TRUE,
+  scale_design = TRUE, #[TO DO] Delete this?  It is done by BayesGLM_cifti and could be done by the user
   Bayes = TRUE,
   #EM = FALSE,
   ar_order = 6,
@@ -198,6 +200,11 @@ BayesGLM <- function(
   meanTol = 1e-6,
   varTol = 1e-6#, emTol = 1e-3,
   ){
+
+  #Mandy added this to generalize Bayesian models to subcortical
+  is_vol <- (length(dim(surf))==3) #surf is actually a volume (3D array)
+  is_surf <- !is_vol
+
 
   EM <- FALSE
   emTol <- 1e-3
@@ -239,7 +246,9 @@ BayesGLM <- function(
   do_EM <- argChecks$do_EM
   do_pw <- argChecks$do_pw
   return_INLA <- argChecks$return_INLA
+
   need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
+  if(is_vol) need_mesh <- FALSE #for volumetric, no mesh
 
   ## Define a few return variables that may or may not be calculated. ----------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
@@ -269,59 +278,111 @@ BayesGLM <- function(
 
 
   ## Mesh: check or make. ------------------------------------------------------
-  # We need a mesh if doing spatial Bayesian modeling or any AR smoothing.
-  if (need_mesh) {
-    # Check that only mesh OR vertices+faces supplied
-    has_mesh <- !is.null(mesh)
-    has_verts_faces <- !is.null(vertices) && !is.null(faces)
-    if (!xor(has_mesh, has_verts_faces)) {
-      stop('Must supply EITHER mesh OR vertices and faces.')
-    }
 
-    # This function has been modified to no longer require INLA (2022-03-24)
-    # But `BayesGLM2` stopped working, so the INLA version is back as the default (2023-09-25)
-    if (is.null(mesh)) mesh <- make_mesh(vertices, faces)
+  # [TO DO] Revisit need_mesh given that we have ciftiTools
+  # [TO DO] Do we want to use masking for volumetric analysis?  Currently within the is_surf loop.
 
-    if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
-  } else {
-    mesh <- NULL
-  }
+  if(is_surf){
 
-  ## Mask: check or make.  -----------------------------------------------------
-  # Get `mask` based on intersection of input mask and `make_mask` checks.
-  if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) }
-  mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol)
-  if (!any(mask)) { stop("No in-mask data locations.") }
+    vertices <- surf$vertices
+    faces <- surf$faces
 
-  # If any masked locations, apply to `mesh` and `data`.
-  mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
-  # `mask2` is in case `need_mesh==FALSE`
-  mask <- mask2 <- as.logical(mask)
-  if (!all(mask)) {
-    # `mesh`
+    # We need a mesh if doing surface-based spatial Bayesian modeling or AR smoothing (not volume-based)
     if (need_mesh) {
-      mesh_orig <- mesh #for later plotting
-      # [TO DO]: bring back line below & comment line two below.
-      # this was from when we were moving away from INLA, but now we're not.
-      # mesh <- excursions::submesh.mesh(mask, mesh) # This is commented out because we now have our own submesh function!
-      mesh <- submesh(mask, mesh)
-      mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
-      mesh$idx$loc <- mesh$idx$loc[mask2]
+      # Check that only mesh OR vertices+faces supplied
+      has_mesh <- !is.null(mesh)
+      has_verts_faces <- !is.null(vertices) && !is.null(faces)
+      if (!xor(has_mesh, has_verts_faces)) {
+        stop('Must supply EITHER mesh OR vertices and faces.')
+      }
+
+      # This function has been modified to no longer require INLA (2022-03-24)
+      # But `BayesGLM2` stopped working, so the INLA version is back as the default (2023-09-25)
+      if (is.null(mesh)) mesh <- make_mesh(vertices, faces)
+
+      if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
+    } else {
+      mesh <- NULL
     }
-    # `data`
-    for (ss in 1:nS) {
-      data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
+
+    ## Mask: check or make.  -----------------------------------------------------
+    # Get `mask` based on intersection of input mask and `make_mask` checks.
+    if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) }
+    mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol)
+    if (!any(mask)) { stop("No in-mask data locations.") }
+
+    # If any masked locations, apply to `mesh` and `data`.
+    mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
+    # `mask2` is in case `need_mesh==FALSE`
+    mask <- mask2 <- as.logical(mask)
+    if (!all(mask)) {
+      # `mesh`
+      if (need_mesh) {
+        mesh_orig <- mesh #for later plotting
+        # [TO DO]: bring back line below & comment line two below.
+        # this was from when we were moving away from INLA, but now we're not.
+        # mesh <- excursions::submesh.mesh(mask, mesh) # This is commented out because we now have our own submesh function!
+        mesh <- submesh(mask, mesh)
+        mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
+        mesh$idx$loc <- mesh$idx$loc[mask2]
+      }
+      # `data`
+      for (ss in 1:nS) {
+        data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
+      }
     }
   }
-  if (do_Bayesian && !do_EM) {spde <- INLA::inla.spde2.matern(mesh)}
+
+  ### MAKE SPDEs
+  if (do_Bayesian && !do_EM) {
+    if(is_surf) spde <- INLA::inla.spde2.matern(mesh)
+    if(is_vol){
+
+      #surf object here is actually an array of labels
+      mask <- (surf != 0)
+      ROIs <- unique(surf[mask])
+      nR <- length(ROIs)
+
+      #construct the C and G for the SPDE by block-diagonalizing over ROIs
+      C_list <- G_list <- spde_list <- vector('list', length=nR)
+      for(r in 1:nR){
+        mask_r <- (surf == ROIs[r])
+        spde_list[[r]] <- vol2spde(mask_r)
+        C_list[[r]] <- spde_list[[r]]$mats$C
+        G_list[[r]] <- spde_list[[r]]$mats$G
+      }
+      C_sub <- Matrix::bdiag(C_list)
+      G_sub <- Matrix::bdiag(G_list)
+
+      #construct the SPDE
+      Elog.kappa <- Elog.tau <- 0 #prior means for log(kappa) and log(tau)
+      Qlog.kappa <- Qlog.tau <- 0.1 #prior precisions for log(kappa) and log(tau)
+      spde <- inla.spde2.generic(M0 = C_sub,
+                                     M1 = G_sub,
+                                     M2 = G_sub%*%solve(C_sub, G_sub),
+                                     theta.mu = c(Elog.kappa, Elog.tau),
+                                     theta.Q = c(Qlog.kappa, Qlog.tau),
+                                     B0 = matrix(c(0, 1, 0), 1, 3),
+                                     B1 = 2*matrix(c(0, 0, 1), 1, 3),
+                                     B2 = 1)
+      }
+  }
+
   if (do_EM) {
     stop()
     #spde <- create_spde_surf(mesh)
   }
 
   # Update number of locations (after masking)
-  nV <- sum(mask2)
-  nV_all <- length(mask2)
+  if(is_surf){
+    nV <- sum(mask2)
+    nV_all <- length(mask2)
+  }
+  if(is_vol){
+    nV <- sum(mask)
+    nV_all <- sum(mask)
+    mask2 <- rep(TRUE, nV)
+  }
 
   ## Task names: check or make. ------------------------------------------------
   if (!is.null(task_names)) {
@@ -485,7 +546,7 @@ BayesGLM <- function(
   result_classical <- vector('list', length=nS)
   for (ss in seq(nS)) {
     if (verbose>0) cat("\tClassical model.\n")
-    
+
     #set up vectorized data and big sparse design matrix
     if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
@@ -531,6 +592,10 @@ BayesGLM <- function(
     )
   }
   names(result_classical) <- session_names
+
+  # HERE -- I stopped because organize_replicates() requires the mesh, and we don't have one for subcortical
+  # Two options: 1. Don't pass in the mesh, just the locations
+  # 2. Learn how to use inlabru.  Start by reading about it briefly to at least get an idea.
 
   # Bayesian GLM. --------------------------------------------------------------
   if (do_Bayesian) {

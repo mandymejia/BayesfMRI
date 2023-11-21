@@ -1,18 +1,18 @@
 #' Central derivative
-#' 
+#'
 #' Take the central derivative of numeric vectors by averaging the forward and
 #'  backward differences.
 #' @param x A numeric matrix, or a vector which will be converted to a
 #'  single-column matrix.
-#' @return A matrix or vector the same dimensions as \code{x}, with the 
+#' @return A matrix or vector the same dimensions as \code{x}, with the
 #'  derivative taken for each column of \code{x}. The first and last rows may
 #'  need to be deleted, depending on the application.
 #' @export
-#' 
+#'
 #' @examples
 #' x <- cderiv(seq(5))
 #' stopifnot(all(x == c(.5, 1, 1, 1, .5)))
-#' 
+#'
 cderiv <- function(x){
   x <- as.matrix(x)
   dx <- diff(x)
@@ -23,20 +23,20 @@ cderiv <- function(x){
 #'
 #' Create HRF design matrix columns from onsets and durations
 #'
-#' @param onsets \eqn{L}-length list in which the name of each element is the 
+#' @param onsets \eqn{L}-length list in which the name of each element is the
 #'  name of the corresponding task, and the value of each element is a matrix of
-#'  onsets (first column) and durations (second column) for each stimuli (each 
+#'  onsets (first column) and durations (second column) for each stimuli (each
 #'  row) of the corresponding task.
 #'
 #' @param TR Temporal resolution of the data, in seconds.
-#' @param duration The number of volumes in the fMRI data. 
+#' @param duration The number of volumes in the fMRI data.
 #' @param dHRF Set to \code{1} to add the temporal derivative of each column
 #'  in the design matrix, \code{2} to add the second derivatives too, or
 #'  \code{0} to not add any columns. Default: \code{1}.
-#' @param dHRF_as Only applies if \code{dHRF > 0}. Model the temporal 
-#'  derivatives as \code{"nuisance"} signals to regress out, \code{"tasks"}, or 
+#' @param dHRF_as Only applies if \code{dHRF > 0}. Model the temporal
+#'  derivatives as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
 #'  \code{"auto"} to treat them as tasks unless the total number of columns in
-#'  the design matrix (i.e. the total number of tasks, times `dHRF+1`), would be 
+#'  the design matrix (i.e. the total number of tasks, times `dHRF+1`), would be
 #'  \code{>=10}, the limit for INLA.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
@@ -47,8 +47,8 @@ cderiv <- function(x){
 #'  HRF-convolved stimuli as columns, depending on \code{dHRF_as}.
 #'
 #' @importFrom stats convolve
-#' 
-#' @examples 
+#'
+#' @examples
 #' onsets <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
 #' TR <- .72 # .72 seconds per volume, or (1/.72) Hz
 #' duration <- 300 # session is 300 volumes long (300*.72 seconds long)
@@ -56,12 +56,12 @@ cderiv <- function(x){
 #'
 #' @export
 make_HRFs <- function(
-  onsets, TR, duration, 
+  onsets, TR, duration,
   dHRF=c(0, 1, 2),
   dHRF_as=c("auto", "nuisance", "task"),
-  downsample=100, 
+  downsample=100,
   verbose=FALSE){
-  
+
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
   if (dHRF == 0) {
     if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "task")) {
@@ -75,7 +75,7 @@ make_HRFs <- function(
   if (dHRF > 0 && dHRF_as=="auto") {
     nJ <- (dHRF+1) * nK # number of design matrix columns
     if (nJ > 5) {
-      if (verbose) { 
+      if (verbose) {
         message("Modeling the HRF derivatives as nuisance signals.")
       }
       dHRF_as <- "nuisance"
@@ -132,19 +132,19 @@ make_HRFs <- function(
   }
 
   list(
-    design=do.call(cbind, design), 
+    design=do.call(cbind, design),
     nuisance=do.call(cbind, nuisance)
   )
 }
 
 #' Canonical (double-gamma) HRF
-#' 
+#'
 #' Calculate the HRF from a time vector and parameters. Optionally compute the
 #'  first or second derivative of the HRF instead.
 #'
 #' @param t time vector
 #' @param deriv \code{0} (default) for the HRF, \code{1} for the first derivative
-#'  of the HRF, or \code{2} for the second derivative of the HRF. 
+#'  of the HRF, or \code{2} for the second derivative of the HRF.
 #' @param a1 delay of response. Default: \code{6}
 #' @param b1 response dispersion. Default: \code{0.9}
 #' @param a2 delay of undershoot. Default: \code{12}
@@ -152,11 +152,11 @@ make_HRFs <- function(
 #' @param c scale of undershoot. Default: \code{0.35}
 #'
 #' @return HRF vector (or dHRF, or d2HRF) corresponding to time
-#' 
+#'
 #' @examples
 #' downsample <- 100
 #' HRF(seq(0, 30, by=1/downsample))
-#' 
+#'
 #' @importFrom fMRItools is_1
 #' @export
 HRF <- function(t, deriv=0, a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
@@ -173,6 +173,7 @@ HRF <- function(t, deriv=0, a1 = 6,b1 = 0.9,a2 = 12,b2 = 0.9,c = 0.35) {
   # HRF
   if (deriv==0) {
     out <- ((t/(a1*b1))^a1) * exp(-(t-a1*b1)/b1) - c * ((t/(a2*b2))^a2) * exp(-(t - a2*b2)/b2)
+    #out2 <- (t^(a1-1)*b1^a1*exp(-b1*t))/gamma(a1) - c * (t^(a2-1) * b2^a2 * exp(-b2*t))/gamma(a2)
 
   # dHRF
   } else if (deriv==1) {

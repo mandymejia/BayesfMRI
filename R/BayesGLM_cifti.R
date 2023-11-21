@@ -144,12 +144,15 @@
 #' @importFrom fMRItools unmask_mat dct_bases dct_convert match_input is_posNum
 #' @importFrom matrixStats rowVars rowSums2 colVars
 #' @importFrom parallel detectCores
+#' @importFrom Matrix bdiag
+#' @importFrom INLA inla.spde2.generic
 #'
 #' @export
 BayesGLM_cifti <- function(
   cifti_fname,
   surfL_fname=NULL,
   surfR_fname=NULL,
+  spde_sub=NULL,
   brainstructures=c('left','right'),
   design=NULL,
   onsets=NULL,
@@ -185,7 +188,7 @@ BayesGLM_cifti <- function(
   ## Check simple arguments.
   ## These checks are in a separate function because they are shared with
   ## `BayesGLM_cifti`.
-  argChecks <- BayesGLM_argChecks(
+  argChecks <- BayesfMRI:::BayesGLM_argChecks(
     combine_sessions = combine_sessions,
     scale_BOLD = scale_BOLD,
     scale_design = scale_design,
@@ -206,7 +209,6 @@ BayesGLM_cifti <- function(
   do_EM <- argChecks$do_EM
   do_pw <- argChecks$do_pw
   return_INLA <- argChecks$return_INLA
-  need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
 
   # Brain structures.
   if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
@@ -220,11 +222,15 @@ BayesGLM_cifti <- function(
   do_left <- ('left' %in% brainstructures)
   do_right <- ('right' %in% brainstructures)
   do_sub <- ('subcortical' %in% brainstructures)
+  do_cort <- do_left || do_right
 
-  # Temporary
-  if (need_mesh && do_sub) {
-    stop("Bayesian modeling and AR smoothing both require spatial modeling, which is currently not availble for the subcortex.")
-  }
+  need_mesh <- do_Bayesian #always need meshes for Bayesian modeling
+  if(do_pw && ar_smooth > 0 && do_cort) need_mesh <- TRUE #also need meshes for ar-smoothing if doing cortical modeling
+
+  # # Temporary
+  # if (need_mesh && do_sub) {
+  #   stop("Bayesian modeling and AR smoothing both require spatial modeling, which is currently not availble for the subcortex.")
+  # }
 
   # Nuisance arguments.
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
@@ -249,13 +255,13 @@ BayesGLM_cifti <- function(
   is_xifti <- FALSE
   if (is.character(cifti_fname)) {
     NULL
-  } else if (is.xifti(cifti_fname, messages=FALSE)) {
+  } else if (ciftiTools:::is.xifti(cifti_fname, messages=FALSE)) {
     is_xifti <- TRUE
     cifti_fname <- list(cifti_fname)
   } else if (is.list(cifti_fname)) {
     if (all(vapply(cifti_fname, is.character, FALSE)) && all(vapply(cifti_fname, length, 0)==1)) {
       cifti_fname <- as.character(cifti_fname)
-    } else if (all(vapply(cifti_fname, is.xifti, messages=FALSE, FALSE))) {
+    } else if (all(vapply(cifti_fname, ciftiTools:::is.xifti, messages=FALSE, FALSE))) {
       is_xifti <- TRUE
     }
   } else {
@@ -305,8 +311,8 @@ BayesGLM_cifti <- function(
   }
   if(is.null(nuisance)) nuisance <- vector("list",length = nS)
 
-  ## Surfaces: check or get. ---------------------------------------------------
-  surf_list <- list(left=NULL, right=NULL)
+  ## Surfaces/SPDE: check or get. ---------------------------------------------------
+  surf_list <- list(left=NULL, right=NULL, subcortical=NULL)
   if (need_mesh) {
     if (do_left) {
       if (is.null(surfL_fname)) {
@@ -321,6 +327,14 @@ BayesGLM_cifti <- function(
         surfR_fname <- ciftiTools.files()$surf["right"]
       }
       surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
+    }
+    if(do_sub) {
+      #get mask and labels from xii data
+      if (is_xifti) xii_1 <- cifti_fname[[1]] else xii_1 <- read_cifti(cifti_fname[1], brainstructures='sub', idx=1)
+      mask <- xii_1$meta$subcort$mask
+      labels <- xii_1$meta$subcort$labels
+      labels_img <- mask*0; labels_img[mask==TRUE] <- labels
+      surf_list$subcortical <- labels_img #this is a 3D array of labels
     }
   } else {
     surf_list <- list(
@@ -370,13 +384,15 @@ BayesGLM_cifti <- function(
   ntime <- vector("numeric", nS)
 
   for (ss in seq(nS)) {
-    if (nS > 1) if (verbose>0) cat(paste0('\tReading in data for session ', ss,'.\n'))
+    if (nS > 1) if (verbose>0) cat(paste0('\tReading and resampling data for session ', ss,'.\n'))
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
-      xii_ss_res <- infer_resolution(xii_ss)
-      if (!is.null(resamp_res) && any(infer_resolution(xii_ss)!=resamp_res)) {
-        xii_ss <- resample_xifti(xii_ss, resamp_res=resamp_res)
+      xii_ss_res <- ciftiTools:::infer_resolution(xii_ss)
+      if(do_left | do_right){ #only do resampling for surface data
+        if (!is.null(resamp_res) && any(ciftiTools:::infer_resolution(xii_ss)!=resamp_res)) {
+          xii_ss <- resample_xifti(xii_ss, resamp_res=resamp_res)
+        }
       }
     } else {
       xii_ss <- read_cifti(
@@ -427,6 +443,7 @@ BayesGLM_cifti <- function(
     }
   }
 
+  #remove un-needed brain structures
   BOLD_list <- BOLD_list[!vapply(BOLD_list, is.null, FALSE)]
   if (need_mesh) { surf_list <- surf_list[!vapply(surf_list, is.null, FALSE)] }
 
@@ -436,7 +453,7 @@ BayesGLM_cifti <- function(
     design <- vector("list", nS)
 
     for (ss in seq(nS)) {
-      HRF_ss <- make_HRFs(
+      HRF_ss <- BayesfMRI:::make_HRFs(
         onsets[[ss]], TR=TR, duration=ntime[ss],
         dHRF=dHRF, dHRF_as=dHRF_as,
         verbose=ss==1
@@ -466,15 +483,15 @@ BayesGLM_cifti <- function(
 
   # Warn the user if the number of design matrix columns exceeds five.
   if (Bayes && ncol(design[[1]]) > 5) {
-    message("The number of design matrix columns exceeds five. INLA computation may be very slow. To avoid stalling, you can quit this function call now and modify the analysis. For example, model some signals as nuisance rather than tasks.")
+    message("The number of regressors to be modeled spatially exceeds five. INLA computation may be slow. To avoid stalling, you can quit this function call now and modify the analysis. For example, model some signals as nuisance rather than tasks.")
     Sys.sleep(10)
   }
 
   task_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more task_names.
 
   # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
-  design <- if (scale_design) {
-    sapply(design, scale_design_mat, simplify = F)
+  design <- if(scale_design) {
+    sapply(design, BayesfMRI:::scale_design_mat, simplify = F)
   } else {
     sapply(design, scale, scale = F, simplify = F)
   }
@@ -503,7 +520,7 @@ BayesGLM_cifti <- function(
   }
 
   # Do GLM. --------------------------------------------------------------------
-  BayesGLM_results <- list(left = NULL, right = NULL)
+  BayesGLM_results <- list(left = NULL, right = NULL, sub = NULL)
 
   # >> Loop through brainstructures ----
   for (bb in brainstructures) {
@@ -524,10 +541,14 @@ BayesGLM_cifti <- function(
       }
     }
 
+    #HERE -- See if we can do the Bayesian GLM with subcortical data!  Will need to handle the SPDE appropriately.
+    #Thought -- If we have multiple structures, maybe we can test the limits of INLA to handle it, without the need to group the structures.
+
     BayesGLM_out <- BayesGLM(
       data = session_data,
-      vertices = surf_list[[bb]]$vertices,
-      faces = surf_list[[bb]]$faces,
+      surf = surf_list[[bb]],
+      #vertices = surf_list[[bb]]$vertices,
+      #faces = surf_list[[bb]]$faces,
       mesh = NULL,
       task_names = NULL, # in `session_data`
       session_names = session_names,

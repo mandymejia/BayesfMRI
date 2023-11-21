@@ -6,8 +6,7 @@
 \usage{
 BayesGLM(
   data,
-  vertices = NULL,
-  faces = NULL,
+  surf = NULL,
   mesh = NULL,
   mask = NULL,
   task_names = NULL,
@@ -36,17 +35,7 @@ session. See \code{?is.BfMRI.sess} for details.
 Note that the argument \code{session_names} can be used instead of providing
 the session names as the names of the elements in \code{data}.}
 
-\item{vertices, faces}{If \code{Bayes}, the geometry data can be provided
-with either both the \code{vertices} and \code{faces} arguments, or with the
-\code{mesh} argument.
-
-\code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
-Euclidean coordinates at which a given vertex in the mesh is located.
-\eqn{V} is the number of vertices in the mesh.
-
-\code{faces} is a \eqn{F \times 3} matrix, where each row contains the
-vertex indices for a given triangular face in the mesh. \eqn{F} is the
-number of faces in the mesh.}
+\item{surf}{TO DO}
 
 \item{mesh}{If \code{Bayes}, the geometry data can be provided
 with either both the \code{vertices} and \code{faces} arguments, or with the

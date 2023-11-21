@@ -8,6 +8,7 @@ BayesGLM_cifti(
   cifti_fname,
   surfL_fname = NULL,
   surfR_fname = NULL,
+  spde_sub = NULL,
   brainstructures = c("left", "right"),
   design = NULL,
   onsets = NULL,
