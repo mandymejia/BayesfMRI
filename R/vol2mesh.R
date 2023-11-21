@@ -8,8 +8,7 @@
 #' @param neighbor_order What order of neighbors of data locations to keep? (1 = first-order neighbors, 2 = first- and second-order neighbors, etc.)
 #'
 #' @return An inla.spde2 object.
-#'
-#' @importFrom INLA inla.mesh.1d inla.mesh.fem inla.spde2.generic inla.spde2.precision
+#' 
 #' @export
 #'
 vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order = 1){
@@ -57,13 +56,13 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
   nz <- length(z)
 
   #1D meshes
-  mesh.x <- inla.mesh.1d(loc = x)
-  mesh.y <- inla.mesh.1d(loc = y)
-  mesh.z <- inla.mesh.1d(loc = z)
+  mesh.x <- INLA::inla.mesh.1d(loc = x)
+  mesh.y <- INLA::inla.mesh.1d(loc = y)
+  mesh.z <- INLA::inla.mesh.1d(loc = z)
 
-  fem.x <- inla.mesh.fem(mesh.x)
-  fem.y <- inla.mesh.fem(mesh.y)
-  fem.z <- inla.mesh.fem(mesh.z)
+  fem.x <- INLA::inla.mesh.fem(mesh.x)
+  fem.y <- INLA::inla.mesh.fem(mesh.y)
+  fem.z <- INLA::inla.mesh.fem(mesh.z)
 
   #construct C and G for 3D mesh
   Cx <- fem.x$c0
@@ -76,7 +75,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
   C3d <- kronecker(kronecker(Cz,Cy),Cx)
   G3d <- kronecker(kronecker(Cz,Cy),Gx) + kronecker(kronecker(Cz,Gy),Cx) + kronecker(kronecker(Gz,Cy),Cx)
 
-  # spde <- inla.spde2.generic(M0 = C3d,
+  # spde <- INLA::inla.spde2.generic(M0 = C3d,
   #                            M1 = G3d,
   #                            M2 = G3d%*%solve(C3d, G3d),
   #                            theta.mu = c(Elog.kappa, Elog.tau),
@@ -86,7 +85,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
   #                            B2 = 1)
   #
   # #visualize marginal variances inside and outside of mask
-  # Q_full <- inla.spde.precision(spde, theta = c(1,1)) #example Q with low spatial range (large kappa)
+  # Q_full <- INLA::inla.spde.precision(spde, theta = c(1,1)) #example Q with low spatial range (large kappa)
   # tmp_full <- diag(solve(Q_full)) #marginal variances
   # tmp_mask <- mask_box; tmp_mask[mask_box >= 0] <- tmp_full
   # tmp_mask[10,1,1] <- 0; tmp_mask[10,1,2] <- 0.0004 #to control the scale
@@ -115,7 +114,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
 
   #[TO DO] Construct SPDE outside of this function, block diagonalizing over regions
 
-  # spde <- inla.spde2.generic(M0 = C3d,
+  # spde <- INLA::inla.spde2.generic(M0 = C3d,
   #                            M1 = G3d,
   #                            M2 = G3d%*%solve(C3d, G3d),
   #                            theta.mu = c(Elog.kappa, Elog.tau),
@@ -125,7 +124,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
   #                            B2 = 1)
   #
   # #visualize marginal variances inside and outside of mask
-  # Q <- inla.spde.precision(spde, theta = c(1,1)) #example Q with low spatial range (large kappa)
+  # Q <- INLA::inla.spde.precision(spde, theta = c(1,1)) #example Q with low spatial range (large kappa)
   # tmp <- diag(solve(Q)) #marginal variances
   # tmp_full <- rep(0, length(mask_box)); tmp_full[idx2] <- tmp #put back in excluded locations
   # tmp_mask <- mask_box; tmp_mask[mask_box >= 0] <- tmp_full; tmp_mask[mask_box2 == 0] <- NA

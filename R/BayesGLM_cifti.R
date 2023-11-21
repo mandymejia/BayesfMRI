@@ -145,7 +145,6 @@
 #' @importFrom matrixStats rowVars rowSums2 colVars
 #' @importFrom parallel detectCores
 #' @importFrom Matrix bdiag
-#' @importFrom INLA inla.spde2.generic
 #'
 #' @export
 BayesGLM_cifti <- function(
@@ -255,13 +254,13 @@ BayesGLM_cifti <- function(
   is_xifti <- FALSE
   if (is.character(cifti_fname)) {
     NULL
-  } else if (ciftiTools:::is.xifti(cifti_fname, messages=FALSE)) {
+  } else if (ciftiTools::is.xifti(cifti_fname, messages=FALSE)) {
     is_xifti <- TRUE
     cifti_fname <- list(cifti_fname)
   } else if (is.list(cifti_fname)) {
     if (all(vapply(cifti_fname, is.character, FALSE)) && all(vapply(cifti_fname, length, 0)==1)) {
       cifti_fname <- as.character(cifti_fname)
-    } else if (all(vapply(cifti_fname, ciftiTools:::is.xifti, messages=FALSE, FALSE))) {
+    } else if (all(vapply(cifti_fname, ciftiTools::is.xifti, messages=FALSE, FALSE))) {
       is_xifti <- TRUE
     }
   } else {
@@ -388,9 +387,9 @@ BayesGLM_cifti <- function(
 
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
-      xii_ss_res <- ciftiTools:::infer_resolution(xii_ss)
+      xii_ss_res <- ciftiTools::infer_resolution(xii_ss)
       if(do_left | do_right){ #only do resampling for surface data
-        if (!is.null(resamp_res) && any(ciftiTools:::infer_resolution(xii_ss)!=resamp_res)) {
+        if (!is.null(resamp_res) && any(ciftiTools::infer_resolution(xii_ss)!=resamp_res)) {
           xii_ss <- resample_xifti(xii_ss, resamp_res=resamp_res)
         }
       }

@@ -4,10 +4,10 @@
 \alias{check_INLA}
 \title{Check INLA and PARDISO}
 \usage{
-check_INLA(require_PARDISO = TRUE)
+check_INLA(require_PARDISO = FALSE)
 }
 \arguments{
-\item{require_PARDISO}{Is PARDISO required? Default: \code{TRUE}.}
+\item{require_PARDISO}{Is PARDISO required? Default: \code{FALSE}.}
 }
 \value{
 \code{NULL}, invisibly

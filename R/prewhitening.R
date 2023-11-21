@@ -67,7 +67,7 @@ pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
       triangle = faces
     )
   )
-  AR_xif <- ciftiTools:::make_xifti(
+  AR_xif <- ciftiTools::make_xifti(
     cortexL = AR,
     surfL = surf_smooth,
     cortexL_mwall = mask
@@ -76,7 +76,7 @@ pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
   AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
   AR_smoothed <- AR_smoothed$data$cortex_left
 
-  var_xif <- ciftiTools:::make_xifti(
+  var_xif <- ciftiTools::make_xifti(
     cortexL = var,
     surfL = surf_smooth,
     cortexL_mwall = mask

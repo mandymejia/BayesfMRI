@@ -52,7 +52,7 @@ BayesGLM_argChecks <- function(
     Bayes <- TRUE
   }
   if (Bayes) {
-    if (!EM) { check_INLA(require_PARDISO=TRUE) }
+    if (!EM) { check_INLA(require_PARDISO=FALSE) }
   }
 
   if (isTRUE(return_INLA)) {
@@ -357,7 +357,7 @@ BayesGLM <- function(
       #construct the SPDE
       Elog.kappa <- Elog.tau <- 0 #prior means for log(kappa) and log(tau)
       Qlog.kappa <- Qlog.tau <- 0.1 #prior precisions for log(kappa) and log(tau)
-      spde <- inla.spde2.generic(M0 = C_sub,
+      spde <- INLA::inla.spde2.generic(M0 = C_sub,
                                      M1 = G_sub,
                                      M2 = G_sub%*%solve(C_sub, G_sub),
                                      theta.mu = c(Elog.kappa, Elog.tau),
