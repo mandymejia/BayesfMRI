@@ -179,7 +179,26 @@ double kappa2Obj(double logKappa, const Rcpp::List &spde, double a_star, double 
   double kappa2 = exp(2*logKappa);
   double lDQ = logDetQt(kappa2, spde, n_sess);
   double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ; // times -1 to minimize instead of maximize
+  Rcout << "kappa2: " << kappa2 << std::endl;
   return out;
+}
+
+double testOpt(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde,double points) {
+  double minimizer = lower;
+  double minValue = kappa2Obj(lower, spde, a_star, b_star, c_star, n_sess, n_spde);
+  double increment = (upper-lower)/points;
+  double fnew;
+  double xnew;
+  for (int i=1; i <= points; ++i) {
+    xnew = lower + i * increment;
+    fnew = kappa2Obj(xnew, spde, a_star, b_star, c_star, n_sess, n_spde);
+    if (minValue > fnew) {
+      minValue = fnew;
+      minimizer = xnew;
+    }
+  }
+  double out;
+  return(out);
 }
 
 double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
@@ -458,7 +477,8 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     a_star = (muCmu + sumDiagPCVkn) ;
     b_star = (muGCGmu + sumDiagPGCGVkn) ;
     c_star = 2 * (sumDiagPGVkn + muGmu);
-    new_logKappa = kappa2Brent(-3., -1., spde, a_star, b_star, c_star, n_sess, n_spde);
+    new_logKappa = kappa2Brent(-5., -1., spde, a_star, b_star, c_star, n_sess, n_spde);
+    //new_logKappa = testOpt(-3., -1., spde, a_star, b_star, c_star, n_sess, n_spde,100);
     new_kappa2 = exp(2*new_logKappa);
     theta_new[k] = new_kappa2;
     // Update phi
