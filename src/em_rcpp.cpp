@@ -175,30 +175,18 @@ double kappa2BrentInit(double lower, double upper, double phi, const List &spde,
   return x;
 }
 
+// Computes the PDF of logKappa which has a normal distribution
+double logKappaPDF(double logKappa,double mu,double sigma2) {
+  double fx = 1/sqrt(2*M_PI*sigma2) * exp(-0.5 * (logKappa-mu)*(logKappa-mu)/sigma2);
+  return(fx);
+}
+
 double kappa2Obj(double logKappa, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
   double kappa2 = exp(2*logKappa);
   double lDQ = logDetQt(kappa2, spde, n_sess);
-  double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ; // times -1 to minimize instead of maximize
-  Rcout << "kappa2: " << kappa2 << std::endl;
+  double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ - 2*logKappaPDF(logKappa,0,3); // times -1 to minimize instead of maximize
+  Rcout << "logKappa: " << logKappa << std::endl;
   return out;
-}
-
-double testOpt(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde,double points) {
-  double minimizer = lower;
-  double minValue = kappa2Obj(lower, spde, a_star, b_star, c_star, n_sess, n_spde);
-  double increment = (upper-lower)/points;
-  double fnew;
-  double xnew;
-  for (int i=1; i <= points; ++i) {
-    xnew = lower + i * increment;
-    fnew = kappa2Obj(xnew, spde, a_star, b_star, c_star, n_sess, n_spde);
-    if (minValue > fnew) {
-      minValue = fnew;
-      minimizer = xnew;
-    }
-  }
-  double out;
-  return(out);
 }
 
 double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
