@@ -41,6 +41,16 @@ void makeQt(Eigen::SparseMatrix<double>* Q, double kappa2, const Rcpp::List &spd
   // return Qt;
 }
 
+//Modification of function above. Returns QTilde without pointer
+Eigen::SparseMatrix<double> makeQtilde(double logKappa, const Rcpp::List &spde) {
+  double kappa2 = exp(2*logKappa);
+  Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
+  Eigen::SparseMatrix<double> Gmat     = Eigen::SparseMatrix<double> (spde["Gmat"]);
+  Eigen::SparseMatrix<double> GtCinvG     = Eigen::SparseMatrix<double> (spde["GtCinvG"]);
+  Eigen::SparseMatrix<double> Qtilde = kappa2 * Cmat + 2. * Gmat + GtCinvG / kappa2;
+   return Qtilde;
+}
+
 Eigen::MatrixXd makeV(int n_spde, int Ns) {
   Eigen::MatrixXd V(n_spde,Ns);
   Rcpp::NumericVector x(1);
@@ -182,10 +192,11 @@ double logKappaPDF(double logKappa,double mu,double sigma2) {
 }
 
 double kappa2Obj(double logKappa, const Rcpp::List &spde, double a_star, double b_star, double c_star, double n_sess, double n_spde) {
+  //Eigen::SparseMatrix<double> QTilde = makeQtilde(logKappa,spde);
   double kappa2 = exp(2*logKappa);
   double lDQ = logDetQt(kappa2, spde, n_sess);
   double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ - 2*logKappaPDF(logKappa,0,3); // times -1 to minimize instead of maximize
-  Rcout << "logKappa: " << logKappa << std::endl;
+  //Rcout << "logKappa: " << logKappa << std::endl;
   return out;
 }
 
@@ -386,8 +397,8 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   for(int ns=0;ns<n_sess;ns++) {
     for(int k = 0; k < K ; k++) {
       list_idx = ns*K + k;
-      makeQt(&Qk, theta(k), spde);
-      Qk = Qk / (4.0 * M_PI * theta(k + K));
+      makeQt(&Qk, theta(k), spde); // Stores QTilde in Qk
+      Qk = Qk / (4.0 * M_PI * theta(k + K)); //Converts QTilde to Q
       Q_list(list_idx) =  Qk;
     }
   }
@@ -414,9 +425,11 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   // Rcout << "TrAEww = " << TrAEww << std::endl;
   double yXpsiMu = y.transpose() * XpsiMu;
   theta_new[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
+  Rcout << "sigma_2: " << theta_new[sig2_ind] << std::endl;
   time_sigma2 = clock();
   // Update kappa2 and phi by task
   for(int k = 0; k < K; k++) {
+    Rcout << "Task: k=" << k << std::endl;
     a_star = 0.0;
     b_star = 0.0;
     c_star = 0.0;
@@ -427,6 +440,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     sumDiagPGVkn = 0.0;
     sumDiagPGCGVkn = 0.0;
     for(int ns = 0; ns < n_sess; ns++) {
+      Rcout << "Session: ns= " << ns << std::endl;
       idx_start = k * n_spde + ns * K * n_spde;
       // idx_stop = idx_start + n_spde;
       muKns = mu.segment(idx_start,n_spde);
@@ -466,7 +480,10 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     b_star = (muGCGmu + sumDiagPGCGVkn) ;
     c_star = 2 * (sumDiagPGVkn + muGmu);
     new_logKappa = kappa2Brent(-5., -1., spde, a_star, b_star, c_star, n_sess, n_spde);
-    //new_logKappa = testOpt(-3., -1., spde, a_star, b_star, c_star, n_sess, n_spde,100);
+    Rcout << "a_star: " << a_star << std::endl;
+    Rcout << "b_star: " << b_star << std::endl;
+    Rcout << "c_star: " << c_star << std::endl;
+    Rcout << "logKappa: " << new_logKappa << std::endl;
     new_kappa2 = exp(2*new_logKappa);
     theta_new[k] = new_kappa2;
     // Update phi
@@ -479,6 +496,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     double TrQEww = phi_partA + phi_partB + phi_partC;
     // Rcout << "TrQEww = " << TrQEww << std::endl;
     phi_new = TrQEww / phi_denom;
+    Rcout << "phi: " << phi_new << std::endl;
     theta_new[k + K] = phi_new;
   }
   time_kappa_phi = clock();
