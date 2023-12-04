@@ -1,26 +1,21 @@
 #' Organize replicates
 #'
-#' beta and repl vectors are of length \eqn{nvox \times n_sess \times n_task}.
+#' beta and repl vectors are of length \eqn{n_mesh \times n_sess \times n_task}.
 #' 	The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
 #' 	The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 #'
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param task_names Vector of names for each task
-#' @inheritParams mesh_Param_inla
-# @inheritParams mesh_Param_either
+#' @param n_mesh Number of mesh locations
 #'
 #' @return replicates vector and betas for sessions
 #'
 #' @keywords internal
 #'
-organize_replicates <- function(n_sess, task_names, mesh){
+organize_replicates <- function(n_sess, task_names, n_mesh){
 
-  if (!(inherits(mesh, "inla.mesh") || inherits(mesh, "BayesfMRI.spde"))) {
-	stop('mesh must be of class inla.mesh  (for surface data, see `help(make_mesh)`) or BayesfMRI.spde (for subcortical data, see `help(create_spde_vol3D)`)')
-  }
-  spatial <- mesh$idx$loc
-
-	nvox <- length(spatial)
+  spatial <- 1:n_mesh
+  #spatial <- mesh$idx$loc
 
 	n_task <- length(task_names)
 
@@ -34,11 +29,11 @@ organize_replicates <- function(n_sess, task_names, mesh){
 		#set up replicates vectors
 		sess_NA_i <- rep(NA, n_sess*n_task)
 		sess_NA_i[inds_i] <- 1:n_sess
-		repls[[i]] <- rep(sess_NA_i, each=nvox)
+		repls[[i]] <- rep(sess_NA_i, each=n_mesh)
 		names(repls)[i] <- paste0('repl',i)
 
 		#set up ith beta vector with replicates for sessions
-		NAs <- rep(NA, nvox)
+		NAs <- rep(NA, n_mesh)
 		preNAs <- rep(NAs, times=(i-1))
 		postNAs <- rep(NAs, times=(n_task-i))
 		betas[[i]] <- rep(c(preNAs, spatial, postNAs), n_sess)

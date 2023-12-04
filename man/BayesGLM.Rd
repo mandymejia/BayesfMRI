@@ -7,7 +7,6 @@
 BayesGLM(
   data,
   surf = NULL,
-  mesh = NULL,
   mask = NULL,
   task_names = NULL,
   session_names = NULL,
@@ -36,13 +35,6 @@ Note that the argument \code{session_names} can be used instead of providing
 the session names as the names of the elements in \code{data}.}
 
 \item{surf}{TO DO}
-
-\item{mesh}{If \code{Bayes}, the geometry data can be provided
-with either both the \code{vertices} and \code{faces} arguments, or with the
-\code{mesh} argument.
-
-\code{mesh} is an \code{"inla.mesh"} object. This can be created for surface
-data using \code{\link{make_mesh}}.}
 
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating the
 vertices to include.}

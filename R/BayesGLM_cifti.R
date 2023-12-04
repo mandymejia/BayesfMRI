@@ -223,8 +223,8 @@ BayesGLM_cifti <- function(
   do_sub <- ('subcortical' %in% brainstructures)
   do_cort <- do_left || do_right
 
-  need_mesh <- do_Bayesian #always need meshes for Bayesian modeling
-  if(do_pw && ar_smooth > 0 && do_cort) need_mesh <- TRUE #also need meshes for ar-smoothing if doing cortical modeling
+  #need_mesh <- do_Bayesian #always need meshes for Bayesian modeling
+  #if(do_pw && ar_smooth > 0 && do_cort) need_mesh <- TRUE #also need meshes for ar-smoothing if doing cortical modeling
 
   # # Temporary
   # if (need_mesh && do_sub) {
@@ -311,35 +311,28 @@ BayesGLM_cifti <- function(
   if(is.null(nuisance)) nuisance <- vector("list",length = nS)
 
   ## Surfaces/SPDE: check or get. ---------------------------------------------------
-  surf_list <- list(left=NULL, right=NULL, subcortical=NULL)
-  if (need_mesh) {
-    if (do_left) {
-      if (is.null(surfL_fname)) {
-        if (verbose>0) cat("Using `ciftiTools` default inflated surface for the left cortex.\n")
-        surfL_fname <- ciftiTools.files()$surf["left"]
-      }
-      surf_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
+  spatial_list <- list(left=NULL, right=NULL, subcortical=NULL)
+  if (do_left) {
+    if (is.null(surfL_fname)) {
+      if (verbose>0) cat("Using `ciftiTools` default inflated fs_LR surface for the left cortex.\n")
+      surfL_fname <- ciftiTools.files()$surf["left"]
     }
-    if (do_right) {
-      if (is.null(surfR_fname)) {
-        if (verbose>0) cat("Using `ciftiTools` default inflated surface for the right cortex.\n")
-        surfR_fname <- ciftiTools.files()$surf["right"]
-      }
-      surf_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
+    spatial_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
+  }
+  if (do_right) {
+    if (is.null(surfR_fname)) {
+      if (verbose>0) cat("Using `ciftiTools` default inflated fs_LR surface for the right cortex.\n")
+      surfR_fname <- ciftiTools.files()$surf["right"]
     }
-    if(do_sub) {
-      #get mask and labels from xii data
-      if (is_xifti) xii_1 <- cifti_fname[[1]] else xii_1 <- read_cifti(cifti_fname[1], brainstructures='sub', idx=1)
-      mask <- xii_1$meta$subcort$mask
-      labels <- xii_1$meta$subcort$labels
-      labels_img <- mask*0; labels_img[mask==TRUE] <- labels
-      surf_list$subcortical <- labels_img #this is a 3D array of labels
-    }
-  } else {
-    surf_list <- list(
-      left = list(vertices=NULL, faces=NULL),
-      right = list(vertices=NULL, faces=NULL)
-    )
+    spatial_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
+  }
+  if(do_sub) {
+    #get mask and labels from xii data
+    if (is_xifti) xii_1 <- cifti_fname[[1]] else xii_1 <- read_cifti(cifti_fname[1], brainstructures='sub', idx=1)
+    mask <- xii_1$meta$subcort$mask
+    labels <- xii_1$meta$subcort$labels
+    labels_img <- mask*0; labels_img[mask==TRUE] <- labels
+    spatial_list$subcortical <- labels_img #this is a 3D array of labels
   }
 
   ## `design`, `onsets`, `task_names`. -----------------------------------------
@@ -409,7 +402,7 @@ BayesGLM_cifti <- function(
     if (ss == 1) {
       if (do_left) { mwallL <- mwallL_ss }
       if (do_right) { mwallR <- mwallR_ss }
-      # [TO DO] Check compatibility with `surf_list`
+      # [TO DO] Check compatibility with `spatial_list`
     } else {
       if (do_left) {
         stopifnot(length(mwallL) == length(mwallL_ss))
@@ -444,7 +437,7 @@ BayesGLM_cifti <- function(
 
   #remove un-needed brain structures
   BOLD_list <- BOLD_list[!vapply(BOLD_list, is.null, FALSE)]
-  if (need_mesh) { surf_list <- surf_list[!vapply(surf_list, is.null, FALSE)] }
+  spatial_list <- spatial_list[!vapply(spatial_list, is.null, FALSE)]
 
   ## Design and nuisance matrices. ---------------------------------------------
   if (is.null(design)) {
@@ -540,21 +533,26 @@ BayesGLM_cifti <- function(
       }
     }
 
-    #HERE -- See if we can do the Bayesian GLM with subcortical data!  Will need to handle the SPDE appropriately.
-    #Thought -- If we have multiple structures, maybe we can test the limits of INLA to handle it, without the need to group the structures.
+    #Extract spatial information and pass to BayesGLM
+    vertices <- faces <- labels <- NULL
+    if(is_surf){
+      vertices <- spatial_list[[bb]]$vertices
+      faces <- spatial_list[[bb]]$faces
+    } else {
+      labels <- spatial_list[[bb]]
+    }
 
     BayesGLM_out <- BayesGLM(
       data = session_data,
-      surf = surf_list[[bb]],
-      #vertices = surf_list[[bb]]$vertices,
-      #faces = surf_list[[bb]]$faces,
-      mesh = NULL,
+      vertices = vertices,
+      faces = faces,
+      labels = labels,
       task_names = NULL, # in `session_data`
+      scale_design = FALSE, # scaling done above
+      Bayes = do_Bayesian,
       session_names = session_names,
       combine_sessions = combine_sessions,
       scale_BOLD = scale_BOLD,
-      scale_design = FALSE, # done above
-      Bayes = do_Bayesian,
       #EM = do_EM,
       ar_order = ar_order,
       ar_smooth = ar_smooth,
@@ -562,8 +560,8 @@ BayesGLM_cifti <- function(
       num.threads = num.threads,
       return_INLA = return_INLA,
       verbose = verbose,
-      meanTol=meanTol,
-      varTol=varTol#,emTol=emTol,
+      meanTol = meanTol,
+      varTol = varTol#,emTol=emTol,
     )
 
     BayesGLM_results[[bb]] <- BayesGLM_out

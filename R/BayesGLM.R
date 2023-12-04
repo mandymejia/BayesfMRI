@@ -1,96 +1,3 @@
-#' Bayes GLM arg checks
-#'
-#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
-#'
-#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
-#'
-#' @param scale_BOLD,scale_design See \code{\link{BayesGLM}}.
-#' @param Bayes,EM See \code{\link{BayesGLM}}.
-#' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
-#' @param num.threads See \code{\link{BayesGLM}}.
-#' @param return_INLA See \code{\link{BayesGLM}}.
-#' @param verbose See \code{\link{BayesGLM}}.
-#' @param combine_sessions See \code{\link{BayesGLM}}.
-#' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
-#'
-#' @return The arguments that may have changed, in a list: \code{scale_BOLD},
-#'  \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
-#'
-#' @keywords internal
-BayesGLM_argChecks <- function(
-  combine_sessions = FALSE,
-  scale_BOLD = c("auto", "mean", "sd", "none"),
-  scale_design = TRUE,
-  Bayes = TRUE,
-  EM = FALSE,
-  ar_order = 6,
-  ar_smooth = 5,
-  aic = FALSE,
-  num.threads = 4,
-  return_INLA = c("trimmed", "full", "minimal"),
-  verbose=1,
-  meanTol=1e-6,
-  varTol=1e-6,
-  emTol=1e-3
-  ){
-
-  stopifnot(is_1(combine_sessions, "logical"))
-
-  if (isTRUE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
-  }
-  if (isFALSE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
-  }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-  stopifnot(is_1(scale_design, "logical"))
-
-  stopifnot(is_1(Bayes, "logical"))
-  stopifnot(is_1(EM, "logical"))
-  if (EM && !Bayes) {
-    warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
-    Bayes <- TRUE
-  }
-  if (Bayes) {
-    if (!EM) { check_INLA(require_PARDISO=FALSE) }
-  }
-
-  if (isTRUE(return_INLA)) {
-    message("Setting `return_INLA` to 'trimmed'"); return_INLA <- "trimmed"
-  }
-  if (isFALSE(return_INLA)) {
-    message("Setting `return_INLA` to 'minimal'"); return_INLA <- "minimal"
-  }
-  return_INLA <- match.arg(return_INLA, c("trimmed", "full", "minimal"))
-
-  # Rename these arguments.
-  do_Bayesian <- Bayes; rm(Bayes)
-  do_EM <- EM; rm(EM)
-
-  if (is.null(ar_order)) ar_order <- 0
-  stopifnot(is_1(ar_order, "numeric"))
-  do_pw <- ar_order > 0
-  if (is.null(ar_smooth)) ar_smooth <- 0
-  stopifnot(is_1(ar_smooth, "numeric"))
-  stopifnot(is_1(aic, "logical"))
-  stopifnot(is_1(num.threads, "numeric"))
-  stopifnot(num.threads <= parallel::detectCores())
-  if (isTRUE(verbose)) { verbose <- 2 }
-  if (isFALSE(verbose)) { verbose <- 0 }
-  stopifnot(is_posNum(verbose, zero_ok=TRUE))
-  stopifnot(is_posNum(meanTol))
-  stopifnot(is_posNum(varTol))
-  stopifnot(is_posNum(emTol))
-
-  list(
-    scale_BOLD=scale_BOLD,
-    do_Bayesian=do_Bayesian,
-    do_EM = do_EM,
-    do_pw = do_pw,
-    return_INLA=return_INLA
-  )
-}
-
 #' BayesGLM
 #'
 #' Performs spatial Bayesian GLM for fMRI task activation
@@ -117,12 +24,6 @@ BayesGLM_argChecks <- function(
 #  \code{faces} is a \eqn{F \times 3} matrix, where each row contains the
 #  vertex indices for a given triangular face in the mesh. \eqn{F} is the
 #  number of faces in the mesh.
-#' @param mesh If \code{Bayes}, the geometry data can be provided
-#'  with either both the \code{vertices} and \code{faces} arguments, or with the
-#'  \code{mesh} argument.
-#'
-#'  \code{mesh} is an \code{"inla.mesh"} object. This can be created for surface
-#'  data using \code{\link{make_mesh}}.
 #' @param mask (Optional) A length \eqn{V} logical vector indicating the
 #'  vertices to include.
 #' @inheritParams task_names_Param
@@ -181,7 +82,6 @@ BayesGLM <- function(
   surf = NULL,
   #vertices = NULL,
   #faces = NULL,
-  mesh = NULL, #[TO DO] Remove this? Let's have a single surf or mesh argument.
   mask = NULL,
   # Below arguments shared with `BayesGLM_cifti`
   task_names = NULL, #[TO DO] Delete this?  This can be encoded in data formatted as sessions. BayesGLM_cifti does this.
@@ -205,7 +105,6 @@ BayesGLM <- function(
   is_vol <- (length(dim(surf))==3) #surf is actually a volume (3D array)
   is_surf <- !is_vol
 
-
   EM <- FALSE
   emTol <- 1e-3
 
@@ -225,7 +124,7 @@ BayesGLM <- function(
   ## Check simple arguments.
   ## These checks are in a separate function because they are shared with
   ## `BayesGLM_cifti`.
-  argChecks <- BayesGLM_argChecks(
+  argChecks <- BayesfMRI:::BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
     scale_design = scale_design,
     Bayes = Bayes,
@@ -319,10 +218,8 @@ BayesGLM <- function(
       # `mesh`
       if (need_mesh) {
         mesh_orig <- mesh #for later plotting
-        # [TO DO]: bring back line below & comment line two below.
-        # this was from when we were moving away from INLA, but now we're not.
         # mesh <- excursions::submesh.mesh(mask, mesh) # This is commented out because we now have our own submesh function!
-        mesh <- submesh(mask, mesh)
+        mesh <- BayesfMRI:::submesh(mask, mesh)
         mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
         mesh$idx$loc <- mesh$idx$loc[mask2]
       }
@@ -347,7 +244,7 @@ BayesGLM <- function(
       C_list <- G_list <- spde_list <- vector('list', length=nR)
       for(r in 1:nR){
         mask_r <- (surf == ROIs[r])
-        spde_list[[r]] <- vol2spde(mask_r)
+        spde_list[[r]] <- vol2spde(mask_r, buffer=NULL, neighbor_order = 0)
         C_list[[r]] <- spde_list[[r]]$mats$C
         G_list[[r]] <- spde_list[[r]]$mats$G
       }
@@ -410,7 +307,7 @@ BayesGLM <- function(
     # In 3.0 Damon got rid of this t(), so we will need it here (four lines below this one).
     # Later, require fMRItools > 3.0.
     dBOLD <- dim(data[[ss]]$BOLD)
-    data[[ss]]$BOLD <- scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
+    data[[ss]]$BOLD <- fMRItools:::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
     if (!(all.equal(dBOLD, dim(data[[ss]]$BOLD), check.attributes=FALSE)==TRUE)) {
       data[[ss]]$BOLD <- t(data[[ss]]$BOLD)
     }
@@ -548,7 +445,7 @@ BayesGLM <- function(
     if (verbose>0) cat("\tClassical model.\n")
 
     #set up vectorized data and big sparse design matrix
-    if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
+    if(!do_pw) data_s <- BayesfMRI:::organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
 
     y_all <- c(y_all, data_s$BOLD)
@@ -593,21 +490,25 @@ BayesGLM <- function(
   }
   names(result_classical) <- session_names
 
-  # HERE -- I stopped because organize_replicates() requires the mesh, and we don't have one for subcortical
-  # Two options: 1. Don't pass in the mesh, just the locations
-  # 2. Learn how to use inlabru.  Start by reading about it briefly to at least get an idea.
-
   # Bayesian GLM. --------------------------------------------------------------
   if (do_Bayesian) {
     #construct betas and repls objects
-    replicates_list <- organize_replicates(n_sess=nS, task_names=task_names, mesh=mesh)
+    if(is_surf) {
+      n_mesh <- length(mesh$idx$loc)
+      if(!all.equal(mesh$idx$loc, 1:n_mesh)) stop('Developer: Check definition of `spatial` in organize_replicates')
+    }
+    if(is_vol) n_mesh <- spde$n.spde
+
+    replicates_list <- organize_replicates(n_sess=nS,
+                                           task_names=task_names,
+                                           n_mesh=n_mesh)
     betas <- replicates_list$betas
     repls <- replicates_list$repls
-    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+    model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     ## EM Model. ---------------------------------------------------------------
-    if(do_EM) {
-      stop()
+    #if(do_EM) {
+      #stop()
       # if (!requireNamespace("MatrixModels", quietly = TRUE)) {
       #   stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
       # }
@@ -690,7 +591,7 @@ BayesGLM <- function(
       # if (verbose>0) cat("\t\tDone!\n")
 
     ## INLA Model. -------------------------------------------------------------
-    } else {
+    #} else {
       #estimate model using INLA
       if (verbose>0) cat('\tEstimating model with INLA...')
       #organize the formula and data objects
@@ -734,7 +635,7 @@ BayesGLM <- function(
         minimal=trim_INLA_model_obj(INLA_model_obj, minimal=TRUE)
       )
       attr(INLA_model_obj, "format") <- return_INLA
-    }
+    #}
   } else {
     task_estimates <- lapply(result_classical, function(x){ x$estimates })
     attr(task_estimates, "GLM_type") <- "classical"
@@ -771,4 +672,100 @@ BayesGLM <- function(
   class(result) <- "BayesGLM"
 
   result
+}
+
+
+#' Bayes GLM arg checks
+#'
+#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
+#'
+#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
+#'
+#' @param scale_BOLD,scale_design See \code{\link{BayesGLM}}.
+#' @param Bayes,EM See \code{\link{BayesGLM}}.
+#' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
+#' @param num.threads See \code{\link{BayesGLM}}.
+#' @param return_INLA See \code{\link{BayesGLM}}.
+#' @param verbose See \code{\link{BayesGLM}}.
+#' @param combine_sessions See \code{\link{BayesGLM}}.
+#' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
+#'
+#' @return The arguments that may have changed, in a list: \code{scale_BOLD},
+#'  \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
+#'
+#' @keywords internal
+BayesGLM_argChecks <- function(
+    combine_sessions = FALSE,
+    scale_BOLD = c("auto", "mean", "sd", "none"),
+    scale_design = TRUE,
+    Bayes = TRUE,
+    EM = FALSE,
+    ar_order = 6,
+    ar_smooth = 5,
+    aic = FALSE,
+    num.threads = 4,
+    return_INLA = c("trimmed", "full", "minimal"),
+    verbose=1,
+    meanTol=1e-6,
+    varTol=1e-6,
+    emTol=1e-3
+){
+
+  stopifnot(is_1(combine_sessions, "logical"))
+
+  if (isTRUE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+  }
+  if (isFALSE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
+  }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
+  stopifnot(is_1(scale_design, "logical"))
+
+  stopifnot(is_1(Bayes, "logical"))
+  stopifnot(is_1(EM, "logical"))
+  if (EM && !Bayes) {
+    warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
+    Bayes <- TRUE
+  }
+  if (Bayes) {
+    if (!EM) { check_INLA(require_PARDISO=FALSE) }
+  }
+
+  if (isTRUE(return_INLA)) {
+    message("Setting `return_INLA` to 'trimmed'"); return_INLA <- "trimmed"
+  }
+  if (isFALSE(return_INLA)) {
+    message("Setting `return_INLA` to 'minimal'"); return_INLA <- "minimal"
+  }
+  return_INLA <- match.arg(return_INLA, c("trimmed", "full", "minimal"))
+
+  # Rename these arguments.
+  do_Bayesian <- Bayes; rm(Bayes)
+  do_EM <- EM; rm(EM)
+
+  if(do_EM) stop() #not currently available
+
+  if (is.null(ar_order)) ar_order <- 0
+  stopifnot(is_1(ar_order, "numeric"))
+  do_pw <- ar_order > 0
+  if (is.null(ar_smooth)) ar_smooth <- 0
+  stopifnot(is_1(ar_smooth, "numeric"))
+  stopifnot(is_1(aic, "logical"))
+  stopifnot(is_1(num.threads, "numeric"))
+  stopifnot(num.threads <= parallel::detectCores())
+  if (isTRUE(verbose)) { verbose <- 2 }
+  if (isFALSE(verbose)) { verbose <- 0 }
+  stopifnot(is_posNum(verbose, zero_ok=TRUE))
+  stopifnot(is_posNum(meanTol))
+  stopifnot(is_posNum(varTol))
+  stopifnot(is_posNum(emTol))
+
+  list(
+    scale_BOLD=scale_BOLD,
+    do_Bayesian=do_Bayesian,
+    do_EM = do_EM,
+    do_pw = do_pw,
+    return_INLA=return_INLA
+  )
 }
