@@ -4,14 +4,21 @@
 #'
 #' @param mask An array of 0s and 1s representing a volumetric mask
 #' @param res The spatial resolution in each direction, in mm. For example, c(2,2,2) indicates 2mm isotropic voxels.
-#' @param buffer Size of extra voxels layers around the bounding box, in terms of voxels. Set to NULL for no buffer.
-#' @param neighbor_order What order of neighbors of data locations to keep? (1 = first-order neighbors, 2 = first- and second-order neighbors, etc.)
+#' @param nbhd_order For volumetric data, what order neighborhood around data
+#' locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
+#' 2nd-order neighbors, etc.). Smaller values will provide greater computational
+#' efficiency at the cost of higher variance around the edge of the data.
+#' @param buffer For volumetric data, size of extra voxels layers around the
+#' bounding box, in terms of voxels. Set to NULL for no buffer.
 #'
 #' @return An inla.spde2 object.
 #'
 #' @export
 #'
-vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order = 1){
+vol2spde <- function(mask,
+                     res = c(2,2,2),
+                     nbhd_order = 1,
+                     buffer=c(1,1,3,4,4)){
 
   #[TO DO] check that mask is an array and contains 0s and 1s. If logical, make numeric.
   #[TO DO] check that buffer is increasing positive integers
@@ -28,7 +35,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
   z0 <- z <- (lim_z[1]:lim_z[2])
 
   #boundary layer(s)
-  if(!is.null(buffer) && buffer==0) buffer <- NULL
+  if(0 %in% buffer) stop('0 is not a valid value for buffer')
   nB <- length(buffer)
   if(!is.null(buffer)){
     for(b in 1:nB){
@@ -98,10 +105,10 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
   # image.plot(1000*tmp_mask_NAs[10,,], col=viridis(100))
 
   #M2 has the same sparsity structure as Q
-  if(neighbor_order > 0){
+  if(nbhd_order > 0){
     M2 <- G3d%*%solve(C3d, G3d) #encodes first-order neighbors of data locations
-    if(neighbor_order > 1){
-      for(o in 2:neighbor_order){
+    if(nbhd_order > 1){
+      for(o in 2:nbhd_order){
         M2 <- M2 %*% M2 #encode the next order of neighbors
       }
     }
@@ -109,7 +116,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
 
   #identify locations to remove (no dependence on any in-mask locations)
   idx <- idx2 <- which(mask_box==1) #indices of in-mask locations
-  if(neighbor_order > 0){
+  if(nbhd_order > 0){
     idx2 <- apply(M2[idx,], 1, function(x) which(x != 0)) #locations with any dependence with in-mask locations
     idx2 <- unique(as.vector(idx2)) #1252 locations for 257 original ROI locations
   }
@@ -147,6 +154,7 @@ vol2spde <- function(mask, res = c(2,2,2), buffer=c(1,1,3,4,4), neighbor_order =
                  buffer = buffer)
 
   list(mats = list(C = C3d, G = G3d),
+       idx = idx, #original data indices
        idx2 = idx2, #idx of included locations in expanded box
        xyz0 = list(x0=x0, y0=y0, z0=z0), #bounding box
        xyz = list(x=x, y=y, z=z), #expanded bounding box

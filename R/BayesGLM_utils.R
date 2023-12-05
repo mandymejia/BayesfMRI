@@ -154,6 +154,51 @@ get_posterior_densities <- function(INLA_model_obj, spde, task_names){
   df[,c('beta','param','value','density')]
 }
 
+#' Extracts posterior density estimates for hyperparameters for volumetric SPDE
+#'
+#' @inheritSection INLA_Description INLA Requirement
+#'
+#' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
+#'  \code{inla()}
+#' @param task_names Descriptive names of model regressors (tasks).
+#'
+#' @return Long-form data frame containing posterior densities for the
+#'  hyperparameters associated with each latent field
+#'
+#' @keywords internal
+get_posterior_densities2 <- function(INLA_model_obj, task_names){
+
+  #marginal densities of hyperparameters
+  hyper <- INLA_model_obj$marginals.hyperpar
+  names_hyper <- names(INLA_model_obj$marginals.hyperpar)
+
+  #grab marginals for kappa and tau for each latent field
+  numbeta <- length(task_names)
+  for(b in 1:numbeta){
+    name_b <- task_names[b]
+    which_b <- grep(name_b, names_hyper)
+    which_kappa_b <- which_b[2] #Theta2
+    which_tau_b <- which_b[1] #Theta1
+    log_kappa.b <- as.data.frame(hyper[[which_kappa_b]])
+    log_tau.b <- as.data.frame(hyper[[which_tau_b]])
+    names(log_kappa.b) <- names(log_tau.b) <- c('value','density')
+    log_kappa.b$param <- 'log_kappa'
+    log_tau.b$param <- 'log_tau'
+    df.b <- rbind(log_kappa.b, log_tau.b)
+    df.b$beta <- name_b
+    if(b == 1) df <- df.b else df <- rbind(df, df.b)
+  }
+
+  #grab marginal for the precision of the likelihood
+  df.prec <- as.data.frame(hyper[[1]])
+  names(df.prec) <- c('value','density')
+  df.prec$param <- 'prec'
+  df.prec$beta <- 'none'
+  df <- rbind(df, df.prec)
+
+  df[,c('beta','param','value','density')]
+}
+
 #' Summarize a \code{"BayesGLM"} object
 #'
 #' Summary method for class \code{"BayesGLM"}
@@ -216,7 +261,7 @@ print.BayesGLM <- function(x, ...) {
 #' @param object Object of class \code{"BayesGLM_cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.BayesGLM_cifti"} object, a list summarizing the 
+#' @return A \code{"summary.BayesGLM_cifti"} object, a list summarizing the
 #'  properties of \code{object}.
 #' @method summary BayesGLM_cifti
 summary.BayesGLM_cifti <- function(object, ...) {

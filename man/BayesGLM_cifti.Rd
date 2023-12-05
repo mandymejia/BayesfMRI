@@ -8,7 +8,6 @@ BayesGLM_cifti(
   cifti_fname,
   surfL_fname = NULL,
   surfR_fname = NULL,
-  spde_sub = NULL,
   brainstructures = c("left", "right"),
   design = NULL,
   onsets = NULL,
@@ -23,6 +22,8 @@ BayesGLM_cifti(
      NULL
  },
   resamp_res = 10000,
+  nbhd_order = 1,
+  buffer = c(1, 1, 3, 4, 4),
   task_names = NULL,
   session_names = NULL,
   combine_sessions = TRUE,
@@ -78,14 +79,10 @@ beta coefficients, so imposing a proper scale is recommended; see the
 should be the column names, if not provided by the \code{task_names}
 argument. For multi-session modeling, this argument should be a list of
 such matrices. To model HRF derivatives, calculate the derivatives of the
-task columns beforehand (see the helper function \code{\link{cderiv}} which
-computes the discrete central derivative) and either add them to
-\code{design} to model them as tasks, or \code{nuisance} to model them as
-nuisance signals; it's recommended to then drop the first and last
-timepoints because the discrete central derivative doesn't exist at the
-time series boundaries. Do note that INLA computation times increase
-greatly if the design matrix has more than five columns, so it might be
-required to add these derivatives to \code{nuisance} rather than
+task columns beforehand and either add them to \code{design} to model them
+as tasks, or \code{nuisance} to model them as nuisance signals. Note that
+INLA computation times increase if the design matrix has more than five columns,
+so it might be helpful to add these derivatives to \code{nuisance} rather than
 \code{design}.
 
 \code{onsets} is an \eqn{L}-length list in which the name of each element is
@@ -138,6 +135,14 @@ is no need to add linear and quadratic drift terms to \code{nuisance}.}
 \item{resamp_res}{The number of vertices to which each cortical surface
 should be resampled, or \code{NULL} to not resample. For computational
 feasibility, a value of \code{10000} or lower is recommended.}
+
+\item{nbhd_order}{For volumetric data, what order neighborhood around data
+locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
+2nd-order neighbors, etc.). Smaller values will provide greater computational
+efficiency at the cost of higher variance around the edge of the data.}
+
+\item{buffer}{For volumetric data, size of extra voxels layers around the
+bounding box, in terms of voxels. Set to NULL for no buffer.}
 
 \item{task_names}{(Optional) Names of tasks represented in design matrix.}
 

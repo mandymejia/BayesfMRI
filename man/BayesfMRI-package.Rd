@@ -28,8 +28,8 @@ Other contributors:
 \itemize{
   \item Damon Pham \email{damondpham@gmail.com} (\href{https://orcid.org/0000-0001-7563-4727}{ORCID}) [contributor]
   \item David Bolin \email{david.bolin@kaust.edu.sa} [contributor]
-  \item Sarah Ryan \email{sarahryan320@gmail.com} [contributor]
   \item Yu (Ryan) Yue \email{yybaruch@gmail.com} [contributor]
+  \item Sarah Ryan \email{sarahryan320@gmail.com} [contributor]
 }
 
 }

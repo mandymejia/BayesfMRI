@@ -2,32 +2,31 @@
 % Please edit documentation in R/make_HRFs.R
 \name{HRF}
 \alias{HRF}
-\title{Canonical (double-gamma) HRF}
+\title{Canonical HRF and Derivatives}
 \usage{
-HRF(t, deriv = 0, a1 = 6, b1 = 0.9, a2 = 12, b2 = 0.9, c = 0.35)
+HRF(t, deriv = 0, dt = FALSE, a1 = 6, b1 = 1, c = 1/6)
 }
 \arguments{
 \item{t}{time vector}
 
-\item{deriv}{\code{0} (default) for the HRF, \code{1} for the first derivative
-of the HRF, or \code{2} for the second derivative of the HRF.}
+\item{deriv}{\code{0} (default) for the HRF, \code{1} for the delay derivative
+of the HRF, or \code{2} for the dispersion derivative of the HRF.}
+
+\item{dt}{If TRUE, take the first and second derivatives of the HRF with
+respect to t, rather than a1 and b1. Default: \code{FALSE}}
 
 \item{a1}{delay of response. Default: \code{6}}
 
-\item{b1}{response dispersion. Default: \code{0.9}}
+\item{b1}{response dispersion. Default: \code{1}}
 
-\item{a2}{delay of undershoot. Default: \code{12}}
-
-\item{b2}{dispersion of undershoot. Default: \code{0.9}}
-
-\item{c}{scale of undershoot. Default: \code{0.35}}
+\item{c}{scale of undershoot. Default: \code{1/6}}
 }
 \value{
-HRF vector (or dHRF, or d2HRF) corresponding to time
+HRF vector (or dHRF, or d2HRF) corresponding to time vector t
 }
 \description{
-Calculate the HRF from a time vector and parameters. Optionally compute the
-first or second derivative of the HRF instead.
+Calculate the HRF from a time vector and parameters, or its derivative with
+respect to delay or dispersion.
 }
 \examples{
 downsample <- 100

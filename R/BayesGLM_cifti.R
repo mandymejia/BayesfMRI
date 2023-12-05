@@ -51,14 +51,10 @@
 #'   should be the column names, if not provided by the \code{task_names}
 #'   argument. For multi-session modeling, this argument should be a list of
 #'   such matrices. To model HRF derivatives, calculate the derivatives of the
-#'   task columns beforehand (see the helper function \code{\link{cderiv}} which
-#'   computes the discrete central derivative) and either add them to
-#'   \code{design} to model them as tasks, or \code{nuisance} to model them as
-#'   nuisance signals; it's recommended to then drop the first and last
-#'   timepoints because the discrete central derivative doesn't exist at the
-#'   time series boundaries. Do note that INLA computation times increase
-#'   greatly if the design matrix has more than five columns, so it might be
-#'   required to add these derivatives to \code{nuisance} rather than
+#'   task columns beforehand and either add them to \code{design} to model them
+#'   as tasks, or \code{nuisance} to model them as nuisance signals. Note that
+#'   INLA computation times increase if the design matrix has more than five columns,
+#'   so it might be helpful to add these derivatives to \code{nuisance} rather than
 #'   \code{design}.
 #'
 #'   \code{onsets} is an \eqn{L}-length list in which the name of each element is
@@ -109,6 +105,13 @@
 #' @param resamp_res The number of vertices to which each cortical surface
 #'  should be resampled, or \code{NULL} to not resample. For computational
 #'  feasibility, a value of \code{10000} or lower is recommended.
+#' @param nbhd_order For volumetric data, what order neighborhood around data
+#' locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
+#' 2nd-order neighbors, etc.). Smaller values will provide greater computational
+#' efficiency at the cost of higher variance around the edge of the data.
+#' @param buffer For volumetric data, size of extra voxels layers around the
+#' bounding box, in terms of voxels. Set to NULL for no buffer.
+
 #' @inheritParams task_names_Param
 #' @inheritParams session_names_Param
 #' @inheritParams scale_BOLD_Param
@@ -151,7 +154,6 @@ BayesGLM_cifti <- function(
   cifti_fname,
   surfL_fname=NULL,
   surfR_fname=NULL,
-  spde_sub=NULL,
   brainstructures=c('left','right'),
   design=NULL,
   onsets=NULL,
@@ -162,7 +164,7 @@ BayesGLM_cifti <- function(
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
   resamp_res=10000,
-  # Below arguments shared with `BayesGLM`
+  nbhd_order=1, buffer=c(1,1,3,4,4),
   task_names = NULL,
   session_names = NULL,
   combine_sessions = TRUE,
@@ -187,7 +189,7 @@ BayesGLM_cifti <- function(
   ## Check simple arguments.
   ## These checks are in a separate function because they are shared with
   ## `BayesGLM_cifti`.
-  argChecks <- BayesfMRI:::BayesGLM_argChecks(
+  argChecks <- BayesGLM_argChecks(
     combine_sessions = combine_sessions,
     scale_BOLD = scale_BOLD,
     scale_design = scale_design,
@@ -214,7 +216,7 @@ BayesGLM_cifti <- function(
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-  brainstructures <- fMRItools::match_input(
+  brainstructures <- match_input(
     brainstructures, c("left","right","subcortical"),
     user_value_label="brainstructures"
   )
@@ -240,11 +242,11 @@ BayesGLM_cifti <- function(
   }
   dHRF_as <- match.arg(dHRF_as, c("auto", "nuisance", "task"))
   if (!is.null(DCT)) {
-    stopifnot(fMRItools::is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
+    stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
   }
   if (!is.null(hpf)) {
-    stopifnot(fMRItools::is_posNum(hpf, zero_ok=TRUE))
+    stopifnot(is_posNum(hpf, zero_ok=TRUE))
     if (hpf==0) { hpf <- NULL }
   }
 
@@ -254,13 +256,13 @@ BayesGLM_cifti <- function(
   is_xifti <- FALSE
   if (is.character(cifti_fname)) {
     NULL
-  } else if (ciftiTools::is.xifti(cifti_fname, messages=FALSE)) {
+  } else if (is.xifti(cifti_fname, messages=FALSE)) {
     is_xifti <- TRUE
     cifti_fname <- list(cifti_fname)
   } else if (is.list(cifti_fname)) {
     if (all(vapply(cifti_fname, is.character, FALSE)) && all(vapply(cifti_fname, length, 0)==1)) {
       cifti_fname <- as.character(cifti_fname)
-    } else if (all(vapply(cifti_fname, ciftiTools::is.xifti, messages=FALSE, FALSE))) {
+    } else if (all(vapply(cifti_fname, is.xifti, messages=FALSE, FALSE))) {
       is_xifti <- TRUE
     }
   } else {
@@ -419,13 +421,13 @@ BayesGLM_cifti <- function(
       if (is.null(xii_ss$data$cortex_left)) {
         stop("No left cortex data for session ", ss, ".")
       }
-      BOLD_list[["left"]][[ss]] <- fMRItools::unmask_mat(xii_ss$data$cortex_left, mwallL)
+      BOLD_list[["left"]][[ss]] <- unmask_mat(xii_ss$data$cortex_left, mwallL)
     }
     if (do_right) {
       if (is.null(xii_ss$data$cortex_right)) {
         stop("No right cortex data for session ", ss, ".")
       }
-      BOLD_list[["right"]][[ss]] <- fMRItools::unmask_mat(xii_ss$data$cortex_right, mwallR)
+      BOLD_list[["right"]][[ss]] <- unmask_mat(xii_ss$data$cortex_right, mwallR)
     }
     if (do_sub) {
       if (is.null(xii_ss$data$subcort)) {
@@ -445,10 +447,10 @@ BayesGLM_cifti <- function(
     design <- vector("list", nS)
 
     for (ss in seq(nS)) {
-      HRF_ss <- BayesfMRI:::make_HRFs(
+      HRF_ss <- make_HRFs(
         onsets[[ss]], TR=TR, duration=ntime[ss],
         dHRF=dHRF, dHRF_as=dHRF_as,
-        verbose=ss==1
+        verbose=(ss==1)
       )
       design[[ss]] <- HRF_ss$design
       if (!is.null(HRF_ss$nuisance)) {
@@ -483,7 +485,7 @@ BayesGLM_cifti <- function(
 
   # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
   design <- if(scale_design) {
-    sapply(design, BayesfMRI:::scale_design_mat, simplify = F)
+    sapply(design, scale_design_mat, simplify = F)
   } else {
     sapply(design, scale, scale = F, simplify = F)
   }
@@ -495,12 +497,12 @@ BayesGLM_cifti <- function(
     if (!is.null(hpf) || !is.null(DCT)) {
       # Get the num. of bases for this session.
       if (!is.null(hpf)) {
-        DCTs[ss] <- round(fMRItools::dct_convert(ntime[ss], TR, f=hpf))
+        DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
       } else {
         DCTs[ss] <- DCT
       }
       # Generate the bases and add them.
-      DCTb_ss <- fMRItools::dct_bases(ntime[ss], DCTs[ss])
+      DCTb_ss <- dct_bases(ntime[ss], DCTs[ss])
       if (DCTs[ss] > 0) {
         if (!is.null(nuisance[[ss]])) {
           nuisance[[ss]] <- cbind(nuisance[[ss]], DCTb_ss)
@@ -512,11 +514,11 @@ BayesGLM_cifti <- function(
   }
 
   # Do GLM. --------------------------------------------------------------------
-  BayesGLM_results <- list(left = NULL, right = NULL, sub = NULL)
+  BayesGLM_results <- list(left = NULL, right = NULL, subcortical = NULL)
 
   # >> Loop through brainstructures ----
   for (bb in brainstructures) {
-    bname <- list(left="left cortex", right="right cortex", subcortical="subcort")[[bb]]
+    bname <- list(left="left cortex", right="right cortex", subcortical="subcortical")[[bb]]
 
     if (verbose>0) cat(paste0(toupper(bname)," analysis:\n"))
 
@@ -535,7 +537,7 @@ BayesGLM_cifti <- function(
 
     #Extract spatial information and pass to BayesGLM
     vertices <- faces <- labels <- NULL
-    if(is_surf){
+    if(do_cort){
       vertices <- spatial_list[[bb]]$vertices
       faces <- spatial_list[[bb]]$faces
     } else {
@@ -547,10 +549,10 @@ BayesGLM_cifti <- function(
       vertices = vertices,
       faces = faces,
       labels = labels,
-      task_names = NULL, # in `session_data`
+      nbhd_order = nbhd_order,
+      buffer = buffer,
       scale_design = FALSE, # scaling done above
       Bayes = do_Bayesian,
-      session_names = session_names,
       combine_sessions = combine_sessions,
       scale_BOLD = scale_BOLD,
       #EM = do_EM,
@@ -576,7 +578,6 @@ BayesGLM_cifti <- function(
   }
   names(BayesGLM_results)[names(BayesGLM_results)=="left"] <- "cortex_left"
   names(BayesGLM_results)[names(BayesGLM_results)=="right"] <- "cortex_right"
-  names(BayesGLM_results)[names(BayesGLM_results)=="subcortical"] <- "subcort"
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
   if (verbose>0) cat("Formatting results.\n")
@@ -630,7 +631,7 @@ BayesGLM_cifti <- function(
         colnames(datR) <- NULL
       }
       if (do_sub) {
-        datSub <- BayesGLM_results$subcort$result_classical[[ss]]$estimates
+        datSub <- BayesGLM_results$subcortical$task_estimates[[ss]]
         colnames(datSub) <- NULL
       }
       task_cifti[[ss]] <- as.xifti(

@@ -12,22 +12,26 @@
 #'
 #'  Note that the argument \code{session_names} can be used instead of providing
 #'  the session names as the names of the elements in \code{data}.
-#'@param surf TO DO
-# @param vertices,faces If \code{Bayes}, the geometry data can be provided
-#  with either both the \code{vertices} and \code{faces} arguments, or with the
-#  \code{mesh} argument.
-#
-#  \code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
-#  Euclidean coordinates at which a given vertex in the mesh is located.
-#  \eqn{V} is the number of vertices in the mesh.
-#
-#  \code{faces} is a \eqn{F \times 3} matrix, where each row contains the
-#  vertex indices for a given triangular face in the mesh. \eqn{F} is the
-#  number of faces in the mesh.
+#' @param vertices,faces For cortical surface data, the geometry is based on
+#'  the \code{vertices} and \code{faces} arguments (must provide both).
+#'
+#'  \code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
+#'  Euclidean coordinates at which a given vertex in the mesh is located.
+#'  \eqn{V} is the number of vertices in the mesh.
+#'
+#'  \code{faces} is a \eqn{F \times 3} matrix, where each row contains the
+#'  vertex indices for a given triangular face in the mesh. \eqn{F} is the
+#'  number of faces in the mesh.
+#' @param labels For volumetric data, geometry is provided through a 3D
+#' array containing label values for spatially distinct ROIs to be analyzed.
+#' @param nbhd_order For volumetric data, what order neighborhood around data
+#' locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
+#' 2nd-order neighbors, etc.). Smaller values will provide greater computational
+#' efficiency at the cost of higher variance around the edge of the data.
+#' @param buffer For volumetric data, size of extra voxels layers around the
+#' bounding box, in terms of voxels. Set to NULL for no buffer.
 #' @param mask (Optional) A length \eqn{V} logical vector indicating the
-#'  vertices to include.
-#' @inheritParams task_names_Param
-#' @inheritParams session_names_Param
+#'  vertices to include in analysis. (Currently only for surface-based analysis)
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
@@ -66,7 +70,6 @@
 #'    \item{call}{match.call() for this function call.}
 #'  }
 #'
-#' @importFrom excursions submesh.mesh
 #' @importFrom matrixStats colVars
 #' @importFrom Matrix bandSparse bdiag crossprod solve
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
@@ -79,13 +82,13 @@
 #' @export
 BayesGLM <- function(
   data,
-  surf = NULL,
-  #vertices = NULL,
-  #faces = NULL,
+  vertices = NULL,
+  faces = NULL,
   mask = NULL,
+  labels = NULL,
+  buffer = c(1,1,3,4,4),
+  nbhd_order = 1,
   # Below arguments shared with `BayesGLM_cifti`
-  task_names = NULL, #[TO DO] Delete this?  This can be encoded in data formatted as sessions. BayesGLM_cifti does this.
-  session_names = NULL,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE, #[TO DO] Delete this?  It is done by BayesGLM_cifti and could be done by the user
@@ -101,34 +104,15 @@ BayesGLM <- function(
   varTol = 1e-6#, emTol = 1e-3,
   ){
 
-  #Mandy added this to generalize Bayesian models to subcortical
-  is_vol <- (length(dim(surf))==3) #surf is actually a volume (3D array)
-  is_surf <- !is_vol
-
-  EM <- FALSE
-  emTol <- 1e-3
-
-  #TO DO:
-  #add "(ignored if classicalGLM_only = TRUE) to some params"
-  #add if statements for some of code if classicalGLM_only = TRUE
-  #make need_mesh object for if classicalGLM_only == TRUE and no AR smoothing
-  #do masking only (no involvement of mesh) if need_mesh == FALSE <-- copy from classicalGLM()
-
-  #check whether data is a list OR a session (for single-session analysis)
-  #check whether each element of data is a session (use is.session)
-  # V = number of data locations
-  # T = length of time series for each session (vector)
-  # K = number of tasks
-
   # Preliminary steps. ---------------------------------------------------------
   ## Check simple arguments.
   ## These checks are in a separate function because they are shared with
   ## `BayesGLM_cifti`.
-  argChecks <- BayesfMRI:::BayesGLM_argChecks(
+  argChecks <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
     scale_design = scale_design,
     Bayes = Bayes,
-    EM = EM,
+    #EM = EM,
     ar_order = ar_order,
     ar_smooth = ar_smooth,
     aic = aic,
@@ -137,8 +121,8 @@ BayesGLM <- function(
     verbose = verbose,
     combine_sessions = combine_sessions,
     varTol = varTol,
-    meanTol = meanTol,
-    emTol = emTol
+    meanTol = meanTol
+    #emTol = emTol
   )
   scale_BOLD <- argChecks$scale_BOLD
   do_Bayesian <- argChecks$do_Bayesian
@@ -146,154 +130,136 @@ BayesGLM <- function(
   do_pw <- argChecks$do_pw
   return_INLA <- argChecks$return_INLA
 
-  need_mesh <- do_Bayesian || (do_pw && ar_smooth > 0)
-  if(is_vol) need_mesh <- FALSE #for volumetric, no mesh
-
-  ## Define a few return variables that may or may not be calculated. ----------
-  INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
-  task_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- X_all_list <- NULL
-  theta_estimates <- Sig_inv <- NULL
+  do_EM <- FALSE; #emTol <- 1e-3
 
   ## Sessions and data dimensions. ---------------------------------------------
   if (!is.BfMRI.sess(data)) {
     stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
   }
+  session_names <- names(data)
 
-  if (is.null(session_names)) {
-    session_names <- names(data)
-  } else {
-    if (!is.null(names(data)) && !identical(session_names, names(data))) {
-      warning("Using `session_names` rather than `names(data)`.")
-      names(data) <- session_names
-    }
-  }
+  ## Task names: check or make. ------------------------------------------------
+  task_names <- colnames(data[[1]]$design)
+  if (is.null(task_names)) { task_names <- paste0("beta", seq(nK)) }
+
+  ## Geometric inputs: check ------------------------------------------------
+  is_surf <- !is.null(vertices) && !is.null(faces)
+  is_vol <- !is.null(labels)
+  if(is_surf + is_vol != 1) stop('Must provide vertices + faces OR labels, but not both. Please check inputs')
+
+  #TO DO:
+  #add "(ignored if classicalGLM_only = TRUE) to some params"
+  #add if statements for some of code if classicalGLM_only = TRUE
+
+  #check whether data is a list OR a session (for single-session analysis)
+  #check whether each element of data is a session (use is.session)
+  # V = number of data locations
+  # T = length of time series for each session (vector)
+  # K = number of tasks
 
   nS <- nS_orig <- length(session_names) # number of sessions
   nK <- ncol(data[[1]]$design) # number of fields
-  nV <- ncol(data[[1]]$BOLD) # number of data locations
+  nV <- ncol(data[[1]]$BOLD) # number of data locations (before any masking)
   nT <- vapply(data, function(x){ nrow(x$BOLD) }, 0) # numbers of timepoints
 
   if (nS == 1 && combine_sessions) combine_sessions <- FALSE
 
+  ## Define a few return variables that may or may not be calculated. ----------
+  INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
+  task_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- X_all_list <- NULL
+  theta_estimates <- Sig_inv <- mesh <- mesh_orig <- NULL
 
-  ## Mesh: check or make. ------------------------------------------------------
 
-  # [TO DO] Revisit need_mesh given that we have ciftiTools
-  # [TO DO] Do we want to use masking for volumetric analysis?  Currently within the is_surf loop.
+  ## Set up spatial data -------------------------------------------------------
+
+  # [TO DO] Implement masking for volumetric analysis.  Currently within is_surf.
+
+  mask_orig <- mask
 
   if(is_surf){
 
-    vertices <- surf$vertices
-    faces <- surf$faces
+    # [TO DO] Add a check that if(is_surf), both vertices and faces supplied and in correct format
 
-    # We need a mesh if doing surface-based spatial Bayesian modeling or AR smoothing (not volume-based)
-    if (need_mesh) {
-      # Check that only mesh OR vertices+faces supplied
-      has_mesh <- !is.null(mesh)
-      has_verts_faces <- !is.null(vertices) && !is.null(faces)
-      if (!xor(has_mesh, has_verts_faces)) {
-        stop('Must supply EITHER mesh OR vertices and faces.')
-      }
-
-      # This function has been modified to no longer require INLA (2022-03-24)
-      # But `BayesGLM2` stopped working, so the INLA version is back as the default (2023-09-25)
-      if (is.null(mesh)) mesh <- make_mesh(vertices, faces)
-
-      if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
-    } else {
-      mesh <- NULL
-    }
+    ## Mesh: Create INLA mesh  -----------------------------------------------------
+    mesh <- make_mesh(vertices, faces)
+    if (mesh$n != nV) { stop("Mesh has ", mesh$n, " locations, but the data has ", nV, " locations.") }
 
     ## Mask: check or make.  -----------------------------------------------------
     # Get `mask` based on intersection of input mask and `make_mask` checks.
-    if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) }
-    mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol)
+    if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) } #start with provided mask or mask of all 1's
+    mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol) #remove locations with bad data
     if (!any(mask)) { stop("No in-mask data locations.") }
 
     # If any masked locations, apply to `mesh` and `data`.
     mesh_orig <- NULL #for output only. initialize to NULL, only update if applying a mask to the mesh
-    # `mask2` is in case `need_mesh==FALSE`
-    mask <- mask2 <- as.logical(mask)
+    mask <- as.logical(mask) # [TO DO] check that provided mask is logical
     if (!all(mask)) {
       # `mesh`
-      if (need_mesh) {
-        mesh_orig <- mesh #for later plotting
-        # mesh <- excursions::submesh.mesh(mask, mesh) # This is commented out because we now have our own submesh function!
-        mesh <- BayesfMRI:::submesh(mask, mesh)
-        mask2 <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
-        mesh$idx$loc <- mesh$idx$loc[mask2]
-      }
+      mesh_orig <- mesh #for later plotting
+      mesh <- submesh(mask, mesh)
+      mask <- !is.na(mesh$idx$loc) #update mask (sometimes vertices not excluded by mask will be excluded in mesh)
+      mesh$idx$loc <- mesh$idx$loc[mask]
       # `data`
-      for (ss in 1:nS) {
-        data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask2,drop=FALSE]
-      }
+      for (ss in 1:nS) { data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask,drop=FALSE] }
     }
+    # Update number of locations after masking
+    nV <- sum(mask); nV_all <- length(mask)
+
+    spde <- INLA::inla.spde2.matern(mesh)
   }
 
-  ### MAKE SPDEs
-  if (do_Bayesian && !do_EM) {
-    if(is_surf) spde <- INLA::inla.spde2.matern(mesh)
-    if(is_vol){
-
-      #surf object here is actually an array of labels
-      mask <- (surf != 0)
-      ROIs <- unique(surf[mask])
-      nR <- length(ROIs)
-
-      #construct the C and G for the SPDE by block-diagonalizing over ROIs
-      C_list <- G_list <- spde_list <- vector('list', length=nR)
-      for(r in 1:nR){
-        mask_r <- (surf == ROIs[r])
-        spde_list[[r]] <- vol2spde(mask_r, buffer=NULL, neighbor_order = 0)
-        C_list[[r]] <- spde_list[[r]]$mats$C
-        G_list[[r]] <- spde_list[[r]]$mats$G
-      }
-      C_sub <- Matrix::bdiag(C_list)
-      G_sub <- Matrix::bdiag(G_list)
-
-      #construct the SPDE
-      Elog.kappa <- Elog.tau <- 0 #prior means for log(kappa) and log(tau)
-      Qlog.kappa <- Qlog.tau <- 0.1 #prior precisions for log(kappa) and log(tau)
-      spde <- INLA::inla.spde2.generic(M0 = C_sub,
-                                     M1 = G_sub,
-                                     M2 = G_sub%*%solve(C_sub, G_sub),
-                                     theta.mu = c(Elog.kappa, Elog.tau),
-                                     theta.Q = c(Qlog.kappa, Qlog.tau),
-                                     B0 = matrix(c(0, 1, 0), 1, 3),
-                                     B1 = 2*matrix(c(0, 0, 1), 1, 3),
-                                     B2 = 1)
-      }
-  }
-
-  if (do_EM) {
-    stop()
-    #spde <- create_spde_surf(mesh)
-  }
-
-  # Update number of locations (after masking)
-  if(is_surf){
-    nV <- sum(mask2)
-    nV_all <- length(mask2)
-  }
   if(is_vol){
-    nV <- sum(mask)
-    nV_all <- sum(mask)
-    mask2 <- rep(TRUE, nV)
-  }
 
-  ## Task names: check or make. ------------------------------------------------
-  if (!is.null(task_names)) {
-    if (length(task_names) != nK) {
-      stop(
-        'I detect ', nK,
-        ' task based on the design matrix, but the length of task_names is ',
-        length(task_names), '.  Please fix task_names.'
-      )
+    #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
+    #Simply remove those locations (and any bad data locations) from the labels array before creating SPDE
+
+    ## SPDE: Create  -----------------------------------------------------
+
+    #labels object here is an array of ROI labels  #[TO DO] Check that labels contains positive integers only, and zeros for background
+    mask <- (labels != 0)
+    ROIs <- unique(labels[mask])
+    nR <- length(ROIs)
+
+    #construct the C and G for the SPDE by block-diagonalizing over ROIs
+    C_list <- G_list <- spde_list <- vector('list', length=nR)
+    for(r in 1:nR){
+      mask_r <- (labels == ROIs[r])
+      spde_list[[r]] <- vol2spde(mask_r, nbhd_order = nbhd_order, buffer=buffer)
+      C_list[[r]] <- spde_list[[r]]$mats$C
+      G_list[[r]] <- spde_list[[r]]$mats$G
     }
-  } else {
-    # Grab beta names from design (if provided)
-    task_names <- colnames(data[[1]]$design)
-    if (is.null(task_names)) { task_names <- paste0("beta", seq(nK)) }
+    C_sub <- Matrix::bdiag(C_list)
+    G_sub <- Matrix::bdiag(G_list)
+
+    #construct the SPDE
+    Elog.kappa <- Elog.tau <- 0 #prior means for log(kappa) and log(tau)
+    Qlog.kappa <- Qlog.tau <- 0.1 #prior precisions for log(kappa) and log(tau)
+    spde <- INLA::inla.spde2.generic(M0 = C_sub,
+                                   M1 = G_sub,
+                                   M2 = G_sub%*%solve(C_sub, G_sub),
+                                   theta.mu = c(Elog.kappa, Elog.tau),
+                                   theta.Q = diag(c(Qlog.kappa, Qlog.tau)),
+                                   B0 = matrix(c(0, 1, 0), 1, 3),
+                                   B1 = 2*matrix(c(0, 0, 1), 1, 3),
+                                   B2 = 1)
+
+    #[TO DO] test this code for multiple regions, it might break
+    #get indices of data locations
+    data_loc_list <- lapply(spde_list, function(x) which(x$idx2 %in% x$idx))
+    data_loc <- data_loc_list[[1]]
+    if(nR > 1){
+      before <- 0 #cumulative sum of previous regions
+      for(r in 2:nR){
+        before <- 0 + nrow(spde_list[[r-1]]$mats$C)
+        data_loc_r <- data_loc_list[[r]]
+        data_loc_r <- data_loc_r + before
+        data_loc <- c(data_loc, data_loc_r)
+      }
+    }
+
+    # Update number of locations after masking
+    nV <- sum(mask); nV_all <- sum(mask);
+    mask <- rep(TRUE, nV) #because we are not yet doing masking, but this will need to be updated in that case.
   }
 
   ## Scale, nuisance regress, and/or concatenate session data. -----------------
@@ -307,7 +273,7 @@ BayesGLM <- function(
     # In 3.0 Damon got rid of this t(), so we will need it here (four lines below this one).
     # Later, require fMRItools > 3.0.
     dBOLD <- dim(data[[ss]]$BOLD)
-    data[[ss]]$BOLD <- fMRItools:::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
+    data[[ss]]$BOLD <- fMRItools::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
     if (!(all.equal(dBOLD, dim(data[[ss]]$BOLD), check.attributes=FALSE)==TRUE)) {
       data[[ss]]$BOLD <- t(data[[ss]]$BOLD)
     }
@@ -445,7 +411,7 @@ BayesGLM <- function(
     if (verbose>0) cat("\tClassical model.\n")
 
     #set up vectorized data and big sparse design matrix
-    if(!do_pw) data_s <- BayesfMRI:::organize_data(data[[ss]]$BOLD, data[[ss]]$design)
+    if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
 
     y_all <- c(y_all, data_s$BOLD)
@@ -463,7 +429,7 @@ BayesGLM <- function(
     }
     coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
     coef_s_mat <- matrix(coef_s, nrow = nV, ncol = nK)
-    beta_hat_s[mask2==TRUE,] <- coef_s_mat
+    beta_hat_s[mask==TRUE,] <- coef_s_mat
     resid_s <- t(matrix(y_reg - X_reg %*% coef_s, nrow = nT))
 
     # ESTIMATE STANDARD ERRORS OF ESTIMATES
@@ -476,7 +442,7 @@ BayesGLM <- function(
     sd_error <- sqrt(var_error)
     #compute SE of betas
     SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = nK) #each?
-    SE_beta_hat_s[mask2==TRUE,] <- SE_beta_s
+    SE_beta_hat_s[mask==TRUE,] <- SE_beta_s
 
     colnames(beta_hat_s) <- colnames(SE_beta_hat_s) <- task_names
 
@@ -485,7 +451,7 @@ BayesGLM <- function(
       SE_estimates = SE_beta_hat_s,
       resids = resid_s,
       DOF = DOF_true,
-      mask = mask2
+      mask = mask
     )
   }
   names(result_classical) <- session_names
@@ -496,15 +462,20 @@ BayesGLM <- function(
     if(is_surf) {
       n_mesh <- length(mesh$idx$loc)
       if(!all.equal(mesh$idx$loc, 1:n_mesh)) stop('Developer: Check definition of `spatial` in organize_replicates')
+      #data_loc <- 1:n_mesh
     }
-    if(is_vol) n_mesh <- spde$n.spde
+    if(is_vol) {
+      n_mesh <- spde$n.spde
+      #data_loc <- data_loc
+    }
 
     replicates_list <- organize_replicates(n_sess=nS,
                                            task_names=task_names,
                                            n_mesh=n_mesh)
+                                           #data_loc=data_loc) #indices of original data locations
     betas <- replicates_list$betas
     repls <- replicates_list$repls
-    model_data <- BayesfMRI:::make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+    model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
 
     ## EM Model. ---------------------------------------------------------------
     #if(do_EM) {
@@ -512,7 +483,7 @@ BayesGLM <- function(
       # if (!requireNamespace("MatrixModels", quietly = TRUE)) {
       #   stop("EM requires the `MatrixModels` package. Please install it.", call. = FALSE)
       # }
-      # if (verbose>0) cat('\tEstimating model with EM.\n')
+      # if (verbose>0) cat('\tEstimating Bayesian model with EM.\n')
       # Psi_k <- spde$Amat
       # Psi <- Matrix::bdiag(rep(list(Psi_k),nK))
       # A <- Matrix::crossprod(model_data$X %*% Psi)
@@ -574,8 +545,8 @@ BayesGLM <- function(
       # m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
       # mu_theta <- Matrix::solve(Sig_inv, m)
       # # Prepare results
-      # task_estimates <- matrix(NA, nrow = length(mask2), ncol = nK*nS)
-      # task_estimates[mask2 == 1,] <- matrix(mu_theta,nrow = nV, ncol = nK*nS)
+      # task_estimates <- matrix(NA, nrow = length(mask), ncol = nK*nS)
+      # task_estimates[mask == 1,] <- matrix(mu_theta,nrow = nV, ncol = nK*nS)
       # colnames(task_estimates) <- rep(task_names, nS)
       # task_estimates <- lapply(seq(nS), function(ss) task_estimates[,(seq(nK) + nK * (ss - 1))])
       # names(task_estimates) <- session_names
@@ -593,7 +564,7 @@ BayesGLM <- function(
     ## INLA Model. -------------------------------------------------------------
     #} else {
       #estimate model using INLA
-      if (verbose>0) cat('\tEstimating model with INLA...')
+      if (verbose>0) cat('\tEstimating Bayesian model with INLA...')
       #organize the formula and data objects
       repl_names <- names(repls)
       hyper_initial <- c(-2,2)
@@ -621,11 +592,12 @@ BayesGLM <- function(
       task_estimates <- extract_estimates(
         INLA_model_obj=INLA_model_obj,
         session_names=session_names,
-        mask=mask2
+        mask=mask
       ) #posterior means of latent task field
-      hyperpar_posteriors <- get_posterior_densities(
-        INLA_model_obj=INLA_model_obj,
-        spde, task_names
+      theta_estimates <- INLA_model_obj$summary.hyperpar$mean
+      hyperpar_posteriors <- get_posterior_densities2(
+        INLA_model_obj=INLA_model_obj, #spde,
+        task_names
       ) #hyperparameter posterior densities
 
       #construct object to be returned
@@ -651,16 +623,17 @@ BayesGLM <- function(
   result <- list(
     task_estimates = task_estimates,
     INLA_model_obj = INLA_model_obj,
+    hyperpar_posteriors = hyperpar_posteriors,
+    theta_estimates = theta_estimates,
     result_classical = result_classical,
     mesh = mesh,
     mesh_orig = mesh_orig,
-    mask = mask2,
+    mask = mask,
+    mask_orig = mask_orig, #[TO DO] return the params passed into the function instead?
     design = design,
     task_names = task_names,
     session_names = session_names,
     n_sess_orig = nS_orig,
-    hyperpar_posteriors = hyperpar_posteriors,
-    theta_estimates = theta_estimates,
     # For joint group model ~~~~~~~~~~~~~
     #posterior_Sig_inv = Sig_inv,
     y = y_all,

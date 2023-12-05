@@ -30,9 +30,9 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
 }
 
 #' Corrected AIC To-Do
-#' 
+#'
 #' Get corrected AIC
-#' 
+#'
 #' @keywords internal
 cAIC <- function(...){invisible(NULL)}
 
@@ -47,9 +47,9 @@ cAIC <- function(...){invisible(NULL)}
 #' @param var A vector length V containing the white noise variance estimates from the AR model
 #' @param FWHM FWHM parameter for smoothing. Remember that
 #'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-#'  to not do any smoothing. Default: \code{5}.#'
+#'  to not do any smoothing. Default: \code{5}.
 #'
-#' @importFrom ciftiTools smooth_cifti make_surf
+#' @importFrom ciftiTools smooth_cifti make_surf as_xifti
 #'
 #' @return Smoothed AR coefficients and residual variance at every vertex
 pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
@@ -67,7 +67,7 @@ pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
       triangle = faces
     )
   )
-  AR_xif <- ciftiTools::make_xifti(
+  AR_xif <- ciftiTools::as_xifti(
     cortexL = AR,
     surfL = surf_smooth,
     cortexL_mwall = mask
@@ -76,7 +76,7 @@ pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
   AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
   AR_smoothed <- AR_smoothed$data$cortex_left
 
-  var_xif <- ciftiTools::make_xifti(
+  var_xif <- ciftiTools::as_xifti(
     cortexL = var,
     surfL = surf_smooth,
     cortexL_mwall = mask

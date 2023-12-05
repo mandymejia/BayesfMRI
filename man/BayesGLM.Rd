@@ -6,10 +6,12 @@
 \usage{
 BayesGLM(
   data,
-  surf = NULL,
+  vertices = NULL,
+  faces = NULL,
   mask = NULL,
-  task_names = NULL,
-  session_names = NULL,
+  labels = NULL,
+  buffer = c(1, 1, 3, 4, 4),
+  nbhd_order = 1,
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
@@ -34,17 +36,30 @@ session. See \code{?is.BfMRI.sess} for details.
 Note that the argument \code{session_names} can be used instead of providing
 the session names as the names of the elements in \code{data}.}
 
-\item{surf}{TO DO}
+\item{vertices, faces}{For cortical surface data, the geometry is based on
+the \code{vertices} and \code{faces} arguments (must provide both).
+
+\code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
+Euclidean coordinates at which a given vertex in the mesh is located.
+\eqn{V} is the number of vertices in the mesh.
+
+\code{faces} is a \eqn{F \times 3} matrix, where each row contains the
+vertex indices for a given triangular face in the mesh. \eqn{F} is the
+number of faces in the mesh.}
 
 \item{mask}{(Optional) A length \eqn{V} logical vector indicating the
-vertices to include.}
+vertices to include in analysis. (Currently only for surface-based analysis)}
 
-\item{task_names}{(Optional) Names of tasks represented in design matrix.}
+\item{labels}{For volumetric data, geometry is provided through a 3D
+array containing label values for spatially distinct ROIs to be analyzed.}
 
-\item{session_names}{(Optional, and only relevant for multi-session modeling)
-Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
-argument will overwrite the names of the list entries in \code{data}, if
-both exist.}
+\item{buffer}{For volumetric data, size of extra voxels layers around the
+bounding box, in terms of voxels. Set to NULL for no buffer.}
+
+\item{nbhd_order}{For volumetric data, what order neighborhood around data
+locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
+2nd-order neighbors, etc.). Smaller values will provide greater computational
+efficiency at the cost of higher variance around the edge of the data.}
 
 \item{combine_sessions}{If multiple sessions are provided, should their data
 be combined and analyzed as a single session?

@@ -7,14 +7,15 @@
 #' @param n_sess The number of sessions sharing hyperparameters (can be different tasks)
 #' @param task_names Vector of names for each task
 #' @param n_mesh Number of mesh locations
+# @param data_loc Indices of original data locations
 #'
 #' @return replicates vector and betas for sessions
 #'
 #' @keywords internal
 #'
-organize_replicates <- function(n_sess, task_names, n_mesh){
+organize_replicates <- function(n_sess, task_names, n_mesh){ #data_loc){
 
-  spatial <- 1:n_mesh
+  spatial <- 1:n_mesh #data_loc
   #spatial <- mesh$idx$loc
 
 	n_task <- length(task_names)

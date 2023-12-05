@@ -25,7 +25,7 @@ meaning that no vertex is masked out; all are used for smoothing.}
 
 \item{FWHM}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.#'}
+to not do any smoothing. Default: \code{5}.}
 }
 \value{
 Smoothed AR coefficients and residual variance at every vertex

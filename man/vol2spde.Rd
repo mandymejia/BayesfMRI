@@ -4,16 +4,20 @@
 \alias{vol2spde}
 \title{Construct a triangular mesh from a 3D volumetric mask}
 \usage{
-vol2spde(mask, res = c(2, 2, 2), buffer = c(1, 1, 3, 4, 4), neighbor_order = 1)
+vol2spde(mask, res = c(2, 2, 2), nbhd_order = 1, buffer = c(1, 1, 3, 4, 4))
 }
 \arguments{
 \item{mask}{An array of 0s and 1s representing a volumetric mask}
 
 \item{res}{The spatial resolution in each direction, in mm. For example, c(2,2,2) indicates 2mm isotropic voxels.}
 
-\item{buffer}{Size of extra voxels layers around the bounding box, in terms of voxels. Set to NULL for no buffer.}
+\item{nbhd_order}{For volumetric data, what order neighborhood around data
+locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
+2nd-order neighbors, etc.). Smaller values will provide greater computational
+efficiency at the cost of higher variance around the edge of the data.}
 
-\item{neighbor_order}{What order of neighbors of data locations to keep? (1 = first-order neighbors, 2 = first- and second-order neighbors, etc.)}
+\item{buffer}{For volumetric data, size of extra voxels layers around the
+bounding box, in terms of voxels. Set to NULL for no buffer.}
 }
 \value{
 An inla.spde2 object.
