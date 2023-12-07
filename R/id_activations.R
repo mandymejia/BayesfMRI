@@ -169,8 +169,8 @@ id_activations <- function(
     alpha=alpha,
     gamma=gamma,
     correction=correction,
-    task_names = model_obj[[idx1]]$task_names,
-    session_names = model_obj[[idx1]]$session_names
+    task_names = tasks,
+    session_names = sessions
     #excur_method = c("EB", "QC")
   )
 
