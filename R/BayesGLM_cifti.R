@@ -167,6 +167,7 @@ BayesGLM_cifti <- function(
   nbhd_order=1, buffer=c(1,1,3,4,4),
   task_names = NULL,
   session_names = NULL,
+  # Below arguments shared with `BayesGLM`.
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,

@@ -20,10 +20,10 @@
 #'  \code{model_obj} does not have Bayesian results because \code{Bayes} was set
 #'  to \code{FALSE}, only the \code{"classical"} method can be used.
 #' @param alpha Significance level. Default: \code{0.05}.
-#' @param threshold Activation threshold, for example \code{1} for 1 percent
+#' @param gamma Activation threshold, for example \code{1} for 1 percent
 #'  signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
-#'  a \code{threshold} is required for the Bayesian method; \code{NULL}
-#'  (default) will use a \code{threshold} of zero for the classical method.
+#'  a \code{gamma} is required for the Bayesian method; \code{NULL}
+#'  (default) will use a \code{gamma} of zero for the classical method.
 # @param excur_method For method = 'Bayesian' only: Either \code{EB} (empirical Bayes) or \code{QC} (Quantile Correction), depending on the method that should be used to find the
 #   excursions set. Note that if any contrasts (including averages across sessions) are used in the modeling, the method chosen must be \code{EB}.
 #   The difference in the methods is that the \code{EB} method assumes Gaussian posterior distributions for the parameters.
@@ -38,11 +38,15 @@
 #' @inheritParams verbose_Param
 # @param type For method='2means' only: The type of 2-means clustering to perform ('point' or 'sequential')
 # @param n_sample The number of samples to generate if the sequential 2-means type is chosen. By default, this takes a value of 1000.
+#' @param threshold DEPRECATED. This argument has been renamed to \code{gamma}.
+#'  Please use \code{gamma} instead of \code{threshold}. \code{threshold} will
+#'  be removed in a later version.
 #'
 # @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
 #' @importFrom ciftiTools convert_xifti
 #' @importFrom fMRItools is_posNum is_1
+#' @importFrom utils packageVersion
 #'
 #' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
 #'  list which indicates the activated locations along with related information.
@@ -54,11 +58,23 @@ id_activations <- function(
   sessions=NULL,
   method=c("Bayesian", "classical"),
   alpha=0.05,
-  threshold=NULL,
+  gamma=NULL,
   #area.limit=NULL,
   correction = c("FWER", "FDR", "none"),
   #excur_method = c("EB", "QC"),
-  verbose = 1){
+  verbose = 1,
+  threshold = NULL){
+
+  # `threshold` is deprecated.
+  # [TEMPORARY]
+  if (!is.null(threshold)) {
+    warning("`threshold` has been renamed to `gamma`. Please use `gamma` instead.")
+    if (!is.null(gamma)) {
+      warning("Ignoring `threshold`.")
+    } else {
+      gamma <- threshold
+    }
+  }
 
   # If 'BayesGLM_cifti', we will loop over the brain structures.
   is_cifti <- inherits(model_obj, "BayesGLM_cifti")
@@ -96,7 +112,7 @@ id_activations <- function(
   if (is.null(sessions)) { sessions <- model_obj[[idx1]]$session_names[1] }
   method <- match.arg(method, c("Bayesian", "classical"))
   stopifnot(is_posNum(alpha) && alpha < 1)
-  stopifnot(is.null(threshold) || is_posNum(threshold, zero_ok=TRUE))
+  stopifnot(is.null(gamma) || is_posNum(gamma, zero_ok=TRUE))
   correction <- match.arg(correction, c("FWER", "FDR", "none"))
   stopifnot(is_posNum(verbose, zero_ok=TRUE))
 
@@ -106,10 +122,10 @@ id_activations <- function(
     method <- "classical"
   }
 
-  # Check threshold was set, if computing Bayesian activations.
-  if (is.null(threshold)) {
-    if (method=='Bayesian') stop("Must specify an activation `threshold` when `method=='Bayesian'`.")
-    if (method=='classical') threshold <- 0
+  # Check gamma was set, if computing Bayesian activations.
+  if (is.null(gamma)) {
+    if (method=='Bayesian') stop("Must specify an activation threshold, `gamma`, when `method=='Bayesian'`.")
+    if (method=='classical') gamma <- 0
   }
 
   # Initialize list of activations.
@@ -121,7 +137,7 @@ id_activations <- function(
     Bayesian = id_activations.posterior,
     classical = id_activations.classical
   )
-  actArgs <- list(tasks=tasks, alpha=alpha, threshold=threshold)
+  actArgs <- list(tasks=tasks, alpha=alpha, gamma=gamma)
   if (method == "classical") {
     actArgs <- c(actArgs, list(correction=correction))
   } else {
@@ -151,7 +167,7 @@ id_activations <- function(
     activations = activations,
     method=method,
     alpha=alpha,
-    threshold=threshold,
+    gamma=gamma,
     correction=correction,
     task_names = model_obj[[idx1]]$task_names,
     session_names = model_obj[[idx1]]$session_names
@@ -194,10 +210,19 @@ id_activations <- function(
     #   }
     #   act_xii_ss$data$subcort <- matrix(datS, ncol=length(tasks))
     # }
-    act_xii_ss <- convert_xifti(
-      act_xii_ss, "dlabel",
-      values=c(Inactive=0, Active=1), colors='red'
-    )
+    if (utils::packageVersion("ciftiTools") < "0.13.1") { # approximate package version
+      act_xii_ss <- convert_xifti(
+        act_xii_ss, "dlabel",
+        values=c("Inactive"=0, "Active"=1),
+        colors='red'
+      )
+    } else {
+      act_xii_ss <- convert_xifti(
+        act_xii_ss, "dlabel",
+        levels_old=c(0, 1), labels=c("Inactive", "Active"),
+        colors='red'
+      )
+    }
     act_xii[[session]] <- act_xii_ss
   }
 
@@ -216,7 +241,7 @@ id_activations <- function(
 #'  posterior distribution of the latent field.
 #'
 #' @param model_obj Result of \code{BayesGLM}, of class \code{"BayesGLM"}.
-#' @param tasks,session,alpha,threshold See \code{\link{id_activations}}.
+#' @param tasks,session,alpha,gamma See \code{\link{id_activations}}.
 # @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
 # depending on the method that should be used to find the excursions set. Note that to ID
 # activations for averages across sessions, the method chosen must be \code{EB}. The difference
@@ -233,7 +258,7 @@ id_activations <- function(
 id_activations.posterior <- function(
   model_obj,
   tasks, session,
-  alpha=0.05, threshold){
+  alpha=0.05, gamma){
   #area.limit=NULL,
   #excur_method = c("EB","QC")
 
@@ -255,10 +280,10 @@ id_activations.posterior <- function(
 		#if(is.null(area.limit)){
 			res.exc <- excursions.inla(
         model_obj$INLA_model_obj,
-        name=f, ind=inds, u=threshold, type='>', alpha=alpha, method="EB"
+        name=f, ind=inds, u=gamma, type='>', alpha=alpha, method="EB"
       )
 		#} else {
-		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_model_obj, mesh=mesh, name=f, ind=inds, u=threshold, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
+		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_model_obj, mesh=mesh, name=f, ind=inds, u=gamma, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
 		#}
 	  which_f <- which(tasks==f)
 		act[,which_f] <- res.exc$E[inds] == 1
@@ -279,7 +304,7 @@ id_activations.posterior <- function(
 #' Identification of areas of activation in a General Linear Model using classical methods
 #'
 #' @param model_obj A \code{BayesGLM} object
-#' @param tasks,session,alpha,threshold See \code{\link{id_activations}}.
+#' @param tasks,session,alpha,gamma See \code{\link{id_activations}}.
 #' @param correction (character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
 #'   family-wise error rate with Bonferroni correction, and 'FDR' refers to the
 #'   false discovery rate using Benjamini-Hochberg.
@@ -297,7 +322,7 @@ id_activations.classical <- function(model_obj,
                                      tasks,
                                      session,
                                      alpha = 0.05,
-                                     threshold = 0,
+                                     gamma = 0,
                                      correction = c("FWER", "FDR", "none"),
                                      mesh = NULL) {
 
@@ -309,7 +334,7 @@ id_activations.classical <- function(model_obj,
       " but should be of class 'BayesGLM'."
     ))
   }
-  # tasks, session, alpha, threshold checked in `id_activations`
+  # tasks, session, alpha, gamma checked in `id_activations`
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
   beta_est <- model_obj$result_classical[[session]]$estimates
@@ -323,7 +348,7 @@ id_activations.classical <- function(model_obj,
   K <- length(tasks)
 
   #Compute t-statistics and p-values
-  t_star <- (beta_est - threshold) / se_beta
+  t_star <- (beta_est - gamma) / se_beta
   if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nvox)
   #perform multiple comparisons correction
   p_values <- p_values_adj <- active <- matrix(NA, nvox, K)
@@ -363,7 +388,7 @@ id_activations.classical <- function(model_obj,
     active = active,
     correction = correction,
     alpha = alpha,
-    threshold = threshold,
+    gamma = gamma,
     areas_all = areas_all,
     areas_act = areas_act
   )
@@ -385,7 +410,7 @@ id_activations.classical <- function(model_obj,
 # #' @param sessions (character) The name of the session that should be examined.
 # #' If \code{NULL} (default), the first session is used.
 # #' @param alpha Significance level (e.g. 0.05)
-# #' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
+# #' @param gamma Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
 # #' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
 # #'
 # #'
@@ -403,7 +428,7 @@ id_activations.classical <- function(model_obj,
 #            tasks = NULL,
 #            sessions = NULL,
 #            alpha = 0.05,
-#            threshold,
+#            gamma,
 #            area.limit = NULL) {
 #     if (!inherits(model_obj, "BayesGLM"))
 #       stop(paste0(
@@ -499,7 +524,7 @@ id_activations.classical <- function(model_obj,
 #           res.exc <-
 #             excursions(
 #               alpha = alpha,
-#               u = threshold,
+#               u = gamma,
 #               mu = beta_est,
 #               Q = Sig_inv,
 #               vars = V,
@@ -529,7 +554,7 @@ id_activations.classical <- function(model_obj,
 #         res.exc <-
 #           excursions(
 #             alpha = alpha,
-#             u = threshold,
+#             u = gamma,
 #             mu = stats::na.omit(
 #               c(model_obj$task_estimates[[sessions]])
 #             ),

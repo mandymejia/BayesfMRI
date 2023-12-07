@@ -27,7 +27,7 @@ summary.act_BayesGLM <- function(object, ...) {
     }),
     method=object$method,
     alpha=object$alpha,
-    threshold=object$threshold,
+    gamma=object$gamma,
     correction=object$correction
     #excur_method
   )
@@ -59,7 +59,7 @@ print.summary.act_BayesGLM <- function(x, ...) {
   }
   cat("GLM type:   ", x$method, "\n")
   cat("alpha:      ", x$alpha, "\n")
-  cat("Threshold:  ", x$threshold, "\n")
+  cat("gamma:      ", x$gamma, "\n")
   if (x$correction != "not applicable") {
     cat("Correction: ", x$correction, "\n")
   }
@@ -124,7 +124,7 @@ print.summary.act_BayesGLM_cifti <- function(x, ...) {
   }
   cat("GLM type:   ", x$method, "\n")
   cat("alpha:      ", x$alpha, "\n")
-  cat("Threshold:  ", x$threshold, "\n")
+  cat("gamma:      ", x$gamma, "\n")
   if (x$correction != "not applicable") {
     cat("Correction: ", x$correction, "\n")
   }

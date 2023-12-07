@@ -9,7 +9,7 @@ id_activations.classical(
   tasks,
   session,
   alpha = 0.05,
-  threshold = 0,
+  gamma = 0,
   correction = c("FWER", "FDR", "none"),
   mesh = NULL
 )
@@ -17,7 +17,7 @@ id_activations.classical(
 \arguments{
 \item{model_obj}{A \code{BayesGLM} object}
 
-\item{tasks, session, alpha, threshold}{See \code{\link{id_activations}}.}
+\item{tasks, session, alpha, gamma}{See \code{\link{id_activations}}.}
 
 \item{correction}{(character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
 family-wise error rate with Bonferroni correction, and 'FDR' refers to the

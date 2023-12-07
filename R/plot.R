@@ -97,11 +97,13 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM2_cifti"} object
 #'
 #' @param x An object of class "BayesGLM2_cifti"
-#' @param idx Which contrast should be plotted? Give the numeric index. 
-#'  \code{NULL} (default) will show all contrasts. This argument overrides 
-#'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
+#' @param idx Which contrast should be plotted? Give the numeric indices or the
+#'  names. \code{NULL} (default) will show all contrasts. This argument 
+#'  overrides the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
 #' @param what Estimates of the \code{"contrasts"} (default), or their 
 #'  thresholded \code{"activations"}.
+#' @param zlim Overrides the \code{zlim} argument for
+#'  \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
 #'
 #' @method plot BayesGLM2_cifti
@@ -109,9 +111,9 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
 #' @importFrom ciftiTools view_xifti
 #' @export
 #' 
-#' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
+#' @return Result of the call to \code{ciftiTools::view_cifti}.
 #'
-plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations"), ...){
+plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations"), zlim=c(-1, 1), ...){
   what <- match.arg(what, c("contrasts", "activations"))
   what <- switch(what, contrasts="contrast_estimates_xii", activations="activations_xii")
   the_xii <- x[[what]]
@@ -126,8 +128,12 @@ plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations")
   }
   
   # Column index
-  if (is.null(idx)) { idx <- seq_len(ncol(do.call(rbind, the_xii$data))) }
+  if (is.null(idx)) {
+    idx <- seq_len(ncol(do.call(rbind, the_xii$data)))
+  } else if (is.character(idx)) {
+    idx <- match(idx, the_xii$meta$cifti$names)
+  }
 
   # Plot
-  ciftiTools::view_xifti(the_xii, idx=idx, ...)
+  ciftiTools::view_xifti(the_xii, idx=idx, zlim=zlim, ...)
 }

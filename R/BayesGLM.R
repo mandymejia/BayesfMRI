@@ -88,7 +88,7 @@ BayesGLM <- function(
   labels = NULL,
   buffer = c(1,1,3,4,4),
   nbhd_order = 1,
-  # Below arguments shared with `BayesGLM_cifti`
+  # Below arguments shared with `BayesGLM_cifti`.
   combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE, #[TO DO] Delete this?  It is done by BayesGLM_cifti and could be done by the user
@@ -268,21 +268,13 @@ BayesGLM <- function(
   nK2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) }
   for (ss in seq(nS)) {
     # Scale data
-    # TEMPORARY FOR fMRItools < 3.0 -----
-    # `scale_timeseries` used to always transpose the matrix before returning.
-    # In 3.0 Damon got rid of this t(), so we will need it here (four lines below this one).
-    # Later, require fMRItools > 3.0.
     dBOLD <- dim(data[[ss]]$BOLD)
     data[[ss]]$BOLD <- fMRItools::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
-    if (!(all.equal(dBOLD, dim(data[[ss]]$BOLD), check.attributes=FALSE)==TRUE)) {
-      data[[ss]]$BOLD <- t(data[[ss]]$BOLD)
-    }
-    # ---------------------------------
     # Scale design matrix
-    if (scale_design) {
-      data[[ss]]$design <- scale_design_mat(data[[ss]]$design)
+    data[[ss]]$design <- if (scale_design) {
+      scale_design_mat(data[[ss]]$design)
     } else {
-      data[[ss]]$design <- scale(data[[ss]]$design, scale = FALSE)
+      scale(data[[ss]]$design, scale = FALSE)
     }
     design[[ss]] <- data[[ss]]$design #after scaling but before nuisance regression
 
