@@ -2,7 +2,7 @@
 #'
 #' @param x An object of class "BayesGLM_cifti"
 #' @param idx Which task should be plotted? Give the numeric indices or the
-#'  names. \code{NULL} (default) will show all tasks. This argument overrides 
+#'  names. \code{NULL} (default) will show all tasks. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
@@ -16,7 +16,7 @@
 #'
 #' @importFrom ciftiTools view_xifti
 #' @export
-#' 
+#'
 #' @return Result of the call to \code{ciftiTools::view_cifti}.
 #'
 plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-1, 1), ...){
@@ -38,6 +38,7 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
     if (length(x$task_estimates_xii[[method]]) > 1) { message("Plotting the first session.") }
     session <- 1
   } else if (is.numeric(session)) {
+    stopifnot(length(session)==1)
     stopifnot(session %in% seq(length(x$session_names)))
   }
   the_xii <- x$task_estimates_xii[[method]][[session]]
@@ -58,7 +59,7 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
 #'
 #' @param x An object of class "act_BayesGLM_cifti"
 #' @param idx Which task should be plotted? Give the numeric indices or the
-#'  names. \code{NULL} (default) will show all tasks. This argument overrides 
+#'  names. \code{NULL} (default) will show all tasks. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
@@ -68,7 +69,7 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
 #'
 #' @importFrom ciftiTools view_xifti
 #' @export
-#' 
+#'
 #' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
 #'
 plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
@@ -78,6 +79,7 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
     if (length(x$activations_xii) > 1) { message("Plotting the first session.") }
     session <- 1
   } else if (is.numeric(session)) {
+    stopifnot(length(session)==1)
     stopifnot(session %in% seq(length(x$activations_xii)))
   }
   the_xii <- x$activations_xii[[session]]
@@ -98,9 +100,9 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
 #'
 #' @param x An object of class "BayesGLM2_cifti"
 #' @param idx Which contrast should be plotted? Give the numeric indices or the
-#'  names. \code{NULL} (default) will show all contrasts. This argument 
+#'  names. \code{NULL} (default) will show all contrasts. This argument
 #'  overrides the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
-#' @param what Estimates of the \code{"contrasts"} (default), or their 
+#' @param what Estimates of the \code{"contrasts"} (default), or their
 #'  thresholded \code{"activations"}.
 #' @param zlim Overrides the \code{zlim} argument for
 #'  \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.
@@ -110,7 +112,7 @@ plot.act_BayesGLM_cifti <- function(x, idx=NULL, session=NULL, ...){
 #'
 #' @importFrom ciftiTools view_xifti
 #' @export
-#' 
+#'
 #' @return Result of the call to \code{ciftiTools::view_cifti}.
 #'
 plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations"), zlim=c(-1, 1), ...){
@@ -126,7 +128,7 @@ plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations")
       x$BayesGLM2_results$excursion_type, "'"
     )
   }
-  
+
   # Column index
   if (is.null(idx)) {
     idx <- seq_len(ncol(do.call(rbind, the_xii$data)))
@@ -136,4 +138,61 @@ plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations")
 
   # Plot
   ciftiTools::view_xifti(the_xii, idx=idx, zlim=zlim, ...)
+}
+
+#' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"prev_BayesGLM_cifti"} object
+#'
+#' @param x An object of class "prev_BayesGLM_cifti"
+#' @param idx Which task should be plotted? Give the numeric indices or the
+#'  names. \code{NULL} (default) will show all tasks. This argument overrides
+#'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
+#' @param session Which session should be plotted? \code{NULL} (default) will
+#'  use the first.
+#' @param drop_zeros Color locations without any activation across all results
+#'  (zero prevalence) the same color as the medial wall? Default: \code{NULL} to
+#'  drop the zeros if only one \code{idx} is being plotted.
+#' @param colors,zlim See \code{\link[ciftiTools]{view_xifti}}. Here, the defaults
+#'  are overrided to use the Viridis \code{"plasma"} color scale between
+#'  \code{1/nA} and 1, where \code{nA} is the number of results in \code{x}.
+#' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
+#'
+#' @method plot prev_BayesGLM_cifti
+#'
+#' @importFrom ciftiTools view_xifti
+#' @importFrom fMRItools is_1
+#' @export
+#'
+#' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
+#'
+plot.prev_BayesGLM_cifti <- function(
+  x, idx=NULL, session=NULL, 
+  drop_zeros=NULL, colors="plasma", 
+  zlim=c(round(1/x$n_results-.005, 2), 1), ...){
+
+  # Session
+  if (is.null(session)) {
+    if (length(x$prev_xii) > 1) { message("Plotting the first session.") }
+    session <- 1
+  } else if (is.numeric(session)) {
+    stopifnot(length(session)==1)
+    stopifnot(session %in% seq(length(x$prev_xii)))
+  }
+  the_xii <- x$prev_xii[[session]]
+  if (is.null(the_xii)) { stop(paste("Session", session, "does not exist.")) }
+
+  # Column index
+  if (is.null(idx)) {
+    idx <- seq_len(ncol(do.call(rbind, the_xii$data)))
+  } else if (is.character(idx)) {
+    idx <- match(idx, the_xii$meta$cifti$names)
+  }
+
+  if (is.null(drop_zeros)) { drop_zeros <- length(idx) == 1 }
+  stopifnot(is_1(drop_zeros, "logical"))
+  if (drop_zeros) {
+    the_xii <- move_to_mwall(the_xii, 0)
+  }
+
+  # Plot
+  ciftiTools::view_xifti(the_xii, idx=idx, colors=colors, zlim=zlim, ...)
 }

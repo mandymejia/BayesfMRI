@@ -9,7 +9,7 @@
 #'  properties of \code{object}.
 #' @method summary act_BayesGLM
 summary.act_BayesGLM <- function(object, ...) {
-  act <- object$activations[!vapply(object$activations, is.null, 0)]
+  act <- object$activations[!vapply(object$activations, is.null, FALSE)]
   if ("p_values" %in% names(act)) { act <- list(single_session=act) }
   x <- list(
     activations = lapply(act, function(x_a){
