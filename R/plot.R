@@ -131,3 +131,60 @@ plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations")
   # Plot
   ciftiTools::view_xifti_surface(the_xii, idx=idx, ...)
 }
+
+#' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"prev_BayesGLM_cifti"} object
+#'
+#' @param x An object of class "prev_BayesGLM_cifti"
+#' @param idx Which task should be plotted? Give the numeric indices or the
+#'  names. \code{NULL} (default) will show all tasks. This argument overrides
+#'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
+#' @param session Which session should be plotted? \code{NULL} (default) will
+#'  use the first.
+#' @param drop_zeros Color locations without any activation across all results
+#'  (zero prevalence) the same color as the medial wall? Default: \code{NULL} to
+#'  drop the zeros if only one \code{idx} is being plotted.
+#' @param colors,zlim See \code{\link[ciftiTools]{view_xifti}}. Here, the defaults
+#'  are overrided to use the Viridis \code{"plasma"} color scale between
+#'  \code{1/nA} and 1, where \code{nA} is the number of results in \code{x}.
+#' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
+#'
+#' @method plot prev_BayesGLM_cifti
+#'
+#' @importFrom ciftiTools view_xifti
+#' @importFrom fMRItools is_1
+#' @export
+#'
+#' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
+#'
+plot.prev_BayesGLM_cifti <- function(
+  x, idx=NULL, session=NULL, 
+  drop_zeros=NULL, colors="plasma", 
+  zlim=c(round(1/x$n_results-.005, 2), 1), ...){
+
+  # Session
+  if (is.null(session)) {
+    if (length(x$prev_xii) > 1) { message("Plotting the first session.") }
+    session <- 1
+  } else if (is.numeric(session)) {
+    stopifnot(length(session)==1)
+    stopifnot(session %in% seq(length(x$prev_xii)))
+  }
+  the_xii <- x$prev_xii[[session]]
+  if (is.null(the_xii)) { stop(paste("Session", session, "does not exist.")) }
+
+  # Column index
+  if (is.null(idx)) {
+    idx <- seq_len(ncol(do.call(rbind, the_xii$data)))
+  } else if (is.character(idx)) {
+    idx <- match(idx, the_xii$meta$cifti$names)
+  }
+
+  if (is.null(drop_zeros)) { drop_zeros <- length(idx) == 1 }
+  stopifnot(is_1(drop_zeros, "logical"))
+  if (drop_zeros) {
+    the_xii <- move_to_mwall(the_xii, 0)
+  }
+
+  # Plot
+  ciftiTools::view_xifti_surface(the_xii, idx=idx, colors=colors, zlim=zlim, ...)
+}

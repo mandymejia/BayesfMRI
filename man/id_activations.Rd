@@ -10,7 +10,7 @@ id_activations(
   sessions = NULL,
   method = c("Bayesian", "classical"),
   alpha = 0.05,
-  threshold = NULL,
+  gamma = NULL,
   correction = c("FWER", "FDR", "none"),
   verbose = 1
 )
@@ -37,10 +37,10 @@ to \code{FALSE}, only the \code{"classical"} method can be used.}
 
 \item{alpha}{Significance level. Default: \code{0.05}.}
 
-\item{threshold}{Activation threshold, for example \code{1} for 1\\% signal
+\item{gamma}{Activation threshold, for example \code{1} for 1\\% signal
 change if \code{scale_BOLD=="mean"} during model estimation. Setting a
-\code{threshold} is required for the Bayesian method; \code{NULL} (default)
-will use a \code{threshold} of zero for the classical method.}
+\code{gamma} is required for the Bayesian method; \code{NULL} (default)
+will use a \code{gamma} of zero for the classical method.}
 
 \item{correction}{For the classical method only: Type of multiple comparisons
 correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}

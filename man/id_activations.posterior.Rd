@@ -4,12 +4,12 @@
 \alias{id_activations.posterior}
 \title{Identify activations using joint posterior probabilities}
 \usage{
-id_activations.posterior(model_obj, tasks, session, alpha = 0.05, threshold)
+id_activations.posterior(model_obj, tasks, session, alpha = 0.05, gamma)
 }
 \arguments{
 \item{model_obj}{Result of \code{BayesGLM}, of class \code{"BayesGLM"}.}
 
-\item{tasks, session, alpha, threshold}{See \code{\link{id_activations}}.}
+\item{tasks, session, alpha, gamma}{See \code{\link{id_activations}}.}
 }
 \value{
 A list with two elements: \code{active}, which gives a matrix of zeros
