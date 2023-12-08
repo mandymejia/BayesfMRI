@@ -72,7 +72,7 @@ for (ii in seq(nrow(params))) {
 
   act_ii <- id_activations(
     bfmri_ii,
-    threshold=.1,
+    gamma=.1,
     method=ifelse(params$Bayes[ii], "Bayesian", "classical"),
     correction="FDR",
     alpha=0.05

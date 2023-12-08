@@ -409,6 +409,7 @@ BayesGLM2 <- function(
         out$BayesGLM2_results$model_results$cortex_right$mask
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
+      out$activations_xii$meta$cifti$names <- names(contrasts)
       names(out$activations_xii$meta$cifti$labels) <- names(contrasts)
     }
     class(out) <- "BayesGLM2_cifti"

@@ -73,7 +73,7 @@ exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
 ))
 print(exec_time)
 
-act_ii <- id_activations(bfmri_ii, threshold=.2, alpha=0.01)
+act_ii <- id_activations(bfmri_ii, gamma=.2, alpha=0.01)
 plot(act_ii, idx=seq(5), together="idx", together_ncol=1, fname=file.path(dir_resultThis, "MSC/bfmri_act.png"))
 
 ## [TO DO] and if I add more noise, what happens?

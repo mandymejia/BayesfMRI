@@ -6,7 +6,7 @@ doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
 resamp_res <- 4000
-my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
+#my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
@@ -22,12 +22,12 @@ if (!dir.exists(dir_resultThis)) { dir.create(dir_resultThis) }
 library(testthat)
 if (doINLA) {
   library(INLA)
-  inla.setOption(pardiso.license = my_pardiso)
-  inla.pardiso.check()
+  #inla.setOption(pardiso.license = my_pardiso)
+  #inla.pardiso.check()
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
-library(BayesfMRI)
+#library(BayesfMRI)
 
 # Get file names.
 fnames <- list(
@@ -75,6 +75,8 @@ BayesGLM_cifti_args <- list(
   combine_sessions = FALSE
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+act <- id_activations(bglm, gamma=.01, sessions=seq(2))
+bglm2 <- BayesGLM2(list(bglm, bglm), excursion_type = ">")
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
 # Expect same classical model results, where they exist.

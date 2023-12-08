@@ -47,7 +47,7 @@ Imports:
     ciftiTools (>= 0.8.0),
     excursions,
     foreach,
-    fMRItools,
+    fMRItools (>= 0.3.0),
     MASS,
     Matrix,
     matrixStats,
@@ -55,7 +55,8 @@ Imports:
     Rcpp,
     stats,
     sp,
-    utils
+    utils,
+    viridisLite
 Suggests:
     covr,
     abind,
