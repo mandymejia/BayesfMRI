@@ -4,7 +4,7 @@
 \alias{make_mesh}
 \title{Make Mesh}
 \usage{
-make_mesh(vertices, faces, use_INLA = FALSE)
+make_mesh(vertices, faces, use_INLA = TRUE)
 }
 \arguments{
 \item{vertices}{A \eqn{V \times 3} matrix, where each row contains the Euclidean
@@ -16,7 +16,7 @@ indices for a given triangular face in the mesh. \eqn{F} is the number of
 faces in the mesh.}
 
 \item{use_INLA}{(logical) Use the INLA package to make the mesh? Default:
-\code{FALSE}. Otherwise, mesh construction is based on an internal function,
+\code{TRUE}. Otherwise, mesh construction is based on an internal function,
 \code{galerkin_db}.}
 }
 \value{

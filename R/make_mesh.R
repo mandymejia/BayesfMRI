@@ -7,18 +7,13 @@
 #' @inheritParams vertices_Param
 #' @inheritParams faces_Param
 #' @param use_INLA (logical) Use the INLA package to make the mesh? Default:
-#'  \code{FALSE}. Otherwise, mesh construction is based on an internal function,
+#'  \code{TRUE}. Otherwise, mesh construction is based on an internal function,
 #'  \code{galerkin_db}.
 #'
 #' @return INLA triangular mesh
 #'
 #' @export
-make_mesh <- function(vertices, faces, use_INLA = FALSE){
-
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop("`make_mesh` requires the `INLA` package. Please install it.", call. = FALSE)
-  }
-
+make_mesh <- function(vertices, faces, use_INLA = TRUE){
 
   # Check index of faces
   if(min(faces) == 0){
@@ -27,6 +22,9 @@ make_mesh <- function(vertices, faces, use_INLA = FALSE){
 
   # Construct mesh
   if(use_INLA) {
+    if (!requireNamespace("INLA", quietly = TRUE)) {
+      stop("`make_mesh` requires the `INLA` package. Please install it.", call. = FALSE)
+    }
     mesh <- INLA::inla.mesh.create(loc = as.matrix(vertices), tv = as.matrix(faces))
   } else {
     gal_mesh <- galerkin_db(faces, vertices, surface = TRUE)
@@ -58,8 +56,8 @@ submesh <- function(mask, mesh) {
   idx[v] <- seq_len(length(v))
   tv <- matrix(idx[tv], nrow(tv), 3)
   loc <- mesh$loc[v, , drop = FALSE]
-  # mesh <- INLA::inla.mesh.create(loc = loc, tv = tv, refine = FALSE)
-  mesh <- make_mesh(vertices = loc,faces = tv,use_INLA = FALSE)
+  mesh <- INLA::inla.mesh.create(loc = loc, tv = tv)
+  # mesh <- make_mesh(vertices = loc,faces = tv,use_INLA = FALSE)
   idx <- rep(as.integer(NA), length(idx))
   idx[v] <- mesh$idx$loc
   mesh$idx$loc <- idx
