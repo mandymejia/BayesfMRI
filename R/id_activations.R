@@ -47,7 +47,7 @@
 #' @importFrom ciftiTools convert_xifti
 #' @importFrom fMRItools is_posNum is_1
 #' @importFrom utils packageVersion
-#' @importFrom viridisLite viridis
+#' @importFrom viridisLite plasma
 #'
 #' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
 #'  list which indicates the activated locations along with related information.
@@ -226,17 +226,25 @@ id_activations <- function(
     #   act_xii_ss$data$subcort <- matrix(datS, ncol=length(tasks))
     # }
     act_labs <- if (is.null(gamma)) { "Active" } else { paste0("Active, gamma=", gamma) }
+
+    viridis_params <- list(
+      n = nG,
+      begin = c(1/2, 1/3, 0)[min(nG, 3)],
+      end = c(1/2, 2/3, 1)[min(nG, 3)],
+      direction=-1
+    )
+
     if (utils::packageVersion("ciftiTools") < "0.13.1") { # approximate package version
       act_xii_ss <- convert_xifti(
         act_xii_ss, "dlabel",
         values=setNames(seq(0, nG), c("Inactive", act_labs)),
-        colors=viridisLite::viridis(n=nG, direction=-1)
+        colors=do.call(viridisLite::plasma, viridis_params)
       )
     } else {
       act_xii_ss <- convert_xifti(
         act_xii_ss, "dlabel",
         levels_old=seq(0, nG), labels=c("Inactive", act_labs),
-        colors=viridisLite::viridis(n=nG, direction=-1)
+        colors=do.call(viridisLite::plasma, viridis_params)
       )
     }
     act_xii[[session]] <- act_xii_ss

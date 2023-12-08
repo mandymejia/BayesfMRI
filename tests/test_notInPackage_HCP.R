@@ -76,6 +76,11 @@ BayesGLM_cifti_args <- list(
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
 act <- id_activations(bglm, gamma=.01, sessions=seq(2))
+
+BayesGLM_cifti_args$Bayes <- FALSE
+bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+
+
 bglm2 <- BayesGLM2(list(bglm, bglm), excursion_type = ">")
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
