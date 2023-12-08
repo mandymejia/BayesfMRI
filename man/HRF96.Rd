@@ -30,7 +30,7 @@ Calculate the HRF from a time vector and parameters. Optionally compute the
 first or second derivative of the HRF instead.
 }
 \examples{
-downsample <- 100
-HRF96(seq(0, 30, by=1/downsample))
+upsample <- 100
+HRF96(seq(0, 30, by=1/upsample))
 
 }

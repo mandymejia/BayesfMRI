@@ -105,14 +105,14 @@ of such matrices.}
 \item{dHRF, dHRF_as}{Only applicable if \code{onsets} and \code{TR} are
 provided. These arguments enable the modeling of HRF derivatives.
 
-Set \code{dHRF} to \code{1} to model the temporal derivatives of each task,
-\code{2} to add the second derivatives too, or \code{0} to not model the
-derivatives. Default: \code{1}.
+Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF,
+\code{2} to add the dispersion derivative too, or \code{0} to include only
+the main HRF regressor. Default: \code{1}.
 
 If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
 modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
-\code{"auto"} (default) to treat them as tasks unless the total number of
-columns in the design matrix would exceed five.}
+\code{"auto"} (default) to treat them as task regressors unless the total
+number of columns in the design matrix would exceed five (for computational reasons)}
 
 \item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
 high-pass filter to the data? Only one of these arguments should be provided.

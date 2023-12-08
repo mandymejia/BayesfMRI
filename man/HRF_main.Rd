@@ -4,10 +4,12 @@
 \alias{HRF_main}
 \title{Canonical (double-gamma) HRF}
 \usage{
-HRF_main(t, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
+HRF_main(t, TR, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
 }
 \arguments{
-\item{t}{time vector}
+\item{t}{time vector (in TRs)}
+
+\item{TR}{temporal resolution of the data, in seconds}
 
 \item{a1}{delay of response. Default: \code{6}}
 
@@ -27,9 +29,4 @@ Calculate the HRF from a time vector and parameters. Optionally compute the
 first or second derivative of the HRF instead. Form of HRF is similar to SPM
 but here the response and undershoot are scaled so the difference of the HRFs
 peaks at 1 and -c
-}
-\examples{
-downsample <- 100
-HRF_main(seq(0, 30, by=1/downsample))
-
 }

@@ -76,14 +76,14 @@
 #' @param dHRF,dHRF_as Only applicable if \code{onsets} and \code{TR} are
 #'  provided. These arguments enable the modeling of HRF derivatives.
 #'
-#'  Set \code{dHRF} to \code{1} to model the temporal derivatives of each task,
-#'  \code{2} to add the second derivatives too, or \code{0} to not model the
-#'  derivatives. Default: \code{1}.
+#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF,
+#'  \code{2} to add the dispersion derivative too, or \code{0} to include only
+#'  the main HRF regressor. Default: \code{1}.
 #'
 #'  If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
 #'  modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
-#'  \code{"auto"} (default) to treat them as tasks unless the total number of
-#'  columns in the design matrix would exceed five.
+#'  \code{"auto"} (default) to treat them as task regressors unless the total
+#'  number of columns in the design matrix would exceed five (for computational reasons)
 #'
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
 #'  high-pass filter to the data? Only one of these arguments should be provided.
@@ -277,12 +277,14 @@ BayesGLM_cifti <- function(
   # Name sessions and check compatibility of multi-session arguments
   nS <- nS_orig <- length(cifti_fname)
   if (nS==1) {
+    print("Preparing to analyze a single task fMRI session")
     combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
     if (!is.null(design)) design <- list(single_session = design)
     if (!is.null(onsets)) onsets <- list(single_session = onsets)
     if (!is.null(nuisance)) nuisance <- list(single_session = nuisance)
   } else {
+    print(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks"))
     if (is.null(session_names)) session_names <- paste0('session', 1:nS)
     # if (length(session_names) == 1) { session_names <- paste0(session_names, 1:nsess) } # allow prefix?
     if (!is.null(design) && (length(design) != nS)) {
@@ -443,25 +445,68 @@ BayesGLM_cifti <- function(
 
   ## Design and nuisance matrices. ---------------------------------------------
   if (is.null(design)) {
-    if (verbose>0) cat("\tMaking design matrices.\n")
-    design <- vector("list", nS)
 
-    for (ss in seq(nS)) {
-      HRF_ss <- make_HRFs(
-        onsets[[ss]], TR=TR, duration=ntime[ss],
-        dHRF=dHRF, dHRF_as=dHRF_as,
-        verbose=(ss==1)
-      )
-      design[[ss]] <- HRF_ss$design
-      if (!is.null(HRF_ss$nuisance)) {
-        if (!is.null(nuisance[[ss]])) {
-          nuisance[[ss]] <- cbind(nuisance[[ss]], HRF_ss$nuisance)
-        } else {
-          nuisance[[ss]] <- HRF_ss$nuisance
+    #determine whether to model HRF derivatives as task or nuisance if "auto"
+    nK <- length(onsets[[1]])
+    if (dHRF > 0 && dHRF_as=="auto") {
+      nJ <- (dHRF+1) * nK # number of design matrix columns
+      if (nJ > 5) {
+        if (verbose) {
+          message("Modeling the HRF derivatives as nuisance signals.")
         }
+        dHRF_as <- "nuisance"
+      } else {
+        if (verbose) {
+          message("Modeling the HRF derivatives as tasks signals.")
+        }
+        dHRF_as <- "task"
       }
     }
-  }
+
+    if (verbose>0) cat("\tMaking design matrices.\n")
+
+    #initialize lists
+    design <- design_FIR <- vector("list", nS)
+    stimulus <- HRFs <- FIR <- vector("list", nS)
+
+    for (ss in seq(nS)) {
+
+      ### Construct stimulus function, HRFs, derivatives, and FIR basis set
+
+      HRF_ss <- make_HRFs(
+        onsets[[ss]],
+        TR=TR,
+        nT=ntime[ss]
+      )
+      stimulus[[ss]] <- HRF_ss$stimulus #TxK matrix
+      HRFs[[ss]] <- HRF_ss$HRFs  #TxKx3 array -- allocate 2nd and 3rd dims to design or nuisance
+      FIR[[ss]] <- HRF_ss$FIR #T x K x nFIR -- just return this for now, don't use in modeling
+      task_names_ss <- colnames(HRF_ss$stimulus)
+
+      ### Construct design and nuisance matrices from main HRF and derivatives
+
+      design[[ss]] <- HRF_ss$design #main HRF
+      if(dHRF > 0){
+        for(dd in 1:dHRF){
+          dname_dd <- switch(dd, "dHRF", "ddHRF")
+          dHRF_sd <- HRF_ss$HRFs[,,(dd+1)]
+          colnames(dHRF_sd) <- paste0(task_names_ss, "_", dname_dd)
+          if(dHRF_as == "nuisance") nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF_sd) #if nuisance[[ss]] is NULL this still works
+          if(dHRF_as == "task") design[[ss]] <- cbind(design[[ss]], dHRF_sd)
+        }
+      }
+
+      ### Construct FIR design matrix
+      if(!is.null(HRF_ss$FIR)){
+        for(kk in 1:nK){
+          FIR_kk <- HRF_ss$FIR[,kk,]
+          colnames(FIR_kk) <- paste0(task_names[kk], '_FIR',1:ncol(FIR_kk))
+          design_FIR[[ss]] <- cbind(design_FIR[[ss]], FIR_kk)
+        }
+      }
+
+    } #end loop over sessions
+  } #end design matrix construction
 
   # Check that design matrix names are consistent across sessions.
   if (nS > 1) {
@@ -477,11 +522,11 @@ BayesGLM_cifti <- function(
 
   # Warn the user if the number of design matrix columns exceeds five.
   if (Bayes && ncol(design[[1]]) > 5) {
-    message("The number of regressors to be modeled spatially exceeds five. INLA computation may be slow. To avoid stalling, you can quit this function call now and modify the analysis. For example, model some signals as nuisance rather than tasks.")
+    message("The number of regressors to be modeled spatially exceeds five. INLA computation may be slow. Consider reducing the number of design matrix columns, e.g. by modeling HRF derivatives as nuisance")
     Sys.sleep(10)
   }
 
-  task_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more task_names.
+  field_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more design matrix columns
 
   # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
   design <- if(scale_design) {
@@ -528,7 +573,8 @@ BayesGLM_cifti <- function(
     for (ss in seq(nS)) {
       session_data[[ss]] <- list(
         BOLD = t(BOLD_list[[bb]][[ss]]),
-        design = design[[ss]]
+        design = design[[ss]],
+        design_FIR = design_FIR[[ss]]
       )
       if (!is.null(nuisance[[ss]])) {
         session_data[[ss]]$nuisance <- nuisance[[ss]]
@@ -614,7 +660,7 @@ BayesGLM_cifti <- function(
     )
     task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
     task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-    task_cifti_classical[[ss]]$meta$cifti$names <- task_names
+    task_cifti_classical[[ss]]$meta$cifti$names <- field_names
 
     # BAYESIAN GLM
     if (do_Bayesian) {
@@ -645,21 +691,26 @@ BayesGLM_cifti <- function(
       )
       task_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
       task_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      task_cifti[[ss]]$meta$cifti$names <- task_names
+      task_cifti[[ss]]$meta$cifti$names <- field_names
     }
   }
+
+  names(design) <- names(design_FIR) <- names(nuisance) <- names(FIR) <- names(stimulus) <- session_names
 
   result <- list(
     task_estimates_xii = list(
       Bayes = task_cifti,
       classical = task_cifti_classical
     ),
-    task_names = task_names,
+    design = design, # after centering/scaling, before nuisance regression / prewhitening
+    nuisance = nuisance,
+    stimulus = stimulus,
+    HRFs = HRFs,
+    FIR = FIR,
+    design_FIR = design_FIR,
+    task_names = field_names, #[TO DO] eventually rename this output to field_names
     session_names = session_names,
-    n_sess_orig = nS_orig,
-    # task part of design matrix after centering/scaling but
-    #   before nuisance regression and prewhitening.
-    design = design,
+    n_sess = nS_orig,
     BayesGLM_results = BayesGLM_results
   )
 
