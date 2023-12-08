@@ -47,6 +47,7 @@
 #' @importFrom ciftiTools convert_xifti
 #' @importFrom fMRItools is_posNum is_1
 #' @importFrom utils packageVersion
+#' @importFrom viridisLite viridis
 #'
 #' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
 #'  list which indicates the activated locations along with related information.
@@ -85,11 +86,13 @@ id_activations <- function(
     if (!inherits(model_obj, "BayesGLM")) {
       stop("`model_obj` is not a `'BayesGLM'` or 'BayesGLM_cifti' object.")
     }
-    model_obj <- list(obj=model_obj)
+    model_obj <- list(bglm=model_obj)
   }
+  models <- names(model_obj)
   idx1 <- min(which(!vapply(model_obj, is.null, FALSE)))
 
   # Argument checks.
+  # Get `tasks` and `sessions`.
   stopifnot(is.null(tasks) || is.character(tasks) || is.numeric(tasks))
   if (is.character(tasks)) { stopifnot(all(tasks %in% model_obj[[idx1]]$task_names)) }
   if (is.numeric(tasks)) {
@@ -112,7 +115,7 @@ id_activations <- function(
   if (is.null(sessions)) { sessions <- model_obj[[idx1]]$session_names[1] }
   method <- match.arg(method, c("Bayesian", "classical"))
   stopifnot(is_posNum(alpha) && alpha < 1)
-  stopifnot(is.null(gamma) || is_posNum(gamma, zero_ok=TRUE))
+  stopifnot(is.null(gamma) || (is.numeric(gamma) && all(gamma >= 0)))
   correction <- match.arg(correction, c("FWER", "FDR", "none"))
   stopifnot(is_posNum(verbose, zero_ok=TRUE))
 
@@ -126,40 +129,52 @@ id_activations <- function(
   if (is.null(gamma)) {
     if (method=='Bayesian') stop("Must specify an activation threshold, `gamma`, when `method=='Bayesian'`.")
     if (method=='classical') gamma <- 0
+  } else {
+    gamma <- sort(gamma)
   }
 
-  # Initialize list of activations.
-  nModels <- length(model_obj)
-  activations <- vector('list', length=nModels)
-  names(activations) <- names(model_obj)
-
+  # Get activation function arguments that won't change.
   actFUN <- switch(method,
     Bayesian = id_activations.posterior,
     classical = id_activations.classical
   )
-  actArgs <- list(tasks=tasks, alpha=alpha, gamma=gamma)
+  actArgs <- list(tasks=tasks, alpha=alpha)
   if (method == "classical") {
     actArgs <- c(actArgs, list(correction=correction))
   } else {
     correction <- "not applicable"
   }
 
-  # Loop over model objects (brain structures, if `is_cifti`).
-  for (mm in seq(nModels)) {
-    if (is.null(model_obj[[mm]])) { next }
-    if (method=="Bayesian" && identical(attr(model_obj[[mm]]$INLA_model_obj, "format"), "minimal")) {
+  nS <- length(sessions)
+  nB <- length(models)
+  nG <- max(length(gamma), 1)
+  nK <- length(tasks)
+
+  # Loop over models, sessions, and gamma to compute activations.
+  activations <- setNames(rep(list(setNames(vector("list", nS), sessions)), nB), models)
+
+  # Loop over models (brain structures, if `is_cifti`).
+  for (bb in seq(nB)) {
+    if (is.null(model_obj[[bb]])) { next }
+    if (method=="Bayesian" && identical(attr(model_obj[[bb]]$INLA_model_obj, "format"), "minimal")) {
       stop("Bayesian activations are not available because `return_INLA` was set to `'minimal'` in the `BayesGLM` call. Request the classical activations, or re-run `BayesGLM`.")
     }
-    name_obj_mm <- names(model_obj)[mm]
-    if (method=="Bayesian" && name_obj_mm!="obj") {
-      if (verbose>0) cat(paste0("Identifying Bayesian GLM activations in ",name_obj_mm,'\n'))
+    if (method=="Bayesian" && models[bb]!="bglm") {
+      if (verbose>0) cat(paste0("Identifying Bayesian GLM activations in ",models[bb],'\n'))
     }
-    # Loop over sessions
-    activations[[mm]] <- vector("list", length(sessions))
-    names(activations[[mm]]) <- sessions
-    for (session in sessions) {
-      actArgs_ms <- c(actArgs, list(model_obj=model_obj[[mm]], session=session))
-      activations[[mm]][[session]] <- do.call(actFUN, actArgs_ms)
+
+    # Loop over sessions.
+    for (ss in seq(nS)) {
+
+      # Loop over gamma.
+      q <- if (is.null(gamma)) { "gamma=NULL" } else { paste0("gamma=", gamma) }
+      q <- setNames(vector("list", nG), q)
+      for (gg in seq(nG)) {
+        q[[gg]] <- do.call(actFUN,
+          c(actArgs, list(model_obj=model_obj[[bb]], session=sessions[ss], gamma=gamma[gg]))
+        )
+      }
+      activations[[bb]][[ss]] <- q
     }
   }
 
@@ -189,7 +204,7 @@ id_activations <- function(
     act_xii_ss <- 0*select_xifti(the_xii, match(tasks, the_xii$meta$cifti$names))
     for (bs in names(the_xii$data)) {
       if (!is.null(the_xii$data[[bs]])) {
-        dat <- 1*activations[[bs]][[session]]$active
+        dat <- Reduce("+", lapply(activations[[bs]][[session]], function(q){1*q$active}))
         colnames(dat) <- NULL
         if (method=="classical") { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
         act_xii_ss$data[[bs]] <- dat
@@ -198,29 +213,30 @@ id_activations <- function(
     # if (!is.null(model_obj$subcortical)) {
     #   if(method == "EM") {
     #     for(m in 1:length(activations$subcortical)){
-    #       datS <- 1*activations$subcortical[[m]]$active
+    #       datS <- activations$subcortical[[m]]$active
     #       act_xii_ss$data$subcort[!is.na(model_obj$betas_EM[[1]]$data$subcort[,1]),] <-
     #         datS
     #     }
     #   }
     #   if(method == "classical") {
-    #     datS <- 1*activations$subcortical$active
+    #     datS <- activations$subcortical$active
     #     act_xii_ss$data$subcort[!is.na(model_obj$betas_classical[[1]]$data$subcort[,1]),] <-
     #       datS
     #   }
     #   act_xii_ss$data$subcort <- matrix(datS, ncol=length(tasks))
     # }
+    act_labs <- if (is.null(gamma)) { "Active" } else { paste0("Active, gamma=", gamma) }
     if (utils::packageVersion("ciftiTools") < "0.13.1") { # approximate package version
       act_xii_ss <- convert_xifti(
         act_xii_ss, "dlabel",
-        values=c("Inactive"=0, "Active"=1),
-        colors='red'
+        values=setNames(seq(0, nG), c("Inactive", act_labs)),
+        colors=viridisLite::viridis(n=nG, direction=-1)
       )
     } else {
       act_xii_ss <- convert_xifti(
         act_xii_ss, "dlabel",
-        levels_old=c(0, 1), labels=c("Inactive", "Active"),
-        colors='red'
+        levels_old=seq(0, nG), labels=c("Inactive", act_labs),
+        colors=viridisLite::viridis(n=nG, direction=-1)
       )
     }
     act_xii[[session]] <- act_xii_ss

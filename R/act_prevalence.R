@@ -2,6 +2,9 @@
 #' 
 #' @param act_list List of activations from \code{\link{id_activations}}. All
 #'  should have the same sessions, fields, and brainstructures.
+#' @param gamma_idx If activtions at multiple thresholds were computed, which 
+#'  threshold should be used for prevalence? Default: the first (lowest).
+#'  
 #' @return A list containing the prevalances of activation, as a proportion of
 #'  the results from \code{act_list}.
 #' 
@@ -9,7 +12,7 @@
 #' @importFrom ciftiTools convert_xifti
 #' 
 #' @export 
-act_prevalance <- function(act_list){
+act_prevalance <- function(act_list, gamma_idx=1){
 
   # Determine if `act_BayesGLM_cifti` or `act_BayesGLM`.
   is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BayesGLM_cifti") }, FALSE))
@@ -59,11 +62,11 @@ act_prevalance <- function(act_list){
 
   # Compute prevalance, for every session and every task.
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
-  for (ss in seq(nS)) {
-    for (bb in seq(nB)) {
+  for (bb in seq(nB)) {
+    for (ss in seq(nS)) {
       x <- lapply(act_list, function(y){
         y <- if (is_cifti) { y$activations[[bb]] } else { y$activations }
-        y[[ss]]$active
+        y[[ss]][[gamma_idx]]$active
       })
       prev[[bb]][[ss]] <- Reduce("+", x)/nA
     }

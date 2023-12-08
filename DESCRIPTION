@@ -55,7 +55,8 @@ Imports:
     Rcpp,
     stats,
     sp,
-    utils
+    utils,
+    viridisLite
 Suggests:
     covr,
     abind,

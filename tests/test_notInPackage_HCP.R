@@ -27,7 +27,7 @@ if (doINLA) {
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
-library(BayesfMRI)
+#library(BayesfMRI)
 
 # Get file names.
 fnames <- list(
@@ -75,7 +75,7 @@ BayesGLM_cifti_args <- list(
   combine_sessions = FALSE
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
-act <- id_activations(bglm, gamma=.01)
+act <- id_activations(bglm, gamma=.01, sessions=seq(2))
 bglm2 <- BayesGLM2(list(bglm, bglm), excursion_type = ">")
 
 # Change `brainstructures`, `n_sess`, and `meanTol`.
