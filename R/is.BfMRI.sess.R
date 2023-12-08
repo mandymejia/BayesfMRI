@@ -1,8 +1,8 @@
 #' Validate an individual session in a \code{"BfMRI.sess"} object.
-#' 
+#'
 #' Check if object is valid for a list entry in \code{"BfMRI.sess"}.
 #'
-#' A valid entry in a \code{"BfMRI.sess"} object is a list with these named 
+#' A valid entry in a \code{"BfMRI.sess"} object is a list with these named
 #'  fields:
 #'  \itemize{
 #'    \item{\code{"BOLD"}}{\eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
@@ -16,6 +16,9 @@
 #'
 #' @keywords internal
 is.a_session <- function(x){
+
+  #remove FIR design matrix if it exists
+  x$design_FIR <- NULL
 
   # `x` is a list.
   if (!is.list(x)) { message("`x` must be a list."); return(FALSE) }
@@ -37,21 +40,21 @@ is.a_session <- function(x){
   has_nus <- length(x) == 3
 
   # The data types are ok.
-  if (!(is.numeric(x$BOLD) && is.matrix(x$BOLD))) { 
+  if (!(is.numeric(x$BOLD) && is.matrix(x$BOLD))) {
     message("`x$BOLD` must be a numeric matrix."); return(FALSE)
   }
   des_pw <- (!has_nus) && (inherits(x$design, "dgCMatrix"))
   if (!des_pw) {
-    if (!(is.numeric(x$design) && is.matrix(x$design))) { 
+    if (!(is.numeric(x$design) && is.matrix(x$design))) {
       message("`x$design` must be a numeric matrix.")
-      if (!has_nus) { 
+      if (!has_nus) {
         message("(It may also be a 'dgCMatrix' if prewhitening has been done.)")
       }
       return(FALSE)
     }
   }
   if (has_nus) {
-    if (!(is.matrix(x$nuisance))) { 
+    if (!(is.matrix(x$nuisance))) {
       message("`x$nuisance` must be a matrix."); return(FALSE)
     }
   }
@@ -68,13 +71,13 @@ is.a_session <- function(x){
       return(FALSE)
     }
   } else {
-    if ((nrow(x$BOLD) != nrow(x$design))) { 
+    if ((nrow(x$BOLD) != nrow(x$design))) {
       message("'BOLD' and 'design' must have the same number of rows (time points).")
       return(FALSE)
     }
   }
   if (has_nus) {
-    if (nrow(x$BOLD) != nrow(x$nuisance)) { 
+    if (nrow(x$BOLD) != nrow(x$nuisance)) {
       message("'BOLD' and 'nuisance' must have the same number of rows (time points).")
       return(FALSE)
     }
@@ -84,10 +87,10 @@ is.a_session <- function(x){
 }
 
 #' Validate a \code{"BfMRI.sess"} object.
-#' 
+#'
 #' Check if object is valid for a \code{"BfMRI.sess"} object.
 #'
-#' A \code{"BfMRI.sess"} object is a list of length \eqn{S}, where \eqn{S} is 
+#' A \code{"BfMRI.sess"} object is a list of length \eqn{S}, where \eqn{S} is
 #'  the number of sessions in the analysis. Each list entry corresponds to a
 #'  separate session, and should itself be a list with these named fields:
 #'  \itemize{
@@ -96,18 +99,17 @@ is.a_session <- function(x){
 #'    \item{"nuisance"}{Optional. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
 #'  In addition, all sessions must have the same number of data locations, \eqn{V}, and tasks, \eqn{K}.
-#' 
-#' @examples 
+#'
+#' @examples
 #' nT <- 180
-#' nV <- 700 
+#' nV <- 700
 #' BOLD1 <- matrix(rnorm(nT*nV), nrow=nT)
 #' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
 #' onsets1 <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
 #' onsets2 <- list(taskA=cbind(c(1,18,25),4))
 #' TR <- .72 # .72 seconds per volume, or (1/.72) Hz
-#' duration <- nT # session is 180 volumes long (180*.72 seconds long)
-#' design1 <- make_HRFs(onsets1, TR, duration)$design
-#' design2 <- make_HRFs(onsets2, TR, duration)$design
+#' design1 <- make_HRFs(onsets1, TR, nT)$design
+#' design2 <- make_HRFs(onsets2, TR, nT)$design
 #' x <- list(
 #'  sessionOne = list(BOLD=BOLD1, design=design1),
 #'  sessionTwo = list(BOLD=BOLD2, design=design2)
@@ -125,7 +127,7 @@ is.BfMRI.sess <- function(x){
   nS <- length(x)
 
   # Check the first session.
-  if (!is.a_session(x[[1]])) { 
+  if (!is.a_session(x[[1]])) {
     message("The first entry of `x` is not a valid session.")
     return(FALSE)
   }
@@ -146,7 +148,7 @@ is.BfMRI.sess <- function(x){
   for (ii in seq(2, nS)) {
     if (ncol(x[[ii]]$BOLD) != nV) {
       message(
-        "The first session has ", nV, " locations, but session ", ii, 
+        "The first session has ", nV, " locations, but session ", ii,
         " (and maybe others) does not. All sessions must have the same number ",
         "of locations."
       )
@@ -154,7 +156,7 @@ is.BfMRI.sess <- function(x){
     }
     if (ncol(x[[ii]]$design) != nK) {
       message(
-        "The first session has ", nK, " locations, but session ", ii, 
+        "The first session has ", nK, " locations, but session ", ii,
         " (and maybe others) does not. All sessions must have the same number ",
         "of locations."
       )

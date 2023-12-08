@@ -4,16 +4,15 @@
 \alias{HRF}
 \title{Canonical HRF and Derivatives}
 \usage{
-HRF(t, deriv = 0, dt = FALSE, a1 = 6, b1 = 1, c = 1/6)
+HRF(t, TR, deriv = 0, a1 = 6, b1 = 1, c = 1/6)
 }
 \arguments{
 \item{t}{time vector}
 
+\item{TR}{temporal resolution of the data, in seconds}
+
 \item{deriv}{\code{0} (default) for the HRF, \code{1} for the delay derivative
 of the HRF, or \code{2} for the dispersion derivative of the HRF.}
-
-\item{dt}{If TRUE, take the first and second derivatives of the HRF with
-respect to t, rather than a1 and b1. Default: \code{FALSE}}
 
 \item{a1}{delay of response. Default: \code{6}}
 
@@ -27,9 +26,4 @@ HRF vector (or dHRF, or d2HRF) corresponding to time vector t
 \description{
 Calculate the HRF from a time vector and parameters, or its derivative with
 respect to delay or dispersion.
-}
-\examples{
-downsample <- 100
-HRF(seq(0, 30, by=1/downsample))
-
 }

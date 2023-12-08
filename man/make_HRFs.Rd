@@ -4,15 +4,7 @@
 \alias{make_HRFs}
 \title{Make HRFs}
 \usage{
-make_HRFs(
-  onsets,
-  TR,
-  duration,
-  dHRF = c(0, 1, 2),
-  dHRF_as = c("auto", "nuisance", "task"),
-  downsample = 100,
-  verbose = FALSE
-)
+make_HRFs(onsets, TR, nT, FIR_nsec = 30, upsample = 100)
 }
 \arguments{
 \item{onsets}{\eqn{L}-length list in which the name of each element is the
@@ -22,35 +14,24 @@ row) of the corresponding task.}
 
 \item{TR}{Temporal resolution of the data, in seconds.}
 
-\item{duration}{The number of volumes in the fMRI data.}
+\item{nT}{The number of volumes in the fMRI data.}
 
-\item{dHRF}{Set to \code{1} to add the temporal derivative of each column
-in the design matrix, \code{2} to add the second derivatives too, or
-\code{0} to not add any columns. Default: \code{1}.}
+\item{FIR_nsec}{The number of seconds to cover in the FIR basis set}
 
-\item{dHRF_as}{Only applies if \code{dHRF > 0}. Model the temporal
-derivatives as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
-\code{"auto"} to treat them as tasks unless the total number of columns in
-the design matrix (i.e. the total number of tasks, times \code{dHRF+1}), would be
-\code{>=10}, the limit for INLA.}
-
-\item{downsample}{Downsample factor for convolving stimulus boxcar or stick
+\item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
-
-\item{verbose}{If applicable, print a message saying how the HRF derivatives
-will be modeled? Default: \code{FALSE}.}
 }
 \value{
-List with the design matrix and/or the nuisance matrix containing the
-HRF-convolved stimuli as columns, depending on \code{dHRF_as}.
+List with the HRF and derivatives, the
+stimulus stick function, and the FIR basis set.
 }
 \description{
-Create HRF design matrix columns from onsets and durations
+Based on onsets and durations, compute canonical HRF, its derivatives, and FIR basis set for each task
 }
 \examples{
 onsets <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
 TR <- .72 # .72 seconds per volume, or (1/.72) Hz
-duration <- 300 # session is 300 volumes long (300*.72 seconds long)
-make_HRFs(onsets, TR, duration)
+nT <- 300 # session is 300 volumes long (300*.72 seconds long)
+make_HRFs(onsets, TR, nT)
 
 }
