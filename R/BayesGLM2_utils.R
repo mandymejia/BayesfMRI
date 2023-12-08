@@ -64,26 +64,27 @@ beta.posterior.thetasamp <- function(
   beta.samples <- NULL
   # ~5 seconds per subject with PARDISO
   nS <- 1
-  Q_nn <- Q
-  for(nn in 1:M){
-    if(nrow(Q) != nrow(Xcros[[nn]])) {
-      nS <- nrow(Xcros[[nn]]) / nrow(Q)
-      Q_nn <- Matrix::bdiag(rep(list(Q),nS))
+  Q <- Q_theta <- Matrix::bdiag(Q.beta) #Q_theta in the paper
+  for(mm in seq(M)) {
+    if(nrow(Q) != nrow(Xcros[[mm]])) {
+      nS <- nrow(Xcros[[mm]]) / nrow(Q)
+      Q_theta <- Matrix::bdiag(rep(list(Q),nS))
     }
     # compute posterior mean and precision of beta|theta
-    Q_nn <- prec.error*Xcros[[nn]] + Q_nn #Q_m in paper
-    cholQ_nn <- Matrix::Cholesky(Q_nn)
+    Q_mm <- prec.error*Xcros[[mm]] + Q_theta #Q_m in paper
+    print(mean(attr(Q_mm, "x")))
+    cholQ_mm <- Matrix::Cholesky(Q_mm)
     if (use_INLA) {
-      mu_nn <- INLA::inla.qsolve(Q_nn, prec.error*Xycros[[nn]]) #mu_m in paper
+      mu_mm <- INLA::inla.qsolve(Q_mm, prec.error*Xycros[[mm]]) #mu_m in paper
       # draw samples from pi(beta_m|theta,y)
-      beta_samp_nn <- INLA::inla.qsample(n = nsamp_beta, Q = Q_nn, mu = mu_nn)
+      beta_samp_mm <- INLA::inla.qsample(n = nsamp_beta, Q = Q_mm, mu = mu_mm)
     } else {
-      mu_nn <- Matrix::solve(cholQ_nn, prec.error*Xycros[[nn]], system = "A")
-      beta_samp_nn <- cholQsample(n = nsamp_beta, cholQ = Q_nn, mu = mu_nn)
+      mu_mm <- Matrix::solve(cholQ_mm, prec.error*Xycros[[mm]], system = "A")
+      beta_samp_mm <- cholQsample(n = nsamp_beta, cholQ = Q_mm, mu = mu_mm)
     }
 
     # concatenate samples over models
-    beta.samples <- rbind(beta.samples, beta_samp_nn)
+    beta.samples <- rbind(beta.samples, beta_samp_mm)
   }
 
   if (excursion_type[1] == 'none') do_excur <- FALSE else do_excur <- TRUE
