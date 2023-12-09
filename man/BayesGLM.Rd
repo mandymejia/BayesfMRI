@@ -6,6 +6,7 @@
 \usage{
 BayesGLM(
   data,
+  design_multiple = NULL,
   vertices = NULL,
   faces = NULL,
   mask = NULL,
@@ -35,6 +36,9 @@ session. See \code{?is.BfMRI.sess} for details.
 
 Note that the argument \code{session_names} can be used instead of providing
 the session names as the names of the elements in \code{data}.}
+
+\item{design_multiple}{(Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
+different design matrices for model comparison.}
 
 \item{vertices, faces}{For cortical surface data, the geometry is based on
 the \code{vertices} and \code{faces} arguments (must provide both).

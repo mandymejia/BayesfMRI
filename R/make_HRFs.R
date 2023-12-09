@@ -11,9 +11,16 @@
 #' @param FIR_nsec The number of seconds to cover in the FIR basis set
 #' @param upsample Upsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
+#' @param dHRF Number of HRF derivatives to include in the model. If \code{dHRF=1}
+#' include the temporal derivative of the HRF, if \code{dHRF=2} also include the
+#' dispersion derivative. Default: \code{2}.
+#' @param a1 (Optional) delay of response. Default: \code{6}
+#' @param b1 response dispersion. Default: \code{1}
+#' @param a2 delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}
+#' @param b2 dispersion of undershoot. Default: \code{b1 = 1}
+#' @param c scale of undershoot. Default: \code{1/6}
 #'
-#' @return List with the HRF and derivatives, the
-#' stimulus stick function, and the FIR basis set.
+#' @return List with the HRF and derivatives, the stimulus stick function, and the FIR basis set.
 #'
 #' @importFrom stats convolve
 #'
@@ -29,11 +36,13 @@ make_HRFs <- function(
   TR,
   nT,
   FIR_nsec=30,
-  upsample=100){
-
-  # [TO DO] Check that this function works for event-related designs
-  # First check that the main HRF looks fine
-  # Then figure out FIR!
+  upsample=100,
+  dHRF=2,
+  a1=6,
+  b1=1,
+  a2=16/6 * a1 * sqrt(b1),
+  b2=1,
+  c=1/6){
 
   nK <- length(onsets) #number of tasks
   task_names <- if (is.null(names(onsets))) {
@@ -69,11 +78,11 @@ make_HRFs <- function(
                   dimnames = list(volume=1:nT, task=task_names, FIR=1:FIR_nTR))
   if(!(FIR_nsec > 0)) theFIR <- NULL
 
-  #[TO DO] set dt=FALSE in HRF function
   # canonical HRF to be used in convolution (units = (1sec)*upsample)
-  HRFs <- list(HRF = HRF(t = seq(0, 30, by=1/upsample), TR=TR, deriv=0),
-               dHRF = HRF(t = seq(0, 30, by=1/upsample), TR=TR, deriv=1),
-               ddHRF = HRF(t = seq(0, 30, by=1/upsample), TR=TR, deriv=2))
+  u <- seq(0, 30, by=1/upsample)
+  HRFs <- list(HRF = HRF(t = u, TR=TR, deriv=0, a1, b1, a2, b2, c),
+               dHRF = HRF(t = u, TR=TR, deriv=1, a1, b1, a2, b2, c),
+               ddHRF = HRF(t = u, TR=TR, deriv=2, a1, b1, a2, b2, c))
 
   for (kk in seq(nK)) {
 
@@ -95,17 +104,10 @@ make_HRFs <- function(
 
     ### Canonical HRF and Derivatives
 
-    for (dd in seq(0, 2)) {
-      #dname_dd <- switch(dd+1, "HRF", "dHRF", "d2HRF")
-      # theHRF_dd <- matrix(NA, nrow=nT, ncol=nK)
-      # if(dd > 0) colnames(theHRF_dd) <- paste0(task_names, "_", dname_dd)
-      # if(dd == 0) colnames(theHRF_dd) <- task_names
-
-      # [TO DO] For event-related design, if the stimuli do not fall on TRs the downsampled stimulus function may be zero everywhere. Fix this.
-      # Note that this should not affect the regressors, just visualization of the stimulus function.
-
-      HRF_k <- convolve(stimulus_k, rev(HRFs[[dd+1]]), type='open')
-      theHRFs[,kk,dd+1] <- HRF_k[inds]
+    #1 = HRF only, 2 = HRF + dHRF, 3 = HRF + dHRF + ddHRF
+    for (dd in 1:(dHRF+1)) {
+      HRF_k <- convolve(stimulus_k, rev(HRFs[[dd]]), type='open')
+      theHRFs[,kk,dd] <- HRF_k[inds]
     }
 
     ### FIR Basis Set
@@ -143,7 +145,7 @@ make_HRFs <- function(
 #' Calculate the HRF from a time vector and parameters, or its derivative with
 #' respect to delay or dispersion.
 #'
-#' @param t time vector
+#' @param t time vector (in units of TR)
 #' @param TR temporal resolution of the data, in seconds
 #' @param deriv \code{0} (default) for the HRF, \code{1} for the delay derivative
 #'  of the HRF, or \code{2} for the dispersion derivative of the HRF.
@@ -151,6 +153,8 @@ make_HRFs <- function(
 # respect to t, rather than a1 and b1. Default: \code{FALSE}
 #' @param a1 delay of response. Default: \code{6}
 #' @param b1 response dispersion. Default: \code{1}
+#' @param a2 delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}
+#' @param b2 dispersion of undershoot. Default: \code{b1 = 1}
 #' @param c scale of undershoot. Default: \code{1/6}
 #'
 #' @return HRF vector (or dHRF, or d2HRF) corresponding to time vector t
@@ -158,33 +162,45 @@ make_HRFs <- function(
 #' @importFrom fMRItools is_1
 #' @export
 #'
-HRF <- function(t, TR, deriv=0, a1=6, b1=1, c=1/6){
+HRF <- function(t, TR, deriv=0, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){
 
   # Arg checks
   stopifnot(is.numeric(t)); stopifnot(min(t) >= 0)
   deriv <- as.numeric(match.arg(as.character(deriv), c("0", "1", "2")))
   stopifnot(is_1(a1, "numeric")); stopifnot(a1 > 0)
   stopifnot(is_1(b1, "numeric")); stopifnot(b1 > 0)
-  stopifnot(is_1(c, "numeric")); stopifnot(c > 0)
+  stopifnot(is_1(c, "numeric")); stopifnot(c >= 0)
+
+  #set a2 and b2 based on a1 and b1
+  if(is.null(a2)) a2 <- (16/6)*a1*sqrt(b1)
+  if(is.null(b2)) b2 <- b1
+
+  #check that the shape parameters are not less than 1
+  if(a1/b1 < 1) stop('The shape parameter of the first Gamma in the HRF (a1/b1) is less than 1, which is invalid. Adjust parameters.')
+  if(a2/b2 < 1) stop('The shape parameter of the second Gamma in the HRF (a2/b2) is less than 1, which is invalid. Adjust parameters.')
 
   if(deriv==0){
-    h <- HRF_main(t, TR, a1, b1, (16/6)*a1, b1, c)
+    h <- HRF_main(t, TR, a1, b1, a2, b2, c)
   }
 
-  #Temporal derivative
+  #Temporal derivative [TO DO] emulate SPM to make this truly an onset derivative
   if(deriv==1){
-    delta <- 0.1
-    fplus <- HRF_main(t+delta, TR, a1, b1, (16/6)*(a1), b1, c)
-    fminus <- HRF_main(t-delta, TR, a1, b1, (16/6)*(a1), b1, c)
-    if(deriv==1)  h <- (fplus - fminus) / (2*delta)
-#    if(deriv==2)  h <- (fplus + fminus - 2*HRF_main(t, TR, a1, b1, (16/6)*(a1), b1, c)) / (delta^2) #second temporal derivative
+    # delta <- 0.01*a1 #delta = 1% each direction
+    # fplus <- HRF_main(t, TR, a1+delta, b1, a2, b2, c)
+    # fminus <- HRF_main(t, TR, a1-delta, b1, a2, b2, c)
+    # h <- (fplus - fminus)/(2*delta)
+    delta <- 0.5
+    fplus <- HRF_main(t+delta, TR, a1, b1, a2, b2, c)
+    fminus <- HRF_main(t-delta, TR, a1, b1, a2, b2, c)
+    h <- (fplus - fminus) / (2*delta)
+    # if(deriv==2)  h <- (fplus + fminus - 2*HRF_main(t, TR, a1, b1, a2, b1, c)) / (delta^2) #second temporal derivative
   }
 
   #Dispersion derivative
   if(deriv==2){
     delta <- 0.01*b1 #delta = 1% each direction
-    fplus <- HRF_main(t, TR, a1, b1+delta, (16/6)*(a1), b1+delta, c)
-    fminus <- HRF_main(t, TR, a1, b1-delta, (16/6)*(a1), b1-delta, c)
+    fplus <- HRF_main(t, TR, a1, b1+delta, a2, b2, c)
+    fminus <- HRF_main(t, TR, a1, b1-delta, a2, b2, c)
     h <- (fplus - fminus)/(2*delta)
   }
 
@@ -221,14 +237,18 @@ HRF_main <- function(t, TR, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){ #}, mt=16){
   stopifnot(is.numeric(TR))
   stopifnot(is_1(a1, "numeric")); stopifnot(a1 > 0)
   stopifnot(is_1(b1, "numeric")); stopifnot(b1 > 0)
-  stopifnot(is_1(c, "numeric")); stopifnot(c > 0)
+  stopifnot(is_1(c, "numeric")); stopifnot(c >= 0)
 
   #set a2 and b2 based on a1 and b1
-  if(is.null(a2)) a2 <- (16/6)*a1
+  if(is.null(a2)) a2 <- (16/6)*a1*sqrt(b1)
   if(is.null(b2)) b2 <- b1
 
   stopifnot(is_1(a2, "numeric")); stopifnot(a2 > 0)
   stopifnot(is_1(b2, "numeric")); stopifnot(b2 > 0)
+
+  #check that the shape parameters are not less than 1
+  if(a1/b1 < 1) stop('The shape parameter of the first Gamma in the HRF (a1/b1) is less than 1, which is invalid. Adjust parameters.')
+  if(a2/b2 < 1) stop('The shape parameter of the second Gamma in the HRF (a2/b2) is less than 1, which is invalid. Adjust parameters.')
 
   #gamma functions
   shape1 <- a1/b1; rate1 <- TR/b1
@@ -240,7 +260,7 @@ HRF_main <- function(t, TR, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){ #}, mt=16){
   gamma2_max <- dgamma((shape2 - 1)/rate2, shape=shape2, rate = rate2)
 
   #identify modes of gamma1 - c*gamma2 (may not be equal to mode of each individual gamma)
-  times <- seq(0, 100, 0.001)
+  times <- seq(0, 100/TR, 0.001) #go out 100 sec to ensure capturing second mode
   diff <- dgamma(times, shape=shape1, rate = rate1)/gamma1_max -
     c*dgamma(times, shape=shape2, rate = rate2)/gamma2_max
   mode1 <- times[which.max(diff)] #identify peak of response

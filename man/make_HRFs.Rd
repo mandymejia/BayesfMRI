@@ -4,7 +4,19 @@
 \alias{make_HRFs}
 \title{Make HRFs}
 \usage{
-make_HRFs(onsets, TR, nT, FIR_nsec = 30, upsample = 100)
+make_HRFs(
+  onsets,
+  TR,
+  nT,
+  FIR_nsec = 30,
+  upsample = 100,
+  dHRF = 2,
+  a1 = 6,
+  b1 = 1,
+  a2 = 16/6 * a1 * sqrt(b1),
+  b2 = 1,
+  c = 1/6
+)
 }
 \arguments{
 \item{onsets}{\eqn{L}-length list in which the name of each element is the
@@ -20,10 +32,23 @@ row) of the corresponding task.}
 
 \item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
+
+\item{dHRF}{Number of HRF derivatives to include in the model. If \code{dHRF=1}
+include the temporal derivative of the HRF, if \code{dHRF=2} also include the
+dispersion derivative. Default: \code{2}.}
+
+\item{a1}{(Optional) delay of response. Default: \code{6}}
+
+\item{b1}{response dispersion. Default: \code{1}}
+
+\item{a2}{delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}}
+
+\item{b2}{dispersion of undershoot. Default: \code{b1 = 1}}
+
+\item{c}{scale of undershoot. Default: \code{1/6}}
 }
 \value{
-List with the HRF and derivatives, the
-stimulus stick function, and the FIR basis set.
+List with the HRF and derivatives, the stimulus stick function, and the FIR basis set.
 }
 \description{
 Based on onsets and durations, compute canonical HRF, its derivatives, and FIR basis set for each task

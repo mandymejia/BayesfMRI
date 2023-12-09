@@ -10,6 +10,7 @@ BayesGLM_cifti(
   surfR_fname = NULL,
   brainstructures = c("left", "right"),
   design = NULL,
+  design_multiple = NULL,
   onsets = NULL,
   TR = NULL,
   nuisance = NULL,
@@ -72,10 +73,7 @@ will be constructed.
 
 \code{design} is a \eqn{T \times K} task design matrix. Each column
 represents the expected BOLD response due to each task, a convolution of
-the hemodynamic response function (HRF) and the task stimulus. Note that
-the scale of the regressors will affect the scale and interpretation of the
-beta coefficients, so imposing a proper scale is recommended; see the
-\code{scale_design} argument, which by default is \code{TRUE}. Task names
+the hemodynamic response function (HRF) and the task stimulus. Task names
 should be the column names, if not provided by the \code{task_names}
 argument. For multi-session modeling, this argument should be a list of
 such matrices. To model HRF derivatives, calculate the derivatives of the
@@ -96,6 +94,10 @@ number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
 If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
 
 \code{TR} is the temporal resolution of the data, in seconds.}
+
+\item{design_multiple}{(Optional) A \eqn{T \times K \times D} array of \eqn{D}
+different design matrices for model comparison.  If provided, onsets and design will be ignored.
+TO DO: Allow differing numbers of regressors across D models, pad with NAs or 0.}
 
 \item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals.
 These are regressed from the fMRI data and the design matrix prior to the

@@ -44,10 +44,7 @@
 #'
 #'   \code{design} is a \eqn{T \times K} task design matrix. Each column
 #'   represents the expected BOLD response due to each task, a convolution of
-#'   the hemodynamic response function (HRF) and the task stimulus. Note that
-#'   the scale of the regressors will affect the scale and interpretation of the
-#'   beta coefficients, so imposing a proper scale is recommended; see the
-#'   \code{scale_design} argument, which by default is \code{TRUE}. Task names
+#'   the hemodynamic response function (HRF) and the task stimulus. Task names
 #'   should be the column names, if not provided by the \code{task_names}
 #'   argument. For multi-session modeling, this argument should be a list of
 #'   such matrices. To model HRF derivatives, calculate the derivatives of the
@@ -69,6 +66,9 @@
 #'
 #'   \code{TR} is the temporal resolution of the data, in seconds.
 #'
+#' @param design_multiple (Optional) A \eqn{T \times K \times D} array of \eqn{D}
+#' different design matrices for model comparison.  If provided, onsets and design will be ignored.
+#' TO DO: Allow differing numbers of regressors across D models, pad with NAs or 0.
 #' @param nuisance (Optional) A \eqn{T \times J} matrix of nuisance signals.
 #'  These are regressed from the fMRI data and the design matrix prior to the
 #'  GLM computation. For multi-session modeling, this argument should be a list
@@ -156,6 +156,7 @@ BayesGLM_cifti <- function(
   surfR_fname=NULL,
   brainstructures=c('left','right'),
   design=NULL,
+  design_multiple=NULL,
   onsets=NULL,
   TR=NULL,
   nuisance=NULL,
@@ -277,31 +278,56 @@ BayesGLM_cifti <- function(
   ## Sessions. -----------------------------------------------------------------
   # Name sessions and check compatibility of multi-session arguments
   nS <- nS_orig <- length(cifti_fname)
+
+  if (!is.null(session_names) && (length(session_names) != nS))
+    stop('The length of `session_names` must match the number of sessions in `cifti_fname`.')
+
   if (nS==1) {
+
     print("Preparing to analyze a single task fMRI session")
+
     combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
     if (!is.null(design)) design <- list(single_session = design)
+    if (!is.null(design_multiple)) design_multiple <- list(single_session = design_multiple)
     if (!is.null(onsets)) onsets <- list(single_session = onsets)
     if (!is.null(nuisance)) nuisance <- list(single_session = nuisance)
+
   } else {
+
     print(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks"))
+
+    #name sessions
     if (is.null(session_names)) session_names <- paste0('session', 1:nS)
-    # if (length(session_names) == 1) { session_names <- paste0(session_names, 1:nsess) } # allow prefix?
-    if (!is.null(design) && (length(design) != nS)) {
+
+    #check that length of design = nS
+    if (!is.null(design) && (length(design) != nS)){
       stop(paste(
         "If multiple sessions provided (because `cifti_fname` is a vector), ",
         "`design` must be a list of length equal to the number of sessions ",
-        " (or `NULL`, if onsets provided)."
+        " (or `NULL`, if `onsets` or `design_multiple` provided)."
       ))
     }
+
+    #check that length of design_multiple = nS
+    if (!is.null(design_multiple) && (length(design_multiple) != nS)){
+      stop(paste(
+        "If multiple sessions provided (because `cifti_fname` is a vector), ",
+        "`design_multiple` must be a list of length equal to the number of sessions ",
+        " (or `NULL`, if `onsets` or `design` provided)."
+      ))
+    }
+
+    #check that length of onsets = nS
     if (!is.null(onsets) && (length(onsets) != nS)) {
       stop(paste(
         "If multiple sessions provided (because `cifti_fname` is a vector), ",
         "`onsets` must be a list of length equal to the number of sessions ",
-        " (or `NULL`, if `design` provided)."
+        " (or `NULL`, if `design` or `design_multiple` provided)."
       ))
     }
+
+    #check that length of nuisance = nS
     if (!is.null(nuisance) && (length(nuisance) != nS)) {
       stop(paste(
         "If multiple sessions provided (because `cifti_fname` is a vector), ",
@@ -310,10 +336,8 @@ BayesGLM_cifti <- function(
       ))
     }
   }
-  if (length(session_names) != nS) {
-    stop('The length of `session_names` must match the number of sessions in `cifti_fname`.')
-  }
-  if(is.null(nuisance)) nuisance <- vector("list",length = nS)
+
+  if(is.null(nuisance)) nuisance <- vector("list", length = nS)
 
   ## Surfaces/SPDE: check or get. ---------------------------------------------------
   spatial_list <- list(left=NULL, right=NULL, subcortical=NULL)
@@ -342,34 +366,66 @@ BayesGLM_cifti <- function(
 
   ## `design`, `onsets`, `task_names`. -----------------------------------------
   ## Also, determine if we are doing multi-session modeling.
-  if (!xor(is.null(design), is.null(onsets))) { stop('`design` or `onsets` must be provided, but not both.') }
-  if (!is.null(design)) {
-    do_multisesh <- inherits(design, "list")
-    if (!do_multisesh) { stopifnot(inherits(design, "matrix") || inherits(design, "data.frame")) }
-    d1 <- if (do_multisesh) { design[[1]] } else { design }
-    task_names <- if (!is.null(task_names)) {
-      task_names
-    } else if (!is.null(names(d1))) {
-      names(d1)
-    } else {
-      paste0("beta", seq(ncol(d1)))
+
+  if(is.null(design_multiple)){
+
+    if (!xor(is.null(design), is.null(onsets))) { stop('`design` or `onsets` must be provided, but not both.') }
+
+    ### Case 1: Design matrix provided
+    if (!is.null(design)) {
+
+      #check format of design
+      dclass <- sapply(design, function(x){
+        if(inherits(x, "matrix")) return("matrix") else return(NA)
+      })
+      if(any(is.na(dclass))) stop('`design` must be a TxK matrix, or list of such matrices for multi-session analysis')
+
+      #define task_names based on design if available
+      task_names <- colnames(design[[1]]) #could be NULL
+      num_tasks <- ncol(design[[1]])
     }
-    rm(d1)
-  }
-  if (!is.null(onsets)) {
-    if (is.null(TR)) { stop('Please provide `TR` if onsets provided') }
-    do_multisesh <- inherits(onsets[[1]], "list")
-    o1 <- if (do_multisesh) { onsets[[1]] } else { onsets }
-    if (!do_multisesh) { stopifnot(inherits(o1, "matrix") || inherits(o1, "data.frame")) }
-    task_names <- if (!is.null(task_names)) {
-      task_names
-    } else if (!is.null(names(o1))) {
-      names(o1)
-    } else {
-      paste0("beta", seq(length(o1)))
+
+    ### Case 2: Onsets and TR provided
+    if (!is.null(onsets)) {
+
+      if (is.null(TR)) { stop('Please provide `TR` if onsets provided') }
+
+      #check format of onsets
+      oclass <- sapply(onsets, function(x){
+        result <- NA
+        if(inherits(x, "list")){
+          print("each element of onsets is a list, checking their contents")
+          #all elements of onsets[[j]] should be data frames or matrices
+          if(all(sapply(x, inherits, what="data.frame"))) result <- 'ok'
+          if(all(sapply(x, inherits, what="matrix"))) result <- 'ok'
+        }
+        return(result)
+      })
+      if(any(is.na(oclass))) stop('`onsets` must be a list of matrices/data frames, or list of such lists for multi-session analysis')
+
+      #define task_names based on onsets if available
+      task_names <- names(onsets[[1]]) #could be NULL
+      num_tasks <- length(onsets[[1]])
     }
-    rm(o1)
+
+  } else {
+
+    ### Case 3: Multiple design matrices provided
+
+    #check format of design_multiple
+    dclass <- sapply(design_multiple, function(x){
+      if(inherits(x, "array") && length(dim(x))==3) return("array") else return(NA)
+    })
+    if(any(is.na(dclass))) stop('`design_multiple` must be a 3D array, or list of 3D arrays for multi-session analysis')
+
+    task_names <- colnames(design_multiple[[1]][,,1])
+    num_tasks <- dim(design_multiple[[1]])[2]
+
   }
+
+  #create task names if not provided or implied earlier
+  if(is.null(task_names)) task_names <- paste0("beta", 1:num_tasks)
+
 
   # Data setup. ----------------------------------------------------------------
   if (verbose>0) cat('Setting up data:\n')
@@ -445,7 +501,8 @@ BayesGLM_cifti <- function(
   spatial_list <- spatial_list[!vapply(spatial_list, is.null, FALSE)]
 
   ## Design and nuisance matrices. ---------------------------------------------
-  if (is.null(design)) {
+
+  if (!is.null(onsets)) {
 
     #determine whether to model HRF derivatives as task or nuisance if "auto"
     nK <- length(onsets[[1]])
@@ -507,36 +564,40 @@ BayesGLM_cifti <- function(
       }
 
     } #end loop over sessions
-  } #end design matrix construction
+  } #end design matrix construction from onsets
 
-  # Check that design matrix names are consistent across sessions.
-  if (nS > 1) {
-    tmp <- sapply(design, colnames)
-    if(length(task_names) == 1) {
-      num_names <- length(unique(tmp))
-      if (num_names > 1) stop('task names must match across sessions for multi-session modeling')
+  if(!is.null(design)){
+
+    # Check that design matrix names are consistent across sessions.
+    if (nS > 1) {
+      tmp <- sapply(design, colnames)
+      if(length(task_names) == 1) {
+        num_names <- length(unique(tmp))
+        if (num_names > 1) stop('task names must match across sessions for multi-session modeling')
+      } else {
+        num_names <- apply(tmp, 1, function(x) length(unique(x))) #number of unique names per row
+        if (max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
+      }
+    }
+
+    # Warn the user if the number of design matrix columns exceeds five.
+    if (Bayes && ncol(design[[1]]) > 5) {
+      message("The number of regressors to be modeled spatially exceeds five. INLA computation may be slow. Consider reducing the number of design matrix columns, e.g. by modeling HRF derivatives as nuisance")
+      Sys.sleep(10)
+    }
+
+    field_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more design matrix columns
+
+    # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
+    design <- if(scale_design) {
+      sapply(design, scale_design_mat, simplify = F)
     } else {
-      num_names <- apply(tmp, 1, function(x) length(unique(x))) #number of unique names per row
-      if (max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
+      sapply(design, scale, scale = F, simplify = F)
     }
   }
 
-  # Warn the user if the number of design matrix columns exceeds five.
-  if (Bayes && ncol(design[[1]]) > 5) {
-    message("The number of regressors to be modeled spatially exceeds five. INLA computation may be slow. Consider reducing the number of design matrix columns, e.g. by modeling HRF derivatives as nuisance")
-    Sys.sleep(10)
-  }
+  # Add DCT bases to nuisance matrix
 
-  field_names <- colnames(design[[1]]) # because if dHRF > 0, there will be more design matrix columns
-
-  # Scale design matrix. (Here, rather than in `BayesGLM`, b/c it's returned.)
-  design <- if(scale_design) {
-    sapply(design, scale_design_mat, simplify = F)
-  } else {
-    sapply(design, scale, scale = F, simplify = F)
-  }
-
-  # Add DCT bases.
   DCTs <- vector("numeric", nS)
   for (ss in 1:nS) {
     # DCT highpass filter
@@ -562,6 +623,10 @@ BayesGLM_cifti <- function(
   # Do GLM. --------------------------------------------------------------------
   BayesGLM_results <- list(left = NULL, right = NULL, subcortical = NULL)
 
+  if(!is.null(design_multiple)){
+    design <- lapply(design_multiple, function(x) x[,,1]) #use first model from each session as a placeholder in session_data below
+  }
+
   # >> Loop through brainstructures ----
   for (bb in brainstructures) {
     bname <- list(left="left cortex", right="right cortex", subcortical="subcortical")[[bb]]
@@ -574,8 +639,8 @@ BayesGLM_cifti <- function(
     for (ss in seq(nS)) {
       session_data[[ss]] <- list(
         BOLD = t(BOLD_list[[bb]][[ss]]),
-        design = design[[ss]],
-        design_FIR = design_FIR[[ss]]
+        design = design[[ss]]
+        #design_FIR = design_FIR[[ss]]
       )
       if (!is.null(nuisance[[ss]])) {
         session_data[[ss]]$nuisance <- nuisance[[ss]]
@@ -591,14 +656,18 @@ BayesGLM_cifti <- function(
       labels <- spatial_list[[bb]]
     }
 
+    #Set scale_design = FALSE if not fitting multiple models
+    if(is.null(design_multiple)) scale_design <- FALSE # scaling already done above
+
     BayesGLM_out <- BayesGLM(
       data = session_data,
+      design_multiple = design_multiple,
       vertices = vertices,
       faces = faces,
       labels = labels,
       nbhd_order = nbhd_order,
       buffer = buffer,
-      scale_design = FALSE, # scaling done above
+      scale_design = scale_design,
       Bayes = do_Bayesian,
       combine_sessions = combine_sessions,
       scale_BOLD = scale_BOLD,
@@ -627,61 +696,35 @@ BayesGLM_cifti <- function(
   names(BayesGLM_results)[names(BayesGLM_results)=="right"] <- "cortex_right"
 
   ### CONSTRUCT BETA ESTIMATES AS CIFTI OBJECTS
+
   if (verbose>0) cat("Formatting results.\n")
-  task_cifti_classical <- task_cifti <- vector('list', nS)
-  names(task_cifti_classical) <- names(task_cifti) <- session_names
-  datL <- datR <- datSub <- NULL
-  for (ss in seq(nS)) {
 
-    # CLASSICAL GLM
-    if (do_left) {
-      datL <- BayesGLM_results$cortex_left$result_classical[[ss]]$estimates
-      mwallL <- !is.na(datL[,1]) # update b/c mask2 can change the medial wall
-      datL <- datL[mwallL,]
-      colnames(datL) <- NULL
-    }
-    if (do_right) {
-      datR <- BayesGLM_results$cortex_right$result_classical[[ss]]$estimates
-      mwallR <- !is.na(datR[,1])
-      datR <- datR[mwallR,]
-      colnames(datR) <- NULL
-    }
-    if (do_sub) {
-      datSub <- BayesGLM_results$subcort$result_classical[[ss]]$estimates
-      colnames(datSub) <- NULL
-    }
-    task_cifti_classical[[ss]] <- as.xifti(
-      cortexL = datL,
-      cortexL_mwall = mwallL,
-      cortexR = datR,
-      cortexR_mwall = mwallR,
-      subcortVol = datSub,
-      subcortLabs = submeta_ss$labels,
-      subcortMask = submeta_ss$mask
-    )
-    task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
-    task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-    task_cifti_classical[[ss]]$meta$cifti$names <- field_names
+  task_cifti_classical <- task_cifti <- bestmodel_cifti <- vector('list', nS)
+  names(task_cifti_classical) <- names(task_cifti) <- names(bestmodel_cifti) <- session_names
 
-    # BAYESIAN GLM
-    if (do_Bayesian) {
+  if(is.null(design_multiple)){
+
+    datL <- datR <- datSub <- NULL
+    for (ss in seq(nS)) {
+
+      # CLASSICAL GLM
       if (do_left) {
-        datL <- BayesGLM_results$cortex_left$task_estimates[[ss]]
-        mwallL <- !is.na(datL[,1])
+        datL <- BayesGLM_results$cortex_left$result_classical[[ss]]$estimates
+        mwallL <- !is.na(datL[,1]) # update b/c mask2 can change the medial wall
         datL <- datL[mwallL,]
         colnames(datL) <- NULL
       }
       if (do_right) {
-        datR <- BayesGLM_results$cortex_right$task_estimates[[ss]]
+        datR <- BayesGLM_results$cortex_right$result_classical[[ss]]$estimates
         mwallR <- !is.na(datR[,1])
         datR <- datR[mwallR,]
         colnames(datR) <- NULL
       }
       if (do_sub) {
-        datSub <- BayesGLM_results$subcortical$task_estimates[[ss]]
+        datSub <- BayesGLM_results$subcort$result_classical[[ss]]$estimates
         colnames(datSub) <- NULL
       }
-      task_cifti[[ss]] <- as.xifti(
+      task_cifti_classical[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = mwallL,
         cortexR = datR,
@@ -690,20 +733,94 @@ BayesGLM_cifti <- function(
         subcortLabs = submeta_ss$labels,
         subcortMask = submeta_ss$mask
       )
-      task_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
-      task_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      task_cifti[[ss]]$meta$cifti$names <- field_names
-    }
-  }
+      task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      task_cifti_classical[[ss]]$meta$cifti$names <- field_names
 
-  names(design) <- names(design_FIR) <- names(nuisance) <- names(FIR) <- names(stimulus) <- session_names
+      # BAYESIAN GLM
+      if (do_Bayesian) {
+        if (do_left) {
+          datL <- BayesGLM_results$cortex_left$task_estimates[[ss]]
+          mwallL <- !is.na(datL[,1])
+          datL <- datL[mwallL,]
+          colnames(datL) <- NULL
+        }
+        if (do_right) {
+          datR <- BayesGLM_results$cortex_right$task_estimates[[ss]]
+          mwallR <- !is.na(datR[,1])
+          datR <- datR[mwallR,]
+          colnames(datR) <- NULL
+        }
+        if (do_sub) {
+          datSub <- BayesGLM_results$subcortical$task_estimates[[ss]]
+          colnames(datSub) <- NULL
+        }
+        task_cifti[[ss]] <- as.xifti(
+          cortexL = datL,
+          cortexL_mwall = mwallL,
+          cortexR = datR,
+          cortexR_mwall = mwallR,
+          subcortVol = datSub,
+          subcortLabs = submeta_ss$labels,
+          subcortMask = submeta_ss$mask
+        )
+        task_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+        task_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+        task_cifti[[ss]]$meta$cifti$names <- field_names
+      }
+    }
+
+    names(design) <- names(design_FIR) <- names(nuisance) <- names(FIR) <- names(stimulus) <- session_names
+
+  } else {
+
+    datL <- datR <- datSub <- NULL
+    for (ss in seq(nS)) {
+
+      # INDEX OF BEST MODEL
+      if (do_left) {
+        datL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel
+        mwallL <- !is.na(datL) # update b/c mask2 can change the medial wall
+        datL <- datL[mwallL]
+        colnames(datL) <- NULL
+      }
+      if (do_right) {
+        datR <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel
+        mwallR <- !is.na(datR[,1])
+        datR <- datR[mwallR,]
+        colnames(datR) <- NULL
+      }
+      if (do_sub) {
+        datSub <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel
+        colnames(datSub) <- NULL
+      }
+      bestmodel_cifti[[ss]] <- as.xifti(
+        cortexL = datL,
+        cortexL_mwall = mwallL,
+        cortexR = datR,
+        cortexR_mwall = mwallR,
+        subcortVol = datSub,
+        subcortLabs = submeta_ss$labels,
+        subcortMask = submeta_ss$mask
+      )
+      bestmodel_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      bestmodel_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      bestmodel_cifti[[ss]]$meta$cifti$names <- task_names
+    }
+
+    #stuff we don't have when fitting multiple models
+    HRFs <- FIR <- design_FIR <- stimulus <- NULL
+    field_names <- task_names
+  }
 
   result <- list(
     task_estimates_xii = list(
       Bayes = task_cifti,
       classical = task_cifti_classical
     ),
+    bestmodel_xii = bestmodel_cifti,
     design = design, # after centering/scaling, before nuisance regression / prewhitening
+    design_multiple = design_multiple,
     nuisance = nuisance,
     stimulus = stimulus,
     HRFs = HRFs,

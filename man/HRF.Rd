@@ -4,10 +4,10 @@
 \alias{HRF}
 \title{Canonical HRF and Derivatives}
 \usage{
-HRF(t, TR, deriv = 0, a1 = 6, b1 = 1, c = 1/6)
+HRF(t, TR, deriv = 0, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
 }
 \arguments{
-\item{t}{time vector}
+\item{t}{time vector (in units of TR)}
 
 \item{TR}{temporal resolution of the data, in seconds}
 
@@ -17,6 +17,10 @@ of the HRF, or \code{2} for the dispersion derivative of the HRF.}
 \item{a1}{delay of response. Default: \code{6}}
 
 \item{b1}{response dispersion. Default: \code{1}}
+
+\item{a2}{delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}}
+
+\item{b2}{dispersion of undershoot. Default: \code{b1 = 1}}
 
 \item{c}{scale of undershoot. Default: \code{1/6}}
 }
