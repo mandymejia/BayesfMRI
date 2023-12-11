@@ -4,12 +4,10 @@
 \alias{HRF_main}
 \title{Canonical (double-gamma) HRF}
 \usage{
-HRF_main(t, TR, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
+HRF_main(t, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
 }
 \arguments{
-\item{t}{time vector (in TRs)}
-
-\item{TR}{temporal resolution of the data, in seconds}
+\item{t}{time vector (in seconds)}
 
 \item{a1}{delay of response. Default: \code{6}}
 

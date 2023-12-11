@@ -4,12 +4,10 @@
 \alias{HRF}
 \title{Canonical HRF and Derivatives}
 \usage{
-HRF(t, TR, deriv = 0, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
+HRF(t, deriv = 0, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
 }
 \arguments{
-\item{t}{time vector (in units of TR)}
-
-\item{TR}{temporal resolution of the data, in seconds}
+\item{t}{time vector (in units of seconds)}
 
 \item{deriv}{\code{0} (default) for the HRF, \code{1} for the delay derivative
 of the HRF, or \code{2} for the dispersion derivative of the HRF.}

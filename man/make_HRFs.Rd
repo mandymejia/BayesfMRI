@@ -8,7 +8,7 @@ make_HRFs(
   onsets,
   TR,
   nT,
-  FIR_nsec = 30,
+  FIR_nsec = 0,
   upsample = 100,
   dHRF = 2,
   a1 = 6,
@@ -28,7 +28,7 @@ row) of the corresponding task.}
 
 \item{nT}{The number of volumes in the fMRI data.}
 
-\item{FIR_nsec}{The number of seconds to cover in the FIR basis set}
+\item{FIR_nsec}{The number of seconds to cover in the FIR basis set. Default: \code{0} (do not return FIR bases)}
 
 \item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
