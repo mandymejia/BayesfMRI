@@ -9,7 +9,7 @@ Q_prime(kappa2, spde)
 \arguments{
 \item{kappa2}{scalar}
 
-\item{spdean}{spde object}
+\item{spde}{An spde object}
 }
 \value{
 a dgCMatrix

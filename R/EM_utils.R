@@ -242,7 +242,7 @@ make_Q <- function(theta, spde, n_sess) {
 #' Gives the portion of the Q matrix independent of phi
 #'
 #' @param kappa2 scalar
-#' @param spdean spde object
+#' @param spde An spde object
 #'
 #' @return a dgCMatrix
 #' @keywords internal
@@ -331,7 +331,7 @@ neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' Streamlined negative objective function for kappa2 using precompiled values
 #'
 #' @param kappa2 scalar
-#' @param spde_mats a list of SPDE prior matrices from
+#' @param spde SPDE prior matrix
 #' @param a_star precomputed coefficient (scalar)
 #' @param b_star precomputed coefficient (scalar)
 #' @param n_sess number of sessions (scalar)
@@ -353,7 +353,7 @@ neg_kappa_fn4 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' @param vh random matrix of -1 and 1 of dim \code{dim(P)}
 #'
 #' @return a list with two elements, which are precomputed coefficients for the
-#'   optimaization function
+#'   optimization function
 #' @keywords internal
 prep_kappa2_optim <- function(spde, mu, phi, P, vh) {
   Cmat <- spde$Cmat
