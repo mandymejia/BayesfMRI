@@ -141,11 +141,11 @@ A \code{"BayesGLM"} object: a list with elements
 \item{session_names}{The names of the sessions.}
 \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
 \item{theta_estimates}{Theta estimates from the Bayesian model.}
-\item{posterior_Sig_inv}{For joint group modelling.}
-\item{mu_theta}{For joint group modelling.}
-\item{Q_theta}{For joint group modelling.}
-\item{y}{For joint group modelling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
-\item{X}{For joint group modelling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
+\item{posterior_Sig_inv}{For joint group modeling.}
+\item{mu_theta}{For joint group modeling.}
+\item{Q_theta}{For joint group modeling.}
+\item{y}{For joint group modeling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
+\item{X}{For joint group modeling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
 \item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
 \item{call}{match.call() for this function call.}
 }

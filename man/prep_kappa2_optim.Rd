@@ -19,7 +19,7 @@ prep_kappa2_optim(spde, mu, phi, P, vh)
 }
 \value{
 a list with two elements, which are precomputed coefficients for the
-optimaization function
+optimization function
 }
 \description{
 Find values for coefficients used in objective function for kappa2
