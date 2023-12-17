@@ -12,7 +12,7 @@ Passes the roxygen `examples`, and the tests that require data (results not incl
 
 ## Previous submission
 
-#### 0.3.9 
+#### 0.3.10
 
 Lost braces in \itemize
 

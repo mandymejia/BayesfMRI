@@ -1,4 +1,4 @@
-# 3.9
+# 3.11
 
 * A few bug fixes
 * Rename `threshold` argument to `gamma` 

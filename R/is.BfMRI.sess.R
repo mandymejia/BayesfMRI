@@ -4,10 +4,10 @@
 #'
 #' A valid entry in a \code{"BfMRI.sess"} object is a list with these named 
 #'  fields:
-#'  \itemize{
-#'    \item{"\code{BOLD}"}{, a \eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
-#'    \item{"\code{design}"}{, a \eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
-#'    \item{"\code{nuisance}"}{, an optional argument. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
+#'  \describe{
+#'    \item{BOLD}{a \eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
+#'    \item{design}{a \eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
+#'    \item{nuisance}{an optional argument. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
 #'
 #' @param x The putative entry in a \code{"BfMRI.sess"} object.
@@ -91,10 +91,10 @@ is.a_session <- function(x){
 #'  the number of sessions in the analysis. Each list entry corresponds to a
 #'  separate session, and should itself be a list with these named fields:
 #' 
-#'  \itemize{
-#'    \item{"\code{BOLD}"}{, a \eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
-#'    \item{"\code{design}"}{, a \eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
-#'    \item{"\code{nuisance}"}{, an optional argument. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
+#'  \describe{
+#'    \item{BOLD}{a \eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
+#'    \item{design}{a \eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
+#'    \item{nuisance}{an optional argument. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
 #' 
 #'  In addition, all sessions must have the same number of data locations, \eqn{V}, and tasks, \eqn{K}.
