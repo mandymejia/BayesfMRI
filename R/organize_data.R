@@ -10,6 +10,8 @@
 #'
 #' @param y the TxV data matrix containing the fMRI timeseries
 #' @param X the TxK design matrix with K task-related columns
+#' @param n_mesh the number of mesh locations V2 >= V
+#' @param inds the indices in the mesh that correspond to the V data locations
 #'
 #' @return A list containing fields \code{y} and \code{A} (see Details)
 #'
@@ -20,26 +22,35 @@
 #' @importFrom Matrix sparseMatrix
 #'
 #' @keywords internal
-organize_data <- function(y, X){
+organize_data <- function(y, X, n_mesh, inds){
 
   if (ncol(y) == nrow(X)) {
     warning('Transposing fMRI data (`y`) so rows are time points and columns are locations.')
     y <- t(y)
   }
 	nT <- nrow(y)
-	nV <- ncol(y)
+	nV <- ncol(y) #the number of data locations
+	nV2 <- n_mesh # the number of mesh locations, which may be a superset
 
 	y <- as.vector(y) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
 	ix <- seq(nT*nV)
 	iy <- rep(seq(nV), each = nT)
 
+	A <- Matrix::Diagonal(nV2)[inds,]
+
 	nK <- ncol(X)
+	X_all <- vector('list', length=nK)
 	for (kk in seq(nK)) {
-		X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,kk], nV))
+	  # expand the kth column of X into a VT x V, then post-multiply by A to get a VT x V2 matrix (a V x V2 matrix for each time point)
+    if(is.nan(X[1,kk])) X[,kk] <- rep(NA, length(X[,kk]))
+	  X_all[[kk]] <- Matrix::sparseMatrix(ix, iy, x=rep(X[,kk], nV)) #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
+
+	  #previous approach
+	  X_k <- Matrix::sparseMatrix(ix, iy, x=rep(X[,kk], nV)) # %*% A #multiply by A to expand to the non-data locations
     bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
 	}
 
-	list(BOLD=y, design=bigX)
+	list(BOLD=y, design=X_all, bigX = bigX, A=A)
 }
 
 #' Organize prewhitened data for Bayesian GLM

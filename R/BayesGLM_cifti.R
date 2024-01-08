@@ -45,30 +45,28 @@
 #'   \code{design} is a \eqn{T \times K} task design matrix. Each column
 #'   represents the expected BOLD response due to each task, a convolution of
 #'   the hemodynamic response function (HRF) and the task stimulus. Task names
-#'   should be the column names, if not provided by the \code{task_names}
-#'   argument. For multi-session modeling, this argument should be a list of
-#'   such matrices. To model HRF derivatives, calculate the derivatives of the
-#'   task columns beforehand and either add them to \code{design} to model them
-#'   as tasks, or \code{nuisance} to model them as nuisance signals. Note that
-#'   INLA computation times increase if the design matrix has more than five columns,
-#'   so it might be helpful to add these derivatives to \code{nuisance} rather than
-#'   \code{design}.
+#'   should be the column names. For multi-session modeling, this argument should be a list of
+#'   such matrices, and column names must match and align across sessions. If any task is
+#'   missing from any session, include a column of zeros in its place. HRF derivatives
+#'   may be included in \code{design} to model them spatially, or in \code{nuisance}
+#'   to treat them as nuisance signals. Note that INLA computation times increase
+#'   if the design matrix has more than five columns.
 #'
-#'   \code{onsets} is an \eqn{L}-length list in which the name of each element is
-#'   the name of the corresponding task, and the value of each element is a
+#'   \code{onsets} is a list where each element represents a task, and the value of each element is a
 #'   matrix of onsets (first column) and durations (second column) for each
 #'   stimuli (each row) of the corresponding task. The units of both columns
 #'   is seconds. For multi-session modeling, this argument should be a list of
-#'   such lists. To model HRF derivatives, use the arguments \code{dHRF} and
-#'   \code{dHRF_as}. If \code{dHRF==0} or \code{dHRF_as=="nuisance"}, the total
-#'   number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
-#'   If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
+#'   such lists, and the task names must match and align across sessions. If any task is
+#'   missing from any session, include a list element equal to NA in its place.
 #'
-#'   \code{TR} is the temporal resolution of the data, in seconds.
+#'   \code{TR} is the temporal resolution of the data, in seconds. Required if \code{onsets} provided.
 #'
 #' @param design_multiple (Optional) A \eqn{T \times K \times D} array of \eqn{D}
 #' different design matrices for model comparison.  If provided, onsets and design will be ignored.
 #' TO DO: Allow differing numbers of regressors across D models, pad with NAs or 0.
+# @param task_names Names of tasks represented in design matrix.  For multi-session
+#' modeling, this must be provided if not all tasks are present for all sessions.
+#' @inheritParams session_names_Param
 #' @param nuisance (Optional) A \eqn{T \times J} matrix of nuisance signals.
 #'  These are regressed from the fMRI data and the design matrix prior to the
 #'  GLM computation. For multi-session modeling, this argument should be a list
@@ -110,10 +108,9 @@
 #' 2nd-order neighbors, etc.). Smaller values will provide greater computational
 #' efficiency at the cost of higher variance around the edge of the data.
 #' @param buffer For volumetric data, size of extra voxels layers around the
-#' bounding box, in terms of voxels. Set to NULL for no buffer.
-
-#' @inheritParams task_names_Param
-#' @inheritParams session_names_Param
+#' bounding box, in terms of voxels. Set to NULL for no buffer. (Recommended not
+#' to change unless you know what you're doing. Instead to reduce the number of
+#' boundary voxels, adjust \code{nbhd_order}).
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
@@ -124,7 +121,7 @@
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_Param
 #' @inheritParams verbose_Param
-#' @inheritParams combine_sessions_Param
+# @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Default: \code{1e-6} for both.
@@ -139,7 +136,7 @@
 #'    \item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
 #'    \item{session_names}{The names of the sessions.}
 #'    \item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-#'    \item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
+#'    \item{task_names}{Column names of the task part of the design matrix.}
 #'  }
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
@@ -159,6 +156,8 @@ BayesGLM_cifti <- function(
   design_multiple=NULL,
   onsets=NULL,
   TR=NULL,
+  #task_names = NULL, #disabled this, user must provide through design or onsets
+  session_names = NULL,
   nuisance=NULL,
   dHRF=c(0, 1, 2),
   dHRF_as=c("auto", "nuisance", "task"),
@@ -166,10 +165,8 @@ BayesGLM_cifti <- function(
   DCT=if(is.null(hpf)) {4} else {NULL},
   resamp_res=10000,
   nbhd_order=1, buffer=c(1,1,3,4,4),
-  task_names = NULL,
-  session_names = NULL,
   # Below arguments shared with `BayesGLM`.
-  combine_sessions = TRUE,
+  #combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -192,7 +189,7 @@ BayesGLM_cifti <- function(
   ## These checks are in a separate function because they are shared with
   ## `BayesGLM_cifti`.
   argChecks <- BayesGLM_argChecks(
-    combine_sessions = combine_sessions,
+    #combine_sessions = combine_sessions,
     scale_BOLD = scale_BOLD,
     scale_design = scale_design,
     Bayes = Bayes,
@@ -284,9 +281,9 @@ BayesGLM_cifti <- function(
 
   if (nS==1) {
 
-    print("Preparing to analyze a single task fMRI session")
+    cat("Preparing to analyze a single task fMRI session\n")
 
-    combine_sessions <- FALSE
+    #combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
     if (!is.null(design)) design <- list(single_session = design)
     if (!is.null(design_multiple)) design_multiple <- list(single_session = design_multiple)
@@ -295,7 +292,7 @@ BayesGLM_cifti <- function(
 
   } else {
 
-    print(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks"))
+    cat(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks\n"))
 
     #name sessions
     if (is.null(session_names)) session_names <- paste0('session', 1:nS)
@@ -365,7 +362,12 @@ BayesGLM_cifti <- function(
   }
 
   ## `design`, `onsets`, `task_names`. -----------------------------------------
-  ## Also, determine if we are doing multi-session modeling.
+
+  if(!is.null(design)) { task_names <- colnames(design[[1]]); nK <- ncol(design[[1]]) } #task_names could still be NULL
+  if(!is.null(onsets)) { task_names <- names(onsets[[1]]); nK <- length(onsets[[1]]) } #task_names could still be NULL
+  if(!is.null(design_multiple)) { task_names <- colnames(design_multiple[[1]][,,1]); nK <- dim(design_multiple[[1]])[2] } #task_names could still be NULL
+  if(is.null(task_names)) stop('Task names must be specified through `onsets` or `design`. See documentation for details.')
+
 
   if(is.null(design_multiple)){
 
@@ -379,10 +381,6 @@ BayesGLM_cifti <- function(
         if(inherits(x, "matrix")) return("matrix") else return(NA)
       })
       if(any(is.na(dclass))) stop('`design` must be a TxK matrix, or list of such matrices for multi-session analysis')
-
-      #define task_names based on design if available
-      task_names <- colnames(design[[1]]) #could be NULL
-      num_tasks <- ncol(design[[1]])
     }
 
     ### Case 2: Onsets and TR provided
@@ -394,18 +392,14 @@ BayesGLM_cifti <- function(
       oclass <- sapply(onsets, function(x){
         result <- NA
         if(inherits(x, "list")){
-          print("each element of onsets is a list, checking their contents")
-          #all elements of onsets[[j]] should be data frames or matrices
-          if(all(sapply(x, inherits, what="data.frame"))) result <- 'ok'
-          if(all(sapply(x, inherits, what="matrix"))) result <- 'ok'
+          #all elements of onsets[[j]] should be data frames or matrices or just NA (for missing tasks)
+          ok <- sapply(x, inherits, what="data.frame") | sapply(x, inherits, what="matrix") #which list elements are a matrix or df
+          ok[which(!ok)] <- sapply(x[which(!ok)], function(x2) { (length(x2) == 1 & is.na(x2[1])) }) #also which list elements are just NA
+          if(all(ok)) result <- 'ok'
         }
         return(result)
       })
-      if(any(is.na(oclass))) stop('`onsets` must be a list of matrices/data frames, or list of such lists for multi-session analysis')
-
-      #define task_names based on onsets if available
-      task_names <- names(onsets[[1]]) #could be NULL
-      num_tasks <- length(onsets[[1]])
+      if(any(is.na(oclass))) stop('If `onsets` is provided, it must be a list of matrices/data frames, or list of such lists for multi-session analysis')
     }
 
   } else {
@@ -417,14 +411,8 @@ BayesGLM_cifti <- function(
       if(inherits(x, "array") && length(dim(x))==3) return("array") else return(NA)
     })
     if(any(is.na(dclass))) stop('`design_multiple` must be a 3D array, or list of 3D arrays for multi-session analysis')
-
-    task_names <- colnames(design_multiple[[1]][,,1])
-    num_tasks <- dim(design_multiple[[1]])[2]
-
   }
 
-  #create task names if not provided or implied earlier
-  if(is.null(task_names)) task_names <- paste0("beta", 1:num_tasks)
 
 
   # Data setup. ----------------------------------------------------------------
@@ -437,8 +425,10 @@ BayesGLM_cifti <- function(
   ntime <- vector("numeric", nS)
 
   for (ss in seq(nS)) {
-    if (nS > 1) if (verbose>0) cat(paste0('\tReading and resampling data for session ', ss,'.\n'))
-
+    if (nS > 1) if (verbose>0) {
+      if(ss==1) cat(paste0('\tReading BOLD data for session ', ss,'  '))
+      if(ss > 1) cat(paste0(ss,'  '))
+    }
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
       xii_ss_res <- ciftiTools::infer_resolution(xii_ss)
@@ -504,6 +494,8 @@ BayesGLM_cifti <- function(
 
   if (!is.null(onsets)) {
 
+    if (verbose>0) cat("\n\tConstructing design matrix based on onsets provided \n")
+
     #determine whether to model HRF derivatives as task or nuisance if "auto"
     nK <- length(onsets[[1]])
     if (dHRF > 0 && dHRF_as=="auto") {
@@ -521,8 +513,6 @@ BayesGLM_cifti <- function(
       }
     }
 
-    if (verbose>0) cat("\tMaking design matrices.\n")
-
     #initialize lists
     design <- design_FIR <- vector("list", nS)
     stimulus <- HRFs <- FIR <- vector("list", nS)
@@ -537,9 +527,12 @@ BayesGLM_cifti <- function(
         nT=ntime[ss]
       )
       stimulus[[ss]] <- HRF_ss$stimulus #TxK matrix
-      HRFs[[ss]] <- HRF_ss$HRFs  #TxKx3 array -- allocate 2nd and 3rd dims to design or nuisance
+      HRFs[[ss]] <- HRF_ss$HRF_convolved  #TxKx3 array -- allocate 2nd and 3rd dims to design or nuisance
       FIR[[ss]] <- HRF_ss$FIR #T x K x nFIR -- just return this for now, don't use in modeling
       task_names_ss <- colnames(HRF_ss$stimulus)
+      if(ss==1) HRF <- HRF_ss$HRF
+
+      if(any(task_names_ss != task_names)) stop(paste0('Tasks in session ',nS,' in `onsets` do not match other sessions. Please input NA for any missing tasks, as described in function documentation.'))
 
       ### Construct design and nuisance matrices from main HRF and derivatives
 
@@ -547,7 +540,7 @@ BayesGLM_cifti <- function(
       if(dHRF > 0){
         for(dd in 1:dHRF){
           dname_dd <- switch(dd, "dHRF", "ddHRF")
-          dHRF_sd <- HRF_ss$HRFs[,,(dd+1)]
+          dHRF_sd <- as.matrix(HRF_ss$HRF_convolved[,,(dd+1)], ncol=nK)
           colnames(dHRF_sd) <- paste0(task_names_ss, "_", dname_dd)
           if(dHRF_as == "nuisance") nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF_sd) #if nuisance[[ss]] is NULL this still works
           if(dHRF_as == "task") design[[ss]] <- cbind(design[[ss]], dHRF_sd)
@@ -570,14 +563,9 @@ BayesGLM_cifti <- function(
 
     # Check that design matrix names are consistent across sessions.
     if (nS > 1) {
-      tmp <- sapply(design, colnames)
-      if(length(task_names) == 1) {
-        num_names <- length(unique(tmp))
-        if (num_names > 1) stop('task names must match across sessions for multi-session modeling')
-      } else {
-        num_names <- apply(tmp, 1, function(x) length(unique(x))) #number of unique names per row
-        if (max(num_names) > 1) stop('task names must match across sessions for multi-session modeling')
-      }
+      tmp <- lapply(design, colnames) #list of column names for all sessions
+      tmp2 <- sapply(tmp, function(x) all.equal(x, tmp[[1]])) #vector with TRUE for sessions whose names match session 1
+      if(!all(tmp2 == TRUE)) stop(paste0('Tasks do not match across sessions in `design`. Please input empty values for any missing tasks, as described in function documentation.'))
     }
 
     # Warn the user if the number of design matrix columns exceeds five.
@@ -605,6 +593,7 @@ BayesGLM_cifti <- function(
       # Get the num. of bases for this session.
       if (!is.null(hpf)) {
         DCTs[ss] <- round(dct_convert(ntime[ss], TR, f=hpf))
+        if(verbose > 0 & ss==1) cat(paste('\tIncluding',DCTs[ss],'DCT basis functions in the model based for hpf =',hpf,'Hz\n'))
       } else {
         DCTs[ss] <- DCT
       }
@@ -669,7 +658,7 @@ BayesGLM_cifti <- function(
       buffer = buffer,
       scale_design = scale_design,
       Bayes = do_Bayesian,
-      combine_sessions = combine_sessions,
+      #combine_sessions = combine_sessions,
       scale_BOLD = scale_BOLD,
       #EM = do_EM,
       ar_order = ar_order,
@@ -684,11 +673,11 @@ BayesGLM_cifti <- function(
 
     BayesGLM_results[[bb]] <- BayesGLM_out
 
-    # update session info if averaged over sessions
-    if (bb == brainstructures[1] && combine_sessions) {
-      session_names <- BayesGLM_out$session_names
-      nS <- 1
-    }
+    # # update session info if averaged over sessions
+    # if (bb == brainstructures[1] && combine_sessions) {
+    #   session_names <- BayesGLM_out$session_names
+    #   nS <- 1
+    # }
 
     rm(BayesGLM_out); gc()
   }
@@ -770,7 +759,8 @@ BayesGLM_cifti <- function(
       }
     }
 
-    names(design) <- names(design_FIR) <- names(nuisance) <- names(FIR) <- names(stimulus) <- session_names
+    names(design) <- names(nuisance) <- names(stimulus) <- session_names
+    #if(length(FIR) > 0) names(FIR) <- names(design_FIR) <- session_names #this check doesn't work for multi-session modeling
 
   } else {
 
@@ -823,7 +813,8 @@ BayesGLM_cifti <- function(
     design_multiple = design_multiple,
     nuisance = nuisance,
     stimulus = stimulus,
-    HRFs = HRFs,
+    HRFs = HRFs, #convolved HRFs
+    HRF_basis = HRF, #HRF basis functions
     FIR = FIR,
     design_FIR = design_FIR,
     task_names = field_names, #[TO DO] eventually rename this output to field_names

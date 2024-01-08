@@ -4,12 +4,16 @@
 \alias{organize_data}
 \title{Organize data for Bayesian GLM}
 \usage{
-organize_data(y, X)
+organize_data(y, X, n_mesh, inds)
 }
 \arguments{
 \item{y}{the TxV data matrix containing the fMRI timeseries}
 
 \item{X}{the TxK design matrix with K task-related columns}
+
+\item{n_mesh}{the number of mesh locations V2 >= V}
+
+\item{inds}{the indices in the mesh that correspond to the V data locations}
 }
 \value{
 A list containing fields \code{y} and \code{A} (see Details)

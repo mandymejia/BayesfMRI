@@ -13,6 +13,7 @@ BayesGLM_cifti(
   design_multiple = NULL,
   onsets = NULL,
   TR = NULL,
+  session_names = NULL,
   nuisance = NULL,
   dHRF = c(0, 1, 2),
   dHRF_as = c("auto", "nuisance", "task"),
@@ -25,9 +26,6 @@ BayesGLM_cifti(
   resamp_res = 10000,
   nbhd_order = 1,
   buffer = c(1, 1, 3, 4, 4),
-  task_names = NULL,
-  session_names = NULL,
-  combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -74,30 +72,31 @@ will be constructed.
 \code{design} is a \eqn{T \times K} task design matrix. Each column
 represents the expected BOLD response due to each task, a convolution of
 the hemodynamic response function (HRF) and the task stimulus. Task names
-should be the column names, if not provided by the \code{task_names}
-argument. For multi-session modeling, this argument should be a list of
-such matrices. To model HRF derivatives, calculate the derivatives of the
-task columns beforehand and either add them to \code{design} to model them
-as tasks, or \code{nuisance} to model them as nuisance signals. Note that
-INLA computation times increase if the design matrix has more than five columns,
-so it might be helpful to add these derivatives to \code{nuisance} rather than
-\code{design}.
+should be the column names. For multi-session modeling, this argument should be a list of
+such matrices, and column names must match and align across sessions. If any task is
+missing from any session, include a column of zeros in its place. HRF derivatives
+may be included in \code{design} to model them spatially, or in \code{nuisance}
+to treat them as nuisance signals. Note that INLA computation times increase
+if the design matrix has more than five columns.
 
-\code{onsets} is an \eqn{L}-length list in which the name of each element is
-the name of the corresponding task, and the value of each element is a
+\code{onsets} is a list where each element represents a task, and the value of each element is a
 matrix of onsets (first column) and durations (second column) for each
 stimuli (each row) of the corresponding task. The units of both columns
 is seconds. For multi-session modeling, this argument should be a list of
-such lists. To model HRF derivatives, use the arguments \code{dHRF} and
-\code{dHRF_as}. If \code{dHRF==0} or \code{dHRF_as=="nuisance"}, the total
-number of columns in the design matrix, \eqn{K}, will equal \eqn{L}.
-If \code{dHRF_as=="task"}, \eqn{K} will equal \eqn{L} times \code{dHRF+1}.
+such lists, and the task names must match and align across sessions. If any task is
+missing from any session, include a list element equal to NA in its place.
 
-\code{TR} is the temporal resolution of the data, in seconds.}
+\code{TR} is the temporal resolution of the data, in seconds. Required if \code{onsets} provided.}
 
 \item{design_multiple}{(Optional) A \eqn{T \times K \times D} array of \eqn{D}
 different design matrices for model comparison.  If provided, onsets and design will be ignored.
-TO DO: Allow differing numbers of regressors across D models, pad with NAs or 0.}
+TO DO: Allow differing numbers of regressors across D models, pad with NAs or 0.
+modeling, this must be provided if not all tasks are present for all sessions.}
+
+\item{session_names}{(Optional, and only relevant for multi-session modeling)
+Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
+argument will overwrite the names of the list entries in \code{data}, if
+both exist.}
 
 \item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals.
 These are regressed from the fMRI data and the design matrix prior to the
@@ -144,23 +143,9 @@ locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
 efficiency at the cost of higher variance around the edge of the data.}
 
 \item{buffer}{For volumetric data, size of extra voxels layers around the
-bounding box, in terms of voxels. Set to NULL for no buffer.}
-
-\item{task_names}{(Optional) Names of tasks represented in design matrix.}
-
-\item{session_names}{(Optional, and only relevant for multi-session modeling)
-Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
-argument will overwrite the names of the list entries in \code{data}, if
-both exist.}
-
-\item{combine_sessions}{If multiple sessions are provided, should their data
-be combined and analyzed as a single session?
-
-If \code{TRUE} (default), the multiple sessions will be concatenated along
-time after scaling and nuisance regression, but before prewhitening. If
-\code{FALSE}, each session will be analyzed separately, except that a single
-estimate of the AR model coefficients for prewhitening is used, estimated
-across all sessions.}
+bounding box, in terms of voxels. Set to NULL for no buffer. (Recommended not
+to change unless you know what you're doing. Instead to reduce the number of
+boundary voxels, adjust \code{nbhd_order}).}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 
@@ -224,7 +209,7 @@ An object of class \code{"BayesGLM_cifti"}: a list with elements
 \item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
 \item{session_names}{The names of the sessions.}
 \item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-\item{task_names}{The task part of the design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
+\item{task_names}{Column names of the task part of the design matrix.}
 }
 }
 \description{

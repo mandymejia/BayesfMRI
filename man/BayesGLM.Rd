@@ -13,7 +13,6 @@ BayesGLM(
   labels = NULL,
   buffer = c(1, 1, 3, 4, 4),
   nbhd_order = 1,
-  combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -32,10 +31,8 @@ BayesGLM(
 session is a list with elements \code{"BOLD"}, \code{"design"}, and
 optionally \code{"nuisance"}. Each element should be a numeric matrix with
 \eqn{T} rows. The name of each element in \code{data} is the name of that
-session. See \code{?is.BfMRI.sess} for details.
-
-Note that the argument \code{session_names} can be used instead of providing
-the session names as the names of the elements in \code{data}.}
+session. Colnames of design matrix represent task names and must match across
+sessions. See \code{?is.BfMRI.sess} for details.}
 
 \item{design_multiple}{(Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
 different design matrices for model comparison.}
@@ -64,15 +61,6 @@ bounding box, in terms of voxels. Set to NULL for no buffer.}
 locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
 2nd-order neighbors, etc.). Smaller values will provide greater computational
 efficiency at the cost of higher variance around the edge of the data.}
-
-\item{combine_sessions}{If multiple sessions are provided, should their data
-be combined and analyzed as a single session?
-
-If \code{TRUE} (default), the multiple sessions will be concatenated along
-time after scaling and nuisance regression, but before prewhitening. If
-\code{FALSE}, each session will be analyzed separately, except that a single
-estimate of the AR model coefficients for prewhitening is used, estimated
-across all sessions.}
 
 \item{scale_BOLD}{Option for scaling the BOLD response.
 

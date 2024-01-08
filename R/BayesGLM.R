@@ -8,10 +8,9 @@
 #'  session is a list with elements \code{"BOLD"}, \code{"design"}, and
 #'  optionally \code{"nuisance"}. Each element should be a numeric matrix with
 #'  \eqn{T} rows. The name of each element in \code{data} is the name of that
-#'  session. See \code{?is.BfMRI.sess} for details.
+#'  session. Colnames of design matrix represent task names and must match across
+#'  sessions. See \code{?is.BfMRI.sess} for details.
 #'
-#'  Note that the argument \code{session_names} can be used instead of providing
-#'  the session names as the names of the elements in \code{data}.
 #' @param design_multiple (Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
 #' different design matrices for model comparison.
 #' @param vertices,faces For cortical surface data, the geometry is based on
@@ -44,7 +43,7 @@
 #' @inheritParams num.threads_Param
 #' @inheritParams return_INLA_Param
 #' @inheritParams verbose_Param
-#' @inheritParams combine_sessions_Param
+# @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Default: \code{1e-6} for both.
@@ -92,7 +91,7 @@ BayesGLM <- function(
   buffer = c(1,1,3,4,4),
   nbhd_order = 1,
   # Below arguments shared with `BayesGLM_cifti`.
-  combine_sessions = TRUE,
+  #combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE, #[TO DO] Delete this?  It is done by BayesGLM_cifti and could be done by the user
   Bayes = TRUE,
@@ -122,7 +121,7 @@ BayesGLM <- function(
     num.threads = num.threads,
     return_INLA = return_INLA,
     verbose = verbose,
-    combine_sessions = combine_sessions,
+    #combine_sessions = combine_sessions,
     varTol = varTol,
     meanTol = meanTol
     #emTol = emTol
@@ -140,6 +139,7 @@ BayesGLM <- function(
     stop("`data` must be a list of sessions, as described in `?is.BfMRI.sess`.")
   }
   session_names <- names(data)
+  if(is.null(session_names)) stop('Session names should be provided via names(data).')
 
   ## Geometric inputs: check ------------------------------------------------
   is_surf <- !is.null(vertices) && !is.null(faces)
@@ -161,15 +161,15 @@ BayesGLM <- function(
   nV <- ncol(data[[1]]$BOLD) # number of data locations (before any masking)
   nT <- vapply(data, function(x){ nrow(x$BOLD) }, 0) # numbers of timepoints
 
-  if (nS == 1 && combine_sessions) combine_sessions <- FALSE
+ # if (nS == 1 && combine_sessions) combine_sessions <- FALSE
 
   ## Task names: check or make. ------------------------------------------------
   task_names <- colnames(data[[1]]$design)
-  if (is.null(task_names)) { task_names <- paste0("beta", seq(nK)) }
+  if(is.null(task_names)) stop('Task names should be provided through `design` element of data. See documentation for details.')
 
   ## Define a few return variables that may or may not be calculated. ----------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
-  task_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- X_all_list <- NULL
+  task_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
   theta_estimates <- Sig_inv <- mesh <- mesh_orig <- NULL
 
   ## Set up spatial data -------------------------------------------------------
@@ -264,10 +264,22 @@ BayesGLM <- function(
     mask <- rep(TRUE, nV) #because we are not yet doing masking, but this will need to be updated in that case.
   }
 
+  if(verbose==1) cat(paste0('\tNumber of data locations: ',length(data_loc),'\n'))
+  if(verbose==1) cat(paste0('\tNumber of data + boundary locations: ',spde$n.spde,'\n'))
+
   # ------------------------------------------------------------------------------
   # Case 1: Fit a models including prewhitening, inference and spatial Bayesian GLM
 
   if(is.null(design_multiple)){
+
+    # Identify any missing tasks across sessions for bookkeeping -----------------
+
+    valid_cols <- matrix(NA, nrow=nS, ncol=ncol(data[[1]]$design))
+    for (ss in 1:nS) {
+      cols_ss <- (colSums(abs(data[[ss]]$design)) > 0)
+      cols_ss[is.na(cols_ss)] <- FALSE
+      valid_cols[ss,] <- cols_ss
+    }
 
     ## Scale, nuisance regress, and/or concatenate session data. -----------------
     #collect data and design matrices
@@ -277,11 +289,14 @@ BayesGLM <- function(
       # Scale data
       dBOLD <- dim(data[[ss]]$BOLD)
       data[[ss]]$BOLD <- fMRItools::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
-      # Scale design matrix
-      data[[ss]]$design <- if (scale_design) {
-        scale_design_mat(data[[ss]]$design)
+      # Remove any missing tasks from design matrix for classical GLM
+      cols_ss <- valid_cols[ss,]
+      if(!all(cols_ss)) warning(paste0('For session ',ss,', ignoring ',sum(!cols_ss),' design matrix columns of zeros for classical GLM.'))
+      # Scale design matrix (ignore columns of zeros)
+        data[[ss]]$design[,cols_ss] <- if (scale_design) {
+        scale_design_mat(data[[ss]]$design[,cols_ss])
       } else {
-        scale(data[[ss]]$design, scale = FALSE)
+        scale(data[[ss]]$design[,cols_ss], scale = FALSE)
       }
       design[[ss]] <- data[[ss]]$design #after scaling but before nuisance regression
 
@@ -289,34 +304,38 @@ BayesGLM <- function(
       if ('nuisance' %in% names(data[[ss]])) {
         nuisance_s <- scale(data[[ss]]$nuisance, scale=FALSE)
         data[[ss]]$BOLD <- nuisance_regression(data[[ss]]$BOLD, nuisance_s)
-        data[[ss]]$design <- nuisance_regression(data[[ss]]$design, nuisance_s)
+        data[[ss]]$design[,cols_ss] <- nuisance_regression(data[[ss]]$design[,cols_ss], nuisance_s)
         data[[ss]]$nuisance <- NULL
       }
     }
 
-    #concatenate sessions if combine_sessions=TRUE
-    if(combine_sessions){
-      #concatenate BOLD data across all sessions
-      data <- list(
-        session_combined = list(
-          BOLD = do.call(rbind, lapply(data, function(sess){ sess$BOLD })),
-          design = do.call(rbind, lapply(data, function(sess){ sess$design }))
-        )
-      )
+    # #concatenate sessions if combine_sessions=TRUE
+    # if(combine_sessions){
+    #   #concatenate BOLD data across all sessions
+    #   data <- list(
+    #     session_combined = list(
+    #       BOLD = do.call(rbind, lapply(data, function(sess){ sess$BOLD })),
+    #       design = do.call(rbind, lapply(data, function(sess){ sess$design }))
+    #     )
+    #   )
+    #
+    #   # Update nT, nS, session_names
+    #   nT <- nrow(data$session_combined$BOLD)
+    #   sess_names_orig <- session_names
+    #   session_names <- 'session_combined'
+    #   nS <- 1
+    #   valid_cols <- matrix(TRUE, nrow=1, ncol=nK)
+    # } else {
+    #   # [TO DO]: allow different `nT`.
+    #   # Is this only problematic when `do_pw`?
+    #   if (length(unique(nT)) > 1) {
+    #     stop("Not supported yet: different BOLD time durations while `combine_sessions=FALSE`.")
+    #   }
+    #   nT <- nT[1]
+    # }
 
-      # Update nT, nS, session_names
-      nT <- nrow(data$session_combined$BOLD)
-      sess_names_orig <- session_names
-      session_names <- 'session_combined'
-      nS <- 1
-    } else {
-      # [TO DO]: allow different `nT`.
-      # Is this only problematic when `do_pw`?
-      if (length(unique(nT)) > 1) {
-        stop("Not supported yet: different BOLD time durations while `combine_sessions=FALSE`.")
-      }
-      nT <- nT[1]
-    }
+    # [TO DO] "Always prewhiten" even if we do not want to prewhiten so that the data is in a consistent format. Just skip the actual PW steps.  Or at least call organize_data.
+
 
     # Prewhitening. --------------------------------------------------------------
     if (do_pw) {
@@ -328,7 +347,8 @@ BayesGLM <- function(
 
       #estimate prewhitening parameters for each session
       for (ss in 1:nS) {
-        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design)
+        cols_ss <- valid_cols[ss,]
+        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design[,cols_ss])
         AR_est <- pw_estimate(resids, ar_order, aic=aic)
         AR_coeffs[,,ss] <- AR_est$phi
         AR_resid_var[,ss] <- AR_est$sigma_sq
@@ -390,12 +410,12 @@ BayesGLM <- function(
       sqrtInv_all <- Matrix::bdiag(template_pw_list)
 
       #apply prewhitening matrix to BOLD and design for each session
-      data <- sapply(data, function(data_s) {
+      data <- sapply(data, function(x) {
         #bold_out <- matrix(NA, nT, nV)
-        bold_out <- as.vector(sqrtInv_all %*% c(data_s$BOLD))
+        bold_out <- as.vector(sqrtInv_all %*% c(x$BOLD))
         #bold_out[,mask] <- pw_BOLD
-        all_design <- organize_data(data_s$BOLD, data_s$design)$design #big sparse matrix
-        pw_design <- sqrtInv_all %*% all_design
+        all_design <- organize_data(x$BOLD, x$design, n_mesh = spde$n.spde, inds = data_loc)$design #big sparse matrix
+        pw_design <- sqrtInv_all %*% all_design  # note that any columns of all zeros in design matrix will stay all zeros
         return(list(BOLD = bold_out, design = pw_design))
       }, simplify = F)
     }
@@ -403,46 +423,70 @@ BayesGLM <- function(
     # Classical GLM. -------------------------------------------------------------
     #organize data
     y_all <- c()
-    X_all_list <- NULL
+    XA_all_list <- NULL
     # Classical GLM
     result_classical <- vector('list', length=nS)
     for (ss in seq(nS)) {
-      if (verbose>0) cat("\tClassical model.\n")
+      if(ss==1) cat(paste0('\tFitting classical GLM for session ', ss,'  '))
+      if(ss > 1) cat(paste0(ss,'  '))
+
+      cols_ss <- valid_cols[ss,] #classical GLM will ignore
+      nK_ss <- sum(cols_ss) #in case some tasks missing
 
       #set up vectorized data and big sparse design matrix
       #(dim(data[[ss]]$BOLD)) is VxT
-      if(!do_pw) data_s <- organize_data(t(data[[ss]]$BOLD), data[[ss]]$design)
+      if(!do_pw) data_s <- organize_data(t(data[[ss]]$BOLD), data[[ss]]$design, n_mesh = spde$n.spde, inds = data_loc)
       if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
 
+      #setup for Bayesian GLM
       y_all <- c(y_all, data_s$BOLD)
-      X_list <- list(data_s$design)
-      names(X_list) <- session_names[ss]
-      X_all_list <- c(X_all_list, X_list)
-      y_reg <- data_s$BOLD #a vector (grouped by location)
-      X_reg <- data_s$design
+      #XA_ss <- data_s$design
+      XA_ss <- lapply(data_s$design, function(x) { return(x %*% data_s$A) }) #post-multiply each design matrix by A (n_data x n_mesh) for Bayesian GLM
+      XA_list <- do.call(cbind, XA_ss) #cbind (expanded) design matrices for each task
+      XA_list <- list(XA_list)
+      names(XA_list) <- session_names[ss]
+      XA_all_list <- c(XA_all_list, XA_list)
+
+      #XA_list <- list(data_s$bigX)
+      #names(XA_list) <- session_names[ss]
+      #XA_all_list <- c(XA_all_list, XA_list)
+
+      #setup for classical GLM
+      y_ss <- data_s$BOLD #a vector (grouped by location)
+      X_ss <- do.call(cbind, data_s$design) #cbind non-expanded design matrices for each task
+      valid_cols_bigX <- (colSums(abs(X_ss)) > 0) #because X_ss is a big sparse matrix, any missing tasks will manifest as a block of zeros
+      valid_cols_bigX[is.na(valid_cols_bigX)] <- FALSE
+      X_ss <- X_ss[,valid_cols_bigX]
 
       #perform classical GLM after any prewhitening
       beta_hat_s <- SE_beta_hat_s <- matrix(NA, nV_all, nK)
-      XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
+      XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_ss)))
       if (inherits(XTX_inv, "try-error")) {
         stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
       }
-      coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
-      coef_s_mat <- matrix(coef_s, nrow = nV, ncol = nK)
-      beta_hat_s[mask==TRUE,] <- coef_s_mat
-      resid_s <- t(matrix(y_reg - X_reg %*% coef_s, nrow = nT))
+      coef_s <- as.matrix(XTX_inv %*% t(X_ss) %*% y_ss) #a vector of (estimates for location 1, estimates for location 2, ...)
+      coef_s_mat <- matrix(coef_s, nrow = nV, ncol = nK_ss) #re-form into a VxK matrix
+      # if(ss >= 6){
+      # print(dim(coef_s_mat))
+      # print(table(mask))
+      # print(cols_ss)
+      # print(dim(beta_hat_s[mask==TRUE,cols_ss]))
+      # print(dim(beta_hat_s[mask==TRUE,which(cols_ss)]))
+      # }
+      beta_hat_s[mask==TRUE,cols_ss] <- coef_s_mat
+      resid_s <- t(matrix(y_ss - X_ss %*% coef_s, nrow = nT))
 
       # ESTIMATE STANDARD ERRORS OF ESTIMATES
       #compute residual SD
-      #using length(y_reg)/nV instead of nT here because we want nT for single session case and nT*nS for multi-session case
-      DOF_true <- (length(y_reg)/nV) - nK - nK2 - 1
-      DOF_false <- (length(y_reg)/nV - 1)
+      #using length(y_ss)/nV instead of nT here because we want nT for single session case and nT*nS for multi-session case
+      DOF_true <- (length(y_ss)/nV) - nK_ss - nK2 - 1
+      DOF_false <- (length(y_ss)/nV - 1)
       var_error <- matrixStats::rowVars(resid_s) * DOF_false / DOF_true #correct DOF
       if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
-      sd_error <- sqrt(var_error)
+      sd_error <- sqrt(var_error) #length = nV
       #compute SE of betas
-      SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, times = nK) #each?
-      SE_beta_hat_s[mask==TRUE,] <- SE_beta_s
+      SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = nK_ss) #blocks of XTX_inv represent tasks, so we should repeat each location-specific SD K times
+      SE_beta_hat_s[mask==TRUE,cols_ss] <- SE_beta_s
 
       colnames(beta_hat_s) <- colnames(SE_beta_hat_s) <- task_names
 
@@ -477,17 +521,17 @@ BayesGLM <- function(
     #   #if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
     #   #if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
     #
-    #   #y_reg <- matrix(data_s$BOLD, nrow=nT) #a vector (grouped by location)
-    #   y_reg <- data[[ss]]$BOLD #[TO DO] implement prewhitening case (may not be needed if we are not doing inference)
-    #   X_reg <- cbind(FIR_ss, 1, data[[ss]]$nuisance) #need the intercept since FIR bases are not centered
+    #   #y_ss <- matrix(data_s$BOLD, nrow=nT) #a vector (grouped by location)
+    #   y_ss <- data[[ss]]$BOLD #[TO DO] implement prewhitening case (may not be needed if we are not doing inference)
+    #   X_ss <- cbind(FIR_ss, 1, data[[ss]]$nuisance) #need the intercept since FIR bases are not centered
     #
     #   #fit model
     #   beta_hat_s <- matrix(NA, nV_all, nFIR)
-    #   XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_reg)))
+    #   XTX_inv <- try(Matrix::solve(Matrix::crossprod(X_ss)))
     #   if (inherits(XTX_inv, "try-error")) {
     #     stop("There is some numerical instability in your design matrix (due to very large or very small values). Scaling the design matrix is suggested.")
     #   }
-    #   coef_s <- as.matrix(XTX_inv %*% t(X_reg) %*% y_reg) #a vector of (estimates for location 1, estimates for location 2, ...)
+    #   coef_s <- as.matrix(XTX_inv %*% t(X_ss) %*% y_ss) #a vector of (estimates for location 1, estimates for location 2, ...)
     #   beta_hat_s[mask==TRUE,] <- t(coef_s[1:nFIR,]) #drop the intercept and nuisance, transpose to V x nFIR
     #
     #   colnames(beta_hat_s) <- colnames(FIR_ss)
@@ -515,7 +559,10 @@ BayesGLM <- function(
                                              #data_loc=data_loc) #indices of original data locations
       betas <- replicates_list$betas
       repls <- replicates_list$repls
-      model_data <- make_data_list(y=y_all, X=X_all_list, betas=betas, repls=repls)
+      model_data <- make_data_list(y=y_all, X=XA_all_list,
+                                   betas=betas, repls=repls)
+      Amat <- model_data$X
+      model_data$XA_all_list <- NULL
 
       ## EM Model. ---------------------------------------------------------------
       #if(do_EM) {
@@ -604,7 +651,7 @@ BayesGLM <- function(
       ## INLA Model. -------------------------------------------------------------
       #} else {
         #estimate model using INLA
-        if (verbose>0) cat('\tEstimating Bayesian model with INLA...')
+        if (verbose>0) cat('\n\tEstimating Bayesian model with INLA...')
         #organize the formula and data objects
         repl_names <- names(repls)
         hyper_initial <- c(-2,2)
@@ -620,7 +667,7 @@ BayesGLM <- function(
           formula,
           data=model_data,
           #data=INLA::inla.stack.data(model_data, spde=spde),
-          control.predictor=list(A=model_data$X, compute = TRUE),
+          control.predictor=list(A=Amat, compute = TRUE),
           verbose = verbose>1, keep = FALSE, num.threads = num.threads,
           control.inla = list(strategy = "gaussian", int.strategy = "eb"),
           control.family=list(hyper=list(prec=list(initial=1))),
@@ -632,7 +679,8 @@ BayesGLM <- function(
         task_estimates <- extract_estimates(
           INLA_model_obj=INLA_model_obj,
           session_names=session_names,
-          mask=mask
+          mask=mask,
+          inds=data_loc
         ) #posterior means of latent task field
         theta_estimates <- INLA_model_obj$summary.hyperpar$mean
         hyperpar_posteriors <- get_posterior_densities2(
@@ -682,7 +730,7 @@ BayesGLM <- function(
       sigma2_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
       for(pp in 1:nP){
 
-        print(paste0('Fitting model ',pp))
+        cat(paste0('\tFitting model ',pp,'\n'))
 
         #set up and scale design matrix
         X_sp <- X_ss[,,pp]/max(X_ss[,,pp])
@@ -735,7 +783,7 @@ BayesGLM <- function(
     # For joint group model ~~~~~~~~~~~~~
     #posterior_Sig_inv = Sig_inv,
     y = y_all,
-    X = X_all_list,
+    X = XA_all_list,
     prewhiten_info = prewhiten_info,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     call = match.call()
@@ -758,7 +806,7 @@ BayesGLM <- function(
 #' @param num.threads See \code{\link{BayesGLM}}.
 #' @param return_INLA See \code{\link{BayesGLM}}.
 #' @param verbose See \code{\link{BayesGLM}}.
-#' @param combine_sessions See \code{\link{BayesGLM}}.
+# @param combine_sessions See \code{\link{BayesGLM}}.
 #' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
 #'
 #' @return The arguments that may have changed, in a list: \code{scale_BOLD},
@@ -766,7 +814,7 @@ BayesGLM <- function(
 #'
 #' @keywords internal
 BayesGLM_argChecks <- function(
-    combine_sessions = FALSE,
+    #combine_sessions = FALSE,
     scale_BOLD = c("auto", "mean", "sd", "none"),
     scale_design = TRUE,
     Bayes = TRUE,
@@ -782,7 +830,7 @@ BayesGLM_argChecks <- function(
     emTol=1e-3
 ){
 
-  stopifnot(is_1(combine_sessions, "logical"))
+  #stopifnot(is_1(combine_sessions, "logical"))
 
   if (isTRUE(scale_BOLD)) {
     message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"

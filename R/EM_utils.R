@@ -242,7 +242,7 @@ make_Q <- function(theta, spde, n_sess) {
 #' Gives the portion of the Q matrix independent of phi
 #'
 #' @param kappa2 scalar
-#' @param spde An spde object
+#' @param spdean spde object
 #'
 #' @return a dgCMatrix
 #' @keywords internal
@@ -331,7 +331,7 @@ neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' Streamlined negative objective function for kappa2 using precompiled values
 #'
 #' @param kappa2 scalar
-#' @param spde SPDE prior matrix
+#' @param spde_mats a list of SPDE prior matrices from
 #' @param a_star precomputed coefficient (scalar)
 #' @param b_star precomputed coefficient (scalar)
 #' @param n_sess number of sessions (scalar)

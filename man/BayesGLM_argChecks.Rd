@@ -5,7 +5,6 @@
 \title{Bayes GLM arg checks}
 \usage{
 BayesGLM_argChecks(
-  combine_sessions = FALSE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
@@ -22,8 +21,6 @@ BayesGLM_argChecks(
 )
 }
 \arguments{
-\item{combine_sessions}{See \code{\link{BayesGLM}}.}
-
 \item{scale_BOLD, scale_design}{See \code{\link{BayesGLM}}.}
 
 \item{Bayes, EM}{See \code{\link{BayesGLM}}.}

@@ -72,12 +72,13 @@ make_data_list <- function(y, X, betas, repls){
 #'  \code{inla}.
 #' @param session_names Vector of fMRI session names
 #' @param mask (Optional) Original mask applied to data before model fitting
+#' @param inds the indices in the mesh that correspond to the V data locations
 #' @param stat A string representing the posterior summary statistic to be returned
 #'
 #' @return Estimates from inla model
 #'
 #' @keywords internal
-extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='mean'){
+extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, inds, stat='mean'){
 
   if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
@@ -86,14 +87,17 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='me
   task_names <- names(res.beta)
 
   nS <- length(session_names)
-  n_loc <- length(res.beta[[1]]$mean)/nS #number of locations for which beta is estimated
-  if(!is.null(mask)) {
-    V <- length(mask)
-    if(sum(mask) != n_loc) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
-  } else {
-    V <- n_loc
-    mask <- rep(1,V)
-  }
+
+  #determine number of locations
+  #	nV  = the number of data locations used in model fitting
+  # nV2 or n_mesh = the number of mesh locations, which may be a superset
+  # nV0 = the number of data locations prior to applying a mask
+  if(is.null(mask)) mask <- rep(1, length(inds))
+  nV0 <- length(mask) #number of data locations prior to applying a mask pre-model fitting
+  nV <- length(inds) #number of data locations included in the model -- should match sum(mask)
+  if(sum(mask) != nV) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
+  nV2 <- length(res.beta[[1]]$mean)/nS #number of locations in beta estimates
+
   betas <- vector('list', nS)
   names(betas) <- session_names
 
@@ -101,15 +105,17 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='me
   if(! (stat %in% stat_names) ) stop(paste0('stat must be one of following: ', paste(stat_names, collapse = ', ')))
   stat_ind <- which(stat_names==stat)
 
-
   for (ss in seq(nS)) {
-    inds_ss <- (1:n_loc) + (ss-1)*n_loc #indices of beta vector corresponding to session v
-    betas_ss <- matrix(NA, nrow=n_loc, ncol=nbeta)
+    inds_ss <- (1:nV2) + (ss-1)*nV2 #indices of beta vector corresponding to session v
+    betas_ss <- matrix(NA, nrow=nV2, ncol=nbeta)
     for (bb in seq(nbeta)) {
       est_iv <- res.beta[[bb]][[stat_ind]][inds_ss]
       betas_ss[,bb] <- est_iv
     }
-    betas[[ss]] <- matrix(NA, nrow=V, ncol=nbeta)
+    #remove boundary locations
+    betas_ss <- betas_ss[inds,]
+    #unmask, with NA for data locations excluded from analysis
+    betas[[ss]] <- matrix(NA, nrow=nV0, ncol=nbeta)
     betas[[ss]][mask==1,] <- betas_ss
     colnames(betas[[ss]]) <- task_names
   }

@@ -45,11 +45,7 @@ make_HRFs <- function(
   c=1/6){
 
   nK <- length(onsets) #number of tasks
-  task_names <- if (is.null(names(onsets))) {
-    task_names <- paste0('task', 1:nK)
-  } else {
-    task_names <- names(onsets)
-  }
+  task_names <- names(onsets)
 
   #prepare to upsample the stimulus function
   upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
@@ -59,7 +55,7 @@ make_HRFs <- function(
   #note: since nT is an integer, the inds will always be integers, as long as TR*upsample is also an integer
 
   if(max(abs(inds - round(inds))) > 1e-6) stop('Contact developer: detected non-integer indices for downsampling')
-  inds <- round(inds)
+  inds <- round(inds) #to fix tiny deviations from zero
 
   #for FIR
   if(FIR_nsec > 0){
@@ -70,11 +66,11 @@ make_HRFs <- function(
   }
 
   #initialize arrays
-  theStimulus <- array(NA, dim=c(nT, nK),
+  theStimulus <- array(0, dim=c(nT, nK),
                        dimnames = list(volume=1:nT, task=task_names))
-  theHRFs <- array(NA, dim=c(nT, nK, 3),
+  theHRFs <- array(0, dim=c(nT, nK, 3),
                    dimnames = list(volume=1:nT, task=task_names, HRF=c("HRF", "dHRF", "ddHRF")))
-  if(FIR_nsec > 0) theFIR <- array(NA, dim=c(nT, nK, FIR_nTR),
+  if(FIR_nsec > 0) theFIR <- array(0, dim=c(nT, nK, FIR_nTR),
                   dimnames = list(volume=1:nT, task=task_names, FIR=1:FIR_nTR))
   if(!(FIR_nsec > 0)) theFIR <- NULL
 
@@ -86,6 +82,10 @@ make_HRFs <- function(
 
   for (kk in seq(nK)) {
 
+    if(is.na(onsets[[kk]][1])) { #NA is placeholder for missing tasks
+      warning('Inputting zeros in design matrix for missing task, proceed with caution.')
+      next()
+    }
     onsets_k <- onsets[[kk]][,1] #onset times in scans
     durations_k <- onsets[[kk]][,2] #durations in scans
 
