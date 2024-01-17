@@ -214,3 +214,28 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
   # Return composite mask.
   mask_na & mask_mean & mask_var
 }
+
+#' Is this a valid `onsets`?
+#' 
+#' Is this valid data for event onsets? Expects a data.frame or numeric matrix
+#'  with two numeric columns, onsets and durations, and at least one row.
+#'  Raise an error if invalid; do nothing if valid.
+#' 
+#' @param x The putative onsets.
+#' @keywords internal
+#' @return Length-one logical vector.
+#' 
+is_onsets <- function(x){
+  is_nummat <- is.numeric(x) & is.matrix(x)
+  is_df <- is.data.frame(x) && all(vapply(x, class, "") == "numeric")
+  if (!(is_nummat || is_df)) { warning("The onsets are not a numeric matrix or data.frame."); return(FALSE) }
+  
+  if (nrow(x)<1) { warning("The onsets must have at least one row."); return(FALSE) }
+
+  if (ncol(x) != 2) { warning("The onsets should have two columns, `onset` and `duration`."); return(FALSE) }
+  if (!all(colnames(x) == c("onset", "duration"))) {
+    warning("The onsets should have two columns, `onset` and `duration`."); return(FALSE)
+  }
+
+  TRUE
+}

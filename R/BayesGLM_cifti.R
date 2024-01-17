@@ -381,31 +381,27 @@ BayesGLM_cifti <- function(
     ### Case 1: Design matrix provided
     if (!is.null(design)) {
       #check format of design
-      if(!all(vapply(design, is.matrix, FALSE))) {
+      if(!all(vapply(design, function(q){is.matrix(q) | is.data.frame(q)}, FALSE))) {
         stop('`design` must be a numeric TxK matrix, or list of such matrices for multi-session analysis.')
       }
       if(!all(vapply(design, is.numeric, FALSE))) {
         stop('`design` must be a numeric TxK matrix, or list of such matrices for multi-session analysis.')
       }
+      if(!all(vapply(design, function(q){ncol(q)>0}, FALSE))) {
+        stop('`design` has data with zero columns. Please fix.')
+      }
     }
 
     ### Case 2: Onsets and TR provided
-    if (!is.null(onsets)) {
-
-      if (is.null(TR)) { stop('Please provide `TR` if onsets provided') }
-
-      #check format of onsets
-      oclass <- vapply(
-        onsets,
-        function(x){
-          if (!is.list(x)) { return(FALSE) }
-          # Each element must be a data.frame, matrix, or `NA`
-          ok <- vapply(x, is.data.frame, FALSE) | vapply(x, is.matrix, FALSE) | vapply(x, function(x2){length(x2)==1 && is.na(x2)}, FALSE)
-          all(ok)
-        },
-        FALSE
-      )
-      if(any(!(oclass))) stop('If `onsets` is provided, it must be a list of matrices/data frames, or list of such lists for multi-session analysis')
+    for (ss in seq(nS)) {
+      onsets_ss <- onsets[[ss]]
+      if (!is.null(onsets_ss)) {
+        if (is.null(TR)) { stop('Please provide `TR` if `onsets` provided.') }
+        #check format of onsets_ss
+        if(!all(vapply(onsets_ss, is_onsets, FALSE))) {
+          stop('`onsets` must be a non-empty numeric matrix, or list of such matrices for multi-session analysis.')
+        }
+      }
     }
 
   } else {
