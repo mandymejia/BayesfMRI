@@ -207,6 +207,8 @@ BayesGLM <- function(
     # Update number of locations after masking
     nV <- sum(mask); nV_all <- length(mask)
 
+    data_loc <- rep(TRUE, nV)
+
     spde <- INLA::inla.spde2.matern(mesh)
   }
 

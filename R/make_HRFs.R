@@ -82,7 +82,7 @@ make_HRFs <- function(
 
   for (kk in seq(nK)) {
 
-    if(is.na(onsets[[kk]][1])) { #NA is placeholder for missing tasks
+    if (all(is.na(onsets[[kk]][1]))) { #NA is placeholder for missing tasks
       warning('Inputting zeros in design matrix for missing task, proceed with caution.')
       next()
     }

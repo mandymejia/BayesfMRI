@@ -334,7 +334,12 @@ BayesGLM_cifti <- function(
     }
   }
 
-  if(is.null(nuisance)) nuisance <- vector("list", length = nS)
+  if (!is.null(nuisance)) {
+    stopifnot(all(vapply(nuisance, is.matrix, FALSE)))
+    stopifnot(all(vapply(nuisance, is.numeric, FALSE)))
+  } else {
+    nuisance <- vector("list", length = nS)
+  }
 
   ## Surfaces/SPDE: check or get. ---------------------------------------------------
   spatial_list <- list(left=NULL, right=NULL, subcortical=NULL)
@@ -375,12 +380,13 @@ BayesGLM_cifti <- function(
 
     ### Case 1: Design matrix provided
     if (!is.null(design)) {
-
       #check format of design
-      dclass <- sapply(design, function(x){
-        if(inherits(x, "matrix")) return("matrix") else return(NA)
-      })
-      if(any(is.na(dclass))) stop('`design` must be a TxK matrix, or list of such matrices for multi-session analysis')
+      if(!all(vapply(design, is.matrix, FALSE))) {
+        stop('`design` must be a numeric TxK matrix, or list of such matrices for multi-session analysis.')
+      }
+      if(!all(vapply(design, is.numeric, FALSE))) {
+        stop('`design` must be a numeric TxK matrix, or list of such matrices for multi-session analysis.')
+      }
     }
 
     ### Case 2: Onsets and TR provided
@@ -389,17 +395,17 @@ BayesGLM_cifti <- function(
       if (is.null(TR)) { stop('Please provide `TR` if onsets provided') }
 
       #check format of onsets
-      oclass <- sapply(onsets, function(x){
-        result <- NA
-        if(inherits(x, "list")){
-          #all elements of onsets[[j]] should be data frames or matrices or just NA (for missing tasks)
-          ok <- sapply(x, inherits, what="data.frame") | sapply(x, inherits, what="matrix") #which list elements are a matrix or df
-          ok[which(!ok)] <- sapply(x[which(!ok)], function(x2) { (length(x2) == 1 & is.na(x2[1])) }) #also which list elements are just NA
-          if(all(ok)) result <- 'ok'
-        }
-        return(result)
-      })
-      if(any(is.na(oclass))) stop('If `onsets` is provided, it must be a list of matrices/data frames, or list of such lists for multi-session analysis')
+      oclass <- vapply(
+        onsets,
+        function(x){
+          if (!is.list(x)) { return(FALSE) }
+          # Each element must be a data.frame, matrix, or `NA`
+          ok <- vapply(x, is.data.frame, FALSE) | vapply(x, is.matrix, FALSE) | vapply(x, function(x2){length(x2)==1 && is.na(x2)}, FALSE)
+          all(ok)
+        },
+        FALSE
+      )
+      if(any(!(oclass))) stop('If `onsets` is provided, it must be a list of matrices/data frames, or list of such lists for multi-session analysis')
     }
 
   } else {
