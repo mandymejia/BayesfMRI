@@ -70,7 +70,7 @@ BayesGLM_cifti_args <- list(
   ar_order = 0,
   ar_smooth = 3,
   resamp_res = 800,
-  verbose = FALSE,
+  verbose = TRUE,
   return_INLA = "trim"
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)

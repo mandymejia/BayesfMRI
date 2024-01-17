@@ -24,6 +24,9 @@
 #' @keywords internal
 organize_data <- function(y, X, n_mesh, inds){
 
+  stopifnot((is.matrix(y) | is.data.frame(y)) && is.numeric(y))
+  stopifnot((is.matrix(X) | is.data.frame(X)) && is.numeric(X))
+
   if (ncol(y) == nrow(X)) {
     warning('Transposing fMRI data (`y`) so rows are time points and columns are locations.')
     y <- t(y)

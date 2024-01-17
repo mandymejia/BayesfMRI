@@ -304,9 +304,11 @@ BayesGLM <- function(
 
       #regress nuisance parameters from BOLD data and design matrix
       if ('nuisance' %in% names(data[[ss]])) {
-        nuisance_s <- scale(data[[ss]]$nuisance, scale=FALSE)
-        data[[ss]]$BOLD <- nuisance_regression(data[[ss]]$BOLD, nuisance_s)
-        data[[ss]]$design[,cols_ss] <- nuisance_regression(data[[ss]]$design[,cols_ss], nuisance_s)
+        nuis_ss <- data[[ss]]$nuisance
+        stopifnot((is.matrix(nuis_ss) | is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
+        nuis_ss <- scale(nuis_ss, scale=FALSE)
+        data[[ss]]$BOLD <- nuisance_regression(data[[ss]]$BOLD, nuis_ss)
+        data[[ss]]$design[,cols_ss] <- nuisance_regression(data[[ss]]$design[,cols_ss], nuis_ss)
         data[[ss]]$nuisance <- NULL
       }
     }
@@ -429,8 +431,10 @@ BayesGLM <- function(
     # Classical GLM
     result_classical <- vector('list', length=nS)
     for (ss in seq(nS)) {
-      if(ss==1) cat(paste0('\tFitting classical GLM for session ', ss,'  '))
-      if(ss > 1) cat(paste0(ss,'  '))
+      if (verbose>0) {
+        if (ss==1) { cat('\tFitting classical GLM for session ') }
+        if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
+      }
 
       cols_ss <- valid_cols[ss,] #classical GLM will ignore
       nK_ss <- sum(cols_ss) #in case some tasks missing
@@ -653,7 +657,7 @@ BayesGLM <- function(
       ## INLA Model. -------------------------------------------------------------
       #} else {
         #estimate model using INLA
-        if (verbose>0) cat('\n\tEstimating Bayesian model with INLA...')
+        if (verbose>0) cat('\tEstimating Bayesian model with INLA...')
         #organize the formula and data objects
         repl_names <- names(repls)
         hyper_initial <- c(-2,2)

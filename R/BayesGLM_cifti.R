@@ -281,7 +281,7 @@ BayesGLM_cifti <- function(
 
   if (nS==1) {
 
-    cat("Preparing to analyze a single task fMRI session\n")
+    cat("Preparing to analyze a single task fMRI session.\n")
 
     #combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
@@ -292,7 +292,7 @@ BayesGLM_cifti <- function(
 
   } else {
 
-    cat(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks\n"))
+    cat(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks.\n"))
 
     #name sessions
     if (is.null(session_names)) session_names <- paste0('session', 1:nS)
@@ -431,10 +431,11 @@ BayesGLM_cifti <- function(
   ntime <- vector("numeric", nS)
 
   for (ss in seq(nS)) {
-    if (nS > 1) if (verbose>0) {
-      if(ss==1) cat(paste0('\tReading BOLD data for session ', ss,'  '))
-      if(ss > 1) cat(paste0(ss,'  '))
+    if (verbose>0) {
+      if (ss==1) { cat('\tReading BOLD data for session ') }
+      if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
     }
+
     if (is_xifti) {
       xii_ss <- cifti_fname[[ss]]
       xii_ss_res <- ciftiTools::infer_resolution(xii_ss)
@@ -500,7 +501,7 @@ BayesGLM_cifti <- function(
 
   if (!is.null(onsets)) {
 
-    if (verbose>0) cat("\n\tConstructing design matrix based on onsets provided \n")
+    if (verbose>0) cat("\tConstructing design matrix based on onsets provided.\n")
 
     #determine whether to model HRF derivatives as task or nuisance if "auto"
     nK <- length(onsets[[1]])
