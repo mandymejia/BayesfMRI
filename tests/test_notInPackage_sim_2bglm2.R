@@ -59,8 +59,7 @@ if (!file.exists(bfmri_fname)) {
     ar_order = 6,
     ar_smooth = 5,
     resamp_res = 3000,
-    verbose = FALSE,
-    combine_sessions = FALSE,
+    verbose = FALSE
     return_INLA = "full",
     meanTol = 1,
     varTol = 1,
@@ -89,7 +88,6 @@ if (!file.exists(bfmri_fname)) {
     resamp_res = 1500,
     DCT=0,
     verbose = FALSE,
-    combine_sessions = FALSE,
     return_INLA = "minimal",
     session_names = c("normal", "scrambled")
   )
@@ -112,7 +110,6 @@ if (!file.exists(bfmri_fname)) {
     ar_smooth = 5,
     resamp_res = 3000,
     verbose = FALSE,
-    combine_sessions = FALSE,
     return_INLA = "trimmed"
   )
   saveRDS(bfmri, bfmri_fname)

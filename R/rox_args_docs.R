@@ -36,19 +36,19 @@ NULL
 #' @name ar_smooth_Param
 NULL
 
-#' combine_sessions
-#'
-#' @param combine_sessions If multiple sessions are provided, should their data
-#'  be combined and analyzed as a single session?
-#' 
-#'  If \code{TRUE} (default), the multiple sessions will be concatenated along
-#'  time after scaling and nuisance regression, but before prewhitening. If 
-#'  \code{FALSE}, each session will be analyzed separately, except that a single
-#'  estimate of the AR model coefficients for prewhitening is used, estimated 
-#'  across all sessions. 
-#' 
-#' @name combine_sessions_Param
-NULL
+# combine_sessions
+#
+# @param combine_sessions If multiple sessions are provided, should their data
+#  be combined and analyzed as a single session?
+# 
+#  If \code{TRUE} (default), the multiple sessions will be concatenated along
+#  time after scaling and nuisance regression, but before prewhitening. If 
+#  \code{FALSE}, each session will be analyzed separately, except that a single
+#  estimate of the AR model coefficients for prewhitening is used, estimated 
+#  across all sessions. 
+# 
+# @name combine_sessions_Param
+# NULL
 
 #'  Bayes
 #'

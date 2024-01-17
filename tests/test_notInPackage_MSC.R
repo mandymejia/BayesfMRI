@@ -68,8 +68,7 @@ exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
   ar_smooth = 5,
   resamp_res = resamp_res,
   verbose = FALSE,
-  return_INLA = TRUE,
-  combine_sessions = TRUE
+  return_INLA = TRUE
 ))
 print(exec_time)
 

@@ -66,8 +66,7 @@ for (ii in seq(nrow(params))) {
     ar_smooth = params$smooth[ii],
     resamp_res = resamp_res / ((params$bs[ii]=="both") + 1), # / (params$Bayes[ii] + 1)
     verbose = FALSE,
-    return_INLA = "trimmed",
-    combine_sessions = params$cmb[ii]
+    return_INLA = "trimmed"
   ))
 
   act_ii <- id_activations(

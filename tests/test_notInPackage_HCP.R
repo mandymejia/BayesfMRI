@@ -71,8 +71,7 @@ BayesGLM_cifti_args <- list(
   ar_smooth = 3,
   resamp_res = 800,
   verbose = FALSE,
-  return_INLA = "trim",
-  combine_sessions = FALSE
+  return_INLA = "trim"
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
 act <- id_activations(bglm, gamma=.01, sessions=seq(2))
@@ -101,8 +100,7 @@ BayesGLM_cifti_args <- list(
   resamp_res = 800,
   verbose = TRUE,
   return_INLA = "full",
-  meanTol=9999,
-  combine_sessions = FALSE
+  meanTol=9999
 )
 bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
 
