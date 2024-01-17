@@ -239,13 +239,16 @@ make_Q <- function(theta, spde, n_sess) {
   return(Q)
 }
 
+#' Q prime
+#' 
 #' Gives the portion of the Q matrix independent of phi
 #'
 #' @param kappa2 scalar
-#' @param spdean spde object
+#' @param spde spde object
 #'
 #' @return a dgCMatrix
 #' @keywords internal
+#' 
 Q_prime <- function(kappa2, spde) {
   # Cmat <- spde$M0
   # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
@@ -331,7 +334,7 @@ neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' Streamlined negative objective function for kappa2 using precompiled values
 #'
 #' @param kappa2 scalar
-#' @param spde_mats a list of SPDE prior matrices from
+#' @param spde a list of SPDE prior matrices from
 #' @param a_star precomputed coefficient (scalar)
 #' @param b_star precomputed coefficient (scalar)
 #' @param n_sess number of sessions (scalar)
