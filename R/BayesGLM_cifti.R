@@ -280,7 +280,6 @@ BayesGLM_cifti <- function(
     stop('The length of `session_names` must match the number of sessions in `cifti_fname`.')
 
   if (nS==1) {
-
     if (verbose>0) { cat("Preparing to analyze a single task fMRI session.\n") }
 
     #combine_sessions <- FALSE
@@ -432,7 +431,7 @@ BayesGLM_cifti <- function(
   for (ss in seq(nS)) {
     if (verbose>0) {
       if (nS==1) {
-        cat('\tReading BOLD data.')
+        cat('\tReading BOLD data.\n')
       } else {
         if (ss==1) { cat('\tReading BOLD data for session ') }
         if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }

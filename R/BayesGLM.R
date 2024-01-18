@@ -417,14 +417,14 @@ BayesGLM <- function(
 
       #apply prewhitening matrix to BOLD and design for each session
       for (ss in seq(nS)) {
-        x_ss <- list(BOLD=NULL, design=NULL)
+        x_ss <- list(BOLD=NULL, design=NULL, bigX=NULL, A=NULL)
         # Prewhiten BOLD
         x_ss$BOLD <- as.vector(sqrtInv_all %*% c(data[[ss]]$BOLD))
         # Prewhiten design
-        x_ss$design <- organize_data(
+        x_ss[c("design", "A")] <- organize_data(
           data[[ss]]$BOLD, data[[ss]]$design,
           n_mesh = spde$n.spde, inds = data_loc
-        )$design #big sparse matrix
+        )[c("design", "A")] # `design` is a big sparse matrix. `A` is used during classical GLM.
         # note for below line: any columns of all zeros in design matrix will stay all zeros
         x_ss$design <- lapply(x_ss$design, function(dsn_kk){ sqrtInv_all %*% dsn_kk } )
         data[[ss]] <- x_ss
@@ -441,7 +441,7 @@ BayesGLM <- function(
     for (ss in seq(nS)) {
       if (verbose>0) {
         if (nS==1) {
-          cat('\tFitting classical GLM.')
+          cat('\tFitting classical GLM.\n')
         } else {
           if (ss==1) { cat('\tFitting classical GLM for session ') }
           if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
