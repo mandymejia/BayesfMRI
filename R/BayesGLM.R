@@ -289,8 +289,10 @@ BayesGLM <- function(
     nK2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) } #number of nuisance regressors
     for (ss in seq(nS)) {
       # Scale data
-      dBOLD <- dim(data[[ss]]$BOLD)
-      data[[ss]]$BOLD <- fMRItools::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE)
+      data[[ss]]$BOLD <- fMRItools::scale_timeseries(
+        data[[ss]]$BOLD, scale=scale_BOLD,
+        transpose=FALSE
+      )
       # Remove any missing tasks from design matrix for classical GLM
       cols_ss <- valid_cols[ss,]
       if(!all(cols_ss)) warning(paste0('For session ',ss,', ignoring ',sum(!cols_ss),' design matrix columns of zeros for classical GLM.'))
@@ -414,14 +416,20 @@ BayesGLM <- function(
       sqrtInv_all <- Matrix::bdiag(template_pw_list)
 
       #apply prewhitening matrix to BOLD and design for each session
-      data <- sapply(data, function(x) {
-        #bold_out <- matrix(NA, nT, nV)
-        bold_out <- as.vector(sqrtInv_all %*% c(x$BOLD))
-        #bold_out[,mask] <- pw_BOLD
-        all_design <- organize_data(x$BOLD, x$design, n_mesh = spde$n.spde, inds = data_loc)$design #big sparse matrix
-        pw_design <- sqrtInv_all %*% all_design  # note that any columns of all zeros in design matrix will stay all zeros
-        return(list(BOLD = bold_out, design = pw_design))
-      }, simplify = F)
+      for (ss in seq(nS)) {
+        x_ss <- list(BOLD=NULL, design=NULL)
+        # Prewhiten BOLD
+        x_ss$BOLD <- as.vector(sqrtInv_all %*% c(data[[ss]]$BOLD))
+        # Prewhiten design
+        x_ss$design <- organize_data(
+          data[[ss]]$BOLD, data[[ss]]$design,
+          n_mesh = spde$n.spde, inds = data_loc
+        )$design #big sparse matrix
+        # note for below line: any columns of all zeros in design matrix will stay all zeros
+        x_ss$design <- lapply(x_ss$design, function(dsn_kk){ sqrtInv_all %*% dsn_kk } )
+        data[[ss]] <- x_ss
+      }
+      rm(x_ss)
     }
 
     # Classical GLM. -------------------------------------------------------------
@@ -432,17 +440,27 @@ BayesGLM <- function(
     result_classical <- vector('list', length=nS)
     for (ss in seq(nS)) {
       if (verbose>0) {
-        if (ss==1) { cat('\tFitting classical GLM for session ') }
-        if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
+        if (nS==1) {
+          cat('\tFitting classical GLM.')
+        } else {
+          if (ss==1) { cat('\tFitting classical GLM for session ') }
+          if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
+        }
       }
 
       cols_ss <- valid_cols[ss,] #classical GLM will ignore
       nK_ss <- sum(cols_ss) #in case some tasks missing
 
-      #set up vectorized data and big sparse design matrix
-      #(dim(data[[ss]]$BOLD)) is VxT
-      if(!do_pw) data_s <- organize_data(t(data[[ss]]$BOLD), data[[ss]]$design, n_mesh = spde$n.spde, inds = data_loc)
-      if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
+      # Set up vectorized data and big sparse design matrix.
+      data_s <- if (do_pw) {
+        # Data is already "organized" (big sparse design) in prewhitening step above.
+        data[[ss]]
+      } else {
+        organize_data(
+          data[[ss]]$BOLD, data[[ss]]$design,
+          n_mesh = spde$n.spde, inds = data_loc
+        )
+      }
 
       #setup for Bayesian GLM
       y_all <- c(y_all, data_s$BOLD)

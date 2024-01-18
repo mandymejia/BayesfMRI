@@ -431,8 +431,12 @@ BayesGLM_cifti <- function(
 
   for (ss in seq(nS)) {
     if (verbose>0) {
-      if (ss==1) { cat('\tReading BOLD data for session ') }
-      if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
+      if (nS==1) {
+        cat('\tReading BOLD data.')
+      } else {
+        if (ss==1) { cat('\tReading BOLD data for session ') }
+        if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
+      }
     }
 
     if (is_xifti) {

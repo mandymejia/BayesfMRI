@@ -56,7 +56,7 @@ nuis <- lapply(fnames[grepl("rp", names(fnames))], read.table, header=FALSE)
 nuis <- lapply(nuis, as.matrix)
 
 # BayesGLM ---------------------------------------------------------------------
-n_sess <- 2
+n_sess <- 1
 BayesGLM_cifti_args <- list(
   cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
   surfL_fname=ciftiTools.files()$surf["left"],
@@ -65,11 +65,11 @@ BayesGLM_cifti_args <- list(
   onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
   TR = 2.2,
   dHRF=2,
-  nuisance=switch(n_sess, nuis$rp_1, nuis),
-  Bayes = TRUE,
-  ar_order = 0,
+  #nuisance=switch(n_sess, nuis$rp_1, nuis),
+  Bayes = FALSE,
+  ar_order = 1,
   ar_smooth = 3,
-  resamp_res = 800,
+  resamp_res = 100,
   verbose = TRUE,
   return_INLA = "trim"
 )
@@ -94,8 +94,8 @@ BayesGLM_cifti_args <- list(
   TR = 2.2,
   dHRF=2,
   nuisance=switch(n_sess, nuis$rp_1, nuis),
-  Bayes = TRUE,
-  ar_order = 0,
+  Bayes = FALSE,
+  ar_order = 1,
   ar_smooth = 3,
   resamp_res = 800,
   verbose = TRUE,
