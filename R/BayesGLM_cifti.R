@@ -281,7 +281,7 @@ BayesGLM_cifti <- function(
 
   if (nS==1) {
 
-    cat("Preparing to analyze a single task fMRI session.\n")
+    if (verbose>0) { cat("Preparing to analyze a single task fMRI session.\n") }
 
     #combine_sessions <- FALSE
     if (is.null(session_names)) session_names <- 'single_session'
@@ -292,7 +292,10 @@ BayesGLM_cifti <- function(
 
   } else {
 
-    cat(paste0("Preparing to analyze ",nS," task fMRI sessions with a common set of tasks.\n"))
+    if (verbose>0) { cat(paste0(
+      "Preparing to analyze ",nS,
+      " task fMRI sessions with a common set of tasks.\n"
+    )) }
 
     #name sessions
     if (is.null(session_names)) session_names <- paste0('session', 1:nS)
