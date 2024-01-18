@@ -7,7 +7,7 @@
 pw_estimate(resids, ar_order, aic = FALSE)
 }
 \arguments{
-\item{resids}{Estimated residuals}
+\item{resids}{Estimated residuals in \eqn{T \times V} numeric matrix}
 
 \item{ar_order, aic}{Order of the AR model used to prewhiten the data at each location.
 If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
@@ -19,3 +19,4 @@ Estimated AR coefficients and residual variance at every vertex
 \description{
 Estimate residual autocorrelation for prewhitening
 }
+\keyword{internal}

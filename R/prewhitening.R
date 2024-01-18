@@ -1,10 +1,12 @@
 #' Estimate residual autocorrelation for prewhitening
 #'
-#' @param resids Estimated residuals
+#' @param resids Estimated residuals in \eqn{T \times V} numeric matrix
 #' @param ar_order,aic Order of the AR model used to prewhiten the data at each location.
 #'  If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
 #'  the order will be between zero and \code{ar_order}, as determined by the AIC.
 #' @importFrom stats ar.yw
+#' 
+#' @keywords internal
 #'
 #' @return Estimated AR coefficients and residual variance at every vertex
 pw_estimate <- function(resids, ar_order, aic=FALSE){
@@ -51,6 +53,8 @@ cAIC <- function(...){invisible(NULL)}
 #'
 #' @importFrom ciftiTools smooth_cifti make_surf as_xifti
 #'
+#' @keywords internal
+#' 
 #' @return Smoothed AR coefficients and residual variance at every vertex
 pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
 

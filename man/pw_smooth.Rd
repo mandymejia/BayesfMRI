@@ -33,3 +33,4 @@ Smoothed AR coefficients and residual variance at every vertex
 \description{
 Smooth AR coefficients and white noise variance
 }
+\keyword{internal}
