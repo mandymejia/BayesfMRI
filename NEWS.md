@@ -1,8 +1,18 @@
+# 5.0
+
+* Many changes, undocumented
+
+# 4.0
+
+* Undocumented
+
 # 3.0 
 
-* Rehaul
+* Many changes, undocumented
 
-...
+# 2.0
+
+* Undocumented
 
 # 1.5
 

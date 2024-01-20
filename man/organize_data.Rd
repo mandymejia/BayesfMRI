@@ -4,7 +4,7 @@
 \alias{organize_data}
 \title{Organize data for Bayesian GLM}
 \usage{
-organize_data(y, X, n_mesh, inds)
+organize_data(y, X, n_mesh, inds, sqrtInv_all = NULL)
 }
 \arguments{
 \item{y}{the TxV data matrix containing the fMRI timeseries}

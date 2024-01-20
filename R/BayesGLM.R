@@ -377,8 +377,7 @@ BayesGLM <- function(
         avg_var <- AR_smoothed_list$var
       }
 
-      ## Apply prewhitening. -----------------------------------------------------
-      # Create the sparse pre-whitening matrix
+      ## Create the sparse pre-whitening matrix. ---------------------------------
       if (is.null(num.threads) | num.threads < 2) {
         # Initialize the block diagonal covariance matrix
         template_pw <- Matrix::bandSparse(
@@ -414,22 +413,8 @@ BayesGLM <- function(
 
       #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
       sqrtInv_all <- Matrix::bdiag(template_pw_list)
-
-      #apply prewhitening matrix to BOLD and design for each session
-      for (ss in seq(nS)) {
-        x_ss <- list(BOLD=NULL, design=NULL, bigX=NULL, A=NULL)
-        # Prewhiten BOLD
-        x_ss$BOLD <- as.vector(sqrtInv_all %*% c(data[[ss]]$BOLD))
-        # Prewhiten design
-        x_ss[c("design", "A")] <- organize_data(
-          data[[ss]]$BOLD, data[[ss]]$design,
-          n_mesh = spde$n.spde, inds = data_loc
-        )[c("design", "A")] # `design` is a big sparse matrix. `A` is used during classical GLM.
-        # note for below line: any columns of all zeros in design matrix will stay all zeros
-        x_ss$design <- lapply(x_ss$design, function(dsn_kk){ sqrtInv_all %*% dsn_kk } )
-        data[[ss]] <- x_ss
-      }
-      rm(x_ss)
+    } else {
+      sqrtInv_all <- NULL
     }
 
     # Classical GLM. -------------------------------------------------------------
@@ -452,32 +437,29 @@ BayesGLM <- function(
       nK_ss <- sum(cols_ss) #in case some tasks missing
 
       # Set up vectorized data and big sparse design matrix.
-      data_s <- if (do_pw) {
-        # Data is already "organized" (big sparse design) in prewhitening step above.
-        data[[ss]]
-      } else {
-        organize_data(
-          data[[ss]]$BOLD, data[[ss]]$design,
-          n_mesh = spde$n.spde, inds = data_loc
-        )
-      }
+      # Apply prewhitening, if applicable.
+      data_ss <- organize_data(
+        data[[ss]]$BOLD, data[[ss]]$design,
+        n_mesh = spde$n.spde, inds = data_loc,
+        sqrtInv_all = sqrtInv_all
+      )
 
       #setup for Bayesian GLM
-      y_all <- c(y_all, data_s$BOLD)
-      #XA_ss <- data_s$design
-      XA_ss <- lapply(data_s$design, function(x) { return(x %*% data_s$A) }) #post-multiply each design matrix by A (n_data x n_mesh) for Bayesian GLM
+      y_all <- c(y_all, data_ss$BOLD)
+      #XA_ss <- data_ss$design
+      XA_ss <- lapply(data_ss$design, function(x) { return(x %*% data_ss$A) }) #post-multiply each design matrix by A (n_data x n_mesh) for Bayesian GLM
       XA_list <- do.call(cbind, XA_ss) #cbind (expanded) design matrices for each task
       XA_list <- list(XA_list)
       names(XA_list) <- session_names[ss]
       XA_all_list <- c(XA_all_list, XA_list)
 
-      #XA_list <- list(data_s$bigX)
+      #XA_list <- list(data_ss$bigX)
       #names(XA_list) <- session_names[ss]
       #XA_all_list <- c(XA_all_list, XA_list)
 
       #setup for classical GLM
-      y_ss <- data_s$BOLD #a vector (grouped by location)
-      X_ss <- do.call(cbind, data_s$design) #cbind non-expanded design matrices for each task
+      y_ss <- data_ss$BOLD #a vector (grouped by location)
+      X_ss <- do.call(cbind, data_ss$design) #cbind non-expanded design matrices for each task
       valid_cols_bigX <- (colSums(abs(X_ss)) > 0) #because X_ss is a big sparse matrix, any missing tasks will manifest as a block of zeros
       valid_cols_bigX[is.na(valid_cols_bigX)] <- FALSE
       X_ss <- X_ss[,valid_cols_bigX]
@@ -542,10 +524,10 @@ BayesGLM <- function(
     #   if (verbose>0) cat("\tFitting FIR model.\n")
     #
     #   #set up vectorized data and big sparse design matrix
-    #   #if(!do_pw) data_s <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
-    #   #if(do_pw) data_s <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
+    #   #if(!do_pw) data_ss <- organize_data(data[[ss]]$BOLD, data[[ss]]$design)
+    #   #if(do_pw) data_ss <- data[[ss]] #data has already been "organized" (big sparse design) in prewhitening step above
     #
-    #   #y_ss <- matrix(data_s$BOLD, nrow=nT) #a vector (grouped by location)
+    #   #y_ss <- matrix(data_ss$BOLD, nrow=nT) #a vector (grouped by location)
     #   y_ss <- data[[ss]]$BOLD #[TO DO] implement prewhitening case (may not be needed if we are not doing inference)
     #   X_ss <- cbind(FIR_ss, 1, data[[ss]]$nuisance) #need the intercept since FIR bases are not centered
     #
