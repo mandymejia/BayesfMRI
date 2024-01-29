@@ -44,9 +44,9 @@
 #' @inheritParams return_INLA_Param
 #' @inheritParams verbose_Param
 # @inheritParams combine_sessions_Param
-#' @param meanTol,varTol Tolerance for mean and variance of each data location.
+#' @param meanTol,varTol,snrTol Tolerance for mean, variance and SNR of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
-#'  Default: \code{1e-6} for both.
+#'  Default: \code{1e-6} for mean and variance, \code{50} for SNR.
 # @inheritParams emTol_Param
 #'
 #' @return A \code{"BayesGLM"} object: a list with elements
@@ -103,7 +103,8 @@ BayesGLM <- function(
   return_INLA = c("trimmed", "full", "minimal"),
   verbose = 1,
   meanTol = 1e-6,
-  varTol = 1e-6#, emTol = 1e-3,
+  varTol = 1e-6,
+  snrTol = 50#, emTol = 1e-3,
   ){
 
   # Preliminary steps. ---------------------------------------------------------
@@ -189,7 +190,8 @@ BayesGLM <- function(
     ## Mask: check or make.  -----------------------------------------------------
     # Get `mask` based on intersection of input mask and `make_mask` checks.
     if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) } #start with provided mask or mask of all 1's
-    mask <- mask & make_mask(data, meanTol=meanTol, varTol=varTol) #remove locations with bad data
+    masks_quality <- make_mask(data, meanTol=meanTol, varTol=varTol, snrTol=snrTol)
+    mask <- mask & masks_quality$mask #remove locations with bad data
     if (!any(mask)) { stop("No in-mask data locations.") }
 
     # If any masked locations, apply to `mesh` and `data`.
@@ -207,7 +209,7 @@ BayesGLM <- function(
     # Update number of locations after masking
     nV <- sum(mask); nV_all <- length(mask)
 
-    data_loc <- rep(TRUE, nV)
+    data_loc <- rep(TRUE, nV) #because we are not including boundary vertices in surface case
 
     spde <- INLA::inla.spde2.matern(mesh)
   }
@@ -220,7 +222,11 @@ BayesGLM <- function(
     ## SPDE: Create  -----------------------------------------------------
 
     #labels object here is an array of ROI labels  #[TO DO] Check that labels contains positive integers only, and zeros for background
-    mask <- (labels != 0)
+    mask <- (labels != 0) # mask of the ROI within the full brain volume
+    masks_quality <- make_mask(data, meanTol=meanTol, varTol=varTol)
+    mask2 <-  masks_quality$mask #mask within the mask (remove locations with low mean or variance)
+    mask[mask==TRUE] <- mask2 #remove bad locations from mask
+    labels[mask==FALSE] <- 0 #remove bad locations from labels
     ROIs <- unique(labels[mask])
     nR <- length(ROIs)
 
@@ -262,8 +268,14 @@ BayesGLM <- function(
     }
 
     # Update number of locations after masking
-    nV <- sum(mask); nV_all <- sum(mask);
-    mask <- rep(TRUE, nV) #because we are not yet doing masking, but this will need to be updated in that case.
+    nV <- sum(mask2); nV_all <- length(mask2);
+    mask <- mask2 #mask within the ROIs
+
+    # Mask BOLD data
+    if (!all(mask)) {
+      for (ss in 1:nS) { data[[ss]]$BOLD <- data[[ss]]$BOLD[,mask,drop=FALSE] }
+    }
+
   }
 
   if(verbose==1) cat(paste0('\tNumber of data locations: ',length(data_loc),'\n'))
@@ -472,13 +484,6 @@ BayesGLM <- function(
       }
       coef_s <- as.matrix(XTX_inv %*% t(X_ss) %*% y_ss) #a vector of (estimates for location 1, estimates for location 2, ...)
       coef_s_mat <- matrix(coef_s, nrow = nV, ncol = nK_ss) #re-form into a VxK matrix
-      # if(ss >= 6){
-      # print(dim(coef_s_mat))
-      # print(table(mask))
-      # print(cols_ss)
-      # print(dim(beta_hat_s[mask==TRUE,cols_ss]))
-      # print(dim(beta_hat_s[mask==TRUE,which(cols_ss)]))
-      # }
       beta_hat_s[mask==TRUE,cols_ss] <- coef_s_mat
       resid_s <- t(matrix(y_ss - X_ss %*% coef_s, nrow = nT))
 
@@ -779,9 +784,11 @@ BayesGLM <- function(
     result_multiple = result_multiple,
     #result_FIR = result_FIR,
     mesh = mesh,
+    spde = spde,
     mesh_orig = mesh_orig,
     mask = mask,
     mask_orig = mask_orig, #[TO DO] return the params passed into the function instead?
+    masks_quality = masks_quality,
     design = design,
     task_names = task_names,
     session_names = session_names,

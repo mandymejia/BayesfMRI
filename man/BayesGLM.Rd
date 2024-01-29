@@ -23,7 +23,8 @@ BayesGLM(
   return_INLA = c("trimmed", "full", "minimal"),
   verbose = 1,
   meanTol = 1e-06,
-  varTol = 1e-06
+  varTol = 1e-06,
+  snrTol = 50
 )
 }
 \arguments{
@@ -111,9 +112,9 @@ is enough for both \code{\link{id_activations}} and \code{BayesGLM2},
 occasional updates, \code{2} for occasional updates as well as running INLA
 in verbose mode (if applicable), or \code{0} for no updates.}
 
-\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
+\item{meanTol, varTol, snrTol}{Tolerance for mean, variance and SNR of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
-Default: \code{1e-6} for both.}
+Default: \code{1e-6} for mean and variance, \code{50} for SNR.}
 }
 \value{
 A \code{"BayesGLM"} object: a list with elements

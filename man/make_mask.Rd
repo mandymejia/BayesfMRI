@@ -4,7 +4,7 @@
 \alias{make_mask}
 \title{Mask out invalid data}
 \usage{
-make_mask(data, meanTol = 1e-06, varTol = 1e-06, verbose = TRUE)
+make_mask(data, meanTol = 1e-06, varTol = 1e-06, snrTol = 50, verbose = TRUE)
 }
 \arguments{
 \item{data}{A list of sessions, where each session is a list with elements

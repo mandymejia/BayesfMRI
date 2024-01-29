@@ -139,22 +139,22 @@ s2m_B <- function(B,sigma){
 }
 
 #' Mask out invalid data
-#' 
+#'
 #' Mask out data locations that are invalid (missing data, low mean, or low
 #'  variance) for any session.
 #'
 #' @param data A list of sessions, where each session is a list with elements
-#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
+#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See
 #'  \code{?is.BfMRI.sess} for details.
-#' @param meanTol,varTol Tolerance for mean and variance of each data location. 
-#'  Locations which do not meet these thresholds are masked out of the analysis. 
+#' @param meanTol,varTol Tolerance for mean and variance of each data location.
+#'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Defaults: \code{1e-6}.
 #' @param verbose Print messages counting how many locations are removed?
 #'  Default: \code{TRUE}.
 #'
 #' @importFrom matrixStats colVars
 #' @return A logical vector indicating locations that are valid across all sessions.
-#' 
+#'
 #' @examples
 #' nT <- 30
 #' nV <- 400
@@ -166,10 +166,10 @@ s2m_B <- function(B,sigma){
 #' make_mask(data)
 #'
 #' @export
-make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+make_mask <- function(data, meanTol=1e-6, varTol=1e-6, snrTol=50, verbose=TRUE){
 
   # For each BOLD data matrix,
-  mask_na <- mask_mean <- mask_var <- rep(TRUE, ncol(data[[1]]$BOLD))
+  mask_na <- mask_mean <- mask_var <- mask_snr <- rep(TRUE, ncol(data[[1]]$BOLD))
   for (ss in seq(length(data))) {
     dss <- data[[ss]]$BOLD
     # Mark columns with any NA or NaN values for removal.
@@ -177,8 +177,12 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     mask_na[apply(dss_na, 2, any)] <- FALSE
     # Calculate means and variances of columns, except those with any NA or NaN.
     # Mark columns with mean/var falling under the thresholds for removal.
-    mask_mean[mask_na][colMeans(dss[,mask_na,drop=FALSE]) < meanTol] <- FALSE
-    mask_var[mask_na][matrixStats::colVars(dss[,mask_na,drop=FALSE]) < varTol] <- FALSE
+    means_ss <- colMeans(dss[,mask_na,drop=FALSE])
+    vars_ss <- matrixStats::colVars(dss[,mask_na,drop=FALSE])
+    snr_ss <- means_ss/sqrt(vars_ss)
+    mask_mean[mask_na][means_ss < meanTol] <- FALSE
+    mask_var[mask_na][vars_ss < varTol] <- FALSE
+    mask_snr[mask_na][snr_ss < snrTol] <- FALSE
   }
 
   # Print counts of locations removed, for each reason.
@@ -187,7 +191,7 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     warn_part2 <- if (length(data) > 1) { " in at least one session.\n" } else { ".\n" }
     if (any(!mask_na)) {
       cat(paste0(
-        "\t", sum(!mask_na), warn_part1, 
+        "\t", sum(!mask_na), warn_part1,
         " removed due to NA/NaN values", warn_part2
       ))
       warn_part1 <- " additional locations"
@@ -196,7 +200,7 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     mask_mean2 <- mask_mean | (!mask_na)
     if (any(!mask_mean2)) {
       cat(paste0(
-        "\t", sum(!mask_mean2), warn_part1, 
+        "\t", sum(!mask_mean2), warn_part1,
         " removed due to low mean", warn_part2
       ))
       warn_part1 <- " additional locations"
@@ -205,31 +209,52 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
     if (any(!mask_var2)) {
       cat(paste0(
-        "\t", sum(!mask_var2), warn_part1, 
+        "\t", sum(!mask_var2), warn_part1,
         " removed due to low variance", warn_part2
       ))
     }
+    # Do not include NA or low-mean or low-var locations in count.
+    mask_snr2 <- mask_snr | (!mask_mean) | (!mask_var) | (!mask_na)
+    if (any(!mask_snr2)) {
+      cat(paste0(
+        "\t", sum(!mask_snr2), warn_part1,
+        " removed due to low SNR", warn_part2
+      ))
+    }
+
   }
 
-  # Return composite mask.
-  mask_na & mask_mean & mask_var
+  # Return composite mask and other masks
+  list(mask =  mask_na & mask_mean & mask_var & mask_snr,
+       mask_na = mask_na,
+       mask_mean = mask_mean,
+       mask_var = mask_var,
+       mask_snr = mask_snr)
 }
 
 #' Is this a valid `onsets`?
-#' 
+#'
 #' Is this valid data for event onsets? Expects a data.frame or numeric matrix
 #'  with two numeric columns, onsets and durations, and at least one row.
 #'  Raise an error if invalid; do nothing if valid.
-#' 
-#' @param x The putative onsets.
+#'
+#' @param x The putative onsets matrix or data frame
 #' @keywords internal
 #' @return Length-one logical vector.
-#' 
+#'
 is_onsets <- function(x){
+
+  #first check if onsets is NA, which can be the case in multi-session analysis where not all tasks are present in all sessions
+  if(length(x) == 1){
+    if(is.na(x)){
+      return(TRUE)
+    }
+  }
+
   is_nummat <- is.numeric(x) & is.matrix(x)
   is_df <- is.data.frame(x) && all(vapply(x, class, "") == "numeric")
   if (!(is_nummat || is_df)) { warning("The onsets are not a numeric matrix or data.frame."); return(FALSE) }
-  
+
   if (nrow(x)<1) { warning("The onsets must have at least one row."); return(FALSE) }
 
   if (ncol(x) != 2) { warning("The onsets should have two columns, `onset` and `duration`."); return(FALSE) }
@@ -237,5 +262,5 @@ is_onsets <- function(x){
     warning("The onsets should have two columns, `onset` and `duration`."); return(FALSE)
   }
 
-  TRUE
+  return(TRUE)
 }

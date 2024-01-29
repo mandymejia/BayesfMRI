@@ -7,7 +7,7 @@
 is_onsets(x)
 }
 \arguments{
-\item{x}{The putative onsets.}
+\item{x}{The putative onsets matrix or data frame}
 }
 \value{
 Length-one logical vector.

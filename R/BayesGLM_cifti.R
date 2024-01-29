@@ -401,7 +401,8 @@ BayesGLM_cifti <- function(
         if (is.null(TR)) { stop('Please provide `TR` if `onsets` provided.') }
         #check format of onsets_ss
         if(!all(vapply(onsets_ss, is_onsets, FALSE))) {
-          stop('`onsets` must be a non-empty numeric matrix, or list of such matrices for multi-session analysis.')
+          if(nS > 1) cat(paste0('For session number ',ss,', '))
+          stop('`onsets` is not a valid format.  Each list element must be a non-empty numeric matrix or data frame.')
         }
       }
     }
