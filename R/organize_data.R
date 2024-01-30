@@ -61,11 +61,12 @@ organize_data <- function(y, X, n_mesh, inds, sqrtInv_all=NULL){
     # bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
 	}
 
+
   # Prewhiten, if applicable. -----
   if (!is.null(sqrtInv_all)) {
-    y <- sqrtInv_all %*% y
-    X_all <- lapply(X_all, function(X_all_kk) { sqrtInv_all %*% X_all_kk } )
-    #bigX <- sqrtInv_all %*% bigX
+     y <- as.vector(sqrtInv_all %*% y)
+     X_all <- lapply(X_all, function(X_all_kk) { sqrtInv_all %*% X_all_kk } )
+  #   #bigX <- sqrtInv_all %*% bigX
   }
 
   # Return results. -----

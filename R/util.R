@@ -166,7 +166,7 @@ s2m_B <- function(B,sigma){
 #' make_mask(data)
 #'
 #' @export
-make_mask <- function(data, meanTol=1e-6, varTol=1e-6, snrTol=50, verbose=TRUE){
+make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 
   # For each BOLD data matrix,
   mask_na <- mask_mean <- mask_var <- mask_snr <- rep(TRUE, ncol(data[[1]]$BOLD))
@@ -182,7 +182,7 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, snrTol=50, verbose=TRUE){
     snr_ss <- means_ss/sqrt(vars_ss)
     mask_mean[mask_na][means_ss < meanTol] <- FALSE
     mask_var[mask_na][vars_ss < varTol] <- FALSE
-    mask_snr[mask_na][snr_ss < snrTol] <- FALSE
+    #mask_snr[mask_na][snr_ss < snrTol] <- FALSE
   }
 
   # Print counts of locations removed, for each reason.
@@ -213,23 +213,23 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, snrTol=50, verbose=TRUE){
         " removed due to low variance", warn_part2
       ))
     }
-    # Do not include NA or low-mean or low-var locations in count.
-    mask_snr2 <- mask_snr | (!mask_mean) | (!mask_var) | (!mask_na)
-    if (any(!mask_snr2)) {
-      cat(paste0(
-        "\t", sum(!mask_snr2), warn_part1,
-        " removed due to low SNR", warn_part2
-      ))
-    }
+    # # Do not include NA or low-mean or low-var locations in count.
+    # mask_snr2 <- mask_snr | (!mask_mean) | (!mask_var) | (!mask_na)
+    # if (any(!mask_snr2)) {
+    #   cat(paste0(
+    #     "\t", sum(!mask_snr2), warn_part1,
+    #     " removed due to low SNR", warn_part2
+    #   ))
+    # }
 
   }
 
   # Return composite mask and other masks
-  list(mask =  mask_na & mask_mean & mask_var & mask_snr,
+  list(mask =  mask_na & mask_mean & mask_var, # & mask_snr,
        mask_na = mask_na,
        mask_mean = mask_mean,
        mask_var = mask_var,
-       mask_snr = mask_snr)
+       mask_snr = snr_ss) #just return the actual SNR values for now
 }
 
 #' Is this a valid `onsets`?

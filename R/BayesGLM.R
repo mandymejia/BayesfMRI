@@ -46,7 +46,8 @@
 # @inheritParams combine_sessions_Param
 #' @param meanTol,varTol,snrTol Tolerance for mean, variance and SNR of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
-#'  Default: \code{1e-6} for mean and variance, \code{50} for SNR.
+#'  Default: \code{1e-6} for mean and variance, \code{50} for SNR. Note: \code{snrTol}
+#'  currently not in use, but SNR maps are returned for visualization.
 # @inheritParams emTol_Param
 #'
 #' @return A \code{"BayesGLM"} object: a list with elements
@@ -72,7 +73,7 @@
 #'  }
 #'
 #' @importFrom matrixStats colVars
-#' @importFrom Matrix bandSparse bdiag crossprod solve
+#' @importFrom Matrix bandSparse bdiag crossprod solve Diagonal
 #' @importFrom parallel detectCores makeCluster clusterMap stopCluster
 #' @importFrom stats as.formula var
 #' @importFrom fMRItools is_1 nuisance_regression scale_timeseries
@@ -190,7 +191,7 @@ BayesGLM <- function(
     ## Mask: check or make.  -----------------------------------------------------
     # Get `mask` based on intersection of input mask and `make_mask` checks.
     if (is.null(mask)) { mask <- rep(TRUE, ncol(data[[1]]$BOLD)) } #start with provided mask or mask of all 1's
-    masks_quality <- make_mask(data, meanTol=meanTol, varTol=varTol, snrTol=snrTol)
+    masks_quality <- make_mask(data, meanTol=meanTol, varTol=varTol) #, snrTol=snrTol)
     mask <- mask & masks_quality$mask #remove locations with bad data
     if (!any(mask)) { stop("No in-mask data locations.") }
 
@@ -354,7 +355,6 @@ BayesGLM <- function(
 
     # [TO DO] "Always prewhiten" even if we do not want to prewhiten so that the data is in a consistent format. Just skip the actual PW steps.  Or at least call organize_data.
 
-
     # Prewhitening. --------------------------------------------------------------
     if (do_pw) {
       if (verbose>0) cat("\tPrewhitening...")
@@ -425,9 +425,33 @@ BayesGLM <- function(
 
       #consider using a variant of bdiag_m if this is very slow.  See help(Matrix::bdiag)
       sqrtInv_all <- Matrix::bdiag(template_pw_list)
+
     } else {
-      sqrtInv_all <- NULL
-    }
+
+      # Standardize variance (in lieu of PW) -----------------------------------
+
+      if (verbose>0) cat("\tStandardizing residual variance...\n")
+
+      ## Estimate residual variance ---------------------------------------
+      AR_resid_var <- array(dim = c(nV,nS))
+
+      #estimate resid var for each session
+      for (ss in 1:nS) {
+        cols_ss <- valid_cols[ss,]
+        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design[,cols_ss])
+        resid_var_ss <- matrixStats::colVars(resids)
+        AR_resid_var[,ss] <- resid_var_ss
+      }
+
+      #average across sessions
+      avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
+      avg_var <- avg_var/mean(avg_var, na.rm=TRUE)
+
+      #set up to pre-multiply the data and design by 1/sqrt(var) for each voxel (happens within organize_data below)
+      diag_values <- rep(1/sqrt(avg_var), each = nT)
+      sqrtInv_all <- Diagonal(x = diag_values)
+
+    } # END PREWHITENING
 
     # Classical GLM. -------------------------------------------------------------
     #organize data

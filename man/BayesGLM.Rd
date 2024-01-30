@@ -114,7 +114,8 @@ in verbose mode (if applicable), or \code{0} for no updates.}
 
 \item{meanTol, varTol, snrTol}{Tolerance for mean, variance and SNR of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
-Default: \code{1e-6} for mean and variance, \code{50} for SNR.}
+Default: \code{1e-6} for mean and variance, \code{50} for SNR. Note: \code{snrTol}
+currently not in use, but SNR maps are returned for visualization.}
 }
 \value{
 A \code{"BayesGLM"} object: a list with elements
