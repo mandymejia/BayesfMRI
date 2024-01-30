@@ -301,14 +301,18 @@ BayesGLM <- function(
     design <- vector('list', length=nS)
     nK2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) } #number of nuisance regressors
     for (ss in seq(nS)) {
-      # Scale data
-      data[[ss]]$BOLD <- fMRItools::scale_timeseries(
-        data[[ss]]$BOLD, scale=scale_BOLD,
+      # Scale data.
+      # (`scale_timeseries` expects VxT data, so transpose before and after.)
+      data[[ss]]$BOLD <- t(fMRItools::scale_timeseries(
+        t(data[[ss]]$BOLD), 
+        scale=scale_BOLD,
         transpose=FALSE
-      )
+      ))
+
       # Remove any missing tasks from design matrix for classical GLM
       cols_ss <- valid_cols[ss,]
       if(!all(cols_ss)) warning(paste0('For session ',ss,', ignoring ',sum(!cols_ss),' design matrix columns of zeros for classical GLM.'))
+      
       # Scale design matrix (ignore columns of zeros)
         data[[ss]]$design[,cols_ss] <- if (scale_design) {
         scale_design_mat(data[[ss]]$design[,cols_ss])
