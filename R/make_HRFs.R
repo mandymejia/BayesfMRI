@@ -164,13 +164,14 @@ make_HRFs <- function(
 #' @param a2 delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}
 #' @param b2 dispersion of undershoot. Default: \code{b1 = 1}
 #' @param c scale of undershoot. Default: \code{1/6}
+#' @param o onset of response. Default: \code{0}
 #'
 #' @return HRF vector (or dHRF, or d2HRF) corresponding to time vector t
 #'
 #' @importFrom fMRItools is_1
 #' @export
 #'
-HRF <- function(t, deriv=0, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){
+HRF <- function(t, deriv=0, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6, o=0){
 
   # Arg checks
   stopifnot(is.numeric(t)); stopifnot(min(t) >= 0)
@@ -191,7 +192,7 @@ HRF <- function(t, deriv=0, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){
     h <- HRF_main(t, a1, b1, a2, b2, c)
   }
 
-  #Temporal derivative [TO DO] emulate SPM to make this truly an onset derivative
+  #Temporal derivative
   if(deriv==1){
     delta <- 0.5
     fplus <- HRF_main(t+delta, a1, b1, a2, b2, c)
@@ -219,13 +220,14 @@ HRF <- function(t, deriv=0, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){
 #'  peaks at 1 and -c
 #'
 #'
-#' @param t time vector (in seconds)
+#' @param t time vector (in seconds). Must be equally spaced.
 # @param TR temporal resolution of the data, in seconds
 #' @param a1 delay of response. Default: \code{6}
 #' @param b1 response dispersion. Default: \code{1}
 #' @param a2 delay of undershoot. Default: \code{16/6*a1 = 16}
 #' @param b2 dispersion of undershoot. Default: \code{b1 = 1}
 #' @param c scale of undershoot. Default: \code{1/6}
+#' @param o onset of response (in seconds). Default: \code{0}
 # @param mt microtime resolution (number of bins to divide each TR into). Default: \code{16}
 #'
 #' @return HRF vector corresponding to time vector t
@@ -234,7 +236,10 @@ HRF <- function(t, deriv=0, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){
 #' @importFrom stats dgamma
 #' @export
 #'
-HRF_main <- function(t, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){ #}, mt=16){
+HRF_main <- function(t, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6, o=0){ #}, mt=16){
+
+  #[TO DO] Check that t is equally spaced
+  #[TO DO] If onsets are provided, check that it is a factor of the spacing of t, i.e. o/(t[2]-t[1]) is an integer
 
   TR <- 1 # this function was originally designed to return the HRF as a function of the TR/volume.
   #this is a workaround to return as a function of time
@@ -288,6 +293,17 @@ HRF_main <- function(t, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6){ #}, mt=16){
   gamma1 <- c1*gamma1 #scale to have height = 1
   if(c > 0) gamma2 <- c2*gamma2 else gamma2 <- 0 #scale to have height = c
   h <- (gamma1 - gamma2)
+
+  #onset > 0?
+  if(o > 0){
+    len_h <- length(h)
+    shift <- round(1 + o/(t[2]-t[1])) #onset, in terms of the spacing of t
+    h_new <- rep(0, len_h) #start the HRF with zeros, prior to the onset
+    len_new <- length(shift:len_h)
+    h_new[shift:len_h] <- h[1:len_new]
+    h <- h_new
+  }
+
   return(h)
 
   # #dhrf w.r.t. a1 (delay) -- this assumes that a2=16/6*a1 and b2=b1
