@@ -592,6 +592,9 @@ BayesGLM_cifti <- function(
     } else {
       sapply(design, scale, scale = F, simplify = F)
     }
+
+    stimulus <- HRFs <- FIR <- design_FIR <- vector("list", nS) #leave empty in this case
+
   }
 
   # Add DCT bases to nuisance matrix
@@ -698,8 +701,8 @@ BayesGLM_cifti <- function(
 
   if (verbose>0) cat("Formatting results.\n")
 
-  task_cifti_classical <- task_cifti <- bestmodel_cifti <- vector('list', nS)
-  names(task_cifti_classical) <- names(task_cifti) <- names(bestmodel_cifti) <- session_names
+  task_cifti_classical <- task_cifti <- bestmodel_cifti <- sigma2_cifti <- vector('list', nS)
+  names(task_cifti_classical) <- names(task_cifti) <- names(bestmodel_cifti) <- names(sigma2_cifti) <- session_names
 
   if(is.null(design_multiple)){
 
@@ -774,25 +777,40 @@ BayesGLM_cifti <- function(
 
   } else {
 
-    datL <- datR <- datSub <- NULL
+    datL <- datR <- datSub <- NULL #index of best-fitting model
+    betaL <- betaR <- betaSub <- NULL #beta estimates for best-fitting model
+    sigma2L <- sigma2R <- sigma2Sub <- NULL #residual var of models
     for (ss in seq(nS)) {
 
       # INDEX OF BEST MODEL
       if (do_left) {
-        datL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel
+        datL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel #index of best model
+        betaL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
+        sigma2L <- BayesGLM_results$cortex_left$result_multiple[[ss]]$sigma2 #V x P (P = number of models tested)
+        #only save beta estimates for the best fitting model
+        betaL <- apply(betaL, 1, as.matrix, simplify=FALSE) #form into a list of length V, each a K x P matrix
+        betaL <- t(mapply(function(matrix, index) matrix[, index, drop = FALSE], betaL, datL, SIMPLIFY = TRUE)) #beta estimates (VxK) for the best model
         mwallL <- !is.na(datL) # update b/c mask2 can change the medial wall
         datL <- datL[mwallL]
-        colnames(datL) <- NULL
+        betaL <- betaL[mwallL,]
+        sigma2L <- sigma2L[mwallL,]
       }
       if (do_right) {
-        datR <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel
-        mwallR <- !is.na(datR[,1])
-        datR <- datR[mwallR,]
-        colnames(datR) <- NULL
+        datR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$bestmodel
+        betaR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
+        sigma2R <- BayesGLM_results$cortex_right$result_multiple[[ss]]$sigma2 #V x P (P = number of models tested)
+        #only save beta estimates for the best fitting model
+        betaR <- apply(betaR, 1, as.matrix, simplify=FALSE) #form into a list of length V, each a K x P matrix
+        betaR <- t(mapply(function(matrix, index) matrix[, index, drop = FALSE], betaR, datR, SIMPLIFY = TRUE)) #beta estimates for the best model
+        mwallR <- !is.na(datR)
+        datR <- datR[mwallR]
+        betaR <- betaR[mwallR,]
+        sigma2R <- sigma2R[mwallR,]
       }
       if (do_sub) {
-        datSub <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel
-        colnames(datSub) <- NULL
+        #[TO DO]: do this for subcortex, as for L and R above
+        #datSub <- BayesGLM_results$subcortical$result_multiple[[ss]]$bestmodel
+        #colnames(datSub) <- NULL
       }
       bestmodel_cifti[[ss]] <- as.xifti(
         cortexL = datL,
@@ -806,6 +824,35 @@ BayesGLM_cifti <- function(
       bestmodel_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
       bestmodel_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
       bestmodel_cifti[[ss]]$meta$cifti$names <- task_names
+
+      task_cifti_classical[[ss]] <- as.xifti(
+        cortexL = betaL,
+        cortexL_mwall = mwallL,
+        cortexR = betaR,
+        cortexR_mwall = mwallR,
+        subcortVol = betaSub,
+        subcortLabs = submeta_ss$labels,
+        subcortMask = submeta_ss$mask
+      )
+      task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      task_cifti_classical[[ss]]$meta$cifti$names <- task_names
+
+      sigma2_cifti[[ss]] <- as.xifti(
+        cortexL = sigma2L,
+        cortexL_mwall = mwallL,
+        cortexR = sigma2R,
+        cortexR_mwall = mwallR,
+        subcortVol = sigma2Sub,
+        subcortLabs = submeta_ss$labels,
+        subcortMask = submeta_ss$mask
+      )
+      sigma2_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      sigma2_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      sigma2_cifti[[ss]]$meta$cifti$names <- task_names
+
+
+
     }
 
     #stuff we don't have when fitting multiple models
@@ -819,6 +866,7 @@ BayesGLM_cifti <- function(
       classical = task_cifti_classical
     ),
     bestmodel_xii = bestmodel_cifti,
+    sigma2_xii = sigma2_cifti, #only has values for multiple design comparison case
     design = design, # after centering/scaling, before nuisance regression / prewhitening
     design_multiple = design_multiple,
     nuisance = nuisance,
