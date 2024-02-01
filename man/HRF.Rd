@@ -4,7 +4,7 @@
 \alias{HRF}
 \title{Canonical HRF and Derivatives}
 \usage{
-HRF(t, deriv = 0, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
+HRF(t, deriv = 0, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6, o = 0)
 }
 \arguments{
 \item{t}{time vector (in units of seconds)}
@@ -21,6 +21,8 @@ of the HRF, or \code{2} for the dispersion derivative of the HRF.}
 \item{b2}{dispersion of undershoot. Default: \code{b1 = 1}}
 
 \item{c}{scale of undershoot. Default: \code{1/6}}
+
+\item{o}{onset of response. Default: \code{0}}
 }
 \value{
 HRF vector (or dHRF, or d2HRF) corresponding to time vector t

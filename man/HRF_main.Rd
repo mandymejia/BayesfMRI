@@ -4,10 +4,10 @@
 \alias{HRF_main}
 \title{Canonical (double-gamma) HRF}
 \usage{
-HRF_main(t, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
+HRF_main(t, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6, o = 0)
 }
 \arguments{
-\item{t}{time vector (in seconds)}
+\item{t}{time vector (in seconds). Must be equally spaced.}
 
 \item{a1}{delay of response. Default: \code{6}}
 
@@ -18,6 +18,8 @@ HRF_main(t, a1 = 6, b1 = 1, a2 = NULL, b2 = NULL, c = 1/6)
 \item{b2}{dispersion of undershoot. Default: \code{b1 = 1}}
 
 \item{c}{scale of undershoot. Default: \code{1/6}}
+
+\item{o}{onset of response (in seconds). Default: \code{0}}
 }
 \value{
 HRF vector corresponding to time vector t

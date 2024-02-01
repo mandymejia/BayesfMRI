@@ -218,7 +218,7 @@ BayesGLM <- function(
   if(is_vol){
 
     #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
-    #Simply remove those locations (and any bad data locations) from the labels array before creating SPDE
+    #Simply remove those locations (in addition to bad data locations, as below) from the labels array before creating SPDE
 
     ## SPDE: Create  -----------------------------------------------------
 
@@ -304,7 +304,7 @@ BayesGLM <- function(
       # Scale data.
       # (`scale_timeseries` expects VxT data, so transpose before and after.)
       data[[ss]]$BOLD <- t(fMRItools::scale_timeseries(
-        t(data[[ss]]$BOLD), 
+        t(data[[ss]]$BOLD),
         scale=scale_BOLD,
         transpose=FALSE
       ))
@@ -312,7 +312,7 @@ BayesGLM <- function(
       # Remove any missing tasks from design matrix for classical GLM
       cols_ss <- valid_cols[ss,]
       if(!all(cols_ss)) warning(paste0('For session ',ss,', ignoring ',sum(!cols_ss),' design matrix columns of zeros for classical GLM.'))
-      
+
       # Scale design matrix (ignore columns of zeros)
         data[[ss]]$design[,cols_ss] <- if (scale_design) {
         scale_design_mat(data[[ss]]$design[,cols_ss])
