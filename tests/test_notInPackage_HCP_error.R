@@ -59,14 +59,14 @@ BayesGLM_cifti_args <- list(
   brainstructures = "left",
   onsets = events[seq(3)],
   TR = 2.2,
-  dHRF=2,
+  #dHRF=2,
   nuisance=nuis$rp_1,
   Bayes = TRUE,
   ar_smooth = 3,
-  resamp_res = 7000,
+  resamp_res = 700,
   verbose = 2,
   return_INLA = "trim"
 )
 bglm0 <- try(do.call(BayesGLM_cifti, c(BayesGLM_cifti_args, list(ar_order=0))))
-bglm2 <- try(do.call(BayesGLM_cifti, c(BayesGLM_cifti_args, list(ar_order=2))))
+bglm2 <- try(do.call(BayesGLM_cifti, c(BayesGLM_cifti_args, list(ar_order=2, dHRF=2))))
 #saveRDS(list(bglm0=bglm0, bglm2=bglm2), "~/Desktop/classical_5p0.rds")

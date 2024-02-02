@@ -234,7 +234,7 @@ BayesGLM_cifti <- function(
   # }
 
   # Nuisance arguments.
-  dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
+  dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
   if (dHRF == 0) {
     if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "task")) {
       warning("`dHRF_as` is only applicable if `dHRF > 0`. If `dHRF == 0`, there's no need to specify `dHRF_as`.")
