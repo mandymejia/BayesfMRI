@@ -74,14 +74,15 @@
 #' @param dHRF,dHRF_as Only applicable if \code{onsets} and \code{TR} are
 #'  provided. These arguments enable the modeling of HRF derivatives.
 #'
-#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF,
-#'  \code{2} to add the dispersion derivative too, or \code{0} to include only
-#'  the main HRF regressor. Default: \code{1}.
+#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF 
+#'  (default), \code{2} to add the dispersion derivative too, or \code{0} to 
+#'  include only the main HRF regressor.
 #'
 #'  If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
 #'  modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
 #'  \code{"auto"} (default) to treat them as task regressors unless the total
-#'  number of columns in the design matrix would exceed five (for computational reasons)
+#'  number of columns in the design matrix would exceed five (for computational 
+#'  reasons).
 #'
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
 #'  high-pass filter to the data? Only one of these arguments should be provided.
@@ -159,7 +160,7 @@ BayesGLM_cifti <- function(
   #task_names = NULL, #disabled this, user must provide through design or onsets
   session_names = NULL,
   nuisance=NULL,
-  dHRF=c(0, 1, 2),
+  dHRF=c(1, 0, 2),
   dHRF_as=c("auto", "nuisance", "task"),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
@@ -534,7 +535,8 @@ BayesGLM_cifti <- function(
       HRF_ss <- make_HRFs(
         onsets[[ss]],
         TR=TR,
-        nT=ntime[ss]
+        nT=ntime[ss],
+        dHRF=2 # Damon: default `dHRF` value for `make_HRFs` used to be `2`. And we were using this default value. Check if `2` is necessary here still, or if it can be what `dHRF` is for `BayesGLM_cifti`.
       )
       stimulus[[ss]] <- HRF_ss$stimulus #TxK matrix
       HRFs[[ss]] <- HRF_ss$HRF_convolved  #TxKx3 array -- allocate 2nd and 3rd dims to design or nuisance

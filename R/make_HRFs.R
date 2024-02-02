@@ -13,7 +13,7 @@
 #'  function with canonical HRF. Default: \code{100}.
 #' @param dHRF Number of HRF derivatives to include in the model. If \code{dHRF=1}
 #' include the temporal derivative of the HRF, if \code{dHRF=2} also include the
-#' dispersion derivative. Default: \code{2}.
+#' dispersion derivative. Default: \code{1}.
 #' @param a1 (Optional) delay of response. Default: \code{6}
 #' @param b1 response dispersion. Default: \code{1}
 #' @param a2 delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}
@@ -37,7 +37,7 @@ make_HRFs <- function(
   nT,
   FIR_nsec=0,
   upsample=100,
-  dHRF=2,
+  dHRF=1,
   a1=6,
   b1=1,
   a2=16/6 * a1 * sqrt(b1),
