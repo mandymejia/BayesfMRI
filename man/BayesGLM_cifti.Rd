@@ -44,20 +44,19 @@ BayesGLM_cifti(
 For single-session analysis this can be a file path to a CIFTI file or a
 \code{"xifti"} object from the \code{ciftiTools} package. For multi-session
 analysis this can be a vector of file paths or a list of \code{"xifti"}
-objects.}
+objects.
 
-\item{surfL_fname}{Left cortex surface geometry in GIFTI format
-("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
-object from the \code{ciftiTools} package. This argument is only used if
-\code{brainstructures} includes \code{"left"} and \code{Bayes==TRUE}. If
-it's not provided, the HCP group-average inflated surface included in the
-\code{ciftiTools} package will be used.}
+If \code{cifti_fname} is a \code{"xifti"} object or list of \code{"xifti"}
+objects, its surfaces, if any, will be used for Bayesian modeling. However,
+\code{surfL_fname} and \code{surfR_fname}, if provided, will override any
+included surfaces.}
 
-\item{surfR_fname}{Right cortex surface geometry in GIFTI format
-("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
-object from the \code{ciftiTools} package. This argument is only used if
-\code{brainstructures} includes \code{"right"} and \code{Bayes==TRUE}. If
-it's not provided, the HCP group-average inflated surface included in the
+\item{surfL_fname, surfR_fname}{Left or right cortex surface geometry in
+GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a
+\code{"surf"} object from the \code{ciftiTools} package. This argument is
+only used if \code{brainstructures} includes the corresponding hemisphere
+and \code{Bayes==TRUE}. If it's not provided, and there are no surfaces in
+\code{cifti_fname}, the HCP group-average inflated surface included in the
 \code{ciftiTools} package will be used.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
