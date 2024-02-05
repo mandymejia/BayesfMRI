@@ -327,7 +327,7 @@ BayesGLM <- function(
         stopifnot((is.matrix(nuis_ss) | is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
         nuis_ss <- scale(nuis_ss, scale=FALSE)
         data[[ss]]$BOLD <- nuisance_regression(data[[ss]]$BOLD, nuis_ss)
-        data[[ss]]$design[,cols_ss] <- nuisance_regression(data[[ss]]$design[,cols_ss], nuis_ss)
+        data[[ss]]$design[,cols_ss] <- nuisance_regression(data[[ss]]$design[,cols_ss], nuis_ss) #[TO DO] if design matrix varies spatially, need to adapt this. Design matrix will start as TxKxV and continue in that format after this step.
         data[[ss]]$nuisance <- NULL
       }
     }
@@ -370,7 +370,7 @@ BayesGLM <- function(
       #estimate prewhitening parameters for each session
       for (ss in 1:nS) {
         cols_ss <- valid_cols[ss,]
-        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design[,cols_ss])
+        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design[,cols_ss]) #[TO DO] if design matrix varies spatially, need to adapt this
         AR_est <- pw_estimate(resids, ar_order, aic=aic)
         AR_coeffs[,,ss] <- AR_est$phi
         AR_resid_var[,ss] <- AR_est$sigma_sq
@@ -442,7 +442,7 @@ BayesGLM <- function(
       #estimate resid var for each session
       for (ss in 1:nS) {
         cols_ss <- valid_cols[ss,]
-        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design[,cols_ss])
+        resids <- nuisance_regression(data[[ss]]$BOLD, data[[ss]]$design[,cols_ss]) #[TO DO] if design matrix varies spatially, need to adapt this
         resid_var_ss <- matrixStats::colVars(resids)
         AR_resid_var[,ss] <- resid_var_ss
       }
@@ -450,6 +450,8 @@ BayesGLM <- function(
       #average across sessions
       avg_var <- apply(as.matrix(AR_resid_var), 1, mean)
       avg_var <- avg_var/mean(avg_var, na.rm=TRUE)
+
+      #[TO DO] Smoothing of variance estimates
 
       #set up to pre-multiply the data and design by 1/sqrt(var) for each voxel (happens within organize_data below)
       diag_values <- rep(1/sqrt(avg_var), each = nT)

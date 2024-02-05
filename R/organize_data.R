@@ -53,8 +53,9 @@ organize_data <- function(y, X, n_mesh, inds, sqrtInv_all=NULL){
 	X_all <- vector('list', length=nK)
 	for (kk in seq(nK)) {
 	  # expand the kth column of X into a VT x V, then post-multiply by A to get a VT x V2 matrix (a V x V2 matrix for each time point)
-    if(is.nan(X[1,kk])) X[,kk] <- rep(NA, length(X[,kk]))
-	  X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], nV)) #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
+    if(is.nan(X[1,kk])) X[,kk] <- rep(NA, length(X[,kk])) #for tasks that are missing for a particular session
+    #[TO DO] If X varies spatially, replace rep() below with c() to vectorize the spatially-varying design.  new line: X_all_k <- ifelse(..., rep, c)
+	  X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV)) #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
 
 	  # # previous approach
 	  # X_k <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], nV)) # %*% A #multiply by A to expand to the non-data locations
