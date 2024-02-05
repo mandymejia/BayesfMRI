@@ -10,7 +10,7 @@ make_HRFs(
   nT,
   FIR_nsec = 0,
   upsample = 100,
-  dHRF = 2,
+  dHRF = 1,
   a1 = 6,
   b1 = 1,
   a2 = 16/6 * a1 * sqrt(b1),
@@ -35,7 +35,7 @@ function with canonical HRF. Default: \code{100}.}
 
 \item{dHRF}{Number of HRF derivatives to include in the model. If \code{dHRF=1}
 include the temporal derivative of the HRF, if \code{dHRF=2} also include the
-dispersion derivative. Default: \code{2}.}
+dispersion derivative. Default: \code{1}.}
 
 \item{a1}{(Optional) delay of response. Default: \code{6}}
 

@@ -15,7 +15,7 @@ BayesGLM_cifti(
   TR = NULL,
   session_names = NULL,
   nuisance = NULL,
-  dHRF = c(0, 1, 2),
+  dHRF = c(1, 0, 2),
   dHRF_as = c("auto", "nuisance", "task"),
   hpf = NULL,
   DCT = if (is.null(hpf)) {
@@ -44,20 +44,19 @@ BayesGLM_cifti(
 For single-session analysis this can be a file path to a CIFTI file or a
 \code{"xifti"} object from the \code{ciftiTools} package. For multi-session
 analysis this can be a vector of file paths or a list of \code{"xifti"}
-objects.}
+objects.
 
-\item{surfL_fname}{Left cortex surface geometry in GIFTI format
-("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
-object from the \code{ciftiTools} package. This argument is only used if
-\code{brainstructures} includes \code{"left"} and \code{Bayes==TRUE}. If
-it's not provided, the HCP group-average inflated surface included in the
-\code{ciftiTools} package will be used.}
+If \code{cifti_fname} is a \code{"xifti"} object or list of \code{"xifti"}
+objects, its surfaces, if any, will be used for Bayesian modeling. However,
+\code{surfL_fname} and \code{surfR_fname}, if provided, will override any
+included surfaces.}
 
-\item{surfR_fname}{Right cortex surface geometry in GIFTI format
-("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
-object from the \code{ciftiTools} package. This argument is only used if
-\code{brainstructures} includes \code{"right"} and \code{Bayes==TRUE}. If
-it's not provided, the HCP group-average inflated surface included in the
+\item{surfL_fname, surfR_fname}{Left or right cortex surface geometry in
+GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a
+\code{"surf"} object from the \code{ciftiTools} package. This argument is
+only used if \code{brainstructures} includes the corresponding hemisphere
+and \code{Bayes==TRUE}. If it's not provided, and there are no surfaces in
+\code{cifti_fname}, the HCP group-average inflated surface included in the
 \code{ciftiTools} package will be used.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
@@ -106,14 +105,15 @@ of such matrices.}
 \item{dHRF, dHRF_as}{Only applicable if \code{onsets} and \code{TR} are
 provided. These arguments enable the modeling of HRF derivatives.
 
-Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF,
-\code{2} to add the dispersion derivative too, or \code{0} to include only
-the main HRF regressor. Default: \code{1}.
+Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF
+(default), \code{2} to add the dispersion derivative too, or \code{0} to
+include only the main HRF regressor.
 
 If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
 modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
 \code{"auto"} (default) to treat them as task regressors unless the total
-number of columns in the design matrix would exceed five (for computational reasons)}
+number of columns in the design matrix would exceed five (for computational
+reasons).}
 
 \item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
 high-pass filter to the data? Only one of these arguments should be provided.

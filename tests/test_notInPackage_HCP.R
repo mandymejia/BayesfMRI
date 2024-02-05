@@ -66,14 +66,32 @@ BayesGLM_cifti_args <- list(
   TR = 2.2,
   dHRF=2,
   #nuisance=switch(n_sess, nuis$rp_1, nuis),
-  Bayes = FALSE,
+  Bayes = TRUE,
   ar_order = 1,
   ar_smooth = 3,
-  resamp_res = 100,
+  resamp_res = 130,
   verbose = TRUE,
   return_INLA = "trim"
 )
 bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+
+cifti_fname <- read_cifti(fnames$cifti_1, surfR_fname=ciftiTools.files()$surf["right"])
+BayesGLM_cifti_args <- list(
+  cifti_fname = cifti_fname,
+  brainstructures = "both",
+  onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
+  TR = 2.2,
+  dHRF=2,
+  #nuisance=switch(n_sess, nuis$rp_1, nuis),
+  Bayes = TRUE,
+  ar_order = 1,
+  ar_smooth = 3,
+  resamp_res = 130,
+  verbose = TRUE,
+  return_INLA = "trim"
+)
+bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+
 act <- id_activations(bglm, gamma=.01, sessions=seq(2))
 
 BayesGLM_cifti_args$Bayes <- FALSE

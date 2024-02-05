@@ -22,17 +22,17 @@
 #'  \code{"xifti"} object from the \code{ciftiTools} package. For multi-session
 #'  analysis this can be a vector of file paths or a list of \code{"xifti"}
 #'  objects.
-#' @param surfL_fname Left cortex surface geometry in GIFTI format
-#'  ("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
-#'  object from the \code{ciftiTools} package. This argument is only used if
-#'  \code{brainstructures} includes \code{"left"} and \code{Bayes==TRUE}. If
-#'  it's not provided, the HCP group-average inflated surface included in the
-#'  \code{ciftiTools} package will be used.
-#' @param surfR_fname Right cortex surface geometry in GIFTI format
-#'  ("*.surf.gii"). This can be a file path to a GIFTI file or a \code{"surf"}
-#'  object from the \code{ciftiTools} package. This argument is only used if
-#'  \code{brainstructures} includes \code{"right"} and \code{Bayes==TRUE}. If
-#'  it's not provided, the HCP group-average inflated surface included in the
+#' 
+#'  If \code{cifti_fname} is a \code{"xifti"} object or list of \code{"xifti"}
+#'  objects, its surfaces, if any, will be used for Bayesian modeling. However,
+#'  \code{surfL_fname} and \code{surfR_fname}, if provided, will override any 
+#'  included surfaces.
+#' @param surfL_fname,surfR_fname Left or right cortex surface geometry in 
+#'  GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a 
+#'  \code{"surf"} object from the \code{ciftiTools} package. This argument is 
+#'  only used if \code{brainstructures} includes the corresponding hemisphere
+#'  and \code{Bayes==TRUE}. If it's not provided, and there are no surfaces in 
+#'  \code{cifti_fname}, the HCP group-average inflated surface included in the 
 #'  \code{ciftiTools} package will be used.
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
@@ -74,14 +74,15 @@
 #' @param dHRF,dHRF_as Only applicable if \code{onsets} and \code{TR} are
 #'  provided. These arguments enable the modeling of HRF derivatives.
 #'
-#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF,
-#'  \code{2} to add the dispersion derivative too, or \code{0} to include only
-#'  the main HRF regressor. Default: \code{1}.
+#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF 
+#'  (default), \code{2} to add the dispersion derivative too, or \code{0} to 
+#'  include only the main HRF regressor.
 #'
 #'  If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
 #'  modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
 #'  \code{"auto"} (default) to treat them as task regressors unless the total
-#'  number of columns in the design matrix would exceed five (for computational reasons)
+#'  number of columns in the design matrix would exceed five (for computational 
+#'  reasons).
 #'
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
 #'  high-pass filter to the data? Only one of these arguments should be provided.
@@ -159,7 +160,7 @@ BayesGLM_cifti <- function(
   #task_names = NULL, #disabled this, user must provide through design or onsets
   session_names = NULL,
   nuisance=NULL,
-  dHRF=c(0, 1, 2),
+  dHRF=c(1, 0, 2),
   dHRF_as=c("auto", "nuisance", "task"),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
@@ -233,7 +234,7 @@ BayesGLM_cifti <- function(
   # }
 
   # Nuisance arguments.
-  dHRF <- as.numeric(match.arg(as.character(dHRF), c("0", "1", "2")))
+  dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
   if (dHRF == 0) {
     if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "task")) {
       warning("`dHRF_as` is only applicable if `dHRF > 0`. If `dHRF == 0`, there's no need to specify `dHRF_as`.")
@@ -266,6 +267,32 @@ BayesGLM_cifti <- function(
     }
   } else {
     stop('`cifti_fname` should be a character vector or list of `"xifti"` objects.')
+  }
+
+  # Use the `"xifti"` surfaces, if available.
+  if (is_xifti) {
+    if (is.null(surfL_fname) && !is.null(cifti_fname[[1]]$surf$cortex_left)) {
+      all_left_surfs <- c(
+        lapply(cifti_fname, function(q){q$surf$cortex_left}), list(NULL)
+      )
+      if (length(unique(all_left_surfs)) > 2) {
+        warning("Using left surface from the first `xifti` for all modeling. Ignoring the other left surfaces.\n")
+      } else {
+        cat("Using left surface from the `xifti` data.\n")
+      }
+      surfL_fname <- cifti_fname[[1]]$surf$cortex_left
+    }
+    if (is.null(surfR_fname) && !is.null(cifti_fname[[1]]$surf$cortex_right)) {
+      all_right_surfs <- c(
+        lapply(cifti_fname, function(q){q$surf$cortex_right}), list(NULL)
+      )
+      if (length(unique(all_right_surfs)) > 2) {
+        warning("Using right surface from the first `xifti` for all modeling. Ignoring the other right surfaces.\n")
+      } else {
+        cat("Using right surface from the `xifti` data.\n")
+      }
+      surfR_fname <- cifti_fname[[1]]$surf$cortex_right
+    }
   }
 
   # [TO DO]: If input is a `"xifti"`, infer `resamp_res`
@@ -350,15 +377,24 @@ BayesGLM_cifti <- function(
       if (verbose>0) cat("Using `ciftiTools` default inflated fs_LR surface for the left cortex.\n")
       surfL_fname <- ciftiTools.files()$surf["left"]
     }
-    spatial_list$left <- read_surf(surfL_fname, resamp_res=resamp_res)
+    if (suppressMessages(is.surf(surfL_fname))) {
+      if (!is.null(resamp_res)) { surfL_fname <- resample_surf(surfL_fname, resamp_res=resamp_res)  }
+    } else {
+      surfL_fname <- read_surf(surfL_fname, resamp_res=resamp_res)
+    }
+    spatial_list$left <- surfL_fname
   }
   if (do_right) {
     if (is.null(surfR_fname)) {
       if (verbose>0) cat("Using `ciftiTools` default inflated fs_LR surface for the right cortex.\n")
       surfR_fname <- ciftiTools.files()$surf["right"]
     }
-    spatial_list$right <- read_surf(surfR_fname, resamp_res=resamp_res)
-  }
+    if (suppressMessages(is.surf(surfR_fname))) {
+      if (!is.null(resamp_res)) { surfR_fname <- resample_surf(surfR_fname, resamp_res=resamp_res)  }
+    } else {
+      surfR_fname <- read_surf(surfR_fname, resamp_res=resamp_res)
+    }
+    spatial_list$right <- surfR_fname  }
   if(do_sub) {
     #get mask and labels from xii data
     if (is_xifti) xii_1 <- cifti_fname[[1]] else xii_1 <- read_cifti(cifti_fname[1], brainstructures='sub', idx=1)
@@ -534,7 +570,8 @@ BayesGLM_cifti <- function(
       HRF_ss <- make_HRFs(
         onsets[[ss]],
         TR=TR,
-        nT=ntime[ss]
+        nT=ntime[ss],
+        dHRF=2 # Damon: default `dHRF` value for `make_HRFs` used to be `2`. And we were using this default value. Check if `2` is necessary here still, or if it can be what `dHRF` is for `BayesGLM_cifti`.
       )
       stimulus[[ss]] <- HRF_ss$stimulus #TxK matrix
       HRFs[[ss]] <- HRF_ss$HRF_convolved  #TxKx3 array -- allocate 2nd and 3rd dims to design or nuisance
