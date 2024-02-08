@@ -5,7 +5,7 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 4000
+resamp_res <- 7000
 #my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
@@ -56,72 +56,87 @@ nuis <- lapply(fnames[grepl("rp", names(fnames))], read.table, header=FALSE)
 nuis <- lapply(nuis, as.matrix)
 
 # BayesGLM ---------------------------------------------------------------------
-n_sess <- 1
-BayesGLM_cifti_args <- list(
-  cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-  surfL_fname=ciftiTools.files()$surf["left"],
-  surfR_fname=ciftiTools.files()$surf["right"],
-  brainstructures = "both",
-  onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
-  TR = 2.2,
-  dHRF=2,
-  #nuisance=switch(n_sess, nuis$rp_1, nuis),
+### Classical vs Bayes; Single- vs Multi-session -----
+BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
+  list(
+    cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
+    surfL_fname=ciftiTools.files()$surf["left"],
+    surfR_fname=ciftiTools.files()$surf["right"],
+    brainstructures = "both",
+    onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
+    TR = 0.72,
+    dHRF=1,
+    nuisance=switch(n_sess, nuis$rp_1, nuis),
+    #Bayes = TRUE,
+    ar_order = 1,
+    ar_smooth = 3,
+    resamp_res = resamp_res * resamp_factor,
+    verbose = TRUE,
+    return_INLA = "trim"
+  )
+}
+
+##### First pass to detect errors
+bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+
+##### Second pass to get results of decent resolution
+bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
+bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1)))
+bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2)))
+bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2)))
+
+act_c1 <- id_activations(bglm_c1, gamma=.01, sessions=1)
+act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
+act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
+
+### Misc. cases; not checking these results, but checking for errors
+bglm_m1 <- BayesGLM_cifti(
+  cifti_fname = fnames$cifti_1,
+  brainstructures = "right",
+  onsets = events[seq(3)],
+  TR = 0.72,
+  dHRF=0,
   Bayes = TRUE,
-  ar_order = 1,
-  ar_smooth = 3,
-  resamp_res = 130,
-  verbose = TRUE,
-  return_INLA = "trim"
+  resamp_res=resamp_res,
+  ar_order = 0,
+  verbose = 0
 )
-bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+act_m1 <- id_activations(bglm_m1, alpha=.1, gamma=.05, tasks=1)
 
-cifti_fname <- read_cifti(fnames$cifti_1, surfR_fname=ciftiTools.files()$surf["right"])
-BayesGLM_cifti_args <- list(
-  cifti_fname = cifti_fname,
-  brainstructures = "both",
-  onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
-  TR = 2.2,
-  dHRF=2,
-  #nuisance=switch(n_sess, nuis$rp_1, nuis),
-  Bayes = TRUE,
-  ar_order = 1,
-  ar_smooth = 3,
-  resamp_res = 130,
-  verbose = TRUE,
-  return_INLA = "trim"
-)
-bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
-
-act <- id_activations(bglm, gamma=.01, sessions=seq(2))
-
-BayesGLM_cifti_args$Bayes <- FALSE
-bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
-
-
-bglm2 <- BayesGLM2(list(bglm, bglm), excursion_type = ">")
-
-# Change `brainstructures`, `n_sess`, and `meanTol`.
-# Expect same classical model results, where they exist.
-n_sess <- 1
-BayesGLM_cifti_args <- list(
-  cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-  surfL_fname=ciftiTools.files()$surf["left"],
-  surfR_fname=ciftiTools.files()$surf["right"],
+bglm_m2 <- BayesGLM_cifti(
+  cifti_fname = c(fnames$cifti_1, fnames$cifti_2),
   brainstructures = "left",
-  onsets = switch(n_sess, events[rev(seq(3))], list(events[rev(seq(3))], events[rev(seq(4,6))])),
-  TR = 2.2,
-  dHRF=2,
-  nuisance=switch(n_sess, nuis$rp_1, nuis),
+  onsets = list(events[seq(3)], events[seq(4,6)]),
+  TR = 0.72,
   Bayes = FALSE,
-  ar_order = 1,
-  ar_smooth = 3,
-  resamp_res = 800,
-  verbose = TRUE,
-  return_INLA = "full",
-  meanTol=9999
+  resamp_res=resamp_res*2,
+  nuisance=nuis,
+  ar_order = 2,
+  ar_smooth = 0,
+  verbose = 2
 )
-bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+act_m2 <- id_activations(bglm_m2)
 
-z <- bglm$BayesGLM_results$cortex_left$result_classical
-y <- bglm2$BayesGLM_results$cortex_left$result_classical
-q <- y$single_session$estimates - z$session1$estimates[,c(3,2,1)]
+# Save ---
+save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_HCP.rda"))
+
+# Plot ---
+plot(bglm_c1, fname=file.path(dir_resultThis, "HCP_bglm_c1"), together="idx")
+plot(bglm_b1, fname=file.path(dir_resultThis, "HCP_bglm_b1"), together="idx")
+plot(bglm_c2, fname=file.path(dir_resultThis, "HCP_bglm_c2"), together="idx")
+plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_b2"), together="idx")
+
+plot(act_c1, fname=file.path(dir_resultThis, "HCP_act_c1"), together="idx")
+plot(act_b1, fname=file.path(dir_resultThis, "HCP_act_b1"), together="idx")
+plot(act_c2, fname=file.path(dir_resultThis, "HCP_act_c2"), together="idx")
+plot(act_b2, fname=file.path(dir_resultThis, "HCP_act_b2"), together="idx")
+
+plot(bglm_m1, fname=file.path(dir_resultThis, "HCP_bglm_m1"), together="idx")
+plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_m2"), together="idx")
+
+plot(act_m1, fname=file.path(dir_resultThis, "HCP_act_m1"), together="idx")
+plot(act_m2, fname=file.path(dir_resultThis, "HCP_act_m2"), together="idx")
