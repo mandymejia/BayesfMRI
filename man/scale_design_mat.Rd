@@ -8,7 +8,7 @@ scale_design_mat(design_mat)
 }
 \arguments{
 \item{design_mat}{The original (unscaled) design matrix that is T x K, where
-T is the number of time points, and k is the number of task covariates}
+T is the number of time points, and k is the number of field covariates}
 }
 \value{
 A scaled design matrix

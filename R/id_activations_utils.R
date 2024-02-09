@@ -28,7 +28,7 @@ summary.act_BayesGLM <- function(object, ...) {
       lapply(x_model, function(x_sess){
         x_sess <- x_sess[[1]] # use first level of gamma
         q <- apply(x_sess$active, 2, function(avec){c(`TRUE`=sum(avec>0), `FALSE`=sum(avec==0))})
-        colnames(q) <- object$task_names
+        colnames(q) <- object$field_names
         q
       })
     }),

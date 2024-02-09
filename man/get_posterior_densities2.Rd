@@ -4,13 +4,13 @@
 \alias{get_posterior_densities2}
 \title{Extracts posterior density estimates for hyperparameters for volumetric SPDE}
 \usage{
-get_posterior_densities2(INLA_model_obj, task_names)
+get_posterior_densities2(INLA_model_obj, field_names)
 }
 \arguments{
 \item{INLA_model_obj}{An object of class \code{"inla"}, a result of a call to
 \code{inla()}}
 
-\item{task_names}{Descriptive names of model regressors (tasks).}
+\item{field_names}{Descriptive names of model regressors (fields).}
 }
 \value{
 Long-form data frame containing posterior densities for the

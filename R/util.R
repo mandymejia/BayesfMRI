@@ -38,15 +38,15 @@
 # #' @method plot BayesGLM
 # plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
 # {
-#   session_names <- names(object$task_estimates)
+#   session_names <- names(object$field_estimates)
 #
 #   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
 #   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
 #
 #   if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
 #
-#   ind <- which(names(object$task_estimates) == session_name) #which element of list
-#   est <- (object$task_estimates)[[ind]]
+#   ind <- which(names(object$field_estimates) == session_name) #which element of list
+#   est <- (object$field_estimates)[[ind]]
 #   K <- ncol(est)
 #
 #
@@ -244,7 +244,7 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 #'
 is_onsets <- function(x){
 
-  #first check if onsets is NA, which can be the case in multi-session analysis where not all tasks are present in all sessions
+  #first check if onsets is NA, which can be the case in multi-session analysis where not all fields are present in all sessions
   if(length(x) == 1){
     if(is.na(x)){
       return(TRUE)

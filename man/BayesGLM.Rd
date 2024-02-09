@@ -32,7 +32,7 @@ BayesGLM(
 session is a list with elements \code{"BOLD"}, \code{"design"}, and
 optionally \code{"nuisance"}. Each element should be a numeric matrix with
 \eqn{T} rows. The name of each element in \code{data} is the name of that
-session. Colnames of design matrix represent task names and must match across
+session. Colnames of design matrix represent field names and must match across
 sessions. See \code{?is.BfMRI.sess} for details.}
 
 \item{design_multiple}{(Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
@@ -121,13 +121,13 @@ currently not in use, but SNR maps are returned for visualization.}
 A \code{"BayesGLM"} object: a list with elements
 \describe{
 \item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
-\item{task_estimates}{The task coefficients for the Bayesian model.}
-\item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
+\item{field_estimates}{The estimated coefficients for the Bayesian model.}
+\item{result_classical}{Results from the classical model: field estimates, field standard error estimates, residuals, degrees of freedom, and the mask.}
 \item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
 \item{mesh_orig}{The original mesh provided.}
 \item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
 \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
-\item{task_names}{The names of the tasks.}
+\item{field_names}{The names of the fields.}
 \item{session_names}{The names of the sessions.}
 \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
 \item{theta_estimates}{Theta estimates from the Bayesian model.}
@@ -141,7 +141,7 @@ A \code{"BayesGLM"} object: a list with elements
 }
 }
 \description{
-Performs spatial Bayesian GLM for fMRI task activation
+Performs spatial Bayesian GLM for task fMRI activation
 }
 \section{INLA Requirement}{
 

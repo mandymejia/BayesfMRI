@@ -6,7 +6,7 @@
 \usage{
 id_activations.classical(
   model_obj,
-  tasks,
+  fields,
   session,
   alpha = 0.05,
   gamma = 0,
@@ -17,7 +17,7 @@ id_activations.classical(
 \arguments{
 \item{model_obj}{A \code{BayesGLM} object}
 
-\item{tasks, session, alpha, gamma}{See \code{\link{id_activations}}.}
+\item{fields, session, alpha, gamma}{See \code{\link{id_activations}}.}
 
 \item{correction}{(character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
 family-wise error rate with Bonferroni correction, and 'FDR' refers to the

@@ -39,32 +39,32 @@ objects saved with \code{\link{saveRDS}}.}
 
 \item{contrasts}{(Optional) A list of contrast vectors that specify the
 group-level summaries of interest. If \code{NULL}, use contrasts that compute
-the average of each field (task HRF) across subjects and sessions.
+the average of each field (field HRF) across subjects and sessions.
 
 Each contrast vector is length \eqn{K * S * N} vector specifying a
 group-level summary of interest, where \eqn{K} is the number
-of fields (task HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
+of fields (field HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
 number of subjects. For a single subject-session the contrast
 for the first field would be:
 
 \code{contrast1 <- c(1, rep(0, K-1))}
 
 and so the full contrast vector representing the group average across
-sessions and subjects for the first task would be:
+sessions and subjects for the first field would be:
 
 \code{rep(rep(contrast1, S), N) /S /N}.
 
-To obtain the group average for the first task, for just the first sessions
+To obtain the group average for the first field, for just the first sessions
 from each subject:
 
 \code{rep(c(contrast1, rep(0, K*(S-1))), N) /N}.
 
 To obtain the mean difference between the first and second sessions, for the
-first task:
+first field:
 
 \code{rep(c(contrast1, -contrast1, rep(0, K-2)), N) /N}.
 
-To obtain the mean across sessions of the first task, just for the first
+To obtain the mean across sessions of the first field, just for the first
 subject:
 
 \code{c(rep(contrast1, S-1), rep(0, K*S*(N-1)) /S}.}

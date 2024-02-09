@@ -32,8 +32,8 @@ check_INLA <- function(require_PARDISO=FALSE){
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
 #' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `organize_data()`
-#' @param betas List (length = number of tasks) of bbeta objects from organize_replicates
-#' @param repls List (length = number of tasks) of repl objects from organize_replicates
+#' @param betas List (length = number of fields) of bbeta objects from organize_replicates
+#' @param repls List (length = number of fields) of repl objects from organize_replicates
 #'
 #' @return List
 #'
@@ -84,7 +84,7 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, inds, st
 
   res.beta <- INLA_model_obj$summary.random
   nbeta <- length(res.beta)
-  task_names <- names(res.beta)
+  field_names <- names(res.beta)
 
   nS <- length(session_names)
 
@@ -117,7 +117,7 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, inds, st
     #unmask, with NA for data locations excluded from analysis
     betas[[ss]] <- matrix(NA, nrow=nV0, ncol=nbeta)
     betas[[ss]][mask==1,] <- betas_ss
-    colnames(betas[[ss]]) <- task_names
+    colnames(betas[[ss]]) <- field_names
   }
 
   attr(betas, "GLM_type") <- "Bayesian"
@@ -133,18 +133,18 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, inds, st
 #'  \code{inla()}
 #' @param spde The model used for the latent fields in the \code{inla()} call,
 #'  an object of class \code{"inla.spde"}
-#' @param task_names Descriptive names of model regressors (tasks).
+#' @param field_names Descriptive names of model regressors (fields).
 #'
 #' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
 #' @keywords internal
-get_posterior_densities <- function(INLA_model_obj, spde, task_names){
+get_posterior_densities <- function(INLA_model_obj, spde, field_names){
 
-  numbeta <- length(task_names)
+  numbeta <- length(field_names)
 
   for(b in 1:numbeta){
-    name_b <- task_names[b]
+    name_b <- field_names[b]
     result.spde.b <- INLA::inla.spde2.result(INLA_model_obj, name_b, spde)
     # Kappa and Tau
     log_kappa.b <- as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
@@ -166,22 +166,22 @@ get_posterior_densities <- function(INLA_model_obj, spde, task_names){
 #'
 #' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
 #'  \code{inla()}
-#' @param task_names Descriptive names of model regressors (tasks).
+#' @param field_names Descriptive names of model regressors (fields).
 #'
 #' @return Long-form data frame containing posterior densities for the
 #'  hyperparameters associated with each latent field
 #'
 #' @keywords internal
-get_posterior_densities2 <- function(INLA_model_obj, task_names){
+get_posterior_densities2 <- function(INLA_model_obj, field_names){
 
   #marginal densities of hyperparameters
   hyper <- INLA_model_obj$marginals.hyperpar
   names_hyper <- names(INLA_model_obj$marginals.hyperpar)
 
   #grab marginals for kappa and tau for each latent field
-  numbeta <- length(task_names)
+  numbeta <- length(field_names)
   for(b in 1:numbeta){
-    name_b <- task_names[b]
+    name_b <- field_names[b]
     which_b <- grep(name_b, names_hyper)
     which_kappa_b <- which_b[2] #Theta2
     which_tau_b <- which_b[1] #Theta1
@@ -218,12 +218,12 @@ get_posterior_densities2 <- function(INLA_model_obj, task_names){
 summary.BayesGLM <- function(object, ...) {
 
   x <- list(
-    tasks = object$task_names,
+    fields = object$field_names,
     sessions = object$session_names,
     n_sess_orig = object$n_sess_orig,
     n_loc_total = length(object$mask),
     n_loc_modeled = sum(object$mask),
-    GLM_type = attr(object$task_estimates, "GLM_type")
+    GLM_type = attr(object$field_estimates, "GLM_type")
   )
 
   class(x) <- "summary.BayesGLM"
@@ -239,7 +239,7 @@ summary.BayesGLM <- function(object, ...) {
 #' @method print summary.BayesGLM
 print.summary.BayesGLM <- function(x, ...) {
   cat("====BayesGLM result====================\n")
-  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
+  cat("Fields:   ", paste0("(", length(x$fields), ") ", paste(x$fields, collapse=", ")), "\n")
   if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
   } else {
@@ -275,12 +275,12 @@ summary.BayesGLM_cifti <- function(object, ...) {
   x <- lapply(object$BayesGLM_results, summary)
   x <- x[!vapply(object$BayesGLM_results, is.null, FALSE)]
   x <- list(
-    tasks = x[[1]]$tasks,
+    fields = x[[1]]$fields,
     sessions = x[[1]]$sessions,
     n_sess_orig = x[[1]]$n_sess_orig,
     n_loc_total = lapply(x, '[[', "n_loc_total"),
     n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
-    #xii = summary(x$task_estimates_xii$classical[[1]]),
+    #xii = summary(x$field_estimates_xii$classical[[1]]),
     GLM_type = x[[1]]$GLM_type
   )
   class(x) <- "summary.BayesGLM_cifti"
@@ -296,7 +296,7 @@ summary.BayesGLM_cifti <- function(object, ...) {
 #' @method print summary.BayesGLM_cifti
 print.summary.BayesGLM_cifti <- function(x, ...) {
   cat("====BayesGLM_cifti result==============\n")
-  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
+  cat("Fields:   ", paste0("(", length(x$fields), ") ", paste(x$fields, collapse=", ")), "\n")
   if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
   } else {

@@ -17,8 +17,8 @@
 \arguments{
 \item{x}{An object of class "prev_BayesGLM_cifti"}
 
-\item{idx}{Which task should be plotted? Give the numeric indices or the
-names. \code{NULL} (default) will show all tasks. This argument overrides
+\item{idx}{Which field should be plotted? Give the numeric indices or the
+names. \code{NULL} (default) will show all fields. This argument overrides
 the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
 
 \item{session}{Which session should be plotted? \code{NULL} (default) will

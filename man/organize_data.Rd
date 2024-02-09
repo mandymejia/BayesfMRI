@@ -9,7 +9,7 @@ organize_data(y, X, n_mesh, inds, sqrtInv_all = NULL)
 \arguments{
 \item{y}{the TxV data matrix containing the fMRI timeseries}
 
-\item{X}{the TxK design matrix with K task-related columns}
+\item{X}{the TxK design matrix with K field-related columns}
 
 \item{n_mesh}{the number of mesh locations V2 >= V}
 
@@ -25,11 +25,11 @@ Bayesian GLM.
 }
 \details{
 The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD data)
-and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+and \code{X_k} (a sparse TVxV matrix corresponding to the kth field regressor) for each field k.
 The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 
 The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD data)
-and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+and \code{X_k} (a sparse TVxV matrix corresponding to the kth field regressor) for each field k.
 The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 }
 \keyword{internal}

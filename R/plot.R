@@ -1,8 +1,8 @@
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object
 #'
 #' @param x An object of class "BayesGLM_cifti"
-#' @param idx Which task should be plotted? Give the numeric indices or the
-#'  names. \code{NULL} (default) will show all tasks. This argument overrides
+#' @param idx Which field should be plotted? Give the numeric indices or the
+#'  names. \code{NULL} (default) will show all fields. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
@@ -24,24 +24,24 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
   # Method
   if (is.null(method)) {
     method <- ifelse(
-      is.null(x$task_estimates_xii$Bayes[[1]]),
+      is.null(x$field_estimates_xii$Bayes[[1]]),
       "classical", "Bayes"
     )
   }
   method <- match.arg(method, c("classical", "Bayes"))
-  if (is.null(x$task_estimates_xii[[method]])) {
+  if (is.null(x$field_estimates_xii[[method]])) {
     stop(paste("Method", gsub("betas_", "", method, fixed=TRUE), "does not exist."))
   }
 
   # Session
   if (is.null(session)) {
-    if (length(x$task_estimates_xii[[method]]) > 1) { message("Plotting the first session.") }
+    if (length(x$field_estimates_xii[[method]]) > 1) { message("Plotting the first session.") }
     session <- 1
   } else if (is.numeric(session)) {
     stopifnot(length(session)==1)
     stopifnot(session %in% seq(length(x$session_names)))
   }
-  the_xii <- x$task_estimates_xii[[method]][[session]]
+  the_xii <- x$field_estimates_xii[[method]][[session]]
   if (is.null(the_xii)) { stop(paste("Session", session, "does not exist.")) }
 
   # Column index
@@ -58,8 +58,8 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"act_BayesGLM_cifti"} object
 #'
 #' @param x An object of class "act_BayesGLM_cifti"
-#' @param idx Which task should be plotted? Give the numeric indices or the
-#'  names. \code{NULL} (default) will show all tasks. This argument overrides
+#' @param idx Which field should be plotted? Give the numeric indices or the
+#'  names. \code{NULL} (default) will show all fields. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
@@ -143,8 +143,8 @@ plot.BayesGLM2_cifti <- function(x, idx=NULL, what=c("contrasts", "activations")
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"prev_BayesGLM_cifti"} object
 #'
 #' @param x An object of class "prev_BayesGLM_cifti"
-#' @param idx Which task should be plotted? Give the numeric indices or the
-#'  names. \code{NULL} (default) will show all tasks. This argument overrides
+#' @param idx Which field should be plotted? Give the numeric indices or the
+#'  names. \code{NULL} (default) will show all fields. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.

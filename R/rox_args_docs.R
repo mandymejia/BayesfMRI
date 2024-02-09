@@ -189,11 +189,11 @@ NULL
 #' @name session_names_Param
 NULL
 
-#' task_names
+#' field_names
 #'
-#' @param task_names (Optional) Names of tasks represented in design matrix.
+#' @param field_names (Optional) Names of fields represented in design matrix.
 #'
-#' @name task_names_Param
+#' @name field_names_Param
 NULL
 
 #' trim_INLA

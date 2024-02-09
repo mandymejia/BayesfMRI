@@ -1,6 +1,6 @@
 #' BayesGLM
 #'
-#' Performs spatial Bayesian GLM for fMRI task activation
+#' Performs spatial Bayesian GLM for task fMRI activation
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
@@ -8,7 +8,7 @@
 #'  session is a list with elements \code{"BOLD"}, \code{"design"}, and
 #'  optionally \code{"nuisance"}. Each element should be a numeric matrix with
 #'  \eqn{T} rows. The name of each element in \code{data} is the name of that
-#'  session. Colnames of design matrix represent task names and must match across
+#'  session. Colnames of design matrix represent field names and must match across
 #'  sessions. See \code{?is.BfMRI.sess} for details.
 #'
 #' @param design_multiple (Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
@@ -53,13 +53,13 @@
 #' @return A \code{"BayesGLM"} object: a list with elements
 #'  \describe{
 #'    \item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
-#'    \item{task_estimates}{The task coefficients for the Bayesian model.}
-#'    \item{result_classical}{Results from the classical model: task estimates, task standard error estimates, residuals, degrees of freedom, and the mask.}
+#'    \item{field_estimates}{The estimated coefficients for the Bayesian model.}
+#'    \item{result_classical}{Results from the classical model: field estimates, field standard error estimates, residuals, degrees of freedom, and the mask.}
 #'    \item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
 #'    \item{mesh_orig}{The original mesh provided.}
 #'    \item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
 #'    \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
-#'    \item{task_names}{The names of the tasks.}
+#'    \item{field_names}{The names of the fields.}
 #'    \item{session_names}{The names of the sessions.}
 #'    \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
 #'    \item{theta_estimates}{Theta estimates from the Bayesian model.}
@@ -156,7 +156,7 @@ BayesGLM <- function(
   #check whether each element of data is a session (use is.session)
   # V = number of data locations
   # T = length of time series for each session (vector)
-  # K = number of tasks
+  # K = number of fields
 
   nS <- nS_orig <- length(session_names) # number of sessions
   nK <- ncol(data[[1]]$design) # number of fields
@@ -165,13 +165,13 @@ BayesGLM <- function(
 
  # if (nS == 1 && combine_sessions) combine_sessions <- FALSE
 
-  ## Task names: check or make. ------------------------------------------------
-  task_names <- colnames(data[[1]]$design)
-  if(is.null(task_names)) stop('Task names should be provided through `design` element of data. See documentation for details.')
+  ## Field names: check or make. -----------------------------------------------
+  field_names <- colnames(data[[1]]$design)
+  if(is.null(field_names)) stop('Field names should be provided through `design` element of data. See documentation for details.')
 
   ## Define a few return variables that may or may not be calculated. ----------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
-  task_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
+  field_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
   theta_estimates <- Sig_inv <- mesh <- mesh_orig <- NULL
 
   ## Set up spatial data -------------------------------------------------------
@@ -287,7 +287,7 @@ BayesGLM <- function(
 
   if(is.null(design_multiple)){
 
-    # Identify any missing tasks across sessions for bookkeeping -----------------
+    # Identify any missing fields across sessions for bookkeeping -----------------
 
     valid_cols <- matrix(NA, nrow=nS, ncol=ncol(data[[1]]$design))
     for (ss in 1:nS) {
@@ -309,7 +309,7 @@ BayesGLM <- function(
         transpose=FALSE
       ))
 
-      # Remove any missing tasks from design matrix for classical GLM
+      # Remove any missing fields from design matrix for classical GLM
       cols_ss <- valid_cols[ss,]
       if(!all(cols_ss)) warning(paste0('For session ',ss,', ignoring ',sum(!cols_ss),' design matrix columns of zeros for classical GLM.'))
 
@@ -476,7 +476,7 @@ BayesGLM <- function(
       }
 
       cols_ss <- valid_cols[ss,] #classical GLM will ignore
-      nK_ss <- sum(cols_ss) #in case some tasks missing
+      nK_ss <- sum(cols_ss) #in case some fields missing
 
       # Set up vectorized data and big sparse design matrix.
       # Apply prewhitening, if applicable.
@@ -490,7 +490,7 @@ BayesGLM <- function(
       y_all <- c(y_all, data_ss$BOLD)
       #XA_ss <- data_ss$design
       XA_ss <- lapply(data_ss$design, function(x) { return(x %*% data_ss$A) }) #post-multiply each design matrix by A (n_data x n_mesh) for Bayesian GLM
-      XA_list <- do.call(cbind, XA_ss) #cbind (expanded) design matrices for each task
+      XA_list <- do.call(cbind, XA_ss) #cbind (expanded) design matrices for each field
       XA_list <- list(XA_list)
       names(XA_list) <- session_names[ss]
       XA_all_list <- c(XA_all_list, XA_list)
@@ -501,8 +501,8 @@ BayesGLM <- function(
 
       #setup for classical GLM
       y_ss <- data_ss$BOLD #a vector (grouped by location)
-      X_ss <- do.call(cbind, data_ss$design) #cbind non-expanded design matrices for each task
-      valid_cols_bigX <- (colSums(abs(X_ss)) > 0) #because X_ss is a big sparse matrix, any missing tasks will manifest as a block of zeros
+      X_ss <- do.call(cbind, data_ss$design) #cbind non-expanded design matrices for each field
+      valid_cols_bigX <- (colSums(abs(X_ss)) > 0) #because X_ss is a big sparse matrix, any missing fields will manifest as a block of zeros
       valid_cols_bigX[is.na(valid_cols_bigX)] <- FALSE
       X_ss <- X_ss[,valid_cols_bigX]
 
@@ -526,10 +526,10 @@ BayesGLM <- function(
       if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere
       sd_error <- sqrt(var_error) #length = nV
       #compute SE of betas
-      SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = nK_ss) #blocks of XTX_inv represent tasks, so we should repeat each location-specific SD K times
+      SE_beta_s <- sqrt(Matrix::diag(XTX_inv)) * rep(sd_error, each = nK_ss) #blocks of XTX_inv represent fields, so we should repeat each location-specific SD K times
       SE_beta_hat_s[mask==TRUE,cols_ss] <- SE_beta_s
 
-      colnames(beta_hat_s) <- colnames(SE_beta_hat_s) <- task_names
+      colnames(beta_hat_s) <- colnames(SE_beta_hat_s) <- field_names
 
       result_classical[[ss]] <- list(
         estimates = beta_hat_s,
@@ -595,7 +595,7 @@ BayesGLM <- function(
       }
 
       replicates_list <- organize_replicates(n_sess=nS,
-                                             task_names=task_names,
+                                             field_names=field_names,
                                              n_mesh=n_mesh)
                                              #data_loc=data_loc) #indices of original data locations
       betas <- replicates_list$betas
@@ -626,8 +626,8 @@ BayesGLM <- function(
         # beta_hat <- matrix(beta_hat, ncol = nK*nS)
         # rcpp_spde <- create_listRcpp(spde$spde)
         # if(nS > 1) {
-        #   task_cols <- sapply(seq(nS), function(ss) seq(nK) + nK *(ss - 1))
-        #   beta_hat <- apply(task_cols,1,function(x) beta_hat[,x])
+        #   field_cols <- sapply(seq(nS), function(ss) seq(nK) + nK *(ss - 1))
+        #   beta_hat <- apply(field_cols,1,function(x) beta_hat[,x])
         # }
         # n_threads <- parallel::detectCores()
         # n_threads <- min(n_threads,nK,num.threads)
@@ -673,13 +673,13 @@ BayesGLM <- function(
         # m <- Matrix::t(model_data$X%*%Psi)%*%model_data$y / sigma2_new
         # mu_theta <- Matrix::solve(Sig_inv, m)
         # # Prepare results
-        # task_estimates <- matrix(NA, nrow = length(mask), ncol = nK*nS)
-        # task_estimates[mask == 1,] <- matrix(mu_theta,nrow = nV, ncol = nK*nS)
-        # colnames(task_estimates) <- rep(task_names, nS)
-        # task_estimates <- lapply(seq(nS), function(ss) task_estimates[,(seq(nK) + nK * (ss - 1))])
-        # names(task_estimates) <- session_names
-        # avg_task_estimates <- NULL
-        # if(combine_sessions) avg_task_estimates <- Reduce(`+`,task_estimates) / nS
+        # field_estimates <- matrix(NA, nrow = length(mask), ncol = nK*nS)
+        # field_estimates[mask == 1,] <- matrix(mu_theta,nrow = nV, ncol = nK*nS)
+        # colnames(field_estimates) <- rep(field_names, nS)
+        # field_estimates <- lapply(seq(nS), function(ss) field_estimates[,(seq(nK) + nK * (ss - 1))])
+        # names(field_estimates) <- session_names
+        # avg_field_estimates <- NULL
+        # if(combine_sessions) avg_field_estimates <- Reduce(`+`,field_estimates) / nS
         # theta_estimates <- c(sigma2_new,c(phi_new,kappa2_new))
         # names(theta_estimates) <- c("sigma2",paste0("phi_",seq(nK)),paste0("kappa2_",seq(nK)))
         # #extract stuff needed for group analysis
@@ -699,7 +699,7 @@ BayesGLM <- function(
         hyper_initial <- rep(list(hyper_initial), nK)
         hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-        formula_vec <- paste0('f(',task_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
+        formula_vec <- paste0('f(',field_names, ', model = spde, replicate = ', repl_names, hyper_vec, ')')
         formula_vec <- c('y ~ -1', formula_vec)
         formula_str <- paste(formula_vec, collapse=' + ')
         formula <- as.formula(formula_str)
@@ -717,16 +717,16 @@ BayesGLM <- function(
         if (verbose>0) cat("\tDone!\n")
 
         #extract useful stuff from INLA model result
-        task_estimates <- extract_estimates(
+        field_estimates <- extract_estimates(
           INLA_model_obj=INLA_model_obj,
           session_names=session_names,
           mask=mask,
           inds=data_loc
-        ) #posterior means of latent task field
+        ) #posterior means of latent field
         theta_estimates <- INLA_model_obj$summary.hyperpar$mean
         hyperpar_posteriors <- get_posterior_densities2(
           INLA_model_obj=INLA_model_obj, #spde,
-          task_names
+          field_names
         ) #hyperparameter posterior densities
 
         #construct object to be returned
@@ -738,8 +738,8 @@ BayesGLM <- function(
         attr(INLA_model_obj, "format") <- return_INLA
       #}
     } else {
-      task_estimates <- lapply(result_classical, function(x){ x$estimates })
-      attr(task_estimates, "GLM_type") <- "classical"
+      field_estimates <- lapply(result_classical, function(x){ x$estimates })
+      attr(field_estimates, "GLM_type") <- "classical"
     }
 
     # Clean up and return. -------------------------------------------------------
@@ -767,7 +767,7 @@ BayesGLM <- function(
       #loop over models
       nP <- dim(X_ss)[3]
       beta_hat_s <- array(NA, dim=c(nV_all, nK, nP),
-                          dimnames = list(loc = 1:nV_all, task = task_names, model = 1:nP))
+                          dimnames = list(loc = 1:nV_all, field = field_names, model = 1:nP))
       sigma2_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
       for(pp in 1:nP){
 
@@ -806,7 +806,7 @@ BayesGLM <- function(
   }
 
   result <- list(
-    task_estimates = task_estimates,
+    field_estimates = field_estimates,
     INLA_model_obj = INLA_model_obj,
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
@@ -820,7 +820,7 @@ BayesGLM <- function(
     mask_orig = mask_orig, #[TO DO] return the params passed into the function instead?
     masks_quality = masks_quality,
     design = design,
-    task_names = task_names,
+    field_names = field_names,
     session_names = session_names,
     n_sess_orig = nS_orig,
     # For joint group model ~~~~~~~~~~~~~

@@ -6,7 +6,7 @@
 #'  fields:
 #'  \describe{
 #'    \item{BOLD}{a \eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
-#'    \item{design}{a \eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
+#'    \item{design}{a \eqn{T \times K} matrix containing the \eqn{K} field regressors. See \code{\link{make_HRFs}}.}
 #'    \item{nuisance}{an optional argument. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
 #'
@@ -95,18 +95,18 @@ is.a_session <- function(x){
 #'  separate session, and should itself be a list with these named fields:
 #'  \describe{
 #'    \item{BOLD}{a \eqn{T \times V} BOLD matrix. Rows are time points; columns are data locations (vertices/voxels).}
-#'    \item{design}{a \eqn{T \times K} matrix containing the \eqn{K} task regressors. See \code{\link{make_HRFs}}.}
+#'    \item{design}{a \eqn{T \times K} matrix containing the \eqn{K} field regressors. See \code{\link{make_HRFs}}.}
 #'    \item{nuisance}{an optional argument. \eqn{T \times J} matrix containing the \eqn{L} nuisance regressors.}
 #'  }
-#'  In addition, all sessions must have the same number of data locations, \eqn{V}, and tasks, \eqn{K}.
+#'  In addition, all sessions must have the same number of data locations, \eqn{V}, and fields, \eqn{K}.
 #'
 #' @examples
 #' nT <- 180
 #' nV <- 700
 #' BOLD1 <- matrix(rnorm(nT*nV), nrow=nT)
 #' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
-#' onsets1 <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
-#' onsets2 <- list(taskA=cbind(c(1,18,25),4))
+#' onsets1 <- list(fieldA=cbind(c(2,17,23),4)) # one field, 3 four sec-long stimuli
+#' onsets2 <- list(fieldA=cbind(c(1,18,25),4))
 #' TR <- .72 # .72 seconds per volume, or (1/.72) Hz
 #' design1 <- make_HRFs(onsets1, TR, nT)$design
 #' design2 <- make_HRFs(onsets2, TR, nT)$design
@@ -142,7 +142,7 @@ is.BfMRI.sess <- function(x){
     return(FALSE)
   }
 
-  # Check that all sessions have the same number of data locations and tasks.
+  # Check that all sessions have the same number of data locations and fields.
   nV <- ncol(x[[1]]$BOLD)
   nK <- ncol(x[[1]]$design)
   for (ii in seq(2, nS)) {

@@ -4,12 +4,12 @@
 \alias{organize_replicates}
 \title{Organize replicates}
 \usage{
-organize_replicates(n_sess, task_names, n_mesh)
+organize_replicates(n_sess, field_names, n_mesh)
 }
 \arguments{
-\item{n_sess}{The number of sessions sharing hyperparameters (can be different tasks)}
+\item{n_sess}{The number of sessions sharing hyperparameters (can be different fields)}
 
-\item{task_names}{Vector of names for each task}
+\item{field_names}{Vector of names for each field}
 
 \item{n_mesh}{Number of mesh locations}
 }
@@ -17,7 +17,7 @@ organize_replicates(n_sess, task_names, n_mesh)
 replicates vector and betas for sessions
 }
 \description{
-beta and repl vectors are of length \eqn{n_mesh \times n_sess \times n_task}.
+beta and repl vectors are of length \eqn{n_mesh \times n_sess \times n_field}.
 The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
 The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 }

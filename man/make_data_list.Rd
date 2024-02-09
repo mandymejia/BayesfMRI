@@ -11,9 +11,9 @@ make_data_list(y, X, betas, repls)
 
 \item{X}{List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{organize_data()}}
 
-\item{betas}{List (length = number of tasks) of bbeta objects from organize_replicates}
+\item{betas}{List (length = number of fields) of bbeta objects from organize_replicates}
 
-\item{repls}{List (length = number of tasks) of repl objects from organize_replicates}
+\item{repls}{List (length = number of fields) of repl objects from organize_replicates}
 }
 \value{
 List

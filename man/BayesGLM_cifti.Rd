@@ -16,7 +16,7 @@ BayesGLM_cifti(
   session_names = NULL,
   nuisance = NULL,
   dHRF = c(1, 0, 2),
-  dHRF_as = c("auto", "nuisance", "task"),
+  dHRF_as = c("auto", "nuisance", "field"),
   hpf = NULL,
   DCT = if (is.null(hpf)) {
      4
@@ -69,10 +69,10 @@ both \code{onsets} and \code{TR} from which the design matrix or matrices
 will be constructed.
 
 \code{design} is a \eqn{T \times K} task design matrix. Each column
-represents the expected BOLD response due to each task, a convolution of
-the hemodynamic response function (HRF) and the task stimulus. Task names
+represents the expected BOLD response for each field, a convolution of
+the hemodynamic response function (HRF) and the task stimulus. Field names
 should be the column names. For multi-session modeling, this argument should be a list of
-such matrices, and column names must match and align across sessions. If any task is
+such matrices, and column names must match and align across sessions. If any field is
 missing from any session, include a column of zeros in its place. HRF derivatives
 may be included in \code{design} to model them spatially, or in \code{nuisance}
 to treat them as nuisance signals. Note that INLA computation times increase
@@ -110,8 +110,8 @@ Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF
 include only the main HRF regressor.
 
 If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
-modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
-\code{"auto"} (default) to treat them as task regressors unless the total
+modeled as \code{"nuisance"} signals to regress out, \code{"field"}, or
+\code{"auto"} (default) to treat them as fields unless the total
 number of columns in the design matrix would exceed five (for computational
 reasons).}
 
@@ -203,17 +203,18 @@ Default: \code{1e-6} for both.}
 \value{
 An object of class \code{"BayesGLM_cifti"}: a list with elements
 \describe{
-\item{betas_Bayesian}{The task coefficients for the Bayesian model.}
-\item{betas_classical}{The task coefficients for the classical model.}
+\item{betas_Bayesian}{The field coefficients for the Bayesian model.}
+\item{betas_classical}{The field coefficients for the classical model.}
 \item{GLMs_Bayesian}{The entire list of GLM results, except for parameters estimated for the classical model.}
 \item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
 \item{session_names}{The names of the sessions.}
 \item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-\item{task_names}{Column names of the task part of the design matrix.}
+\item{field_names}{Column names of the fields in the design matrix.}
 }
 }
 \description{
-Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
+Performs spatial Bayesian GLM on the cortical surface for task fMRI
+activation.
 }
 \section{INLA latent fields limit}{
 
@@ -222,7 +223,7 @@ design matrix exceeds five. So if there are more than five tasks, or
 three or more tasks each with its temporal derivative being modeled as a
 task, \code{BayesGLM} will raise a warning. In cases like the latter, we
 recommend modeling the temporal derivatives as nuisance signals using the
-\code{nuisance} argument, rather than modeling them as tasks.
+\code{nuisance} argument, rather than modeling them as fields.
 }
 
 \section{Connectome Workbench Requirement}{

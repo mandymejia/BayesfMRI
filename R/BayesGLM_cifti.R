@@ -1,6 +1,7 @@
 #' BayesGLM for CIFTI
 #'
-#' Performs spatial Bayesian GLM on the cortical surface for fMRI task activation
+#' Performs spatial Bayesian GLM on the cortical surface for task fMRI 
+#'  activation.
 #'
 #' @section INLA latent fields limit:
 #'  INLA computation times increase greatly when the number of columns in the
@@ -8,7 +9,7 @@
 #'  three or more tasks each with its temporal derivative being modeled as a
 #'  task, \code{BayesGLM} will raise a warning. In cases like the latter, we
 #'  recommend modeling the temporal derivatives as nuisance signals using the
-#'  \code{nuisance} argument, rather than modeling them as tasks.
+#'  \code{nuisance} argument, rather than modeling them as fields.
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
@@ -43,10 +44,10 @@
 #'  will be constructed.
 #'
 #'   \code{design} is a \eqn{T \times K} task design matrix. Each column
-#'   represents the expected BOLD response due to each task, a convolution of
-#'   the hemodynamic response function (HRF) and the task stimulus. Task names
+#'   represents the expected BOLD response for each field, a convolution of
+#'   the hemodynamic response function (HRF) and the task stimulus. Field names
 #'   should be the column names. For multi-session modeling, this argument should be a list of
-#'   such matrices, and column names must match and align across sessions. If any task is
+#'   such matrices, and column names must match and align across sessions. If any field is
 #'   missing from any session, include a column of zeros in its place. HRF derivatives
 #'   may be included in \code{design} to model them spatially, or in \code{nuisance}
 #'   to treat them as nuisance signals. Note that INLA computation times increase
@@ -79,8 +80,8 @@
 #'  include only the main HRF regressor.
 #'
 #'  If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
-#'  modeled as \code{"nuisance"} signals to regress out, \code{"tasks"}, or
-#'  \code{"auto"} (default) to treat them as task regressors unless the total
+#'  modeled as \code{"nuisance"} signals to regress out, \code{"field"}, or
+#'  \code{"auto"} (default) to treat them as fields unless the total
 #'  number of columns in the design matrix would exceed five (for computational 
 #'  reasons).
 #'
@@ -131,13 +132,13 @@
 #'
 #' @return An object of class \code{"BayesGLM_cifti"}: a list with elements
 #'  \describe{
-#'    \item{betas_Bayesian}{The task coefficients for the Bayesian model.}
-#'    \item{betas_classical}{The task coefficients for the classical model.}
+#'    \item{betas_Bayesian}{The field coefficients for the Bayesian model.}
+#'    \item{betas_classical}{The field coefficients for the classical model.}
 #'    \item{GLMs_Bayesian}{The entire list of GLM results, except for parameters estimated for the classical model.}
 #'    \item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
 #'    \item{session_names}{The names of the sessions.}
 #'    \item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-#'    \item{task_names}{Column names of the task part of the design matrix.}
+#'    \item{field_names}{Column names of the fields in the design matrix.}
 #'  }
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
@@ -161,7 +162,7 @@ BayesGLM_cifti <- function(
   session_names = NULL,
   nuisance=NULL,
   dHRF=c(1, 0, 2),
-  dHRF_as=c("auto", "nuisance", "task"),
+  dHRF_as=c("auto", "nuisance", "field"),
   hpf=NULL,
   DCT=if(is.null(hpf)) {4} else {NULL},
   resamp_res=10000,
@@ -236,11 +237,11 @@ BayesGLM_cifti <- function(
   # Nuisance arguments.
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
   if (dHRF == 0) {
-    if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "task")) {
+    if (identical(dHRF_as, "nuisance") || identical(dHRF_as, "field")) {
       warning("`dHRF_as` is only applicable if `dHRF > 0`. If `dHRF == 0`, there's no need to specify `dHRF_as`.")
     }
   }
-  dHRF_as <- match.arg(dHRF_as, c("auto", "nuisance", "task"))
+  dHRF_as <- match.arg(dHRF_as, c("auto", "nuisance", "field"))
   if (!is.null(DCT)) {
     stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
@@ -409,7 +410,7 @@ BayesGLM_cifti <- function(
   if(!is.null(design)) { task_names <- colnames(design[[1]]); nK <- ncol(design[[1]]) } #task_names could still be NULL
   if(!is.null(onsets)) { task_names <- names(onsets[[1]]); nK <- length(onsets[[1]]) } #task_names could still be NULL
   if(!is.null(design_multiple)) { task_names <- colnames(design_multiple[[1]][,,1]); nK <- dim(design_multiple[[1]])[2] } #task_names could still be NULL
-  if(is.null(task_names)) stop('Task names must be specified through `onsets` or `design`. See documentation for details.')
+  if(is.null(task_names)) stop('Task/field names must be specified through `onsets` or `design`. See documentation for details.')
 
 
   if(is.null(design_multiple)){
@@ -542,20 +543,20 @@ BayesGLM_cifti <- function(
 
     if (verbose>0) cat("\tConstructing design matrix based on onsets provided.\n")
 
-    #determine whether to model HRF derivatives as task or nuisance if "auto"
+    #determine whether to model HRF derivatives as field or nuisance if "auto"
     nK <- length(onsets[[1]])
     if (dHRF > 0 && dHRF_as=="auto") {
       nJ <- (dHRF+1) * nK # number of design matrix columns
       if (nJ > 5) {
         if (verbose) {
-          message("Modeling the HRF derivatives as nuisance signals.")
+          message("Treating the HRF derivatives as nuisance signals.")
         }
         dHRF_as <- "nuisance"
       } else {
         if (verbose) {
-          message("Modeling the HRF derivatives as tasks signals.")
+          message("Modeling the HRF derivatives as fields.")
         }
-        dHRF_as <- "task"
+        dHRF_as <- "field"
       }
     }
 
@@ -588,9 +589,9 @@ BayesGLM_cifti <- function(
         for(dd in 1:dHRF){
           dname_dd <- switch(dd, "dHRF", "ddHRF")
           dHRF_sd <- as.matrix(HRF_ss$HRF_convolved[,,(dd+1)], ncol=nK)
-          colnames(dHRF_sd) <- paste0(task_names_ss, "_", dname_dd)
+          colnames(dHRF_sd) <- paste0(task_names_ss, "_", dname_dd) # now these are field names
           if(dHRF_as == "nuisance") nuisance[[ss]] <- cbind(nuisance[[ss]], dHRF_sd) #if nuisance[[ss]] is NULL this still works
-          if(dHRF_as == "task") design[[ss]] <- cbind(design[[ss]], dHRF_sd)
+          if(dHRF_as == "field") design[[ss]] <- cbind(design[[ss]], dHRF_sd)
         }
       }
 
@@ -612,7 +613,7 @@ BayesGLM_cifti <- function(
     if (nS > 1) {
       tmp <- lapply(design, colnames) #list of column names for all sessions
       tmp2 <- sapply(tmp, function(x) all.equal(x, tmp[[1]])) #vector with TRUE for sessions whose names match session 1
-      if(!all(tmp2 == TRUE)) stop(paste0('Tasks do not match across sessions in `design`. Please input empty values for any missing tasks, as described in function documentation.'))
+      if(!all(tmp2 == TRUE)) stop(paste0('Fields do not match across sessions in `design`. Please input empty values for any missing tasks, as described in function documentation.'))
     }
 
     # Warn the user if the number of design matrix columns exceeds five.
@@ -633,6 +634,9 @@ BayesGLM_cifti <- function(
     stimulus <- HRFs <- FIR <- design_FIR <- vector("list", nS) #leave empty in this case
 
   }
+
+  # [TO DO]
+  field_names <- field_names
 
   # Add DCT bases to nuisance matrix
 
@@ -738,8 +742,8 @@ BayesGLM_cifti <- function(
 
   if (verbose>0) cat("Formatting results.\n")
 
-  task_cifti_classical <- task_cifti <- bestmodel_cifti <- sigma2_cifti <- vector('list', nS)
-  names(task_cifti_classical) <- names(task_cifti) <- names(bestmodel_cifti) <- names(sigma2_cifti) <- session_names
+  field_cifti_classical <- field_cifti <- bestmodel_cifti <- sigma2_cifti <- vector('list', nS)
+  names(field_cifti_classical) <- names(field_cifti) <- names(bestmodel_cifti) <- names(sigma2_cifti) <- session_names
 
   if(is.null(design_multiple)){
 
@@ -763,7 +767,7 @@ BayesGLM_cifti <- function(
         datSub <- BayesGLM_results$subcort$result_classical[[ss]]$estimates
         colnames(datSub) <- NULL
       }
-      task_cifti_classical[[ss]] <- as.xifti(
+      field_cifti_classical[[ss]] <- as.xifti(
         cortexL = datL,
         cortexL_mwall = mwallL,
         cortexR = datR,
@@ -772,29 +776,29 @@ BayesGLM_cifti <- function(
         subcortLabs = submeta_ss$labels,
         subcortMask = submeta_ss$mask
       )
-      task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
-      task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      task_cifti_classical[[ss]]$meta$cifti$names <- field_names
+      field_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      field_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      field_cifti_classical[[ss]]$meta$cifti$names <- field_names
 
       # BAYESIAN GLM
       if (do_Bayesian) {
         if (do_left) {
-          datL <- BayesGLM_results$cortex_left$task_estimates[[ss]]
+          datL <- BayesGLM_results$cortex_left$field_estimates[[ss]]
           mwallL <- !is.na(datL[,1])
           datL <- datL[mwallL,]
           colnames(datL) <- NULL
         }
         if (do_right) {
-          datR <- BayesGLM_results$cortex_right$task_estimates[[ss]]
+          datR <- BayesGLM_results$cortex_right$field_estimates[[ss]]
           mwallR <- !is.na(datR[,1])
           datR <- datR[mwallR,]
           colnames(datR) <- NULL
         }
         if (do_sub) {
-          datSub <- BayesGLM_results$subcortical$task_estimates[[ss]]
+          datSub <- BayesGLM_results$subcortical$field_estimates[[ss]]
           colnames(datSub) <- NULL
         }
-        task_cifti[[ss]] <- as.xifti(
+        field_cifti[[ss]] <- as.xifti(
           cortexL = datL,
           cortexL_mwall = mwallL,
           cortexR = datR,
@@ -803,9 +807,9 @@ BayesGLM_cifti <- function(
           subcortLabs = submeta_ss$labels,
           subcortMask = submeta_ss$mask
         )
-        task_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
-        task_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-        task_cifti[[ss]]$meta$cifti$names <- field_names
+        field_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+        field_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+        field_cifti[[ss]]$meta$cifti$names <- field_names
       }
     }
 
@@ -860,9 +864,9 @@ BayesGLM_cifti <- function(
       )
       bestmodel_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
       bestmodel_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      bestmodel_cifti[[ss]]$meta$cifti$names <- task_names
+      bestmodel_cifti[[ss]]$meta$cifti$names <- field_names
 
-      task_cifti_classical[[ss]] <- as.xifti(
+      field_cifti_classical[[ss]] <- as.xifti(
         cortexL = betaL,
         cortexL_mwall = mwallL,
         cortexR = betaR,
@@ -871,9 +875,9 @@ BayesGLM_cifti <- function(
         subcortLabs = submeta_ss$labels,
         subcortMask = submeta_ss$mask
       )
-      task_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
-      task_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      task_cifti_classical[[ss]]$meta$cifti$names <- task_names
+      field_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      field_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      field_cifti_classical[[ss]]$meta$cifti$names <- field_names
 
       sigma2_cifti[[ss]] <- as.xifti(
         cortexL = sigma2L,
@@ -886,7 +890,7 @@ BayesGLM_cifti <- function(
       )
       sigma2_cifti[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
       sigma2_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      sigma2_cifti[[ss]]$meta$cifti$names <- task_names
+      sigma2_cifti[[ss]]$meta$cifti$names <- field_names
 
 
 
@@ -894,13 +898,13 @@ BayesGLM_cifti <- function(
 
     #stuff we don't have when fitting multiple models
     HRFs <- FIR <- design_FIR <- stimulus <- NULL
-    field_names <- task_names
+    field_names <- field_names
   }
 
   result <- list(
-    task_estimates_xii = list(
-      Bayes = task_cifti,
-      classical = task_cifti_classical
+    field_estimates_xii = list(
+      Bayes = field_cifti,
+      classical = field_cifti_classical
     ),
     bestmodel_xii = bestmodel_cifti,
     sigma2_xii = sigma2_cifti, #only has values for multiple design comparison case
@@ -912,7 +916,7 @@ BayesGLM_cifti <- function(
     HRF_basis = HRF, #HRF basis functions
     FIR = FIR,
     design_FIR = design_FIR,
-    task_names = field_names, #[TO DO] eventually rename this output to field_names
+    field_names = field_names,
     session_names = session_names,
     n_sess = nS_orig,
     BayesGLM_results = BayesGLM_results

@@ -5,18 +5,18 @@
 #' 	Bayesian GLM.
 #'
 #' The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD data)
-#' 	and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+#' 	and \code{X_k} (a sparse TVxV matrix corresponding to the kth field regressor) for each field k.
 #' 	The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 #'
 #' @param y the TxV data matrix containing the fMRI timeseries
-#' @param X the TxK design matrix with K task-related columns
+#' @param X the TxK design matrix with K field-related columns
 #' @param n_mesh the number of mesh locations V2 >= V
 #' @param inds the indices in the mesh that correspond to the V data locations
 #'
 #' @return A list containing fields \code{y} and \code{A} (see Details)
 #'
 #' @details The Bayesian GLM requires \code{y} (a vector of length TV containing the BOLD data)
-#' and \code{X_k} (a sparse TVxV matrix corresponding to the kth task regressor) for each task k.
+#' and \code{X_k} (a sparse TVxV matrix corresponding to the kth field regressor) for each field k.
 #' The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 #'
 #' @importFrom Matrix sparseMatrix
@@ -53,7 +53,7 @@ organize_data <- function(y, X, n_mesh, inds, sqrtInv_all=NULL){
 	X_all <- vector('list', length=nK)
 	for (kk in seq(nK)) {
 	  # expand the kth column of X into a VT x V, then post-multiply by A to get a VT x V2 matrix (a V x V2 matrix for each time point)
-    if(is.nan(X[1,kk])) X[,kk] <- rep(NA, length(X[,kk])) #for tasks that are missing for a particular session
+    if(is.nan(X[1,kk])) X[,kk] <- rep(NA, length(X[,kk])) #for fields that are missing for a particular session
     #[TO DO] If X varies spatially, replace rep() below with c() to vectorize the spatially-varying design.  new line: X_all_k <- ifelse(..., rep, c)
 	  X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV)) #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
 

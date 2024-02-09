@@ -28,7 +28,7 @@ beta.posterior.thetasamp <- function(
   n.mesh <- spde$n.spde
 
   prec.error <- exp(theta[1])
-  theta_spde <- matrix(theta[-1], nrow=2) #2xK matrix of the hyperparameters (2 per task)
+  theta_spde <- matrix(theta[-1], nrow=2) #2xK matrix of the hyperparameters (2 per field)
   K <- ncol(theta_spde)
   M <- length(Xcros)
 
@@ -51,7 +51,7 @@ beta.posterior.thetasamp <- function(
       theta_k <-
         theta_spde[, k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
       Q.beta[[k]] <-
-        INLA::inla.spde2.precision(spde, theta = theta_k) # prior precision for a single task k
+        INLA::inla.spde2.precision(spde, theta = theta_k) # prior precision for a single field k
     }
   }
 
@@ -217,7 +217,7 @@ summary.BayesGLM2 <- function(object, ...) {
 
   x <- list(
     n_contrasts = length(object$contrasts),
-    tasks = object$task_names,
+    fields = object$field_names,
     sessions = object$session_names,
     n_loc_total = vapply(lapply(object$model_results, '[[', "mask"), length, 0),
     n_loc_modeled = vapply(lapply(object$model_results, '[[', "mask"), sum, 0),
@@ -235,7 +235,7 @@ summary.BayesGLM2 <- function(object, ...) {
 #' @method print summary.BayesGLM2
 print.summary.BayesGLM2 <- function(x, ...) {
   cat("====BayesGLM2 result===================\n")
-  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
+  cat("Fields:   ", paste0("(", length(x$fields), ") ", paste(x$fields, collapse=", ")), "\n")
   if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
   } else {

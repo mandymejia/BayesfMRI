@@ -88,26 +88,29 @@ act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
 act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
 
 ### Misc. cases; not checking these results, but checking for errors
+### Last updated: 5.1
 bglm_m1 <- BayesGLM_cifti(
   cifti_fname = fnames$cifti_1,
   brainstructures = "right",
   onsets = events[[1]],
   TR = 2.2,
-  dHRF=0,
+  dHRF_as="field",
   Bayes = TRUE,
   resamp_res=resamp_res,
   ar_order = 0,
   verbose = 0
 )
-act_m1 <- id_activations(bglm_m1, alpha=.1, gamma=.05, tasks=1)
+act_m1 <- id_activations(bglm_m1, alpha=.1, gamma=.05, fields=1)
 
 bglm_m2 <- BayesGLM_cifti(
   cifti_fname = c(fnames$cifti_1, fnames$cifti_2),
   brainstructures = "left",
   onsets = events[seq(2)],
   TR = 2.2,
+  dHRF=0,
   Bayes = FALSE,
   resamp_res=resamp_res*2,
+  nuisance=nuis,
   ar_order = 2,
   ar_smooth = 0,
   verbose = 2

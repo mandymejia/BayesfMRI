@@ -2,11 +2,11 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations}
 \alias{id_activations}
-\title{Identify task activations}
+\title{Identify field activations}
 \usage{
 id_activations(
   model_obj,
-  tasks = NULL,
+  fields = NULL,
   sessions = NULL,
   method = c("Bayesian", "classical"),
   alpha = 0.05,
@@ -20,9 +20,9 @@ id_activations(
 \item{model_obj}{Result of \code{BayesGLM} or \code{BayesGLM_cifti} model
 call, of class \code{"BayesGLM"} or \code{"BayesGLM_cifti"}.}
 
-\item{tasks}{The task(s) to identify activations for. Give either the name(s)
+\item{fields}{The field(s) to identify activations for. Give either the name(s)
 as a character vector, or the numerical indices. If \code{NULL} (default),
-analyze all tasks.}
+analyze all fields.}
 
 \item{sessions}{The session(s) to identify activations for. Give either the
 name(s) as a character vector, or the numerical indices. If \code{NULL}
@@ -60,6 +60,6 @@ An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
 list which indicates the activated locations along with related information.
 }
 \description{
-Identify areas of activation for each task from the result of \code{BayesGLM}
+Identify areas of activation for each field from the result of \code{BayesGLM}
 or \code{BayesGLM_cifti}.
 }
