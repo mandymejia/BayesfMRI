@@ -223,7 +223,8 @@ summary.BayesGLM <- function(object, ...) {
     n_sess_orig = object$n_sess_orig,
     n_loc_total = length(object$mask),
     n_loc_modeled = sum(object$mask),
-    GLM_type = attr(object$field_estimates, "GLM_type")
+    GLM_type = attr(object$field_estimates, "GLM_type"),
+    design_is_multiple = !is.null(object$result_multiple)
   )
 
   class(x) <- "summary.BayesGLM"
@@ -246,7 +247,11 @@ print.summary.BayesGLM <- function(x, ...) {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
   }
   cat("Locations:", x$n_loc_modeled, "modeled,", x$n_loc_total, "total", "\n")
-  cat("GLM type: ", x$GLM_type, "\n")
+  if (x$design_is_multiple) {
+    cat("GLM type: ", "classical (multiple designs)", "\n")
+  } else {
+    cat("GLM type: ", x$GLM_type, "\n")
+  }
   cat("\n")
   invisible(NULL)
 }
@@ -280,8 +285,9 @@ summary.BayesGLM_cifti <- function(object, ...) {
     n_sess_orig = x[[1]]$n_sess_orig,
     n_loc_total = lapply(x, '[[', "n_loc_total"),
     n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
-    #xii = summary(x$field_estimates_xii$classical[[1]]),
-    GLM_type = x[[1]]$GLM_type
+    #xii = summary(x$estimates_xii$classical[[1]]),
+    GLM_type = x[[1]]$GLM_type,
+    design_is_multiple = x[[1]]$design_is_multiple
   )
   class(x) <- "summary.BayesGLM_cifti"
 
@@ -309,7 +315,11 @@ print.summary.BayesGLM_cifti <- function(x, ...) {
       "modeled,", x$n_loc_total[[ii]], "total", "\n"
     )
   }
-  cat("GLM type: ", x$GLM_type, "\n")
+  if (x$design_is_multiple) {
+    cat("GLM type: ", "classical (multiple designs)", "\n")
+  } else {
+    cat("GLM type: ", x$GLM_type, "\n")
+  }
   cat("\n")
   invisible(NULL)
 }

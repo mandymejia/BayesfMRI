@@ -24,24 +24,24 @@ plot.BayesGLM_cifti <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-
   # Method
   if (is.null(method)) {
     method <- ifelse(
-      is.null(x$field_estimates_xii$Bayes[[1]]),
+      is.null(x$estimates_xii$Bayes[[1]]),
       "classical", "Bayes"
     )
   }
   method <- match.arg(method, c("classical", "Bayes"))
-  if (is.null(x$field_estimates_xii[[method]])) {
+  if (is.null(x$estimates_xii[[method]])) {
     stop(paste("Method", gsub("betas_", "", method, fixed=TRUE), "does not exist."))
   }
 
   # Session
   if (is.null(session)) {
-    if (length(x$field_estimates_xii[[method]]) > 1) { message("Plotting the first session.") }
+    if (length(x$estimates_xii[[method]]) > 1) { message("Plotting the first session.") }
     session <- 1
   } else if (is.numeric(session)) {
     stopifnot(length(session)==1)
     stopifnot(session %in% seq(length(x$session_names)))
   }
-  the_xii <- x$field_estimates_xii[[method]][[session]]
+  the_xii <- x$estimates_xii[[method]][[session]]
   if (is.null(the_xii)) { stop(paste("Session", session, "does not exist.")) }
 
   # Column index

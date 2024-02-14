@@ -56,14 +56,30 @@ nuis <- lapply(fnames[grepl("rp", names(fnames))], read.table, header=FALSE)
 nuis <- lapply(nuis, as.matrix)
 
 # BayesGLM ---------------------------------------------------------------------
+des <- make_design(
+  onsets = list(events[seq(3)], events[seq(4,6)]),
+  TR = 0.72, nTime=253
+)
+
 ### Classical vs Bayes; Single- vs Multi-session -----
-BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
+BayesGLM_cifti_args <- function(n_sess, resamp_factor=1, dtype=c("single", "multi")){
+  dtype <- match.arg(dtype, c("single", "multi"))
+  if (dtype == "multi") {
+    des$design <- lapply(des$design, function(ddd){
+      abind::abind(
+        ddd,
+        ddd + rnorm(prod(dim(ddd)), sd=.1),
+        ddd + rnorm(prod(dim(ddd)), sd=.5), along=3
+      )
+    })
+  }
+  des1 <- des; des1$design <- des1$design[1]
   list(
     cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
     surfL_fname=ciftiTools.files()$surf["left"],
     surfR_fname=ciftiTools.files()$surf["right"],
     brainstructures = "both",
-    onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
+    design=switch(n_sess, des1, des),
     TR = 0.72,
     dHRF=1,
     nuisance=switch(n_sess, nuis$rp_1, nuis),
@@ -79,26 +95,34 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
 ##### First pass to detect errors
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1, dtype="multi")))
 bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1, dtype="multi")))
+
 
 ##### Second pass to get results of decent resolution
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1)))
+bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, dtype="multi")))
 bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2)))
 bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2)))
+bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, dtype="multi")))
 
-act_c1 <- id_activations(bglm_c1, gamma=.01, sessions=1)
+act_c1 <- id_activations(bglm_c1, sessions=1)
 act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+act_m1 <- id_activations(bglm_b1, sessions=1)
 act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
 act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
+act_m2 <- id_activations(bglm_b1, sessions=seq(2))
 
 ### Misc. cases; not checking these results, but checking for errors
-### Last updated: 5.1
-bglm_m1 <- BayesGLM_cifti(
+### Last updated: 5.2
+des1 <- make_design(onsets = list(events[seq(3)]), TR=.72, nTime=253)
+bglm_x1 <- BayesGLM_cifti(
   cifti_fname = fnames$cifti_1,
   brainstructures = "right",
-  onsets = events[seq(3)],
+  design = des1,
   TR = 0.72,
   dHRF_as="field",
   Bayes = TRUE,
@@ -106,12 +130,12 @@ bglm_m1 <- BayesGLM_cifti(
   ar_order = 0,
   verbose = 0
 )
-act_m1 <- id_activations(bglm_m1, alpha=.1, gamma=.05, fields=1)
+act_m1 <- id_activations(bglm_x1, alpha=.1, gamma=.05, fields=1)
 
-bglm_m2 <- BayesGLM_cifti(
+bglm_x2 <- BayesGLM_cifti(
   cifti_fname = c(fnames$cifti_1, fnames$cifti_2),
   brainstructures = "left",
-  onsets = list(events[seq(3)], events[seq(4,6)]),
+  design=des,
   TR = 0.72,
   dHRF=0,
   Bayes = FALSE,
@@ -121,7 +145,7 @@ bglm_m2 <- BayesGLM_cifti(
   ar_smooth = 0,
   verbose = 2
 )
-act_m2 <- id_activations(bglm_m2)
+act_m2 <- id_activations(bglm_x2)
 
 # Save ---
 save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_HCP.rda"))
@@ -129,6 +153,7 @@ save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_HCP.rda"))
 # Plot ---
 plot(bglm_c1, fname=file.path(dir_resultThis, "HCP_bglm_c1"), together="idx")
 plot(bglm_b1, fname=file.path(dir_resultThis, "HCP_bglm_b1"), together="idx")
+plot(bglm_m1, fname=file.path(dir_resultThis, "HCP_bglm_m1"), together="idx")
 plot(bglm_c2, fname=file.path(dir_resultThis, "HCP_bglm_c2"), together="idx")
 plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_b2"), together="idx")
 
@@ -137,8 +162,8 @@ plot(act_b1, fname=file.path(dir_resultThis, "HCP_act_b1"), together="idx")
 plot(act_c2, fname=file.path(dir_resultThis, "HCP_act_c2"), together="idx")
 plot(act_b2, fname=file.path(dir_resultThis, "HCP_act_b2"), together="idx")
 
-plot(bglm_m1, fname=file.path(dir_resultThis, "HCP_bglm_m1"), together="idx")
-plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_m2"), together="idx")
+plot(bglm_x1, fname=file.path(dir_resultThis, "HCP_bglm_x1"), together="idx")
+plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_x2"), together="idx")
 
 plot(act_m1, fname=file.path(dir_resultThis, "HCP_act_m1"), together="idx")
 plot(act_m2, fname=file.path(dir_resultThis, "HCP_act_m2"), together="idx")

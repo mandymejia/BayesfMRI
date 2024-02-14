@@ -163,15 +163,6 @@ NULL
 #' @name scale_BOLD_Param
 NULL
 
-#' scale_design
-#'
-#' @param scale_design Scale the design matrix by dividing each column by its
-#'  maximum and then subtracting the mean? Default: \code{TRUE}. If 
-#'  \code{FALSE}, the design matrix is centered but not scaled. 
-#'
-#' @name scale_design_Param
-NULL
-
 #' seed
 #'
 #' @param seed Random seed (optional). Default: \code{NULL}.

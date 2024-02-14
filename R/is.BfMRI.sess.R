@@ -45,8 +45,8 @@ is.a_session <- function(x){
   }
   des_pw <- (!has_nus) && (inherits(x$design, "dgCMatrix"))
   if (!des_pw) {
-    if (!(is.numeric(x$design) && is.matrix(x$design))) {
-      message("`x$design` must be a numeric matrix.")
+    if (!(is.numeric(x$design) && (is.matrix(x$design) | is.array(x$design)))) {
+      message("`x$design` must be a numeric matrix (or array for multi-design).")
       if (!has_nus) {
         message("(It may also be a 'dgCMatrix' if prewhitening has been done.)")
       }
@@ -144,7 +144,7 @@ is.BfMRI.sess <- function(x){
 
   # Check that all sessions have the same number of data locations and fields.
   nV <- ncol(x[[1]]$BOLD)
-  nK <- ncol(x[[1]]$design)
+  nK <- dim(x[[1]]$design)[2]
   for (ii in seq(2, nS)) {
     if (ncol(x[[ii]]$BOLD) != nV) {
       message(
@@ -154,7 +154,7 @@ is.BfMRI.sess <- function(x){
       )
       return(FALSE)
     }
-    if (ncol(x[[ii]]$design) != nK) {
+    if (dim(x[[ii]]$design)[2] != nK) {
       message(
         "The first session has ", nK, " locations, but session ", ii,
         " (and maybe others) does not. All sessions must have the same number ",

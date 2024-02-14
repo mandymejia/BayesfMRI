@@ -200,7 +200,7 @@ id_activations <- function(
   act_xii <- vector("list", length(sessions))
   names(act_xii) <- sessions
   for (session in sessions) {
-    the_xii <- cifti_obj$field_estimates_xii$classical[[session]]
+    the_xii <- cifti_obj$estimates_xii$classical[[session]]
     act_xii_ss <- 0*select_xifti(the_xii, match(fields, the_xii$meta$cifti$names))
     for (bs in names(the_xii$data)) {
       if (!is.null(the_xii$data[[bs]])) {

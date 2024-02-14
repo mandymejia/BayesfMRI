@@ -6,7 +6,6 @@
 \usage{
 BayesGLM(
   data,
-  design_multiple = NULL,
   vertices = NULL,
   faces = NULL,
   mask = NULL,
@@ -14,7 +13,6 @@ BayesGLM(
   buffer = c(1, 1, 3, 4, 4),
   nbhd_order = 1,
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  scale_design = TRUE,
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
@@ -34,9 +32,6 @@ optionally \code{"nuisance"}. Each element should be a numeric matrix with
 \eqn{T} rows. The name of each element in \code{data} is the name of that
 session. Colnames of design matrix represent field names and must match across
 sessions. See \code{?is.BfMRI.sess} for details.}
-
-\item{design_multiple}{(Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
-different design matrices for model comparison.}
 
 \item{vertices, faces}{For cortical surface data, the geometry is based on
 the \code{vertices} and \code{faces} arguments (must provide both).
@@ -74,10 +69,6 @@ scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.}
-
-\item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}. If
-\code{FALSE}, the design matrix is centered but not scaled.}
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
 addition to the classical GLM. (The classical GLM is always returned.)}

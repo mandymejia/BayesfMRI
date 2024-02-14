@@ -6,17 +6,15 @@
 \usage{
 BayesGLM_cifti(
   cifti_fname,
+  design,
   surfL_fname = NULL,
   surfR_fname = NULL,
   brainstructures = c("left", "right"),
-  design = NULL,
-  design_multiple = NULL,
-  onsets = NULL,
-  TR = NULL,
-  session_names = NULL,
-  nuisance = NULL,
   dHRF = c(1, 0, 2),
   dHRF_as = c("auto", "nuisance", "field"),
+  session_names = NULL,
+  nuisance = NULL,
+  TR = NULL,
   hpf = NULL,
   DCT = if (is.null(hpf)) {
      4
@@ -27,7 +25,6 @@ BayesGLM_cifti(
   nbhd_order = 1,
   buffer = c(1, 1, 3, 4, 4),
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  scale_design = TRUE,
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
@@ -51,6 +48,8 @@ objects, its surfaces, if any, will be used for Bayesian modeling. However,
 \code{surfL_fname} and \code{surfR_fname}, if provided, will override any
 included surfaces.}
 
+\item{design}{See \code{make_design}.}
+
 \item{surfL_fname, surfR_fname}{Left or right cortex surface geometry in
 GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a
 \code{"surf"} object from the \code{ciftiTools} package. This argument is
@@ -64,33 +63,20 @@ to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
 (right cortical surface). Default: \code{c("left","right")} (both
 hemispheres). Note that the subcortical models have not yet been implemented.}
 
-\item{design, onsets, TR}{Either provide \code{design} directly, or provide
-both \code{onsets} and \code{TR} from which the design matrix or matrices
-will be constructed.
+\item{dHRF}{\code{dHRF} controls the addition of HRF derivatives to the design matrix if
+\code{onsets} is provided. Set to \code{0} to not model the derivatives and
+only include the main HRF regressor; set to \code{1} (default) to model the
+temporal derivative too; or, set to \code{2} to model both the temporal
+derivative and the dispersion derivative too.
+If \code{dHRF==0}, there is one design column per task. If \code{dHRF==1},
+there are two design columns per task. And if \code{dHRF==2}, there are
+three design columns per task. If there are several tasks and \code{dHRF>0},
+spatial modeling with INLA may require large computation times. A possible
+adjustment is to model the columns for HRF derivatives as nuisance signals
+rather than fields. This can be controlled by the \code{dHRF_as} argument
+to \code{BayesGLM(_cifti)}.}
 
-\code{design} is a \eqn{T \times K} task design matrix. Each column
-represents the expected BOLD response for each field, a convolution of
-the hemodynamic response function (HRF) and the task stimulus. Field names
-should be the column names. For multi-session modeling, this argument should be a list of
-such matrices, and column names must match and align across sessions. If any field is
-missing from any session, include a column of zeros in its place. HRF derivatives
-may be included in \code{design} to model them spatially, or in \code{nuisance}
-to treat them as nuisance signals. Note that INLA computation times increase
-if the design matrix has more than five columns.
-
-\code{onsets} is a list where each element represents a task, and the value of each element is a
-matrix of onsets (first column) and durations (second column) for each
-stimuli (each row) of the corresponding task. The units of both columns
-is seconds. For multi-session modeling, this argument should be a list of
-such lists, and the task names must match and align across sessions. If any task is
-missing from any session, include a list element equal to NA in its place.
-
-\code{TR} is the temporal resolution of the data, in seconds. Required if \code{onsets} provided.}
-
-\item{design_multiple}{(Optional) A \eqn{T \times K \times D} array of \eqn{D}
-different design matrices for model comparison.  If provided, onsets and design will be ignored.
-TO DO: Allow differing numbers of regressors across D models, pad with NAs or 0.
-modeling, this must be provided if not all tasks are present for all sessions.}
+\item{dHRF_as}{\code{"auto"} (default) ...}
 
 \item{session_names}{(Optional, and only relevant for multi-session modeling)
 Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
@@ -102,18 +88,7 @@ These are regressed from the fMRI data and the design matrix prior to the
 GLM computation. For multi-session modeling, this argument should be a list
 of such matrices.}
 
-\item{dHRF, dHRF_as}{Only applicable if \code{onsets} and \code{TR} are
-provided. These arguments enable the modeling of HRF derivatives.
-
-Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF
-(default), \code{2} to add the dispersion derivative too, or \code{0} to
-include only the main HRF regressor.
-
-If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
-modeled as \code{"nuisance"} signals to regress out, \code{"field"}, or
-\code{"auto"} (default) to treat them as fields unless the total
-number of columns in the design matrix would exceed five (for computational
-reasons).}
+\item{TR}{The temporal resolution of the data, in seconds.}
 
 \item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
 high-pass filter to the data? Only one of these arguments should be provided.
@@ -158,10 +133,6 @@ scaling will be used instead.
 \code{"sd"} scaling will scale the data by local standard deviation.
 
 \code{"none"} will only center the data, not scale it.}
-
-\item{scale_design}{Scale the design matrix by dividing each column by its
-maximum and then subtracting the mean? Default: \code{TRUE}. If
-\code{FALSE}, the design matrix is centered but not scaled.}
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
 addition to the classical GLM. (The classical GLM is always returned.)}

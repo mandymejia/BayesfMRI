@@ -6,7 +6,6 @@
 \usage{
 BayesGLM_argChecks(
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  scale_design = TRUE,
   Bayes = TRUE,
   EM = FALSE,
   ar_order = 6,
@@ -21,7 +20,7 @@ BayesGLM_argChecks(
 )
 }
 \arguments{
-\item{scale_BOLD, scale_design}{See \code{\link{BayesGLM}}.}
+\item{scale_BOLD}{See \code{\link{BayesGLM}}.}
 
 \item{Bayes, EM}{See \code{\link{BayesGLM}}.}
 

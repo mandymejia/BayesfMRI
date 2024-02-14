@@ -138,6 +138,15 @@ make_HRFs <- function(
   #add time to HRFs
   HRFs_df <- data.frame(time = u, HRF = HRFs[[1]], dHRF = HRFs[[2]], ddHRF = HRFs[[3]])
 
+  # Drop dim names for the volumes.
+  rownames(theStimulus) <- NULL
+  dimnames(theHRFs)[1] <- list(volume=NULL)
+  rownames(HRFs_df) <- NULL
+  rownames(design) <- NULL
+  if (!is.null(theFIR)) {
+    dimnames(theFIR)[1] <- list(volume=NULL)
+  }
+
   list(
     stimulus=theStimulus,
     HRF_convolved=theHRFs,

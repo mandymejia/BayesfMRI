@@ -11,8 +11,8 @@
 #'  session. Colnames of design matrix represent field names and must match across
 #'  sessions. See \code{?is.BfMRI.sess} for details.
 #'
-#' @param design_multiple (Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
-#' different design matrices for model comparison.
+# @param design_multiple (Optional) A list of \eqn{T \times K \times D} arrays of \eqn{D}
+# different design matrices for model comparison.
 #' @param vertices,faces For cortical surface data, the geometry is based on
 #'  the \code{vertices} and \code{faces} arguments (must provide both).
 #'
@@ -34,7 +34,6 @@
 #' @param mask (Optional) A length \eqn{V} logical vector indicating the
 #'  vertices to include in analysis. (Currently only for surface-based analysis)
 #' @inheritParams scale_BOLD_Param
-#' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
 # @inheritParams EM_Param
 #' @inheritParams ar_order_Param
@@ -84,7 +83,7 @@
 #' @export
 BayesGLM <- function(
   data,
-  design_multiple = NULL,
+  #design_multiple = NULL,
   vertices = NULL,
   faces = NULL,
   mask = NULL,
@@ -94,7 +93,6 @@ BayesGLM <- function(
   # Below arguments shared with `BayesGLM_cifti`.
   #combine_sessions = TRUE,
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  scale_design = TRUE, #[TO DO] Delete this?  It is done by BayesGLM_cifti and could be done by the user
   Bayes = TRUE,
   #EM = FALSE,
   ar_order = 6,
@@ -114,7 +112,6 @@ BayesGLM <- function(
   ## `BayesGLM_cifti`.
   argChecks <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
-    scale_design = scale_design,
     Bayes = Bayes,
     #EM = EM,
     ar_order = ar_order,
@@ -163,10 +160,13 @@ BayesGLM <- function(
   nV <- ncol(data[[1]]$BOLD) # number of data locations (before any masking)
   nT <- vapply(data, function(x){ nrow(x$BOLD) }, 0) # numbers of timepoints
 
+  design_is_multi <- length(dim(data[[1]]$design)) == 3
+  nD <- if (design_is_multi) { dim(data[[1]]$design)[3] } else { 1 }
+
  # if (nS == 1 && combine_sessions) combine_sessions <- FALSE
 
   ## Field names: check or make. -----------------------------------------------
-  field_names <- colnames(data[[1]]$design)
+  field_names <- dimnames(data[[1]]$design)[[2]]
   if(is.null(field_names)) stop('Field names should be provided through `design` element of data. See documentation for details.')
 
   ## Define a few return variables that may or may not be calculated. ----------
@@ -285,11 +285,10 @@ BayesGLM <- function(
   # ------------------------------------------------------------------------------
   # Case 1: Fit a models including prewhitening, inference and spatial Bayesian GLM
 
-  if(is.null(design_multiple)){
+  if(!design_is_multi){
 
     # Identify any missing fields across sessions for bookkeeping -----------------
-
-    valid_cols <- matrix(NA, nrow=nS, ncol=ncol(data[[1]]$design))
+    valid_cols <- matrix(NA, nrow=nS, ncol=dim(data[[1]]$design)[2])
     for (ss in 1:nS) {
       cols_ss <- (colSums(abs(data[[ss]]$design)) > 0)
       cols_ss[is.na(cols_ss)] <- FALSE
@@ -314,11 +313,7 @@ BayesGLM <- function(
       if(!all(cols_ss)) warning(paste0('For session ',ss,', ignoring ',sum(!cols_ss),' design matrix columns of zeros for classical GLM.'))
 
       # Scale design matrix (ignore columns of zeros)
-        data[[ss]]$design[,cols_ss] <- if (scale_design) {
-        scale_design_mat(data[[ss]]$design[,cols_ss])
-      } else {
-        scale(data[[ss]]$design[,cols_ss], scale = FALSE)
-      }
+      data[[ss]]$design[,cols_ss] <- scale(data[[ss]]$design[,cols_ss], scale = FALSE)
       design[[ss]] <- data[[ss]]$design #after scaling but before nuisance regression
 
       #regress nuisance parameters from BOLD data and design matrix
@@ -742,7 +737,7 @@ BayesGLM <- function(
       attr(field_estimates, "GLM_type") <- "classical"
     }
 
-    # Clean up and return. -------------------------------------------------------
+    # Clean up and return. -----------------------------------------------------
     prewhiten_info <- if (do_pw) {
       list(phi = avg_AR, sigma_sq = avg_var, AIC = max_AIC)
     } else {
@@ -753,7 +748,7 @@ BayesGLM <- function(
 
   } else {
 
-    # ------------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Case 2: Fit and compare multiple models
 
     result_multiple <- vector('list', length=nS)
@@ -761,30 +756,30 @@ BayesGLM <- function(
     for (ss in seq(nS)) {
 
       y_ss <- t(fMRItools::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE))
-      X_ss <- design_multiple[[ss]]
+      X_ss <- data[[ss]]$design
       X2_ss <- data[[ss]]$nuisance
 
       #loop over models
-      nP <- dim(X_ss)[3]
-      beta_hat_s <- array(NA, dim=c(nV_all, nK, nP),
-                          dimnames = list(loc = 1:nV_all, field = field_names, model = 1:nP))
-      sigma2_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
-      for(pp in 1:nP){
+      nD <- dim(X_ss)[3]
+      beta_hat_s <- array(NA, dim=c(nV_all, nK, nD),
+                          dimnames = list(loc = 1:nV_all, field = field_names, model = seq(nD)))
+      sigma2_s <- matrix(NA, nrow=nV_all, ncol=nD) #keep track of residual SD (proxy for R^2 or AIC)
 
-        cat(paste0('\tFitting model ',pp,'\n'))
+      for(dd in 1:nD){
+        cat(paste0('\tFitting model ',dd,'\n'))
 
         #set up and scale design matrix
-        X_sp <- X_ss[,,pp]/max(X_ss[,,pp])
+        X_sp <- X_ss[,,dd]/max(X_ss[,,dd])
         X_sp <- cbind(X_sp, 1, X2_ss)
 
-        XtX_inv_pp <- try(Matrix::solve(Matrix::crossprod(X_sp)))
-        if (inherits(XtX_inv_pp, "try-error")) {
-          warning(paste0("Numerical instability in design matrix for model ",pp))
+        XtX_inv_dd <- try(Matrix::solve(Matrix::crossprod(X_sp)))
+        if (inherits(XtX_inv_dd, "try-error")) {
+          warning(paste0("Numerical instability in design matrix for model ",dd))
         }
-        coef_pp <- XtX_inv_pp %*% t(X_sp) %*% y_ss #a vector of (estimates for location 1, estimates for location 2, ...)
-        beta_hat_s[mask==TRUE,,pp] <- t(coef_pp[1:nK,]) #drop the intercept and nuisance, transpose to V x nFIR
-        resid_pp <- y_ss - X_sp %*% coef_pp #TxV matrix
-        sigma2_s[mask==TRUE,pp] <- sqrt(colSums(resid_pp^2)/(nT - ncol(X_sp)))
+        coef_dd <- XtX_inv_dd %*% t(X_sp) %*% y_ss #a vector of (estimates for location 1, estimates for location 2, ...)
+        beta_hat_s[mask==TRUE,,dd] <- t(coef_dd[1:nK,]) #drop the intercept and nuisance, transpose to V x nFIR
+        resid_dd <- y_ss - X_sp %*% coef_dd #TxV matrix
+        sigma2_s[mask==TRUE,dd] <- sqrt(colSums(resid_dd^2)/(nT[ss] - ncol(X_sp)))
       }
 
       #determine best model (minimum residual error)
@@ -801,8 +796,8 @@ BayesGLM <- function(
                                     sigma2 = sigma2_s)
     }
 
-    result_classical <- prewhiten_info <- design <- NULL
-
+    design <- lapply(data, function(ss){ss$design})
+    result_classical <- prewhiten_info <- NULL
   }
 
   result <- list(
@@ -843,7 +838,7 @@ BayesGLM <- function(
 #'
 #' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
 #'
-#' @param scale_BOLD,scale_design See \code{\link{BayesGLM}}.
+#' @param scale_BOLD See \code{\link{BayesGLM}}.
 #' @param Bayes,EM See \code{\link{BayesGLM}}.
 #' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
 #' @param num.threads See \code{\link{BayesGLM}}.
@@ -859,7 +854,6 @@ BayesGLM <- function(
 BayesGLM_argChecks <- function(
     #combine_sessions = FALSE,
     scale_BOLD = c("auto", "mean", "sd", "none"),
-    scale_design = TRUE,
     Bayes = TRUE,
     EM = FALSE,
     ar_order = 6,
@@ -882,7 +876,6 @@ BayesGLM_argChecks <- function(
     message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
   }
   scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-  stopifnot(is_1(scale_design, "logical"))
 
   stopifnot(is_1(Bayes, "logical"))
   stopifnot(is_1(EM, "logical"))
