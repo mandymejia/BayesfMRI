@@ -6,7 +6,7 @@ doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
 resamp_res <- 7000
-#my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
+# my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
@@ -20,14 +20,15 @@ if (!overwriteResults && dir.exists(dir_resultThis)) { stop("Results exist alrea
 if (!dir.exists(dir_resultThis)) { dir.create(dir_resultThis) }
 
 library(testthat)
+library(stats)
 if (doINLA) {
   library(INLA)
-  #inla.setOption(pardiso.license = my_pardiso)
-  #inla.pardiso.check()
+  # inla.setOption(pardiso.license = my_pardiso)
+  # inla.pardiso.check()
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
-#library(BayesfMRI)
+library(BayesfMRI)
 
 # Get file names.
 fnames <- list(
@@ -111,10 +112,10 @@ bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, d
 
 act_c1 <- id_activations(bglm_c1, sessions=1)
 act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
-act_m1 <- id_activations(bglm_b1, sessions=1)
+act_m1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
 act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
 act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
-act_m2 <- id_activations(bglm_b1, sessions=seq(2))
+act_m2 <- id_activations(bglm_b1, gamma=.01, sessions=1)
 
 ### Misc. cases; not checking these results, but checking for errors
 ### Last updated: 5.2
@@ -156,11 +157,14 @@ plot(bglm_b1, fname=file.path(dir_resultThis, "HCP_bglm_b1"), together="idx")
 plot(bglm_m1, fname=file.path(dir_resultThis, "HCP_bglm_m1"), together="idx")
 plot(bglm_c2, fname=file.path(dir_resultThis, "HCP_bglm_c2"), together="idx")
 plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_b2"), together="idx")
+plot(bglm_m2, fname=file.path(dir_resultThis, "HCP_bglm_m2"), together="idx")
 
 plot(act_c1, fname=file.path(dir_resultThis, "HCP_act_c1"), together="idx")
 plot(act_b1, fname=file.path(dir_resultThis, "HCP_act_b1"), together="idx")
+plot(act_m1, fname=file.path(dir_resultThis, "HCP_act_m1"), together="idx")
 plot(act_c2, fname=file.path(dir_resultThis, "HCP_act_c2"), together="idx")
 plot(act_b2, fname=file.path(dir_resultThis, "HCP_act_b2"), together="idx")
+plot(act_m2, fname=file.path(dir_resultThis, "HCP_act_m2"), together="idx")
 
 plot(bglm_x1, fname=file.path(dir_resultThis, "HCP_bglm_x1"), together="idx")
 plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_x2"), together="idx")

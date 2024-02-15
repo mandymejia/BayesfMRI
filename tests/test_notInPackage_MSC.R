@@ -6,7 +6,7 @@ doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
 resamp_res <- 7000
-my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
+# my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_data <- "tests/data_notInPackage"
@@ -23,8 +23,8 @@ library(testthat)
 library(stats) # setNames
 if (doINLA) {
   library(INLA)
-  inla.setOption(pardiso.license = my_pardiso)
-  inla.pardiso.check()
+  # inla.setOption(pardiso.license = my_pardiso)
+  # inla.pardiso.check()
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
