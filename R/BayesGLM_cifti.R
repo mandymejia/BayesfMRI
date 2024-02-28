@@ -1,6 +1,6 @@
 #' BayesGLM for CIFTI
 #'
-#' Performs spatial Bayesian GLM on the cortical surface for task fMRI 
+#' Performs spatial Bayesian GLM on the cortical surface for task fMRI
 #'  activation.
 #'
 #' @section INLA latent fields limit:
@@ -23,17 +23,17 @@
 #'  \code{"xifti"} object from the \code{ciftiTools} package. For multi-session
 #'  analysis this can be a vector of file paths or a list of \code{"xifti"}
 #'  objects.
-#' 
+#'
 #'  If \code{cifti_fname} is a \code{"xifti"} object or list of \code{"xifti"}
 #'  objects, its surfaces, if any, will be used for Bayesian modeling. However,
-#'  \code{surfL_fname} and \code{surfR_fname}, if provided, will override any 
+#'  \code{surfL_fname} and \code{surfR_fname}, if provided, will override any
 #'  included surfaces.
-#' @param surfL_fname,surfR_fname Left or right cortex surface geometry in 
-#'  GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a 
-#'  \code{"surf"} object from the \code{ciftiTools} package. This argument is 
+#' @param surfL_fname,surfR_fname Left or right cortex surface geometry in
+#'  GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a
+#'  \code{"surf"} object from the \code{ciftiTools} package. This argument is
 #'  only used if \code{brainstructures} includes the corresponding hemisphere
-#'  and \code{Bayes==TRUE}. If it's not provided, and there are no surfaces in 
-#'  \code{cifti_fname}, the HCP group-average inflated surface included in the 
+#'  and \code{Bayes==TRUE}. If it's not provided, and there are no surfaces in
+#'  \code{cifti_fname}, the HCP group-average inflated surface included in the
 #'  \code{ciftiTools} package will be used.
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
@@ -75,14 +75,14 @@
 #' @param dHRF,dHRF_as Only applicable if \code{onsets} and \code{TR} are
 #'  provided. These arguments enable the modeling of HRF derivatives.
 #'
-#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF 
-#'  (default), \code{2} to add the dispersion derivative too, or \code{0} to 
+#'  Set \code{dHRF} to \code{1} to model the temporal derivative of the HRF
+#'  (default), \code{2} to add the dispersion derivative too, or \code{0} to
 #'  include only the main HRF regressor.
 #'
 #'  If \code{dHRF > 0}, \code{dHRF_as} controls whether the derivatives are
 #'  modeled as \code{"nuisance"} signals to regress out, \code{"field"}, or
 #'  \code{"auto"} (default) to treat them as fields unless the total
-#'  number of columns in the design matrix would exceed five (for computational 
+#'  number of columns in the design matrix would exceed five (for computational
 #'  reasons).
 #'
 #' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal
@@ -409,7 +409,7 @@ BayesGLM_cifti <- function(
 
   if(!is.null(design)) { task_names <- colnames(design[[1]]); nK <- ncol(design[[1]]) } #task_names could still be NULL
   if(!is.null(onsets)) { task_names <- names(onsets[[1]]); nK <- length(onsets[[1]]) } #task_names could still be NULL
-  if(!is.null(design_multiple)) { task_names <- colnames(design_multiple[[1]][,,1]); nK <- dim(design_multiple[[1]])[2] } #task_names could still be NULL
+  if(!is.null(design_multiple)) { task_names <- field_names <- colnames(design_multiple[[1]][,,1]); nK <- dim(design_multiple[[1]])[2] } #task_names could still be NULL
   if(is.null(task_names)) stop('Task/field names must be specified through `onsets` or `design`. See documentation for details.')
 
 
@@ -636,7 +636,7 @@ BayesGLM_cifti <- function(
   }
 
   # [TO DO]
-  field_names <- field_names
+  #field_names <- field_names
 
   # Add DCT bases to nuisance matrix
 
@@ -819,33 +819,33 @@ BayesGLM_cifti <- function(
   } else {
 
     datL <- datR <- datSub <- NULL #index of best-fitting model
-    betaL <- betaR <- betaSub <- NULL #beta estimates for best-fitting model
+    #betaL <- betaR <- betaSub <- NULL #beta estimates for best-fitting model
     sigma2L <- sigma2R <- sigma2Sub <- NULL #residual var of models
     for (ss in seq(nS)) {
 
       # INDEX OF BEST MODEL
       if (do_left) {
         datL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel #index of best model
-        betaL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
+        #betaL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
         sigma2L <- BayesGLM_results$cortex_left$result_multiple[[ss]]$sigma2 #V x P (P = number of models tested)
         #only save beta estimates for the best fitting model
-        betaL <- apply(betaL, 1, as.matrix, simplify=FALSE) #form into a list of length V, each a K x P matrix
-        betaL <- t(mapply(function(matrix, index) matrix[, index, drop = FALSE], betaL, datL, SIMPLIFY = TRUE)) #beta estimates (VxK) for the best model
+        #betaL <- apply(betaL, 1, as.matrix, simplify=FALSE) #form into a list of length V, each a K x P matrix
+        #betaL <- t(mapply(function(matrix, index) matrix[, index, drop = FALSE], betaL, datL, SIMPLIFY = TRUE)) #beta estimates (VxK) for the best model
         mwallL <- !is.na(datL) # update b/c mask2 can change the medial wall
         datL <- datL[mwallL]
-        betaL <- betaL[mwallL,]
+        #betaL <- betaL[mwallL,]
         sigma2L <- sigma2L[mwallL,]
       }
       if (do_right) {
         datR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$bestmodel
-        betaR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
+        #betaR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
         sigma2R <- BayesGLM_results$cortex_right$result_multiple[[ss]]$sigma2 #V x P (P = number of models tested)
         #only save beta estimates for the best fitting model
-        betaR <- apply(betaR, 1, as.matrix, simplify=FALSE) #form into a list of length V, each a K x P matrix
-        betaR <- t(mapply(function(matrix, index) matrix[, index, drop = FALSE], betaR, datR, SIMPLIFY = TRUE)) #beta estimates for the best model
+        #betaR <- apply(betaR, 1, as.matrix, simplify=FALSE) #form into a list of length V, each a K x P matrix
+        #betaR <- t(mapply(function(matrix, index) matrix[, index, drop = FALSE], betaR, datR, SIMPLIFY = TRUE)) #beta estimates for the best model
         mwallR <- !is.na(datR)
         datR <- datR[mwallR]
-        betaR <- betaR[mwallR,]
+        #betaR <- betaR[mwallR,]
         sigma2R <- sigma2R[mwallR,]
       }
       if (do_sub) {
@@ -866,18 +866,18 @@ BayesGLM_cifti <- function(
       bestmodel_cifti[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
       bestmodel_cifti[[ss]]$meta$cifti$names <- field_names
 
-      field_cifti_classical[[ss]] <- as.xifti(
-        cortexL = betaL,
-        cortexL_mwall = mwallL,
-        cortexR = betaR,
-        cortexR_mwall = mwallR,
-        subcortVol = betaSub,
-        subcortLabs = submeta_ss$labels,
-        subcortMask = submeta_ss$mask
-      )
-      field_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
-      field_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
-      field_cifti_classical[[ss]]$meta$cifti$names <- field_names
+      # field_cifti_classical[[ss]] <- as.xifti(
+      #   cortexL = betaL,
+      #   cortexL_mwall = mwallL,
+      #   cortexR = betaR,
+      #   cortexR_mwall = mwallR,
+      #   subcortVol = betaSub,
+      #   subcortLabs = submeta_ss$labels,
+      #   subcortMask = submeta_ss$mask
+      # )
+      # field_cifti_classical[[ss]]$meta$subcort$trans_mat <- submeta_ss$trans_mat
+      # field_cifti_classical[[ss]]$meta$subcort$trans_units <- submeta_ss$trans_units
+      # field_cifti_classical[[ss]]$meta$cifti$names <- field_names
 
       sigma2_cifti[[ss]] <- as.xifti(
         cortexL = sigma2L,
@@ -898,7 +898,7 @@ BayesGLM_cifti <- function(
 
     #stuff we don't have when fitting multiple models
     HRFs <- FIR <- design_FIR <- stimulus <- NULL
-    field_names <- field_names
+    field_names <- NULL
   }
 
   result <- list(

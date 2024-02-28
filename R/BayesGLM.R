@@ -397,14 +397,14 @@ BayesGLM <- function(
       if (is.null(num.threads) | num.threads < 2) {
         # Initialize the block diagonal covariance matrix
         template_pw <- Matrix::bandSparse(
-          n = nT, k = 0:(ar_order + 1), symmetric = TRUE
+          n = nT, k = 0:(ar_order + 1), symmetric = TRUE. #[TO DO]: Check that nT is correct here for multi-session analysis
         )
         template_pw_list <- rep(list(template_pw), nV)
         for (vv in 1:nV) {
           if(vv %% 100 == 0) if (verbose>0) cat("\tLocation",vv,"of",nV,"\n")
           template_pw_list[[vv]] <- .getSqrtInvCpp(
             AR_coeffs = avg_AR[vv,],
-            nTime = nT,
+            nTime = nT,  #[TO DO]: Check that nT is correct here for multi-session analysis
             avg_var = avg_var[vv]
           )
         }
@@ -419,7 +419,7 @@ BayesGLM <- function(
           cl,
           .getSqrtInvCpp,
           AR_coeffs = split(avg_AR, row(avg_AR)),
-          nTime = nT,
+          nTime = nT,   #[TO DO]: Check that nT is correct here for multi-session analysis
           avg_var = avg_var,
           SIMPLIFY = FALSE
         )
@@ -769,13 +769,22 @@ BayesGLM <- function(
       beta_hat_s <- array(NA, dim=c(nV_all, nK, nP),
                           dimnames = list(loc = 1:nV_all, field = field_names, model = 1:nP))
       sigma2_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
+      AIC_s <- AIC2_s <- matrix(NA, nrow=nV_all, ncol=nP) #compute AIC for comparison with no-HRF model
+      #AIC2 is based on assuming that the true DOF is nT/2 to account for autocorrelation. This just a hack to examine the sensitivity to residual dependence.
       for(pp in 1:nP){
 
         cat(paste0('\tFitting model ',pp,'\n'))
 
-        #set up and scale design matrix
-        X_sp <- X_ss[,,pp]/max(X_ss[,,pp])
-        X_sp <- cbind(X_sp, 1, X2_ss)
+        #first, check whether we are dealing with the no-HRF model
+        if(all(X_ss[,,pp] == 0)) {
+          X_sp <- NULL #if no HRF, no task design columns
+        } else {
+          #set up and scale design matrix
+          X_sp <- X_ss[,,pp]#/max(X_ss[,,pp])
+        }
+        X_sp <- cbind(X_sp, rep(1, nT), X2_ss) #combine design (possibly NULL) with intercept and nuisance
+        #[TO DO]: Check that nT is correct in the line above for multi-session analysis. Should it be nT[ss] ?
+
 
         XtX_inv_pp <- try(Matrix::solve(Matrix::crossprod(X_sp)))
         if (inherits(XtX_inv_pp, "try-error")) {
@@ -785,6 +794,11 @@ BayesGLM <- function(
         beta_hat_s[mask==TRUE,,pp] <- t(coef_pp[1:nK,]) #drop the intercept and nuisance, transpose to V x nFIR
         resid_pp <- y_ss - X_sp %*% coef_pp #TxV matrix
         sigma2_s[mask==TRUE,pp] <- sqrt(colSums(resid_pp^2)/(nT - ncol(X_sp)))
+
+        #Compute AIC = 2*k + n*ln(sigma2), where sigma2 is the MLE (i.e. divide by nT)
+        #[TO DO] Consider CV prediction instead of AIC since the true DOF should be less than nT. Can split the timeseries into blocks to preserve the dependence structure.
+        AIC_s[mask==TRUE,pp] <- 2*ncol(X_sp) + nT*log(colSums(resid_pp^2)/nT)
+        AIC2_s[mask==TRUE,pp] <- 2*ncol(X_sp) + (nT/2)*log(colSums(resid_pp^2)/(nT/2)) #replace nT with nT/2. This just a hack to examine the sensitivity to residual dependence.
       }
 
       #determine best model (minimum residual error)
@@ -798,7 +812,9 @@ BayesGLM <- function(
 
       result_multiple[[ss]] <- list(beta_estimates = beta_hat_s,
                                     bestmodel = bestmodel_s,
-                                    sigma2 = sigma2_s)
+                                    sigma2 = sigma2_s,
+                                    AIC = AIC_s,
+                                    AIC2 = AIC2_s)
     }
 
     result_classical <- prewhiten_info <- design <- NULL
@@ -815,6 +831,7 @@ BayesGLM <- function(
     #result_FIR = result_FIR,
     mesh = mesh,
     spde = spde,
+    data_loc = data_loc,
     mesh_orig = mesh_orig,
     mask = mask,
     mask_orig = mask_orig, #[TO DO] return the params passed into the function instead?
