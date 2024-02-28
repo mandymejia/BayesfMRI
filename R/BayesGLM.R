@@ -798,7 +798,7 @@ BayesGLM <- function(
         #Compute AIC = 2*k + n*ln(sigma2), where sigma2 is the MLE (i.e. divide by nT)
         #[TO DO] Consider CV prediction instead of AIC since the true DOF should be less than nT. Can split the timeseries into blocks to preserve the dependence structure.
         AIC_s[mask==TRUE,pp] <- 2*ncol(X_sp) + nT*log(colSums(resid_pp^2)/nT)
-        AIC2_s[mask==TRUE,pp] <- 2*ncol(X_sp) + (nT/2)*log(colSums(resid_pp^2)/(nT/2)) #replace nT with nT/2. This just a hack to examine the sensitivity to residual dependence.
+        AIC2_s[mask==TRUE,pp] <- 2*ncol(X_sp) + (nT/2)*log(colSums(resid_pp^2)/nT) #replace nT with nT/2. This just a hack to examine the sensitivity to residual dependence.
       }
 
       #determine best model (minimum residual error)

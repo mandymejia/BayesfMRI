@@ -898,7 +898,7 @@ BayesGLM_cifti <- function(
 
     #stuff we don't have when fitting multiple models
     HRFs <- FIR <- design_FIR <- stimulus <- NULL
-    field_names <- NULL
+    #field_names <- NULL
   }
 
   result <- list(
