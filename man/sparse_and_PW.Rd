@@ -7,8 +7,8 @@
 sparse_and_PW(
   BOLD,
   design,
-  nV_T,
-  nV_D,
+  spatial,
+  spatial_type,
   field_names,
   design_type,
   valid_cols,
@@ -18,7 +18,7 @@ sparse_and_PW(
 )
 }
 \arguments{
-\item{BOLD, design, nV_T, nV_D}{See \code{BayesGLM}.}
+\item{BOLD, design, spatial, spatial_type}{See \code{BayesGLM}.}
 
 \item{valid_cols, nT, nD, sqrtInv_all}{See \code{BayesGLM}.}
 

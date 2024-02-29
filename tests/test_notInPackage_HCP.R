@@ -68,11 +68,11 @@ eventsB[c(2, 6)] <- NA
 # From `onsets`.
 des_o1 <- make_design(
   onsets = events[seq(3)],
-  TR = 0.72, nTime=nTime
+  TR = 0.72, nTime=nTime, dHRF=0
 )
 des_o2 <- make_design(
   onsets = list(events[seq(3)], events[seq(4,6)]),
-  TR = 0.72, nTime=nTime
+  TR = 0.72, nTime=nTime, dHRF=0
 )
 testthat::expect_equal(des_o1$design[[1]], des_o2$design[[1]])
 testthat::expect_equal(des_o1$HRF_info[[1]], des_o2$HRF_info[[1]])
@@ -123,6 +123,8 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
     verbose = TRUE
   )
 }
+
+des_
 
 ##### First pass to detect errors
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))

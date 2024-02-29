@@ -7,7 +7,7 @@
 BayesGLM(
   BOLD,
   design,
-  nuisance,
+  nuisance = NULL,
   spatial,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,

@@ -160,7 +160,7 @@ s2m_B <- function(B,sigma){
 #' BOLD1[,seq(30,50)] <- NA
 #' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
 #' BOLD2[,65] <- BOLD2[,65] / 1e10
-#' BOLD <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
+#' BOLD <- list(sess1=BOLD1, sess2=BOLD2)
 #' make_mask(BOLD)
 #'
 #' @export
@@ -234,9 +234,9 @@ make_mask <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 }
 
 #' Is a matrix or data.frame?
-#' 
+#'
 #' Is this a matrix or data.frame?
-#' 
+#'
 #' @param q The object
 #' @return Length-one logical.
 #' @keywords internal
@@ -244,8 +244,8 @@ is.matrix.or.df <- function(q){
   is.matrix(q) || is.data.frame(q)
 }
 
-#' `cbind` if first argument might be \code{NULL} 
-#' 
+#' `cbind` if first argument might be \code{NULL}
+#'
 #' `cbind`, but return the second argument if the first is \code{NULL}
 #' @param mat_or_NULL \code{NULL} or a numeric matrix
 #' @param to_add A numeric matrix with the same number of rows as \code{mat_or_NULL}

@@ -1,43 +1,43 @@
-#' Organize replicates
+#' Make replicates
 #'
-#' beta and repl vectors are of length \eqn{n_mesh \times n_sess \times n_field}.
+#' beta and repl vectors are of length \eqn{nMesh \times nSess \times n_field}.
 #' 	The ith repl vector is an indicator vector for the cells corresponding to the ith column of x.
 #' 	The ith beta vector contains data indices (e.g. 1,...,V) in the cells corresponding to the ith column of x.
 #'
-#' @param n_sess The number of sessions sharing hyperparameters (can be different fields)
+#' @param nSess The number of sessions sharing hyperparameters (can be different fields)
 #' @param field_names Vector of names for each field
-#' @param n_mesh Number of mesh locations
+#' @param nMesh Number of mesh locations
 # @param data_loc Indices of original data locations
 #'
 #' @return replicates vector and betas for sessions
 #'
 #' @keywords internal
 #'
-organize_replicates <- function(n_sess, field_names, n_mesh){ #data_loc){
+make_replicates <- function(nSess, field_names, nMesh){ #data_loc){
 
-  spatial <- 1:n_mesh #data_loc
-  #spatial <- mesh$idx$loc
+  seq_nMesh <- seq(nMesh) #data_loc
+	nK <- length(field_names)
 
-	n_field <- length(field_names)
+	grps <- ((1:(nSess*nK) + (nK-1)) %% nK) + 1 # 1, 2, .. nK, 1, 2, .. nK, ...
 
-	grps <- ((1:(n_sess*n_field) + (n_field-1)) %% n_field) + 1 # 1, 2, .. n_field, 1, 2, .. n_field, ...
-	repls <- vector('list', n_field)
-	betas <- vector('list', n_field)
-	names(betas) <- field_names
-	for(i in 1:n_field){
-		inds_i <- (grps == i)
+  betas <- repls <- vector('list', nK)
+  names(betas) <- field_names
+  names(repls) <- paste0("repl", seq(nK))
+
+	for (ii in 1:nK) {
+		inds_ii <- (grps == ii)
 
 		#set up replicates vectors
-		sess_NA_i <- rep(NA, n_sess*n_field)
-		sess_NA_i[inds_i] <- 1:n_sess
-		repls[[i]] <- rep(sess_NA_i, each=n_mesh)
-		names(repls)[i] <- paste0('repl',i)
+		sess_NA_ii <- rep(NA, nSess*nK)
+		sess_NA_ii[inds_ii] <- 1:nSess
+		repls[[ii]] <- rep(sess_NA_ii, each=nMesh)
+		names(repls)[ii] <- paste0('repl',ii)
 
 		#set up ith beta vector with replicates for sessions
-		NAs <- rep(NA, n_mesh)
-		preNAs <- rep(NAs, times=(i-1))
-		postNAs <- rep(NAs, times=(n_field-i))
-		betas[[i]] <- rep(c(preNAs, spatial, postNAs), n_sess)
+		NAs <- rep(NA, nMesh)
+		preNAs <- rep(NAs, times=(ii-1))
+		postNAs <- rep(NAs, times=(nK-ii))
+		betas[[ii]] <- rep(c(preNAs, seq_nMesh, postNAs), nSess)
 	}
 
 	list(betas=betas, repls=repls)
@@ -77,8 +77,8 @@ check_INLA <- function(require_PARDISO=FALSE){
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
 #' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `sparse_and_PW()`
-#' @param betas List (length = number of fields) of bbeta objects from organize_replicates
-#' @param repls List (length = number of fields) of repl objects from organize_replicates
+#' @param betas List (length = number of fields) of bbeta objects from make_replicates
+#' @param repls List (length = number of fields) of repl objects from make_replicates
 #'
 #' @return List
 #'
@@ -88,7 +88,7 @@ check_INLA <- function(require_PARDISO=FALSE){
 make_data_list <- function(y, X, betas, repls){
 
   # Check length/dimensions of y, X, elements of betas and repls all match
-  nx <- length(betas) #check same as length(repls)
+  nK <- length(betas) #check same as length(repls)
   #figure out nvox
   #check dim(X)
   #check length of betas and repls
@@ -99,10 +99,9 @@ make_data_list <- function(y, X, betas, repls){
   model_data$y <- y
   model_data$X <- bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
 
-  nbeta <- length(betas)
-  for(i in 1:nbeta){
-    model_data[[2+i]] <- betas[[i]]
-    model_data[[2+nbeta+i]] <- repls[[i]]
+  for (kk in seq(nK)) {
+    model_data[[2+kk]] <- betas[[kk]]
+    model_data[[2+nK+kk]] <- repls[[kk]]
   }
 
   model_data
@@ -122,7 +121,9 @@ make_data_list <- function(y, X, betas, repls){
 #' @return Estimates from inla model
 #'
 #' @keywords internal
-extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, inds, stat='mean'){
+extract_estimates <- function(
+  INLA_model_obj, session_names,
+  spatial, spatial_type, stat='mean'){
 
   if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
@@ -134,7 +135,7 @@ extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, inds, st
 
   #determine number of locations
   #	nV  = the number of data locations used in model fitting
-  # nV2 or n_mesh = the number of mesh locations, which may be a superset
+  # nV2 or nMesh = the number of mesh locations, which may be a superset
   # nV0 = the number of data locations prior to applying a mask
   if(is.null(mask)) mask <- rep(1, length(inds))
   nV0 <- length(mask) #number of data locations prior to applying a mask pre-model fitting
@@ -250,14 +251,14 @@ get_posterior_densities2 <- function(INLA_model_obj, field_names){
 }
 
 #' Trim INLA object
-#' 
-#' Trim an INLA object to only include what is necessary for 
+#'
+#' Trim an INLA object to only include what is necessary for
 #'  \code{id_activations} or \code{BayesGLM2}.
 #'
 #' @param INLA_model_obj An object of class \code{"inla"}.
 #' @param minimal Just keep the two parameters needed for \code{BayesGLM2}?
-#'  Default: \code{FALSE}. \code{!minimal} is required for 
-#'  \code{id_activations}, but \code{minimal} is sufficient for 
+#'  Default: \code{FALSE}. \code{!minimal} is required for
+#'  \code{id_activations}, but \code{minimal} is sufficient for
 #'  \code{BayesGLM2}.
 #'
 #' @return A trimmed \code{"inla"} object.

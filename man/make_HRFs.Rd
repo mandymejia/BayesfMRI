@@ -45,7 +45,8 @@ A session-length list. Each entry is a sublist with components:
 Make HRFs from onsets. This is a helper function to \code{\link{make_design}}.
 }
 \examples{
-onsets <- list(taskA=cbind(c(2,17,23),4)) # 1 task, 3 stimuli, each 4 sec. long
+# onsets: 1 session, 1 task, 3 stimuli, each 4 sec. long
+onsets <- list(session1=list(taskA=cbind(c(2,17,23),4))) 
 TR <- .72 # .72 seconds per volume, or (1/.72) Hz
 nTime <- 300 # session has 300 volumes. Session duration is 300*.72 sec.
 make_HRFs(onsets, nTime, TR)

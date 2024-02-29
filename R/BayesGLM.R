@@ -160,8 +160,21 @@ BayesGLM <- function(
   ## Set up spatial data, SPDE -------------------------------------------------
   spatial_og <- spatial
 
+  nV <- get_nV(spatial, spatial_type)
+  if (spatial_type=="mesh" && (nV$T != nV$D)) {
+    if (verbose>0) {
+      cat(paste0(
+        "\t", (nV$T-nV$D),
+        " locations on the mesh do not have data.\n"
+      ))
+    }
+  }
+
   # Mask based on quality control metrics of the BOLD data.
-  mask_qc <- make_mask(BOLD, meanTol=meanTol, varTol=varTol) #, snrTol=snrTol)
+  mask_qc <- make_mask(
+    BOLD,
+    meanTol=meanTol, varTol=varTol, verbose=verbose>0
+  ) #, snrTol=snrTol)
   if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
   if (any(!mask_qc$mask)) {
     if (spatial_type == "mesh") {
@@ -263,7 +276,8 @@ BayesGLM <- function(
     # Set up vectorized data and big sparse design matrix.
     # Apply prewhitening, if applicable.
     x <- sparse_and_PW(
-      BOLD[[ss]], design[[ss]], nV$T, nV$D,
+      BOLD[[ss]], design[[ss]],
+      spatial, spatial_type,
       field_names, design_type,
       vcols_ss, nT[ss], nD,
       sqrtInv_all[[ss]]
@@ -290,91 +304,84 @@ BayesGLM <- function(
     if (do$Bayesian) {
       y_all <- c(y_all, BOLD[[ss]])
       #XA_ss <- design
-      #post-multiply each design matrix by A (n_data x n_mesh) for Bayesian GLM
-      XA_ss <- lapply(design, function(x) { x %*% A_sparse_ss })
+      #post-multiply each design matrix by A (n_data x nMesh) for Bayesian GLM
+      XA_ss <- lapply(design[[ss]], function(x) { x %*% A_sparse_ss })
       #cbind (expanded) design matrices for each field
       XA_ss <- list(do.call(cbind, XA_ss))
       names(XA_ss) <- session_names[ss]
       XA_all_list <- c(XA_all_list, XA_ss)
-      rm(XA_ss, A_sparse_ss)
+      #rm(XA_ss, A_sparse_ss)
     }
   }
 
   # [NOTE] Moved to `GLM_FIR.R`: FIR Model.
 
-  # # Bayesian GLM. --------------------------------------------------------------
-  # if (do$Bayesian) {
-  #   #construct betas and repls objects
-  #   if (spatial_type == "mesh") {
-  #     n_mesh <- length(mesh$idx$loc)
-  #     if(!all.equal(mesh$idx$loc, seq(n_mesh))) stop('Developer: Check definition of `spatial` in organize_replicates')
-  #     #data_loc <- seq(n_mesh)
-  #   } else if (spatial_type == "voxel") {
-  #     n_mesh <- spde$n.spde
-  #     #data_loc <- data_loc
-  #   } else { stop() }
+  # Bayesian GLM. --------------------------------------------------------------
+  if (do$Bayesian) {
 
-  #   x <- organize_replicates(
-  #     n_sess=nS, field_names=field_names, n_mesh=n_mesh#, data_loc=data_loc) #indices of original data locations
-  #   )
-  #   betas <- x$betas
-  #   repls <- x$repls
-  #   rm(x)
+    # Construct betas and repls objects.
+    x <- make_replicates(
+      nSess=nS, field_names=field_names, nMesh=nV$D # [TO DO] check for voxel. is it spde$n.spde instead?
+      #, data_loc=data_loc) #indices of original data locations
+    )
+    betas <- x$betas
+    repls <- x$repls
+    rm(x)
 
-  #   model_data <- make_data_list(y=y_all, X=XA_all_list, betas=betas, repls=repls)
-  #   Amat <- model_data$X
-  #   model_data$XA_all_list <- NULL
+    model_data <- make_data_list(y=y_all, X=XA_all_list, betas=betas, repls=repls)
+    Amat <- model_data$X
+    model_data$XA_all_list <- NULL
 
-  #   # [NOTE] Moved to `GLM_Bayesian_EM.R`: Em Model.
+    # [NOTE] Moved to `GLM_Bayesian_EM.R`: EM Model.
 
-  #   ## INLA Model. -------------------------------------------------------------
-  #   #estimate model using INLA
-  #   if (verbose>0) cat('\tEstimating Bayesian model with INLA...')
-  #   #organize the formula and data objects
-  #   hyper_initial <- c(-2,2)
-  #   hyper_initial <- rep(list(hyper_initial), nK)
-  #   hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
+    ## INLA Model. -------------------------------------------------------------
+    #estimate model using INLA
+    if (verbose>0) cat('\tEstimating Bayesian model with INLA...')
+    #organize the formula and data objects
+    hyper_initial <- c(-2,2)
+    hyper_initial <- rep(list(hyper_initial), nK)
+    hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-  #   formula <- paste0('f(',field_names, ', model = spde, replicate = ', names(repls), hyper_vec, ')')
-  #   formula <- paste(c('y ~ -1', formula), collapse=' + ')
-  #   formula <- as.formula(formula)
+    formula <- paste0('f(',field_names, ', model = spde, replicate = ', names(repls), hyper_vec, ')')
+    formula <- paste(c('y ~ -1', formula), collapse=' + ')
+    formula <- as.formula(formula)
 
-  #   INLA_model_obj <- INLA::inla(
-  #     formula,
-  #     data=model_data,
-  #     #data=INLA::inla.stack.data(model_data, spde=spde),
-  #     control.predictor=list(A=Amat, compute = TRUE),
-  #     verbose = verbose>1, keep = FALSE, num.threads = n_threads,
-  #     control.inla = list(strategy = "gaussian", int.strategy = "eb"),
-  #     control.family=list(hyper=list(prec=list(initial=1))),
-  #     control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
-  #   )
-  #   if (verbose>0) cat("\tDone!\n")
+    INLA_model_obj <- INLA::inla(
+      formula,
+      data=model_data,
+      #data=INLA::inla.stack.data(model_data, spde=spde),
+      control.predictor=list(A=Amat, compute = TRUE),
+      verbose = verbose>1, keep = FALSE, num.threads = n_threads,
+      control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+      control.family=list(hyper=list(prec=list(initial=1))),
+      control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
+    )
+    if (verbose>0) cat("\tDone!\n")
 
-  #   #extract useful stuff from INLA model result
-  #   field_estimates <- extract_estimates(
-  #     INLA_model_obj=INLA_model_obj,
-  #     session_names=session_names,
-  #     mask=nV$maskD, # [TO DO]
-  #     inds=nV # [TO DO]
-  #   ) #posterior means of latent field
-  #   theta_estimates <- INLA_model_obj$summary.hyperpar$mean
-  #   hyperpar_posteriors <- get_posterior_densities2(
-  #     INLA_model_obj=INLA_model_obj, #spde,
-  #     field_names
-  #   ) #hyperparameter posterior densities
+    #extract useful stuff from INLA model result
+    browser() # [TO DO] [LEFT OFF HERE: REVISE `extract_estimates`]
+    field_estimates <- extract_estimates(
+      INLA_model_obj=INLA_model_obj,
+      session_names=session_names,
+      spatial=spatial, spatial_type=spatial_type
+    ) #posterior means of latent field
+    theta_estimates <- INLA_model_obj$summary.hyperpar$mean
+    hyperpar_posteriors <- get_posterior_densities2(
+      INLA_model_obj=INLA_model_obj, #spde,
+      field_names
+    ) #hyperparameter posterior densities
 
-  #   #construct object to be returned
-  #   INLA_model_obj <- switch(return_INLA,
-  #     trimmed=trim_INLA_model_obj(INLA_model_obj, minimal=FALSE),
-  #     full=INLA_model_obj,
-  #     minimal=trim_INLA_model_obj(INLA_model_obj, minimal=TRUE)
-  #   )
-  #   attr(INLA_model_obj, "format") <- return_INLA
-  # } else {
+    #construct object to be returned
+    INLA_model_obj <- switch(return_INLA,
+      trimmed=trim_INLA_model_obj(INLA_model_obj, minimal=FALSE),
+      full=INLA_model_obj,
+      minimal=trim_INLA_model_obj(INLA_model_obj, minimal=TRUE)
+    )
+    attr(INLA_model_obj, "format") <- return_INLA
+  } else {
     field_estimates <- lapply(result_classical, function(x){ x$estimates })
     attr(field_estimates, "GLM_type") <- "classical"
-  # }
+  }
 
   result <- list(
     field_estimates = field_estimates, # new in 6.0: these are masked.
@@ -385,9 +392,9 @@ BayesGLM <- function(
     #result_FIR = result_FIR,
     spatial = spatial,
     spde = spde,
-    mask_qc = mask_qc,
     field_names = field_names,
     session_names = session_names,
+    mask_qc = mask_qc,
     # For joint group model ~~~~~~~~~~~~~
     #posterior_Sig_inv = Sig_inv,
     y = y_all,
