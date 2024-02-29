@@ -68,7 +68,7 @@
 #' @importFrom methods as
 #' @export
 BayesGLM <- function(
-  BOLD, design, nuisance,
+  BOLD, design, nuisance=NULL,
   spatial,
   # Below arguments shared with `BayesGLM_cifti`.
   scale_BOLD = c("auto", "mean", "sd", "none"),
@@ -147,6 +147,7 @@ BayesGLM <- function(
 
   # More checks, in case `BayesGLM` was run directly (not w/ CIFTI) ------------
   # [TO DO] Refine.
+  if (is.null(nuisance)) { nuisance <- vector("list", nS) }
   for (ss in seq(nS)) {
     stopifnot(is.matrix(BOLD[[ss]]) && is.numeric(BOLD[[ss]]))
     stopifnot(nrow(BOLD[[ss]]) == nT[ss])
