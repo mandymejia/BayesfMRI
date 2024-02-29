@@ -5,9 +5,8 @@
 \title{session_names}
 \arguments{
 \item{session_names}{(Optional, and only relevant for multi-session modeling)
-Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
-argument will overwrite the names of the list entries in \code{data}, if
-both exist.}
+Names of each session. Default: \code{NULL}. Will overwrite the names of the
+\code{BOLD} data, if both are provided.}
 }
 \description{
 session_names

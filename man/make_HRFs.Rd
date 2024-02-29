@@ -6,57 +6,48 @@
 \usage{
 make_HRFs(
   onsets,
+  nTime,
   TR,
-  nT,
-  FIR_nsec = 0,
+  dHRF = c(1, 0, 2),
   upsample = 100,
-  dHRF = 1,
   a1 = 6,
   b1 = 1,
   a2 = 16/6 * a1 * sqrt(b1),
-  b2 = 1,
+  b2 = b1,
   c = 1/6
 )
 }
 \arguments{
-\item{onsets}{\eqn{L}-length list in which the name of each element is the
-name of the corresponding task, and the value of each element is a matrix of
-onsets (first column) and durations (second column) for each stimuli (each
-row) of the corresponding task.}
-
-\item{TR}{Temporal resolution of the data, in seconds.}
-
-\item{nT}{The number of volumes in the fMRI data.}
-
-\item{FIR_nsec}{The number of seconds to cover in the FIR basis set. Default: \code{0} (do not return FIR bases)}
+\item{onsets, nTime, TR, dHRF}{See \code{\link{make_design}}.}
 
 \item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
-\item{dHRF}{Number of HRF derivatives to include in the model. If \code{dHRF=1}
-include the temporal derivative of the HRF, if \code{dHRF=2} also include the
-dispersion derivative. Default: \code{1}.}
-
 \item{a1}{(Optional) delay of response. Default: \code{6}}
 
-\item{b1}{response dispersion. Default: \code{1}}
+\item{b1}{Response dispersion. Default: \code{1}}
 
-\item{a2}{delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}}
+\item{a2}{Delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) == 16}}
 
-\item{b2}{dispersion of undershoot. Default: \code{b1 = 1}}
+\item{b2}{Dispersion of undershoot. Default: \code{b1 == 1}}
 
-\item{c}{scale of undershoot. Default: \code{1/6}}
+\item{c}{Scale of undershoot. Default: \code{1/6}}
 }
 \value{
-List with the HRF and derivatives, the stimulus stick function, and the FIR basis set.
+A session-length list. Each entry is a sublist with components:
+\describe{
+\item{HRF}{The upsampled HRFs.}
+\item{stimulus}{The task stimulus.}
+\item{design}{The corresponding design matrix.}
+}
 }
 \description{
-Based on onsets and durations, compute canonical HRF, its derivatives, and FIR basis set for each task
+Make HRFs from onsets. This is a helper function to \code{\link{make_design}}.
 }
 \examples{
-onsets <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
+onsets <- list(taskA=cbind(c(2,17,23),4)) # 1 task, 3 stimuli, each 4 sec. long
 TR <- .72 # .72 seconds per volume, or (1/.72) Hz
-nT <- 300 # session is 300 volumes long (300*.72 seconds long)
-make_HRFs(onsets, TR, nT)
+nTime <- 300 # session has 300 volumes. Session duration is 300*.72 sec.
+make_HRFs(onsets, nTime, TR)
 
 }

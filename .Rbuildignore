@@ -20,7 +20,7 @@
 ^tests/data
 # Volumetric -------------------
 ^R/BayesGLM_vol3D\.R$
-#^R/create_spde_vol3D\.R$
+#^R/make_spde_vol3D\.R$
 ^R/vol2mesh\.R$
 ^R/make_slice_mesh\.R$
 ^R/plot_slice\.R$
@@ -34,5 +34,5 @@
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
-^R/create_spde_surf\.R$
+^R/make_spde_surf\.R$
 ^R/summarize_sessions\.R$

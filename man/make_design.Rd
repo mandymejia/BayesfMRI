@@ -6,74 +6,114 @@
 \usage{
 make_design(
   design = NULL,
-  design_multiple = NULL,
+  design_compare = NULL,
+  design_per_location = NULL,
   onsets = NULL,
   nTime = NULL,
   TR = NULL,
-  scale_design = TRUE
+  dHRF = c(1, 0, 2),
+  scale_design = TRUE,
+  session_names = NULL,
+  ...
 )
 }
 \arguments{
 \item{design}{\eqn{T \times K} task design matrix. Each column
 represents the expected BOLD response for a field, a convolution of
-a hemodynamic response function (HRF) (or its derivative) with a task stimulus.
-Field names must be given by the column names.
+a hemodynamic response function (HRF) (or its derivative) with a task
+stimulus. Field names must be given by the column names.
 
-For multi-session modeling, this argument should be a list of such matrices,
-and column names must match across sessions. Session names must be given by
-the list names.
+If there are multiple sessions to model, this argument should be a list of
+such matrices. The list names should be the session names. Column names must
+match across sessions; if any field is missing from a given session, include
+a column of zeros in its place.
 
-If any field is missing from any session, include a column of zeros in its
-place.
+Tasks convolved with an HRF derivative may be included in \code{design} to
+model spatially; alternatively, provide these in \code{BayesGLM(_cifti)} as
+columns in \code{nuisance} to treat as nuisance signals. Note that INLA
+computation times increase if \eqn{K > 5}.}
 
-Tasks convolved with an HRF derivative may be included in
-\code{design} to model them spatially; alternatively, provide these in
-\code{BayesGLM(_cifti)} as columns in \code{nuisance} to treat as nuisance
-signals. Note that INLA computation times increase if the design matrix has
-more than five columns.}
+\item{design_compare}{Similar to \code{design}, but instead of a matrix,
+an \eqn{T \times K \times D} array, to compare \eqn{D} design matrix choices.}
 
-\item{design_multiple}{Same as \code{design}, but rather than a matrix, use
-a \eqn{T \times K \times D} array of \eqn{D} different design matrices for
-model comparison.}
+\item{design_per_location}{Similar to \code{design}, but instead of a matrix,
+an \eqn{T \times K \times V} array, to use a unique design matrix for each
+of the \eqn{V} locations.}
 
-\item{onsets}{A list where each element represents a
-task, and the value of each element is a matrix of onsets (first column) and
-durations (second column) for each stimuli (each row) of the corresponding
-task. The units of both columns is seconds. Task names must be given by
-the list names. \code{nTime} and \code{TR} are required if \code{onsets} is
-provided.
+\item{onsets}{Task stimulus information, from which a design matrix (or
+matrices, for multi-session data) will be constructed. This is a list where
+each entry represents a task as a matrix of onsets (first column) and
+durations (second column) for each stimuli (each row) of the task, in
+seconds. List names should be the task names. \code{nTime} and \code{TR} are
+required with \code{onsets}.
 
-For multi-session modeling, this argument should be a list of such lists,
-and the task names must match across sessions. Session names must be given by
-the list names.
+For multi-session modeling, this argument should be a list of such lists.
+The list names should be the session names. Task names must match across
+sessions; if any task is missing from any session, include a list element
+equal to \code{NA} in its place.
 
-If any task is missing from any session, include a list element equal to
-\code{NA} in its place.}
+An example of a properly-formatted single-session \code{onsets} is:
+\code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
+In this session, there are two tasks: the first has three 1s-long stimuli,
+while the second has two 5s-long stimuli. A multi-session \code{onsets}
+would look like \code{on_multi <- list(s1=on_s1, s2=on_s2)},
+with \code{on_s2} formatted similarly to \code{on_s1}.}
 
-\item{nTime, TR}{These are used if and only if \code{onsets} is provided.
+\item{nTime, TR}{These are required if and only if \code{onsets} is provided.
 
 \code{nTime} is the number of timepoints (volumes) in the task fMRI data.
 This can either be a single positive integer, or a vector of positive
-integers if there are multiple sessions each with different numbers of
-timepoints. There is no default value, so \code{nTime} is required if
-\code{onsets} is provided.
+integers if there are multiple sessions each with different lengths.
 
-\code{TR} is the temporal resolution of the data, in seconds. There is no
-default value, so \code{TR} is required if \code{onsets} is provided.}
+\code{TR} is the temporal resolution of the data, in seconds.}
+
+\item{dHRF}{Controls the extent of HRF derivatives modeling. Applicable if
+and only if \code{onsets} is provided.
+
+Set to \code{0} to only model the main HRF regressor, and not include its
+derivatives; set to \code{1} (default) to model the temporal derivative too;
+or, set to \code{2} to model both the temporal and dispersion derivatives.
+If \code{dHRF==0}, there is one design column (field) per task. If
+\code{dHRF==1}, there are two fields per task. And if \code{dHRF==2}, there
+are three fields per task.
+
+If there are several tasks and \code{dHRF>0}, the total number of design
+matrix columns may exceed five, which may require large computation times
+with INLA. The analysis can be adjusted by modeling the derivatives as
+nuisance signals rather than as fields. To do so, move the corresponding
+columns from the design matrix to the \code{nuisance} argument for
+\code{BayesGLM_cifti}.}
 
 \item{scale_design}{Scale the design matrix by dividing each column by its
 maximum and then subtracting the mean? Default: \code{TRUE}. If
 \code{FALSE}, the design matrix is centered but not scaled.}
+
+\item{session_names}{(Optional) Session names can be provided by the list
+names of \code{design}, \code{design_compare}, \code{design_per_location},
+or \code{onsets}; alternatively, session names can be provided by this
+argument.}
+
+\item{...}{Additional arguments to \code{\link{make_HRFs}}. Applicable if
+and only if \code{onsets} is provided.}
 }
 \value{
-A list of two: the design matrix/arrays or list of them; and, extra
-results if \code{onsets} was provided.
+A \code{"BayesfMRI_design"} object: a list with elements
+\describe{
+\item{design}{The design matrix/array, or list of these for multi-session analysis.}
+\item{HRF_info}{Additional HRF modeling results, if \code{onsets} was provided.}
+\item{design_type}{The source of the design.}
+\item{dims}{The numbers of sessions, volumes, fields, and designs.}
+\item{field_names}{The names of each field.}
+\item{valid_cols}{Indicates sessions with tasks that had no stimuli.}
+}
 }
 \description{
-Make the design matrix/array, or matrices/arrays, for \code{\link{BayesGLM}}
-or \code{\link{BayesGLM_cifti}}, from information about the tasks.
+Make the design matrix/array, or matrices/arrays, for
+\code{\link{BayesGLM_cifti}} or \code{\link{CompareGLM_cifti}},
+from information about the task design.
 }
 \details{
-Provide either (1) \code{design}, (2) \code{design_multiple}, or (3) all of
-\code{onsets}, \code{nTime}, \code{TR}, and \code{dHRF}.
+Provide one of: (1) \code{design}; (2) \code{design_per_location}; (3)
+\code{design_compare}; or (4) all of \code{onsets}, \code{nTime}, \code{TR},
+and \code{dHRF}.
 }

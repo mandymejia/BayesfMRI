@@ -31,17 +31,39 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
   list(phi = AR_coefs, sigma_sq = AR_resid_var, aic = AR_AIC)
 }
 
-#' Corrected AIC To-Do
-#'
-#' Get corrected AIC
-#'
+#' Corrected AIC
+#' 
+#' Computes corrected AIC (AICc).
+#' 
+#' @param y The autocorrelated data
+#' @param demean Demean \code{y}? Default: \code{FALSE}.
+#' @param order.max The model order limit. Default: \code{10}.
+#' 
+#' @return The cAIC
 #' @keywords internal
-cAIC <- function(...){invisible(NULL)}
+#' 
+#' @importFrom fMRItools is_posNum
+AICc <- function(y, demean=FALSE, order.max = 10) {
+  N <- length(y)
+  stopifnot(is_posNum(order.max))
+
+  # Get regular AIC values.
+  ar_mdl <- ar.yw(x = y, aic = FALSE, demean = demean, order.max = order.max)
+  AIC_vals <- ar_mdl$aic
+
+  # Get corrected AIC values.
+  kseq <- seq(0, order.max)
+  AICc <- AIC_vals - (2*(kseq+1)) + 2*N*(kseq+1)/(N-kseq-2)
+  AICc <- AICc - min(AICc)
+
+  # Format and return.
+  names(AICc) <- paste0("AR(", kseq, ")")
+  AICc
+}
 
 #' Smooth AR coefficients and white noise variance
 #'
-#' @inheritParams vertices_Param
-#' @inheritParams faces_Param
+#' @param surf A \code{"surf"} object with vertices and triangular faces.
 #' @param mask A logical vector indicating, for each vertex, whether to include
 #'  it in smoothing. \code{NULL} (default) will use a vector of all \code{TRUE},
 #'  meaning that no vertex is masked out; all are used for smoothing.
@@ -56,24 +78,18 @@ cAIC <- function(...){invisible(NULL)}
 #' @keywords internal
 #' 
 #' @return Smoothed AR coefficients and residual variance at every vertex
-pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
+pw_smooth <- function(surf, mask=NULL, AR, var, FWHM=5){
 
-  if (is.null(mask)) { mask <- rep(TRUE, nrow(vertices)) }
+  if (is.null(mask)) { mask <- rep(TRUE, nrow(surf$vertices)) }
   V <- sum(mask)
   V1 <- nrow(AR)
   V2 <- length(var)
   if(V != V1) stop('Number of rows in AR must match number of vertices')
   if(V != V2) stop('Length of var must match number of vertices')
 
-  surf_smooth <- make_surf(
-    list(
-      pointset = vertices,
-      triangle = faces
-    )
-  )
   AR_xif <- ciftiTools::as_xifti(
     cortexL = AR,
-    surfL = surf_smooth,
+    surfL = surf,
     cortexL_mwall = mask
   )
   #AR_xif$meta$cifti$brainstructures <- "left"
@@ -82,7 +98,7 @@ pw_smooth <- function(vertices, faces, mask=NULL, AR, var, FWHM=5){
 
   var_xif <- ciftiTools::as_xifti(
     cortexL = var,
-    surfL = surf_smooth,
+    surfL = surf,
     cortexL_mwall = mask
   )
   #var_xif$meta$cifti$brainstructures <- "left"

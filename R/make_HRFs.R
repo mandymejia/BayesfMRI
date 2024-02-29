@@ -1,161 +1,243 @@
 #' Make HRFs
+#' 
+#' Make HRFs from onsets. This is a helper function to \code{\link{make_design}}.
 #'
-#' Based on onsets and durations, compute canonical HRF, its derivatives, and FIR basis set for each task
-#'
-#' @param onsets \eqn{L}-length list in which the name of each element is the
-#'  name of the corresponding task, and the value of each element is a matrix of
-#'  onsets (first column) and durations (second column) for each stimuli (each
-#'  row) of the corresponding task.
-#' @param TR Temporal resolution of the data, in seconds.
-#' @param nT The number of volumes in the fMRI data.
-#' @param FIR_nsec The number of seconds to cover in the FIR basis set. Default: \code{0} (do not return FIR bases)
+#' @param onsets,nTime,TR,dHRF See \code{\link{make_design}}.
+# @param FIR_nSec The number of seconds to cover in the FIR basis set. Default: \code{0} (do not return FIR bases)
 #' @param upsample Upsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
-#' @param dHRF Number of HRF derivatives to include in the model. If \code{dHRF=1}
-#' include the temporal derivative of the HRF, if \code{dHRF=2} also include the
-#' dispersion derivative. Default: \code{1}.
 #' @param a1 (Optional) delay of response. Default: \code{6}
-#' @param b1 response dispersion. Default: \code{1}
-#' @param a2 delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) = 16}
-#' @param b2 dispersion of undershoot. Default: \code{b1 = 1}
-#' @param c scale of undershoot. Default: \code{1/6}
-#'
-#' @return List with the HRF and derivatives, the stimulus stick function, and the FIR basis set.
-#'
+#' @param b1 Response dispersion. Default: \code{1}
+#' @param a2 Delay of undershoot. Default: \code{16/6 * a1 * sqrt(b1) == 16}
+#' @param b2 Dispersion of undershoot. Default: \code{b1 == 1}
+#' @param c Scale of undershoot. Default: \code{1/6}
+#' @return A session-length list. Each entry is a sublist with components:
+#'  \describe{
+#'    \item{HRF}{The upsampled HRFs.}
+#'    \item{stimulus}{The task stimulus.}
+#'    \item{design}{The corresponding design matrix.}
+#' }
 #' @importFrom stats convolve
 #'
 #' @examples
-#' onsets <- list(taskA=cbind(c(2,17,23),4)) # one task, 3 four sec-long stimuli
+#' onsets <- list(taskA=cbind(c(2,17,23),4)) # 1 task, 3 stimuli, each 4 sec. long
 #' TR <- .72 # .72 seconds per volume, or (1/.72) Hz
-#' nT <- 300 # session is 300 volumes long (300*.72 seconds long)
-#' make_HRFs(onsets, TR, nT)
+#' nTime <- 300 # session has 300 volumes. Session duration is 300*.72 sec.
+#' make_HRFs(onsets, nTime, TR)
 #'
 #' @export
 make_HRFs <- function(
-  onsets,
-  TR,
-  nT,
-  FIR_nsec=0,
+  onsets, nTime, TR, dHRF=c(1, 0, 2),
   upsample=100,
-  dHRF=1,
   a1=6,
   b1=1,
   a2=16/6 * a1 * sqrt(b1),
-  b2=1,
+  b2=b1,
   c=1/6){
 
-  nK <- length(onsets) #number of tasks
-  task_names <- names(onsets)
+  # Check input arguments. -----------------------------------------------------
+  # `onsets`.
+  ### For each task, expect a two-column numeric matrix; second column >= 0.
+  ###   Except missing tasks, which should just be the value `NA`.
+  stopifnot(all(vapply(onsets, function(q){all(vapply(q, function(r){
+    if (length(r)==1 && is.na(r)) {TRUE} else { all(apply(r, 2, is.numeric)) }
+  }, FALSE))}, FALSE)))
+  stopifnot(all(vapply(onsets, function(q){all(vapply(q, function(r){
+    if (length(r)==1 && is.na(r)) {TRUE} else { is.matrix.or.df(r) }
+  }, FALSE))}, FALSE)))
+  stopifnot(all(vapply(onsets, function(q){all(vapply(q, function(r){
+    if (length(r)==1 && is.na(r)) {TRUE} else { ncol(r)==2 }
+  }, FALSE))}, FALSE)))
+  stopifnot(all(vapply(onsets, function(q){all(vapply(q, function(r){
+    if (length(r)==1 && is.na(r)) {TRUE} else { all(r[,2] >= 0) }
+  }, FALSE))}, FALSE)))
+  ### Expect every session to have the same tasks.
+  stopifnot(length(unique(lapply(onsets, length)))==1)
+  stopifnot(length(unique(lapply(onsets, names)))==1)
+  nS <- length(onsets)
 
-  #prepare to upsample the stimulus function
-  upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
-  nsec <- nT*TR; # Total time of experiment in seconds
-  stimulus <- rep(0, nsec*upsample) # For stick function to be used in convolution
-  inds <- seq(TR*upsample, nT*TR*upsample, by = TR*upsample) # Extract EVs by TR after convolution
-  #note: since nT is an integer, the inds will always be integers, as long as TR*upsample is also an integer
-
-  if(max(abs(inds - round(inds))) > 1e-6) stop('Contact developer: detected non-integer indices for downsampling')
-  inds <- round(inds) #to fix tiny deviations from zero
-
-  #for FIR
-  if(FIR_nsec > 0){
-    FIR_nsec <- round(FIR_nsec/TR)*TR # FIR_nsec/TR must be an integer to match indices of upsampled stimulus, must round if not
-    FIR_nTR <- FIR_nsec/TR # (sec)/(sec/vol) = vol  #number of TRs to model with FIR
-    inds_FIR <- seq(1, by = TR*upsample, length.out = FIR_nTR) #first index for each FIR basis function
-    if(max(abs(inds_FIR - round(inds_FIR))) > 1e-6) stop('Contact developer: detected non-integer indices for FIR. Set FIR_nsec = 0 to skip FIR basis set calculation.')
+  # `nTime`.
+  if (is.null(nTime)) { stop("`nTime` is required if `onsets` is provided.") }
+  stopifnot(is.numeric(nTime))
+  stopifnot(all(nTime > 0))
+  stopifnot(all(nTime == round(nTime)))
+  if (length(nTime)==1) {
+    nTime <- rep(nTime, nS)
+  } else {
+    stopifnot(length(nTime)==nS)
   }
 
-  #initialize arrays
-  theStimulus <- array(0, dim=c(nT, nK),
-                       dimnames = list(volume=1:nT, task=task_names))
-  theHRFs <- array(0, dim=c(nT, nK, 3),
-                   dimnames = list(volume=1:nT, task=task_names, HRF=c("HRF", "dHRF", "ddHRF")))
-  if(FIR_nsec > 0) theFIR <- array(0, dim=c(nT, nK, FIR_nTR),
-                  dimnames = list(volume=1:nT, task=task_names, FIR=1:FIR_nTR))
-  if(!(FIR_nsec > 0)) theFIR <- NULL
+  # `TR`.
+  if (is.null(TR)) { stop("`TR` is required if `onsets` is provided.") }
+  stopifnot(is.numeric(TR))
+  stopifnot(TR > 0)
 
-  # canonical HRF to be used in convolution as a function of time (in seconds)
-  u <- seq(0, 30, by=1/upsample) #go out 30 sec
-  HRFs <- list(HRF = HRF(t = u, deriv=0, a1, b1, a2, b2, c),
-               dHRF = HRF(t = u, deriv=1, a1, b1, a2, b2, c),
-               ddHRF = HRF(t = u, deriv=2, a1, b1, a2, b2, c))
+  # `dHRF`.
+  dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
 
-  for (kk in seq(nK)) {
+  # Others.
+  stopifnot(is_1(upsample, "numeric"))
+  upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
+  stopifnot(is_1(a1, "numeric"))
+  stopifnot(is_1(b1, "numeric"))
+  stopifnot(is_1(a2, "numeric"))
+  stopifnot(is_1(b2, "numeric"))
+  stopifnot(is_1(c, "numeric"))
 
-    if (all(is.na(onsets[[kk]][1]))) { #NA is placeholder for missing tasks
-      warning('Inputting zeros in design matrix for missing task, proceed with caution.')
-      next()
+  # In the future, this might be an argument.
+  FIR_nSec <- 0
+  do_FIR <- FIR_nSec > 0
+  if (do_FIR) {
+    FIR_nSec <- round(FIR_nSec/TR)*TR # FIR_nSec/TR must be an integer to match indices of upsampled stimulus, must round if not
+    FIR_nTimeR <- FIR_nSec/TR # (sec)/(sec/vol) = vol  #number of TRs to model with FIR
+  }
+
+  # Define dimension variables and names.
+  session_names <- names(onsets)
+  nS <- length(onsets)
+  task_names <- names(onsets[[1]])
+  nJ <- length(task_names)
+  HRF_names <- c("HRF", "dHRF", "ddHRF")[seq(dHRF+1)]
+  field_names <- c(outer(
+    task_names,
+    c("", "_dHRF", "_ddHRF")[seq(dHRF+1)],
+    paste0
+  ))
+
+  # Initialize return variables.
+  out <- setNames(vector("list", nS), session_names)
+  for (ss in seq(nS)) {
+    out[[ss]] <- list(
+      HRF = NULL,
+      stimulus = array(0, dim=c(nTime[ss], nJ),
+        dimnames=list(vol=NULL, task=task_names)
+      ),
+      design = array(0, dim=c(nTime[ss], nJ*(dHRF+1)),
+        dimnames=list(vol=NULL, field=field_names)
+      )#,
+      # FIR = if (do_FIR) {
+      #   array(0, dim=c(nTime, nJ, FIR_nTimeR),
+      #     dimnames = list(vol=NULL, task=task_names, FIR=seq(FIR_nTimeR))
+      #   )
+      # } else {
+      #   NULL
+      # }
+    )
+  }
+
+  # Iterate over sessions. -----------------------------------------------------
+  for (ss in seq(nS)) {
+    ### Compute `HRF`. ---------------------------------------------------------
+    # For multi-session, avoid re-computing if `nT` is unchanged.
+    if (ss==1 || (nT_ss != nTime[ss])) {
+      nT_ss <- nTime[ss]
+
+      # Prepare to upsample the stimulus function.
+      nSec <- nT_ss*TR; # Total time of experiment in seconds
+      inds <- seq(TR*upsample, nT_ss*TR*upsample, by = TR*upsample) # Extract EVs by TR after convolution
+      #note: since nT_ss is an integer, the inds will always be integers, as long as TR*upsample is also an integer
+      if(max(abs(inds - round(inds))) > 1e-6) stop('Contact developer: detected non-integer indices for downsampling')
+      inds <- round(inds) #to fix tiny deviations from zero
+
+      # For FIR.
+      if (do_FIR) {
+        inds_FIR <- seq(1, by = TR*upsample, length.out = FIR_nTimeR) #first index for each FIR basis function
+        if(max(abs(inds_FIR - round(inds_FIR))) > 1e-6) stop('Contact developer: detected non-integer indices for FIR. Set FIR_nSec = 0 to skip FIR basis set calculation.')
+      }
+
+      # Canonical HRF to use in convolution as a function of time (in seconds).
+      u <- seq(0, 30, by=1/upsample) #go out 30 sec
+      out[[ss]]$HRF <- list(
+        u = u,
+        HRF = HRF(t = u, deriv=0, a1, b1, a2, b2, c)
+      )
+      if (dHRF > 0) {
+        out[[ss]]$HRF <- c(out[[ss]]$HRF, list(
+          HRF_d = HRF(t = u, deriv=1, a1, b1, a2, b2, c)
+        ))
+      }
+      if (dHRF > 1) {
+        out[[ss]]$HRF <- c(out[[ss]]$HRF, list(
+          HRF_dd = HRF(t = u, deriv=2, a1, b1, a2, b2, c)
+        ))
+      }
+    } else {
+      out[[ss]]$HRF <- out[[ss-1]]$HRF
     }
-    onsets_k <- onsets[[kk]][,1] #onset times in scans
-    durations_k <- onsets[[kk]][,2] #durations in scans
 
-    # Round onsets to TR for event-related designs
-    round2TR <- function(x, TR){ round(x/TR)*TR }
-    onsets_k <- ifelse(durations_k == 0, round2TR(onsets_k, TR), onsets_k)
+    ### Iterate over tasks. ----------------------------------------------------
+    for (jj in seq(nJ)) {
 
-    # Define stimulus function
-    stimulus_k <- stimulus
-    for (ii in seq(length(onsets_k))) {
-      start_ii <- round(onsets_k[ii]*upsample)
-      end_ii <- round(onsets_k[ii]*upsample + durations_k[ii]*upsample)
-      stimulus_k[start_ii:end_ii] <- 1
-    }
-    theStimulus[,kk] <- c(stimulus_k,0)[inds]
+      # Skip if no stimulus for this session & task.
+      if (all(is.na(onsets[[ss]][[jj]]))) { #NA is placeholder for missing tasks
+        warning(
+          "For task '", task_names[jj], "' in session '", session_names[ss],
+          "': inputting constant-zero column in design matrix for lack of stimulus. ",
+          "Proceed with caution."
+        )
+        next()
+      }
 
-    ### Canonical HRF and Derivatives
+      # Define `ots` (onset times) and `dur` (durations) for this sess & task.
+      ots_sj <- onsets[[ss]][[jj]][,1]
+      dur_sj <- onsets[[ss]][[jj]][,2]
 
-    #1 = HRF only, 2 = HRF + dHRF, 3 = HRF + dHRF + ddHRF
-    for (dd in 1:(dHRF+1)) {
-      HRF_k <- convolve(stimulus_k, rev(HRFs[[dd]]), type='open')
-      theHRFs[,kk,dd] <- HRF_k[inds]
-    }
+      ### Round `ots_sj` to TR for event-related designs.
+      ots_sj <- ifelse(dur_sj==0,
+        round(ots_sj/TR)*TR,
+        ots_sj
+      )
 
-    ### FIR Basis Set
+      ##### Get `stimulus`. ---------------------------------------------------
+      stim_sj <- rep(0, nSec*upsample)
+      for (ii in seq(length(ots_sj))) {
+        start_ii <- round(ots_sj[ii]*upsample)
+        end_ii <- round(ots_sj[ii]*upsample + dur_sj[ii]*upsample)
+        stim_sj[start_ii:end_ii] <- 1
+      }
+      out[[ss]]$stimulus[,jj] <- c(stim_sj,0)[inds]
 
-    if(FIR_nsec > 0){
-      for(tt in 1:FIR_nTR){
-        dummy_tt <- rep(0, TR*upsample*FIR_nTR)
-        start_tt <- inds_FIR[tt]
-        end_tt <- start_tt + TR*upsample - 1 #each FIR basis spans a single TR
-        dummy_tt[start_tt:end_tt] <- 1
-        FIR_tk <- convolve(stimulus_k, rev(dummy_tt), type='open')
-        FIR_tk <- round(FIR_tk, 5)
-        theFIR[,kk,tt] <- FIR_tk[inds]
+      ##### Get `design` by convolving stimulus and HRFs. ----------------------
+      #1 = HRF only, 2 = HRF + dHRF, 3 = HRF + dHRF + ddHRF
+      for (dd in seq(0, dHRF)) {
+        HRF_dd <- out[[ss]]$HRF[[c("HRF", "HRF_d", "HRF_dd")[dd+1]]]
+        out[[ss]]$design[,jj+dd*nJ] <- convolve(
+          stim_sj, rev(HRF_dd), type='open'
+        )[inds]
+      }
+
+      ##### Get `FIR`. ---------------------------------------------------------
+      if (FIR_nSec > 0) {
+        for (tt in seq(FIR_nTimeR)) {
+          dummy_tt <- rep(0, TR*upsample*FIR_nTimeR)
+          start_tt <- inds_FIR[tt]
+          end_tt <- start_tt + TR*upsample - 1 #each FIR basis spans a single TR
+          dummy_tt[start_tt:end_tt] <- 1
+          FIR_tj <- convolve(stim_sj, rev(dummy_tt), type='open')
+          FIR_tj <- round(FIR_tj, 5)
+          # out[[ss]]$FIR[,jj,tt] <- FIR_tj[inds]
         } #end loop over FIR bases
       } #end FIR basis set construction
-
     } #end loop over tasks
+  } # end loop over sessions
 
-  ### Format results
+  # Format results and return. -------------------------------------------------
 
-  #starting point for design matrix (may add derivatives later)
-  design <- matrix(theHRFs[,,1], ncol=nK) #reform into a matrix in case nK=1
-  colnames(design) <- task_names
+  # `FIR` stuff.
+  # Binarize FIR matrix.
+  # if (do_FIR) out[[ss]]$FIR <- 1*(out[[ss]]$FIR > 0)
+  # FIR <- NULL # lapply(x, '[[', "FIR") #T x K x nFIR -- just return this for now, don't use in modeling
+  # design_FIR <- if (is.null(FIR)) { NULL } else {
+  #   lapply(FIR, function(q){
+  #     # [NOTE] Untested
+  #     q <- as.matrix(q, ncol=nJ)
+  #     colnames(q) <- c(outer(paste0(task_names, "_FIR"), seq(nJ), paste0))
+  #     q
+  #   })
+  # }
 
-  #binarize FIR matrix
-  if(!is.null(theFIR)) theFIR <- 1*(theFIR > 0)
-
-  #add time to HRFs
-  HRFs_df <- data.frame(time = u, HRF = HRFs[[1]], dHRF = HRFs[[2]], ddHRF = HRFs[[3]])
-
-  # Drop dim names for the volumes.
-  rownames(theStimulus) <- NULL
-  dimnames(theHRFs)[1] <- list(volume=NULL)
-  rownames(HRFs_df) <- NULL
-  rownames(design) <- NULL
-  if (!is.null(theFIR)) {
-    dimnames(theFIR)[1] <- list(volume=NULL)
-  }
-
-  list(
-    stimulus=theStimulus,
-    HRF_convolved=theHRFs,
-    HRF=HRFs_df, #HRFs and derivatives to use in convolution
-    design=design, #starting point for design matrix
-    FIR=theFIR
-  )
+  out
 }
-
 
 #' Canonical HRF and Derivatives
 #'

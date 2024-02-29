@@ -1,7 +1,7 @@
 Package: BayesfMRI
 Type: Package
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.5.3
+Version: 0.6.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -61,7 +61,6 @@ Suggests:
     covr,
     abind,
     dplyr,
-    geometry,
     ggplot2,
     grDevices,
     INLA (>= 0.0-1468840039),
@@ -69,7 +68,6 @@ Suggests:
     MatrixModels,
     parallel,
     purrr,
-    rdist,
     rmarkdown,
     SQUAREM,
     testthat (>= 3.0.0)

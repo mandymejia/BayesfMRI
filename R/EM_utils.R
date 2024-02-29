@@ -164,13 +164,13 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
 #' @param Psi a conversion matrix (N by V) (or N by n)
 #' @param K number of covariates
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
-#' @param num.threads Needed for SQUAREM (it is an argument to the fixed-point functions)
+#' @param n_threads Needed for SQUAREM (it is an argument to the fixed-point functions)
 #' @param Ns The number of samples used to approximate traces using the Hutchinson
 #'   estimator. If set to 0, the exact trace is found.
 #'
 #' @return A scalar value for the negative expected log-likelihood
 #' @keywords internal
-GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL, Ns = NULL) {
+GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, n_threads = NULL, Ns = NULL) {
   if(length(theta) > 3) { # This condition means that parameters are being updated separately
     kappa2_inds <- seq(K)
     phi_inds <- seq(K) + K

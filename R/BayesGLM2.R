@@ -64,6 +64,7 @@
 #'
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
+#' @importFrom ciftiTools as.xifti
 #'
 #' @export
 BayesGLM2 <- function(

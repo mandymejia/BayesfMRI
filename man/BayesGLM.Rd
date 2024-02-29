@@ -5,108 +5,89 @@
 \title{BayesGLM}
 \usage{
 BayesGLM(
-  data,
-  vertices = NULL,
-  faces = NULL,
-  mask = NULL,
-  labels = NULL,
-  buffer = c(1, 1, 3, 4, 4),
-  nbhd_order = 1,
+  BOLD,
+  design,
+  nuisance,
+  spatial,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
-  num.threads = 4,
+  n_threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
   verbose = 1,
   meanTol = 1e-06,
-  varTol = 1e-06,
-  snrTol = 50
+  varTol = 1e-06
 )
 }
 \arguments{
-\item{data}{A list of sessions in the \code{"BfMRI.sess"} object format. Each
-session is a list with elements \code{"BOLD"}, \code{"design"}, and
-optionally \code{"nuisance"}. Each element should be a numeric matrix with
-\eqn{T} rows. The name of each element in \code{data} is the name of that
-session. Colnames of design matrix represent field names and must match across
-sessions. See \code{?is.BfMRI.sess} for details.}
+\item{BOLD, design, nuisance}{Session-length list of numeric matrices/arrays,
+each with volumes along the first dimension.}
 
-\item{vertices, faces}{For cortical surface data, the geometry is based on
-the \code{vertices} and \code{faces} arguments (must provide both).
+\item{spatial}{Gives the spatial information. For surface data, a list of two:
+\describe{
+\item{surf}{A list of two: \code{vertices} \eqn{V \times 3} numeric matrix of vertex locations in XYZ coordinate space, and \code{faces}, \eqn{F \times 3} matrix of positive integers defining the triangular faces.}
+\item{mask}{Mask of locations with valid data.}
+}
+For voxel data, a list of six:
+\describe{
+\item{label}{3D array of labeled locations to include in the model.}
+\item{trans_mat}{Projection matrix to convert voxel indices to XYZ position. Can be \code{NULL}.}
+\item{trans_units}{XYZ units. Can be \code{NULL}.}
+\item{nbhd_order}{See documentation for \code{\link{BayesGLM_cifti}}.}
+\item{buffer}{See documentation for \code{\link{BayesGLM_cifti}}.}
+}}
 
-\code{vertices} is a \eqn{V \times 3} matrix, where each row contains the
-Euclidean coordinates at which a given vertex in the mesh is located.
-\eqn{V} is the number of vertices in the mesh.
+\item{scale_BOLD}{Controls scaling the BOLD response at each location.
+\describe{
+\item{"auto":}{   (default) Use \code{"mean"} scaling, except if
+demeaned data is detected (any location's mean < 1), use \code{"sd"}
+scaling.}
+\item{"mean":}{   Scale the data to percent local signal change.}
+\item{"sd":}{   Scale the data by local standard deviation.}
+\item{"none":}{   Center the data but do not scale it.}
+}}
 
-\code{faces} is a \eqn{F \times 3} matrix, where each row contains the
-vertex indices for a given triangular face in the mesh. \eqn{F} is the
-number of faces in the mesh.}
+\item{Bayes}{Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
+\code{FALSE}, only fit the classical GLM. (The classical GLM is always
+returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)}
 
-\item{mask}{(Optional) A length \eqn{V} logical vector indicating the
-vertices to include in analysis. (Currently only for surface-based analysis)}
+\item{ar_order}{(For prewhitening) The order of the autoregressive (AR) model
+to use for prewhitening. If \code{0}, do not prewhiten. Default: \code{6}.
 
-\item{labels}{For volumetric data, geometry is provided through a 3D
-array containing label values for spatially distinct ROIs to be analyzed.}
+For multi-session modeling, note that a single AR model is used; its
+coefficients will be the average estimate from each session.}
 
-\item{buffer}{For volumetric data, size of extra voxels layers around the
-bounding box, in terms of voxels. Set to NULL for no buffer.}
+\item{ar_smooth}{(For prewhitening) The FWHM parameter for spatially
+smoothing the coefficient estimates for the AR model to use for
+prewhitening. Recall that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} to not smooth
+the estimates. Default: \code{5}.}
 
-\item{nbhd_order}{For volumetric data, what order neighborhood around data
-locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
-2nd-order neighbors, etc.). Smaller values will provide greater computational
-efficiency at the cost of higher variance around the edge of the data.}
+\item{aic}{(For prewhitening) Use the Akaike information criterion (AIC) to
+select AR model orders between \code{0} and \code{ar_order}? Default:
+\code{FALSE}.}
 
-\item{scale_BOLD}{Option for scaling the BOLD response.
-
-\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
-data is detected (if any mean is less than one), in which case \code{"sd"}
-scaling will be used instead.
-
-\code{"mean"} scaling will scale the data to percent local signal change.
-
-\code{"sd"} scaling will scale the data by local standard deviation.
-
-\code{"none"} will only center the data, not scale it.}
-
-\item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
-addition to the classical GLM. (The classical GLM is always returned.)}
-
-\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
-should be a number indicating the order of the autoregressive model to use
-for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
-multi-session models, note that a single AR model is used; the parameters
-are estimated by averaging the estimates from each session.}
-
-\item{ar_smooth}{(numeric) FWHM parameter for smoothing the AR model
-coefficient estimates for prewhitening. Remember that
-\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.}
-
-\item{aic}{Use the AIC to select AR model order between \code{0} and
-\code{ar_order}? Default: \code{FALSE}.}
-
-\item{num.threads}{The maximum number of threads to use for parallel
+\item{n_threads}{The maximum number of threads to use for parallel
 computations: prewhitening parameter estimation, and the inla-program model
 estimation. Default: \code{4}. Note that parallel prewhitening requires the
 \code{parallel} package.}
 
 \item{return_INLA}{Return the INLA model object? (It can be large.) Use
-\code{"trimmed"} (default) to return only the more relevant results, which
-is enough for both \code{\link{id_activations}} and \code{BayesGLM2},
-\code{"minimal"} to return just enough for \code{\link{BayesGLM2}} but not
-\code{id_activations}, or \code{"full"} to return the full output of
-\code{inla}.}
+\code{"trimmed"} (default) returns the results sufficient for
+\code{\link{id_activations}} and \code{\link{BayesGLM2}}; \code{"minimal"}
+returns enough for \code{\link{BayesGLM2}} but not
+\code{\link{id_activations}}; \code{"full"} returns the full \code{inla}
+output.}
 
-\item{verbose}{Should updates be printed? Use \code{1} (default) for
-occasional updates, \code{2} for occasional updates as well as running INLA
-in verbose mode (if applicable), or \code{0} for no updates.}
+\item{verbose}{\code{1} (default) to print occasional updates during model
+computation; \code{2} for occasional updates as well as running INLA in
+verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 
-\item{meanTol, varTol, snrTol}{Tolerance for mean, variance and SNR of each data location.
+\item{meanTol, varTol}{Tolerance for mean, variance and SNR of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
-Default: \code{1e-6} for mean and variance, \code{50} for SNR. Note: \code{snrTol}
-currently not in use, but SNR maps are returned for visualization.}
+Default: \code{1e-6} for mean and variance, \code{50} for SNR.}
 }
 \value{
 A \code{"BayesGLM"} object: a list with elements

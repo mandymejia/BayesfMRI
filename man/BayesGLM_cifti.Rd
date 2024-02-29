@@ -5,14 +5,14 @@
 \title{BayesGLM for CIFTI}
 \usage{
 BayesGLM_cifti(
-  cifti_fname,
+  BOLD,
   design,
-  surfL_fname = NULL,
-  surfR_fname = NULL,
   brainstructures = c("left", "right"),
-  dHRF = c(1, 0, 2),
-  dHRF_as = c("auto", "nuisance", "field"),
-  session_names = NULL,
+  surfL = NULL,
+  surfR = NULL,
+  resamp_res = 10000,
+  nbhd_order = 1,
+  buffer = c(1, 1, 3, 4, 4),
   nuisance = NULL,
   TR = NULL,
   hpf = NULL,
@@ -21,15 +21,12 @@ BayesGLM_cifti(
  } else {
      NULL
  },
-  resamp_res = 10000,
-  nbhd_order = 1,
-  buffer = c(1, 1, 3, 4, 4),
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
-  num.threads = 4,
+  n_threads = 4,
   return_INLA = c("trimmed", "full", "minimal"),
   verbose = 1,
   meanTol = 1e-06,
@@ -37,135 +34,125 @@ BayesGLM_cifti(
 )
 }
 \arguments{
-\item{cifti_fname}{fMRI timeseries data in CIFTI format ("*.dtseries.nii").
+\item{BOLD}{fMRI timeseries data in CIFTI format ("*.dtseries.nii").
 For single-session analysis this can be a file path to a CIFTI file or a
 \code{"xifti"} object from the \code{ciftiTools} package. For multi-session
 analysis this can be a vector of file paths or a list of \code{"xifti"}
 objects.
 
-If \code{cifti_fname} is a \code{"xifti"} object or list of \code{"xifti"}
-objects, its surfaces, if any, will be used for Bayesian modeling. However,
-\code{surfL_fname} and \code{surfR_fname}, if provided, will override any
-included surfaces.}
+If \code{BOLD} is a \code{"xifti"} object(s), the surfaces, if any, will be
+used for the spatial model. However, if \code{surfL} and \code{surfR} are
+provided, they will override any surfaces in \code{BOLD}.}
 
-\item{design}{See \code{make_design}.}
-
-\item{surfL_fname, surfR_fname}{Left or right cortex surface geometry in
-GIFTI format ("*.surf.gii"). This can be a file path to a GIFTI file or a
-\code{"surf"} object from the \code{ciftiTools} package. This argument is
-only used if \code{brainstructures} includes the corresponding hemisphere
-and \code{Bayes==TRUE}. If it's not provided, and there are no surfaces in
-\code{cifti_fname}, the HCP group-average inflated surface included in the
-\code{ciftiTools} package will be used.}
+\item{design}{A \code{"BayesfMRI_design"} object from \code{\link{make_design}}.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
-to analyze: \code{"left"} (left cortical surface) and/or \code{"right"}
-(right cortical surface). Default: \code{c("left","right")} (both
-hemispheres). Note that the subcortical models have not yet been implemented.}
+of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
+and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
+(cortex only).}
 
-\item{dHRF}{\code{dHRF} controls the addition of HRF derivatives to the design matrix if
-\code{onsets} is provided. Set to \code{0} to not model the derivatives and
-only include the main HRF regressor; set to \code{1} (default) to model the
-temporal derivative too; or, set to \code{2} to model both the temporal
-derivative and the dispersion derivative too.
-If \code{dHRF==0}, there is one design column per task. If \code{dHRF==1},
-there are two design columns per task. And if \code{dHRF==2}, there are
-three design columns per task. If there are several tasks and \code{dHRF>0},
-spatial modeling with INLA may require large computation times. A possible
-adjustment is to model the columns for HRF derivatives as nuisance signals
-rather than fields. This can be controlled by the \code{dHRF_as} argument
-to \code{BayesGLM(_cifti)}.}
+\item{surfL, surfR}{For cortex spatial model. Left and right cortex surface
+geometry in GIFTI format ("*.surf.gii"). These can be a file path to
+a GIFTI file or a \code{"surf"} object from \code{ciftiTools}.
 
-\item{dHRF_as}{\code{"auto"} (default) ...}
+Surfaces can alternatively be provided through the \code{$surf} metadata in
+\code{BOLD} if it is \code{"xifti"} data. If neither are provided, the
+HCP group-average inflated surface included in \code{ciftiTools} will be
+used for the cortex spatial model.}
 
-\item{session_names}{(Optional, and only relevant for multi-session modeling)
-Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
-argument will overwrite the names of the list entries in \code{data}, if
-both exist.}
+\item{resamp_res}{For cortex spatial model. The number of vertices to which
+each cortical surface should be resampled, or \code{NULL} to not resample.
 
-\item{nuisance}{(Optional) A \eqn{T \times J} matrix of nuisance signals.
-These are regressed from the fMRI data and the design matrix prior to the
-GLM computation. For multi-session modeling, this argument should be a list
-of such matrices.}
+For computational feasibility, a value of \code{10000} (default) or lower is
+recommended for Bayesian spatial modeling. If \code{Bayes=FALSE},
+\code{resamp_res} can be set to \code{NULL} for full-resolution classical
+modeling.}
 
-\item{TR}{The temporal resolution of the data, in seconds.}
+\item{nbhd_order}{For volumetric model. What order neighborhood around data
+locations to keep? \code{0} for no neighbors, \code{1} for 1st-order
+neighbors, \code{2} for 1st- and 2nd-order neighbors, etc. Smaller values
+will provide greater computational efficiency at the cost of higher variance
+around the edge of the data.}
 
-\item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal
-high-pass filter to the data? Only one of these arguments should be provided.
-\code{hpf} should be the filter frequency; if it is provided, \code{TR}
-must be provided too. The number of DCT bases to include will be computed
-to yield a filter with as close a frequency to \code{hpf} as possible.
-Alternatively, \code{DCT} can be provided to directly specify the number
-of DCT bases to include.
+\item{buffer}{For volumetric model. The number of extra voxel layers around
+the bounding box. Set to \code{NULL} for no buffer. (We recommend not
+changing \code{buffer} unless you know what you're doing. Instead, to reduce
+the number of boundary voxels, adjust \code{nbhd_order}).}
 
-Default: \code{DCT=4}. For typical \code{TR}, four DCT bases amounts to a
-lower frequency cutoff than the approximately .01 Hz used in most studies.
-We selected this default to err on the side of retaining more low-frequency
-information, but we recommend setting these arguments to values most
-appropriate for the data analysis at hand.
+\item{nuisance}{(Optional) A \eqn{T \times N} matrix of nuisance signals,
+where \eqn{T} is the number of timepoints and \eqn{N} is the number of
+nuisance signals, or a list of these for multi-session analysis. Nuisance
+signals are regressed from the fMRI data and design matrix prior to GLM
+computation. Nuisance signals can include motion regressors, HRF derivatives
+not being modeled as tasks, and other sources of noise.
 
-Using at least two DCT bases is as sufficient as using linear and quadratic
-drift terms in the design matrix. So if DCT detrending is being used, there
-is no need to add linear and quadratic drift terms to \code{nuisance}.}
+Detrending/high-pass filtering is accomplished by adding DCT bases to the
+nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
 
-\item{resamp_res}{The number of vertices to which each cortical surface
-should be resampled, or \code{NULL} to not resample. For computational
-feasibility, a value of \code{10000} or lower is recommended.}
+\item{TR}{Temporal resolution of the data, in seconds.}
 
-\item{nbhd_order}{For volumetric data, what order neighborhood around data
-locations to keep? (0 = no neighbors, 1 = 1st-order neighbors, 2 = 1st- and
-2nd-order neighbors, etc.). Smaller values will provide greater computational
-efficiency at the cost of higher variance around the edge of the data.}
+\item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
+filter to the data, for detrending? Only one of these should be provided:
+the filter frequency \code{hpf}, or the number of DCT bases \code{DCT}.
+If \code{hpf} is provided, \code{TR} must be provided too and the
+corresponding number of DCT bases will be calculated.
 
-\item{buffer}{For volumetric data, size of extra voxels layers around the
-bounding box, in terms of voxels. Set to NULL for no buffer. (Recommended not
-to change unless you know what you're doing. Instead to reduce the number of
-boundary voxels, adjust \code{nbhd_order}).}
+Default: \code{DCT=4}. For typical \code{TR} and length of \code{BOLD}, four
+DCT bases amounts to a lower frequency cutoff than the approximately .01 Hz
+used in most studies. We selected this default to err on the side of
+retaining more low-frequency information, but recommend setting these
+arguments to values most appropriate for the analysis at hand.
 
-\item{scale_BOLD}{Option for scaling the BOLD response.
+Using at least two DCT bases is as sufficient for detrending as using linear
+and quadratic drift terms in the design matrix. So if DCT detrending is
+being used used, there is no need to add linear and quadratic drift terms to
+\code{nuisance}.}
 
-\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
-data is detected (if any mean is less than one), in which case \code{"sd"}
-scaling will be used instead.
+\item{scale_BOLD}{Controls scaling the BOLD response at each location.
+\describe{
+\item{"auto":}{   (default) Use \code{"mean"} scaling, except if
+demeaned data is detected (any location's mean < 1), use \code{"sd"}
+scaling.}
+\item{"mean":}{   Scale the data to percent local signal change.}
+\item{"sd":}{   Scale the data by local standard deviation.}
+\item{"none":}{   Center the data but do not scale it.}
+}}
 
-\code{"mean"} scaling will scale the data to percent local signal change.
+\item{Bayes}{Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
+\code{FALSE}, only fit the classical GLM. (The classical GLM is always
+returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)}
 
-\code{"sd"} scaling will scale the data by local standard deviation.
+\item{ar_order}{(For prewhitening) The order of the autoregressive (AR) model
+to use for prewhitening. If \code{0}, do not prewhiten. Default: \code{6}.
 
-\code{"none"} will only center the data, not scale it.}
+For multi-session modeling, note that a single AR model is used; its
+coefficients will be the average estimate from each session.}
 
-\item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
-addition to the classical GLM. (The classical GLM is always returned.)}
+\item{ar_smooth}{(For prewhitening) The FWHM parameter for spatially
+smoothing the coefficient estimates for the AR model to use for
+prewhitening. Recall that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} to not smooth
+the estimates. Default: \code{5}.}
 
-\item{ar_order}{(numeric) Controls prewhitening. If greater than zero, this
-should be a number indicating the order of the autoregressive model to use
-for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
-multi-session models, note that a single AR model is used; the parameters
-are estimated by averaging the estimates from each session.}
+\item{aic}{(For prewhitening) Use the Akaike information criterion (AIC) to
+select AR model orders between \code{0} and \code{ar_order}? Default:
+\code{FALSE}.}
 
-\item{ar_smooth}{(numeric) FWHM parameter for smoothing the AR model
-coefficient estimates for prewhitening. Remember that
-\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.}
-
-\item{aic}{Use the AIC to select AR model order between \code{0} and
-\code{ar_order}? Default: \code{FALSE}.}
-
-\item{num.threads}{The maximum number of threads to use for parallel
+\item{n_threads}{The maximum number of threads to use for parallel
 computations: prewhitening parameter estimation, and the inla-program model
 estimation. Default: \code{4}. Note that parallel prewhitening requires the
 \code{parallel} package.}
 
 \item{return_INLA}{Return the INLA model object? (It can be large.) Use
-\code{"trimmed"} (default) to return only the more relevant results, which
-is enough for both \code{\link{id_activations}} and \code{BayesGLM2},
-\code{"minimal"} to return just enough for \code{\link{BayesGLM2}} but not
-\code{id_activations}, or \code{"full"} to return the full output of
-\code{inla}.}
+\code{"trimmed"} (default) returns the results sufficient for
+\code{\link{id_activations}} and \code{\link{BayesGLM2}}; \code{"minimal"}
+returns enough for \code{\link{BayesGLM2}} but not
+\code{\link{id_activations}}; \code{"full"} returns the full \code{inla}
+output.}
 
-\item{verbose}{Should updates be printed? Use \code{1} (default) for
-occasional updates, \code{2} for occasional updates as well as running INLA
-in verbose mode (if applicable), or \code{0} for no updates.}
+\item{verbose}{\code{1} (default) to print occasional updates during model
+computation; \code{2} for occasional updates as well as running INLA in
+verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
@@ -178,26 +165,26 @@ An object of class \code{"BayesGLM_cifti"}: a list with elements
 \item{betas_classical}{The field coefficients for the classical model.}
 \item{GLMs_Bayesian}{The entire list of GLM results, except for parameters estimated for the classical model.}
 \item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
-\item{session_names}{The names of the sessions.}
-\item{n_sess_orig}{The number of sessions (before averaging, if applicable).}
-\item{field_names}{Column names of the fields in the design matrix.}
+\item{brainstructures}{\code{data.frame} summarizing the spatial features of each brain structure modeled.}
+\item{sessions}{\code{data.frame} with the \code{name} and \code{nTime} of each BOLD session.}
+\item{fields}{\code{data.frame} with the \code{name}, related \code{task}, and \code{HRF_order} of each field.}
 }
 }
 \description{
-Performs spatial Bayesian GLM on the cortical surface for task fMRI
-activation.
+Performs spatial Bayesian GLM for task fMRI activation with CIFTI-format
+data. The cortex is modeled as a surface mesh, and subcortical structures
+are modeled as distinct volumetric regions. Includes the pre-processing
+steps of nuisance regression, prewhitening, scaling, and variance
+normalization. Supports both single- and multi-session analysis. Can also
+compute just the classical (spatially-independent) GLM. Can also compare
+different choices of designs for single-session classical GLM.
 }
-\section{INLA latent fields limit}{
-
-INLA computation times increase greatly when the number of columns in the
-design matrix exceeds five. So if there are more than five tasks, or
-three or more tasks each with its temporal derivative being modeled as a
-task, \code{BayesGLM} will raise a warning. In cases like the latter, we
-recommend modeling the temporal derivatives as nuisance signals using the
-\code{nuisance} argument, rather than modeling them as fields.
+\details{
+To use \code{BayesGLM_cifti}, the design matrix must first be constructed
+with \code{\link{make_design}}.
 }
-
 \section{Connectome Workbench Requirement}{
+
 
 This function uses a system wrapper for the 'wb_command' executable. The
 user must first download and install the Connectome Workbench, available
@@ -208,5 +195,15 @@ from https://www.humanconnectome.org/software/get-connectome-workbench .
 
 This function requires the \code{INLA} package, which is not a CRAN package.
 See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+
+\section{INLA Latent Fields Limit}{
+
+INLA computation times increase greatly when the number of columns in the
+design matrix exceeds five: when there are more than five tasks, or more
+than three tasks each with a temporal derivative modeled as a field. In
+cases like the latter, we recommend modeling the temporal derivatives as
+nuisance signals using the option \code{dHRF_as="nuisance"}, rather than
+modeling the temporal derivatives as fields.
 }
 

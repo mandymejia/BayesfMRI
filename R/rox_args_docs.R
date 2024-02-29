@@ -1,3 +1,14 @@
+#' Connectome Workbench
+#' 
+#' @section Connectome Workbench Requirement:
+#'  
+#'  This function uses a system wrapper for the 'wb_command' executable. The
+#'  user must first download and install the Connectome Workbench, available
+#'  from https://www.humanconnectome.org/software/get-connectome-workbench .
+#' 
+#' @name Connectome_Workbench_Description
+NULL
+
 #' INLA
 #'
 #' @section INLA Requirement:
@@ -7,55 +18,68 @@
 #' @name INLA_Description
 NULL
 
+#' INLA Latent Fields
+#' 
+#' @section INLA Latent Fields Limit:
+#'  INLA computation times increase greatly when the number of columns in the
+#'  design matrix exceeds five: when there are more than five tasks, or more
+#'  than three tasks each with a temporal derivative modeled as a field. In 
+#'  cases like the latter, we recommend modeling the temporal derivatives as 
+#'  nuisance signals using the option \code{dHRF_as="nuisance"}, rather than 
+#'  modeling the temporal derivatives as fields.
+#' 
+#' @name INLA_Latent_Fields_Limit_Description
+NULL
+
 #' aic
 #'
-#' @param aic Use the AIC to select AR model order between \code{0} and 
-#'  \code{ar_order}? Default: \code{FALSE}.
+#' @param aic (For prewhitening) Use the Akaike information criterion (AIC) to
+#'  select AR model orders between \code{0} and \code{ar_order}? Default: 
+#'  \code{FALSE}.
 #'
 #' @name aic_Param
 NULL
 
 #' ar_order
 #'
-#' @param ar_order (numeric) Controls prewhitening. If greater than zero, this
-#'  should be a number indicating the order of the autoregressive model to use
-#'  for prewhitening. If zero, do not prewhiten. Default: \code{6}. For
-#'  multi-session models, note that a single AR model is used; the parameters
-#'  are estimated by averaging the estimates from each session.
+#' @param ar_order (For prewhitening) The order of the autoregressive (AR) model
+#'  to use for prewhitening. If \code{0}, do not prewhiten. Default: \code{6}. 
+#' 
+#'  For multi-session modeling, note that a single AR model is used; its 
+#'  coefficients will be the average estimate from each session.
 #'
 #' @name ar_order_Param
 NULL
 
 #' ar_smooth
 #'
-#' @param ar_smooth (numeric) FWHM parameter for smoothing the AR model 
-#'  coefficient estimates for prewhitening. Remember that
-#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-#'  to not do any smoothing. Default: \code{5}.
+#' @param ar_smooth (For prewhitening) The FWHM parameter for spatially 
+#'  smoothing the coefficient estimates for the AR model to use for 
+#'  prewhitening. Recall that
+#'  \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} to not smooth
+#'  the estimates. Default: \code{5}.
 #'
+# [TO DO] vol vs surf?
 #' @name ar_smooth_Param
 NULL
 
-# combine_sessions
-#
-# @param combine_sessions If multiple sessions are provided, should their data
-#  be combined and analyzed as a single session?
-# 
-#  If \code{TRUE} (default), the multiple sessions will be concatenated along
-#  time after scaling and nuisance regression, but before prewhitening. If 
-#  \code{FALSE}, each session will be analyzed separately, except that a single
-#  estimate of the AR model coefficients for prewhitening is used, estimated 
-#  across all sessions. 
-# 
-# @name combine_sessions_Param
-# NULL
-
 #'  Bayes
 #'
-#' @param Bayes If \code{TRUE} (default), will fit a spatial Bayesian GLM in 
-#'  addition to the classical GLM. (The classical GLM is always returned.)
+#' @param Bayes Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
+#'  \code{FALSE}, only fit the classical GLM. (The classical GLM is always
+#'  returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)
 #'
 #' @name Bayes_Param
+NULL
+
+#' buffer 
+#' 
+#' @param buffer For volumetric model. The number of extra voxel layers around 
+#'  the bounding box. Set to \code{NULL} for no buffer. (We recommend not
+#'  changing \code{buffer} unless you know what you're doing. Instead, to reduce 
+#'  the number of boundary voxels, adjust \code{nbhd_order}).
+#' 
+#' @name buffer_Param 
 NULL
 
 #' contrasts
@@ -98,6 +122,15 @@ NULL
 #' @name mask_Param_vertices
 NULL
 
+#' mean and variance tolerance 
+#' 
+#' @param meanTol,varTol Tolerance for mean and variance of each data location.
+#'  Locations which do not meet these thresholds are masked out of the analysis.
+#'  Default: \code{1e-6} for both.
+#' 
+#' @name mean_var_Tol_Param
+NULL
+
 #' mesh: INLA only
 #'
 #' @param mesh An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
@@ -110,56 +143,66 @@ NULL
 #'
 #' @param mesh An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
 #'  surface data)
-#  or \code{"BayesfMRI.spde"} object (see \code{\link{create_spde_vol3D}} for subcortical data).
+#  or \code{"BayesfMRI.spde"} object (see \code{\link{make_spde_vol3D}} for subcortical data).
 #'
 #' @name mesh_Param_either
 NULL
 
-#' max.threads
+#' max_threads
 #'
-#' @param max.threads The maximum number of threads to use in the inla-program
+#' @param max_threads The maximum number of threads to use in the inla-program
 #'  for model estimation. \code{0} (default) will use the maximum number of
 #'  threads allowed by the system.
 #'
-#' @name max.threads_Param
+#' @name max_threads_Param
 NULL
 
-#' num.threads
+#' nbhd_order 
+#' 
+#' @param nbhd_order For volumetric model. What order neighborhood around data
+#' locations to keep? \code{0} for no neighbors, \code{1} for 1st-order 
+#'  neighbors, \code{2} for 1st- and 2nd-order neighbors, etc. Smaller values 
+#'  will provide greater computational efficiency at the cost of higher variance
+#'  around the edge of the data.
+#' 
+#' @name nbhd_order_Param
+#' 
+NULL
+
+#' n_threads
 #'
-#' @param num.threads The maximum number of threads to use for parallel
+#' @param n_threads The maximum number of threads to use for parallel
 #'  computations: prewhitening parameter estimation, and the inla-program model
 #'  estimation. Default: \code{4}. Note that parallel prewhitening requires the
 #'  \code{parallel} package.
 #'
-#' @name num.threads_Param
+#' @name n_threads_Param
 NULL
 
 #' return_INLA
 #'
 #' @param return_INLA Return the INLA model object? (It can be large.) Use 
-#'  \code{"trimmed"} (default) to return only the more relevant results, which
-#'  is enough for both \code{\link{id_activations}} and \code{BayesGLM2}, 
-#'  \code{"minimal"} to return just enough for \code{\link{BayesGLM2}} but not
-#'  \code{id_activations}, or \code{"full"} to return the full output of 
-#'  \code{inla}.
+#'  \code{"trimmed"} (default) returns the results sufficient for 
+#'  \code{\link{id_activations}} and \code{\link{BayesGLM2}}; \code{"minimal"}
+#'  returns enough for \code{\link{BayesGLM2}} but not 
+#'  \code{\link{id_activations}}; \code{"full"} returns the full \code{inla} 
+#'  output. 
 #'
 #' @name return_INLA_Param
 NULL
 
 #' scale_BOLD
 #'
-#' @param scale_BOLD Option for scaling the BOLD response.
-#' 	
-#' \code{"auto"} (default) will use \code{"mean"} scaling except if demeaned 
-#'  data is detected (if any mean is less than one), in which case \code{"sd"}
-#'  scaling will be used instead.
-#' 	
-#' \code{"mean"} scaling will scale the data to percent local signal change.
-#' 	
-#' \code{"sd"} scaling will scale the data by local standard deviation.
-#' 	
-#' \code{"none"} will only center the data, not scale it. 
-#'
+#' @param scale_BOLD Controls scaling the BOLD response at each location. 
+#'  \describe{
+#'    \item{"auto":}{   (default) Use \code{"mean"} scaling, except if 
+#'      demeaned data is detected (any location's mean < 1), use \code{"sd"} 
+#'      scaling.}
+#'    \item{"mean":}{   Scale the data to percent local signal change.}
+#'    \item{"sd":}{   Scale the data by local standard deviation.}
+#'    \item{"none":}{   Center the data but do not scale it.}
+#' }
+#' 
 #' @name scale_BOLD_Param
 NULL
 
@@ -173,9 +216,8 @@ NULL
 #' session_names
 #'
 #' @param session_names (Optional, and only relevant for multi-session modeling)
-#'  Names of each session. Default: \code{NULL}. In \code{\link{BayesGLM}} this
-#'  argument will overwrite the names of the list entries in \code{data}, if
-#'  both exist. 
+#'  Names of each session. Default: \code{NULL}. Will overwrite the names of the
+#'  \code{BOLD} data, if both are provided. 
 #'
 #' @name session_names_Param
 NULL
@@ -198,9 +240,9 @@ NULL
 
 #' verbose
 #'
-#' @param verbose Should updates be printed? Use \code{1} (default) for
-#'  occasional updates, \code{2} for occasional updates as well as running INLA
-#'  in verbose mode (if applicable), or \code{0} for no updates.
+#' @param verbose \code{1} (default) to print occasional updates during model 
+#'  computation; \code{2} for occasional updates as well as running INLA in
+#'  verbose mode (if \code{Bayes}), or \code{0} for no printed updates.
 #'
 #' @name verbose_Param
 NULL

@@ -4,7 +4,7 @@
 \alias{GLMEM_objfn}
 \title{Objective function for the BayesGLM EM algorithm}
 \usage{
-GLMEM_objfn(theta, spde, model_data, Psi, K, A, num.threads = NULL, Ns = NULL)
+GLMEM_objfn(theta, spde, model_data, Psi, K, A, n_threads = NULL, Ns = NULL)
 }
 \arguments{
 \item{theta}{a vector containing kappa2, phi, and sigma2, in that order}
@@ -19,7 +19,7 @@ GLMEM_objfn(theta, spde, model_data, Psi, K, A, num.threads = NULL, Ns = NULL)
 
 \item{A}{The value for Matrix::crossprod(X\%*\%Psi) (saves time on computation)}
 
-\item{num.threads}{Needed for SQUAREM (it is an argument to the fixed-point functions)}
+\item{n_threads}{Needed for SQUAREM (it is an argument to the fixed-point functions)}
 
 \item{Ns}{The number of samples used to approximate traces using the Hutchinson
 estimator. If set to 0, the exact trace is found.}

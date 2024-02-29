@@ -95,9 +95,9 @@ value sampled. Default: \code{100}.}
 \item{num_cores}{The number of cores to use for sampling betas in parallel. If
 \code{NULL} (default), do not run in parallel.}
 
-\item{verbose}{Should updates be printed? Use \code{1} (default) for
-occasional updates, \code{2} for occasional updates as well as running INLA
-in verbose mode (if applicable), or \code{0} for no updates.}
+\item{verbose}{\code{1} (default) to print occasional updates during model
+computation; \code{2} for occasional updates as well as running INLA in
+verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 }
 \value{
 A list containing the estimates, PPMs and areas of activation for each contrast.

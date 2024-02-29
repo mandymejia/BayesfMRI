@@ -47,9 +47,9 @@ a \code{gamma} is required for the Bayesian method; \code{NULL}
 correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
 (Benjamini Hochberg), or \code{"none"}.}
 
-\item{verbose}{Should updates be printed? Use \code{1} (default) for
-occasional updates, \code{2} for occasional updates as well as running INLA
-in verbose mode (if applicable), or \code{0} for no updates.}
+\item{verbose}{\code{1} (default) to print occasional updates during model
+computation; \code{2} for occasional updates as well as running INLA in
+verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 
 \item{threshold}{DEPRECATED. This argument has been renamed to \code{gamma}.
 Please use \code{gamma} instead of \code{threshold}. \code{threshold} will

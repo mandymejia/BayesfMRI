@@ -4,10 +4,10 @@
 \alias{.getSqrtInvCpp}
 \title{Get the prewhitening matrix for a single data location}
 \usage{
-.getSqrtInvCpp(AR_coeffs, nTime, avg_var)
+.getSqrtInvCpp(AR_coefs, nTime, avg_var)
 }
 \arguments{
-\item{AR_coeffs}{a length-p vector where p is the AR order}
+\item{AR_coefs}{a length-p vector where p is the AR order}
 
 \item{nTime}{(integer) the length of the time series that is being prewhitened}
 

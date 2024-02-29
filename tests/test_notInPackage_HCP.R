@@ -28,7 +28,8 @@ if (doINLA) {
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
-library(BayesfMRI)
+roxygen2::roxygenize("~/Documents/GitHub/BayesfMRI")
+#library(BayesfMRI)
 
 # Get file names.
 fnames <- list(
@@ -56,50 +57,78 @@ names(events) <- rep(c("win", "loss", "neut"), 2)
 nuis <- lapply(fnames[grepl("rp", names(fnames))], read.table, header=FALSE)
 nuis <- lapply(nuis, as.matrix)
 
-# BayesGLM ---------------------------------------------------------------------
-des <- make_design(
-  onsets = list(events[seq(3)], events[seq(4,6)]),
-  TR = 0.72, nTime=253
-)
+nTime <- 253#vapply(lapply(fnames[c("cifti_1", "cifti_2")], read_cifti), ncol, 0)
 
+# Make version of `events` with no stimuli for some tasks, for testing.
+eventsB <- events
+eventsB[c(2, 6)] <- NA
+
+# Test `make_design` -----------------------------------------------------------
+
+# From `onsets`.
+des_o1 <- make_design(
+  onsets = events[seq(3)],
+  TR = 0.72, nTime=nTime
+)
+des_o2 <- make_design(
+  onsets = list(events[seq(3)], events[seq(4,6)]),
+  TR = 0.72, nTime=nTime
+)
+testthat::expect_equal(des_o1$design[[1]], des_o2$design[[1]])
+testthat::expect_equal(des_o1$HRF_info[[1]], des_o2$HRF_info[[1]])
+testthat::expect_equal(des_o1$dims[c(2,3,4),], des_o2$dims[c(2,3,4),])
+testthat::expect_equal(des_o1$valid_cols[1,], des_o2$valid_cols[1,])
+des_o3 <- testthat::expect_warning(make_design(
+  onsets = list(eventsB[seq(3)], eventsB[seq(4,6)]),
+  TR = 0.72, nTime=c(nTime, 280),
+))
+testthat::expect_equal(names(des_o2), names(des_o3))
+testthat::expect_equal(lapply(des_o2, names), lapply(des_o3, names))
+testthat::expect_equal(lapply(des_o2, dim), lapply(des_o3, dim))
+
+# From `design`.
+des_d1 <- make_design(des_o1$design)
+testthat::expect_equal(des_d1, make_design(des_o1$design[[1]]))
+testthat::expect_equal(des_d1$design, des_o1$design)
+testthat::expect_equal(des_d1$dims, des_o1$dims)
+testthat::expect_equal(des_d1$valid_cols, des_o1$valid_cols)
+
+# From `design_compare`.
+des_c1 <- make_design(design_compare=array(rep(c(des_o1$design[[1]], 5)), dim=c(dim(des_o1$design[[1]]), 5)))
+
+# From `design_per_location`.
+# [TO DO]
+
+# Summary functions.
+# des_o3
+# des_d1
+# des_c1
+
+# BayesGLM ---------------------------------------------------------------------
 ### Classical vs Bayes; Single- vs Multi-session -----
-BayesGLM_cifti_args <- function(n_sess, resamp_factor=1, dtype=c("single", "multi")){
-  dtype <- match.arg(dtype, c("single", "multi"))
-  if (dtype == "multi") {
-    des$design <- lapply(des$design, function(ddd){
-      abind::abind(
-        ddd,
-        ddd + rnorm(prod(dim(ddd)), sd=.1),
-        ddd + rnorm(prod(dim(ddd)), sd=.5), along=3
-      )
-    })
-  }
-  des1 <- des; des1$design <- des1$design[1]
+BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
   list(
-    cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-    surfL_fname=ciftiTools.files()$surf["left"],
-    surfR_fname=ciftiTools.files()$surf["right"],
+    BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
+    design = switch(n_sess, des_o1, des_o2),
     brainstructures = "both",
-    design=switch(n_sess, des1, des),
-    TR = 0.72,
-    dHRF=1,
+    surfL=ciftiTools.files()$surf["left"],
+    surfR=ciftiTools.files()$surf["right"],
+    resamp_res = resamp_res * resamp_factor,
     nuisance=switch(n_sess, nuis$rp_1, nuis),
+    TR = 0.72,
     #Bayes = TRUE,
     ar_order = 1,
     ar_smooth = 3,
-    resamp_res = resamp_res * resamp_factor,
-    verbose = TRUE,
-    return_INLA = "trim"
+    return_INLA = "trim",
+    verbose = TRUE
   )
 }
 
 ##### First pass to detect errors
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
-bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1, dtype="multi")))
 bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
-bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1, dtype="multi")))
 
 
 ##### Second pass to get results of decent resolution

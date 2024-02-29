@@ -58,15 +58,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // getSqrtInvCpp
-Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var);
-RcppExport SEXP _BayesfMRI_getSqrtInvCpp(SEXP AR_coeffsSEXP, SEXP nTimeSEXP, SEXP avg_varSEXP) {
+Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coefs, int nTime, double avg_var);
+RcppExport SEXP _BayesfMRI_getSqrtInvCpp(SEXP AR_coefsSEXP, SEXP nTimeSEXP, SEXP avg_varSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type AR_coeffs(AR_coeffsSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type AR_coefs(AR_coefsSEXP);
     Rcpp::traits::input_parameter< int >::type nTime(nTimeSEXP);
     Rcpp::traits::input_parameter< double >::type avg_var(avg_varSEXP);
-    rcpp_result_gen = Rcpp::wrap(getSqrtInvCpp(AR_coeffs, nTime, avg_var));
+    rcpp_result_gen = Rcpp::wrap(getSqrtInvCpp(AR_coefs, nTime, avg_var));
     return rcpp_result_gen;
 END_RCPP
 }

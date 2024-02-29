@@ -8,14 +8,14 @@ using namespace std;
 
 //' Get the prewhitening matrix for a single data location
 //'
-//' @param AR_coeffs a length-p vector where p is the AR order
+//' @param AR_coefs a length-p vector where p is the AR order
 //' @param nTime (integer) the length of the time series that is being prewhitened
 //' @param avg_var a scalar value of the residual variances of the AR model
 //' 
 // [[Rcpp::export(.getSqrtInvCpp)]]
-Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, double avg_var) {
+Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coefs, int nTime, double avg_var) {
   double sqrt_var = sqrt(avg_var);
-  int p = AR_coeffs.size();
+  int p = AR_coefs.size();
   double sqrt_prec = 1/sqrt_var;
   Eigen::VectorXd Dinv_v(nTime);
   for(int i=0; i<nTime;i++){Dinv_v(i) = sqrt_prec;}
@@ -26,7 +26,7 @@ Eigen::SparseMatrix<double> getSqrtInvCpp(Eigen::VectorXd AR_coeffs, int nTime, 
   for(int j=0;j<nTime;j++){
     for(int k=1;k<=p;k++) {
       if(j+k >nTime - 1){break;}
-      halfInv_v(j+k,j) = -1 * AR_coeffs(k-1);
+      halfInv_v(j+k,j) = -1 * AR_coefs(k-1);
     }
   }
   Eigen::MatrixXd Inv_v = halfInv_v * halfInv_v.transpose();

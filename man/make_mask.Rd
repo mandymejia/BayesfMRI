@@ -4,12 +4,10 @@
 \alias{make_mask}
 \title{Mask out invalid data}
 \usage{
-make_mask(data, meanTol = 1e-06, varTol = 1e-06, verbose = TRUE)
+make_mask(BOLD, meanTol = 1e-06, varTol = 1e-06, verbose = TRUE)
 }
 \arguments{
-\item{data}{A list of sessions, where each session is a list with elements
-\code{BOLD}, \code{design}, and optionally \code{nuisance}. See
-\code{?is.BfMRI.sess} for details.}
+\item{BOLD}{A session-length list of \eqn{T \times V} numeric BOLD data.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
@@ -32,7 +30,7 @@ BOLD1 <- matrix(rnorm(nT*nV), nrow=nT)
 BOLD1[,seq(30,50)] <- NA
 BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
 BOLD2[,65] <- BOLD2[,65] / 1e10
-data <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
-make_mask(data)
+BOLD <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
+make_mask(BOLD)
 
 }

@@ -5,11 +5,11 @@
 \title{return_INLA}
 \arguments{
 \item{return_INLA}{Return the INLA model object? (It can be large.) Use
-\code{"trimmed"} (default) to return only the more relevant results, which
-is enough for both \code{\link{id_activations}} and \code{BayesGLM2},
-\code{"minimal"} to return just enough for \code{\link{BayesGLM2}} but not
-\code{id_activations}, or \code{"full"} to return the full output of
-\code{inla}.}
+\code{"trimmed"} (default) returns the results sufficient for
+\code{\link{id_activations}} and \code{\link{BayesGLM2}}; \code{"minimal"}
+returns enough for \code{\link{BayesGLM2}} but not
+\code{\link{id_activations}}; \code{"full"} returns the full \code{inla}
+output.}
 }
 \description{
 return_INLA

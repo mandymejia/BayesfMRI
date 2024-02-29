@@ -11,16 +11,16 @@
 # #' @importFrom Matrix sparseMatrix colSums Diagonal t solve
 # #'
 # #' @export
-# create_spde_vol3D <- function(locs, labs, lab_set = NULL){
+# make_spde_vol3D <- function(locs, labs, lab_set = NULL){
 
 #   # Check to see that the `rdist` package is installed
 #   if (!requireNamespace("rdist", quietly = TRUE)) {
-#     stop("`create_spde_vol3D` requires the `rdist` package. Please install it.", call. = FALSE)
+#     stop("`make_spde_vol3D` requires the `rdist` package. Please install it.", call. = FALSE)
 #   }
 
 #   # Check to see that the `geometry` package is installed
 #   if (!requireNamespace("geometry", quietly = TRUE)) {
-#     stop("`create_spde_vol3D` requires the `geometry` package. Please install it.", call. = FALSE)
+#     stop("`make_spde_vol3D` requires the `geometry` package. Please install it.", call. = FALSE)
 #   }
 
 #   check_INLA(FALSE)

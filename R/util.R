@@ -1,6 +1,6 @@
 # #' Plot BayesfMRI.spde objects
 # #'
-# #' @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
+# #' @param object Object of class BayesfMRI.spde (see \code{help(make_spde_vol3D)})
 # #' @param colors (Optional) Vector of colors to represent each region.
 # #' @param alpha Transparency level.
 # #'
@@ -11,7 +11,7 @@
 # #' @importFrom viridis viridis_pal
 #
 # plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
-#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
+#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(make_spde_vol3D).')
 #   num_regions <- length(object$vertices)
 #   if(is.null(colors)) colors <- viridis_pal()(num_regions)
 #   if(length(colors) < num_regions) {
@@ -143,9 +143,7 @@ s2m_B <- function(B,sigma){
 #' Mask out data locations that are invalid (missing data, low mean, or low
 #'  variance) for any session.
 #'
-#' @param data A list of sessions, where each session is a list with elements
-#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See
-#'  \code{?is.BfMRI.sess} for details.
+#' @param BOLD A session-length list of \eqn{T \times V} numeric BOLD data.
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Defaults: \code{1e-6}.
@@ -162,23 +160,25 @@ s2m_B <- function(B,sigma){
 #' BOLD1[,seq(30,50)] <- NA
 #' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
 #' BOLD2[,65] <- BOLD2[,65] / 1e10
-#' data <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
-#' make_mask(data)
+#' BOLD <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
+#' make_mask(BOLD)
 #'
 #' @export
-make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+make_mask <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+
+  nS <- length(BOLD)
+  nV <- ncol(BOLD[[1]])
 
   # For each BOLD data matrix,
-  mask_na <- mask_mean <- mask_var <- mask_snr <- rep(TRUE, ncol(data[[1]]$BOLD))
-  for (ss in seq(length(data))) {
-    dss <- data[[ss]]$BOLD
+  mask_na <- mask_mean <- mask_var <- mask_snr <- rep(TRUE, nV)
+  for (ss in seq(nS)) {
     # Mark columns with any NA or NaN values for removal.
-    dss_na <- is.na(dss) | is.nan(dss)
-    mask_na[apply(dss_na, 2, any)] <- FALSE
+    na_ss <- is.na(BOLD[[ss]]) | is.nan(BOLD[[ss]])
+    mask_na[apply(na_ss, 2, any)] <- FALSE
     # Calculate means and variances of columns, except those with any NA or NaN.
     # Mark columns with mean/var falling under the thresholds for removal.
-    means_ss <- colMeans(dss[,mask_na,drop=FALSE])
-    vars_ss <- matrixStats::colVars(dss[,mask_na,drop=FALSE])
+    means_ss <- colMeans(BOLD[[ss]][,mask_na,drop=FALSE])
+    vars_ss <- matrixStats::colVars(BOLD[[ss]][,mask_na,drop=FALSE])
     snr_ss <- means_ss/sqrt(vars_ss)
     mask_mean[mask_na][means_ss < meanTol] <- FALSE
     mask_var[mask_na][vars_ss < varTol] <- FALSE
@@ -188,7 +188,7 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
   # Print counts of locations removed, for each reason.
   if (verbose) {
     warn_part1 <- " locations"
-    warn_part2 <- if (length(data) > 1) { " in at least one session.\n" } else { ".\n" }
+    warn_part2 <- if (nS > 1) { " in at least one session.\n" } else { ".\n" }
     if (any(!mask_na)) {
       cat(paste0(
         "\t", sum(!mask_na), warn_part1,
@@ -221,46 +221,40 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     #     " removed due to low SNR", warn_part2
     #   ))
     # }
-
   }
 
   # Return composite mask and other masks
-  list(mask =  mask_na & mask_mean & mask_var, # & mask_snr,
-       mask_na = mask_na,
-       mask_mean = mask_mean,
-       mask_var = mask_var,
-       mask_snr = snr_ss) #just return the actual SNR values for now
+  list(
+    mask =  mask_na & mask_mean & mask_var, # & mask_snr,
+    mask_na = mask_na,
+    mask_mean = mask_mean,
+    mask_var = mask_var,
+    mask_snr = snr_ss #just return the actual SNR values for now
+  )
 }
 
-#' Is this a valid `onsets`?
-#'
-#' Is this valid data for event onsets? Expects a data.frame or numeric matrix
-#'  with two numeric columns, onsets and durations, and at least one row.
-#'  Raise an error if invalid; do nothing if valid.
-#'
-#' @param x The putative onsets matrix or data frame
+#' Is a matrix or data.frame?
+#' 
+#' Is this a matrix or data.frame?
+#' 
+#' @param q The object
+#' @return Length-one logical.
 #' @keywords internal
-#' @return Length-one logical vector.
-#'
-is_onsets <- function(x){
+is.matrix.or.df <- function(q){
+  is.matrix(q) || is.data.frame(q)
+}
 
-  #first check if onsets is NA, which can be the case in multi-session analysis where not all fields are present in all sessions
-  if(length(x) == 1){
-    if(is.na(x)){
-      return(TRUE)
-    }
+#' `cbind` if first argument might be \code{NULL} 
+#' 
+#' `cbind`, but return the second argument if the first is \code{NULL}
+#' @param mat_or_NULL \code{NULL} or a numeric matrix
+#' @param to_add A numeric matrix with the same number of rows as \code{mat_or_NULL}
+#' @return \code{cbind(mat_or_NULL, to_add)}, or just \code{to_add} if the first argument is NULL.
+#' @keywords internal
+cbind2 <- function(mat_or_NULL, to_add) {
+  if (!is.null(mat_or_NULL)) {
+    cbind(mat_or_NULL, to_add)
+  } else {
+    to_add
   }
-
-  is_nummat <- is.numeric(x) & is.matrix(x)
-  is_df <- is.data.frame(x) && all(vapply(x, class, "") == "numeric")
-  if (!(is_nummat || is_df)) { warning("The onsets are not a numeric matrix or data.frame."); return(FALSE) }
-
-  if (nrow(x)<1) { warning("The onsets must have at least one row."); return(FALSE) }
-
-  if (ncol(x) != 2) { warning("The onsets should have two columns, `onset` and `duration`."); return(FALSE) }
-  if (!all(colnames(x) == c("onset", "duration"))) {
-    warning("The onsets should have two columns, `onset` and `duration`."); return(FALSE)
-  }
-
-  return(TRUE)
 }

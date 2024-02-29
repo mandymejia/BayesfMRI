@@ -4,10 +4,11 @@
 \alias{ar_smooth_Param}
 \title{ar_smooth}
 \arguments{
-\item{ar_smooth}{(numeric) FWHM parameter for smoothing the AR model
-coefficient estimates for prewhitening. Remember that
-\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.}
+\item{ar_smooth}{(For prewhitening) The FWHM parameter for spatially
+smoothing the coefficient estimates for the AR model to use for
+prewhitening. Recall that
+\eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} to not smooth
+the estimates. Default: \code{5}.}
 }
 \description{
 ar_smooth

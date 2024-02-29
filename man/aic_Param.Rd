@@ -4,8 +4,9 @@
 \alias{aic_Param}
 \title{aic}
 \arguments{
-\item{aic}{Use the AIC to select AR model order between \code{0} and
-\code{ar_order}? Default: \code{FALSE}.}
+\item{aic}{(For prewhitening) Use the Akaike information criterion (AIC) to
+select AR model orders between \code{0} and \code{ar_order}? Default:
+\code{FALSE}.}
 }
 \description{
 aic
