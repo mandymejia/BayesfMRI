@@ -16,10 +16,9 @@ GLM_est_resid_var_pw <- function(
 
   nS <- length(session_names)
   nK <- length(field_names)
-
   nV_D <- get_nV(spatial, spatial_type)$D
 
-  max_AIC <- NULL
+  AR_coefs_avg <- var_avg <- max_AIC <- NULL
 
   var_resid <- array(dim = c(nV_D, nS))
   if (do_pw) {
@@ -68,7 +67,10 @@ GLM_est_resid_var_pw <- function(
     nT, nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg, verbose
   )
 
-  list(var_resid=var_resid, sqrtInv_all=sqrtInv_all)
+  list(
+    var_resid=var_resid, sqrtInv_all=sqrtInv_all,
+    AR_coefs_avg=AR_coefs_avg, var_avg=var_avg, max_AIC=max_AIC
+  )
 }
 
 #' Make \code{sqrtInv_all}

@@ -1,65 +1,68 @@
-# #' Format BayesGLM results into \code{"xifti"} objects
-# #' 
-# #' Format beta estimates of the BayesGLM results into list of \code{"xifti"} 
-# #'  objects for each session.
-# #' 
-# #' @param BayesGLM_results The list of BayesGLM results
-# #' @param session_names The session names
-# #' @param method \code{"classical"} or \code{"Bayesian"}
-# #' @return The list of \code{"xifti"} objects 
-# #' @keywords internal 
-# #' 
-# BayesGLM_cifti_format_results <- function(
-#   BayesGLM_results, session_names, method=c("classical", "Bayesian")){
+#' Format BayesGLM results into \code{"xifti"} objects
+#' 
+#' Format beta estimates of the BayesGLM results into list of \code{"xifti"} 
+#'  objects for each session.
+#' 
+#' @param BayesGLM_results The list of BayesGLM results
+#' @param do,spatial,submeta,session_names,field_names See \code{BayesGLM_cifti}.
+#' @param method \code{"classical"} or \code{"Bayesian"}
+#' @return The list of \code{"xifti"} objects 
+#' @keywords internal 
+#' 
+BayesGLM_cifti_format_results <- function(
+  BayesGLM_results, do, 
+  spatial, submeta, 
+  session_names, field_names, 
+  method=c("classical", "Bayesian")){
 
-#   nS <- length(session_names)
-#   method <- match.arg(method, c("classical", "Bayesian"))
+  nS <- length(session_names)
+  method <- match.arg(method, c("classical", "Bayesian"))
 
-#   result_xii <- setNames(vector("list", nS), session_names)
-#   datL <- datR <- datSub <- NULL
-#   for (ss in seq(nS)) {
-#     if (do_left) {
-#       datL <- switch(method,
-#         classical = BayesGLM_results$cortex_left$result_classical[[ss]]$estimates,
-#         Bayesian = BayesGLM_results$cortex_left$field_estimates[[ss]]
-#       )
-#       # Update mwall b/c `mask2` in `BayesGLM` can change the medial wall.
-#       mwallL <- !is.na(datL[,1])
-#       datL <- datL[mwallL,]
-#       colnames(datL) <- NULL
-#     }
-#     if (do_right) {
-#       datR <- switch(method,
-#         classical = BayesGLM_results$cortex_right$result_classical[[ss]]$estimates,
-#         Bayesian = BayesGLM_results$cortex_right$field_estimates[[ss]]
-#       )
-#       mwallR <- !is.na(datR[,1])
-#       datR <- datR[mwallR,]
-#       colnames(datR) <- NULL
-#     }
-#     if (do_sub) {
-#       datSub <- switch(method,
-#         classical = BayesGLM_results$subcort$result_classical[[ss]]$estimates,
-#         Bayesian = BayesGLM_results$subcortical$field_estimates[[ss]]
-#       )
-#       colnames(datSub) <- NULL
-#     }
-#     result_xii[[ss]] <- as.xifti(
-#       cortexL = datL,
-#       cortexL_mwall = if (do_left) { mwallL } else { NULL },
-#       cortexR = datR,
-#       cortexR_mwall = if (do_right) { mwallR } else { NULL },
-#       subcortVol = datSub,
-#       subcortLabs = submeta$labels,
-#       subcortMask = submeta$mask
-#     )
-#     result_xii[[ss]]$meta$subcort$trans_mat <- submeta$trans_mat
-#     result_xii[[ss]]$meta$subcort$trans_units <- submeta$trans_units
-#     result_xii[[ss]]$meta$cifti$names <- field_names
-#   }
+  browser()
 
-#   result_xii
-# }
+  result_xii <- setNames(vector("list", nS), session_names)
+  datL <- datR <- datSub <- NULL
+  for (ss in seq(nS)) {
+    if (do$left) {
+      datL <- switch(method,
+        classical = BayesGLM_results$cortex_left$result_classical[[ss]]$estimates,
+        Bayesian = BayesGLM_results$cortex_left$field_estimates[[ss]]
+      )
+      # Update mwall b/c `mask2` in `BayesGLM` can change the medial wall.
+      mwallL <- BayesGLM_results$cortex_left$spatial$mask
+      colnames(datL) <- NULL
+    }
+    if (do$right) {
+      datR <- switch(method,
+        classical = BayesGLM_results$cortex_right$result_classical[[ss]]$estimates,
+        Bayesian = BayesGLM_results$cortex_right$field_estimates[[ss]]
+      )
+      mwallR <- BayesGLM_results$cortex_right$spatial$mask
+      colnames(datR) <- NULL
+    }
+    if (do$sub) {
+      datSub <- switch(method,
+        classical = BayesGLM_results$subcort$result_classical[[ss]]$estimates,
+        Bayesian = BayesGLM_results$subcortical$field_estimates[[ss]]
+      )
+      colnames(datSub) <- NULL
+    }
+    result_xii[[ss]] <- as.xifti(
+      cortexL = datL,
+      cortexL_mwall = if (do$left) { mwallL } else { NULL },
+      cortexR = datR,
+      cortexR_mwall = if (do$right) { mwallR } else { NULL },
+      subcortVol = datSub,
+      subcortLabs = submeta$labels,
+      subcortMask = submeta$mask
+    )
+    result_xii[[ss]]$meta$subcort$trans_mat <- submeta$trans_mat
+    result_xii[[ss]]$meta$subcort$trans_units <- submeta$trans_units
+    result_xii[[ss]]$meta$cifti$names <- field_names
+  }
+
+  result_xii
+}
 
 # #' Format BayesGLM results into \code{"xifti"} objects for the multi-model case
 # #' 
@@ -81,7 +84,7 @@
 
 #     for (ss in seq(nS)) {
 #       # INDEX OF BEST MODEL
-#       if (do_left) {
+#       if (do$left) {
 #         datL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$bestmodel #index of best model
 #         betaL <- BayesGLM_results$cortex_left$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
 #         sigma2L <- BayesGLM_results$cortex_left$result_multiple[[ss]]$sigma2 #V x P (P = number of models tested)
@@ -94,7 +97,7 @@
 #         betaL <- betaL[mwallL,]
 #         sigma2L <- sigma2L[mwallL,]
 #       }
-#       if (do_right) {
+#       if (do$right) {
 #         datR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$bestmodel
 #         betaR <- BayesGLM_results$cortex_right$result_multiple[[ss]]$beta_estimates #V x K x P (P = number of models tested)
 #         sigma2R <- BayesGLM_results$cortex_right$result_multiple[[ss]]$sigma2 #V x P (P = number of models tested)
@@ -106,7 +109,7 @@
 #         betaR <- betaR[mwallR,]
 #         sigma2R <- sigma2R[mwallR,]
 #       }
-#       if (do_sub) {
+#       if (do$sub) {
 #         #[TO DO]: do this for subcortex, as for L and R above
 #         #datSub <- BayesGLM_results$subcortical$result_multiple[[ss]]$bestmodel
 #         #colnames(datSub) <- NULL
@@ -114,9 +117,9 @@
 
 #       bestmodel_xii[[ss]] <- as.xifti(
 #         cortexL = datL,
-#         cortexL_mwall = if (do_left) { mwallL } else { NULL },
+#         cortexL_mwall = if (do$left) { mwallL } else { NULL },
 #         cortexR = datR,
-#         cortexR_mwall = if (do_right) { mwallR } else { NULL },
+#         cortexR_mwall = if (do$right) { mwallR } else { NULL },
 #         subcortVol = datSub,
 #         subcortLabs = submeta$labels,
 #         subcortMask = submeta$mask
@@ -127,9 +130,9 @@
 
 #       results_xii$classical[[ss]] <- as.xifti(
 #         cortexL = betaL,
-#         cortexL_mwall = if (do_left) { mwallL } else { NULL },
+#         cortexL_mwall = if (do$left) { mwallL } else { NULL },
 #         cortexR = betaR,
-#         cortexR_mwall = if (do_right) { mwallR } else { NULL },
+#         cortexR_mwall = if (do$right) { mwallR } else { NULL },
 #         subcortVol = betaSub,
 #         subcortLabs = submeta$labels,
 #         subcortMask = submeta$mask
@@ -140,9 +143,9 @@
 
 #       sigma2_xii[[ss]] <- as.xifti(
 #         cortexL = sigma2L,
-#         cortexL_mwall = if (do_left) { mwallL } else { NULL },
+#         cortexL_mwall = if (do$left) { mwallL } else { NULL },
 #         cortexR = sigma2R,
-#         cortexR_mwall = if (do_right) { mwallR } else { NULL },
+#         cortexR_mwall = if (do$right) { mwallR } else { NULL },
 #         subcortVol = sigma2Sub,
 #         subcortLabs = submeta$labels,
 #         subcortMask = submeta$mask

@@ -23,12 +23,11 @@
 #' @keywords internal
 sparse_and_PW <- function(
   BOLD, design, nV_T, nV_D,
-  session_names, field_names, design_type,
+  field_names, design_type,
   valid_cols, nT, nD,
   sqrtInv_all
   ){
 
-  nS <- length(session_names)
   nK <- length(field_names)
 	nIX <- seq(nT*nV_D)
 	nIY <- rep(seq(nV_D), each = nT)

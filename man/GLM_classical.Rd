@@ -8,7 +8,6 @@ GLM_classical(
   BOLD,
   design,
   nV_D,
-  session_names,
   field_names,
   design_type,
   vcols_ss,

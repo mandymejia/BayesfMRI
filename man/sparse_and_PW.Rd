@@ -9,7 +9,6 @@ sparse_and_PW(
   design,
   nV_T,
   nV_D,
-  session_names,
   field_names,
   design_type,
   valid_cols,
@@ -21,9 +20,9 @@ sparse_and_PW(
 \arguments{
 \item{BOLD, design, nV_T, nV_D}{See \code{BayesGLM}.}
 
-\item{session_names, field_names, design_type}{See \code{BayesGLM}.}
-
 \item{valid_cols, nT, nD, sqrtInv_all}{See \code{BayesGLM}.}
+
+\item{session_names, field_names, design_type}{See \code{BayesGLM}.}
 }
 \value{
 A list containing fields \code{y} and \code{A} (see Details)

@@ -4,27 +4,7 @@
 \alias{GLM_compare}
 \title{Classical GLM for multiple models}
 \usage{
-GLM_compare(
-  data,
-  spatial,
-  spatial_type,
-  session_names,
-  field_names,
-  design_type,
-  valid_cols,
-  nT,
-  nD,
-  var_resid,
-  sqrtInv_all
-)
-}
-\arguments{
-\item{data, spatial, spatial_type, session_names, field_names, design_type}{See \code{BayesGLM}.}
-
-\item{valid_cols, nT, nD, var_resid, sqrtInv_all}{See \code{BayesGLM}.}
-}
-\value{
-A list of results
+GLM_compare(...)
 }
 \description{
 Classical GLM for multiple models

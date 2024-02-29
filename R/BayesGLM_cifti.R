@@ -114,6 +114,8 @@ BayesGLM_cifti <- function(
   stopifnot(nbhd_order>0 && nbhd_order==round(nbhd_order))
   stopifnot(is.numeric(buffer))
 
+  do <- vector("list")
+
   # In a separate function because these checks are shared with `BayesGLM`.
   x <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
@@ -130,9 +132,9 @@ BayesGLM_cifti <- function(
     emTol = emTol
   )
   scale_BOLD <- x$scale_BOLD
-  do_Bayesian <- x$Bayes; rm(Bayes) # rename
-  do_EM <- x$do_EM; rm(EM) # rename
-  do_pw <- x$do_pw
+  do$Bayesian <- x$Bayes; rm(Bayes) # rename
+  do$EM <- x$do_EM; rm(EM) # rename
+  do$pw <- x$do_pw
   return_INLA <- x$return_INLA
   rm(x)
 
@@ -145,11 +147,11 @@ BayesGLM_cifti <- function(
     brainstructures, c("left","right","subcortical"),
     user_value_label="brainstructures"
   )
-  do_left <- ('left' %in% brainstructures)
-  do_right <- ('right' %in% brainstructures)
-  do_sub <- ('subcortical' %in% brainstructures)
-  do_cortex <- do_left || do_right
-  if (!do_cortex) { resamp_res <- NULL }
+  do$left <- ('left' %in% brainstructures)
+  do$right <- ('right' %in% brainstructures)
+  do$sub <- ('subcortical' %in% brainstructures)
+  do$cortex <- do$left || do$right
+  if (!do$cortex) { resamp_res <- NULL }
 
   ### Initialize `spatial` to store all spatial information.
   spatial <- list(
@@ -161,9 +163,9 @@ BayesGLM_cifti <- function(
       nbhd_order=nbhd_order, buffer=buffer
     )
   )
-  if (!do_left) { spatial$cortexL <- NULL }
-  if (!do_right) { spatial$cortexR <- NULL }
-  if (!do_sub) { spatial$subcort <- NULL }
+  if (!do$left) { spatial$cortexL <- NULL }
+  if (!do$right) { spatial$cortexR <- NULL }
+  if (!do$sub) { spatial$subcort <- NULL }
 
   ### Initialize `nV0` to store the total number of locations for each brain structure.
   nV0 <- as.character(lapply(spatial, function(q){NA}))
@@ -216,7 +218,7 @@ BayesGLM_cifti <- function(
   #   in `BOLD` `xifti`; HCP group average inflated surface from `ciftiTools`.
   # Still do this even if `!Bayes` to get surfaces for visualization.
   # Note that surfaces may be resampled (again)
-  if (do_left) {
+  if (do$left) {
     # Get surface.
     if (is.null(surfL)) {
       if (is_xifti && !is.null(BOLD[[1]]$surf$cortex_left)) {
@@ -242,7 +244,7 @@ BayesGLM_cifti <- function(
     spatial$cortexL$surf <- surfL; rm(surfL)
   }
 
-  if (do_right) {
+  if (do$right) {
     # Get surface.
     if (is.null(surfR)) {
       if (is_xifti && !is.null(BOLD[[1]]$surf$cortex_right)) {
@@ -285,7 +287,7 @@ BayesGLM_cifti <- function(
   for (ss in seq(nS)) {
     ### Read and/or resample the CIFTI data. -----------------------------------
     if (is_xifti) {
-      if (do_cortex) {
+      if (do$cortex) {
         if (!is.null(resamp_res)) {
           if (any(ciftiTools::infer_resolution(BOLD[[ss]])!=resamp_res)) {
             if (verbose>0) { cat(BOLD_input_msg(ss, nS, "resample")) }
@@ -307,24 +309,24 @@ BayesGLM_cifti <- function(
       "volumes. Repeat `make_design` with a revised `nTime`, or correct `BOLD`."
     )}
 
-    if (do_left && is.null(BOLD[[ss]]$data$cortex_left)) { stop("Left cortex data is missing from this BOLD session.") }
-    if (do_right && is.null(BOLD[[ss]]$data$cortex_right)) { stop("Right cortex data is missing from this BOLD session.") }
-    if (do_sub && is.null(BOLD[[ss]]$data$subcort)) { stop("Subcortex data is missing from this BOLD session.") }
+    if (do$left && is.null(BOLD[[ss]]$data$cortex_left)) { stop("Left cortex data is missing from this BOLD session.") }
+    if (do$right && is.null(BOLD[[ss]]$data$cortex_right)) { stop("Right cortex data is missing from this BOLD session.") }
+    if (do$sub && is.null(BOLD[[ss]]$data$subcort)) { stop("Subcortex data is missing from this BOLD session.") }
 
     ### Total spatial dims, `nV0`. Check it's consistent across sessions. ------
     # `xii_res`: total spatial dims according to the BOLD data.
     #   Names: 'left', 'right', 'subcort'.
     xii_res <- vector("numeric", 0)
-    if (do_cortex) {
+    if (do$cortex) {
       xii_res <- c(xii_res, ciftiTools::infer_resolution(BOLD[[ss]]))
     }
-    if (do_sub) {
+    if (do$sub) {
       xii_res <- c(xii_res, c(subcort=sum(BOLD[[ss]]$meta$subcort$mask)))
     }
 
     # Set `nV0` based on the `xii_res` of the first session...
     if (ss == 1) {
-      if (do_left) {
+      if (do$left) {
         # Check that the left cortex data is nonempty.
         if (xii_res["left"] %in% c(0, NA, NaN)) { stop("This BOLD session does not seem to have left cortex data.") }
         surfL_res <- get_nV(spatial$cortexL)$T
@@ -343,7 +345,7 @@ BayesGLM_cifti <- function(
         }
         nV0["cortexL"] <- xii_res["left"]
       }
-      if (do_right) {
+      if (do$right) {
         # Check that the right cortex data is nonempty.
         if (xii_res["right"] %in% c(0, NA, NaN)) { stop("This BOLD session does not seem to have right cortex data.") }
         surfL_res <- get_nV(spatial$cortexR)$T
@@ -362,14 +364,8 @@ BayesGLM_cifti <- function(
         }
         nV0["cortexR"] <- xii_res["right"]
       }
-      if (do_sub) {
-        submeta <- BOLD[[ss]]$meta$subcort
-        spatial$subcort$label <- submeta$mask*0;
-        spatial$subcort$label[submeta$mask==TRUE] <- submeta$labels
-        spatial$subcort$trans_mat <- submeta$trans_mat
-        spatial$subcort$trans_units <- submeta$trans_units
-        nV0["subcort"] <- sum(submeta$mask)
-        rm(submeta)
+      if (do$sub) {
+        nV0["subcort"] <- sum(BOLD[[ss]]$meta$subcort$mask)
       }
 
       # Per-location design: check `sum(nV0)` matches with `design`.
@@ -384,21 +380,21 @@ BayesGLM_cifti <- function(
 
     # Check `nV0` matches `xii_res` of other sessions.
     } else {
-      if (do_left && (xii_res["left"] != nV0["cortexL"])) {
+      if (do$left && (xii_res["left"] != nV0["cortexL"])) {
         stop(
           "This BOLD session appears to have left cortex data with ",
           xii_res["left"], "total vertices, while the first session ",
           "appears to have", nV0["cortexL"], "total vertices."
         )
       }
-      if (do_right && (xii_res["right"] != nV0["cortexR"])) {
+      if (do$right && (xii_res["right"] != nV0["cortexR"])) {
         stop(
           "This BOLD session appears to have right cortex data with ",
           xii_res["right"], "total vertices, while the first session ",
           "appears to have", nV0["cortexR"], "total vertices."
         )
       }
-      if (do_sub && (xii_res["subcort"] != nV0["subcort"])) {
+      if (do$sub && (xii_res["subcort"] != nV0["subcort"])) {
         stop(
           "This BOLD session appears to have subcortical data with",
           xii_res["subcort"], "total voxels, while the first session ",
@@ -415,32 +411,33 @@ BayesGLM_cifti <- function(
 
     # cortex: `mask`. subcortex: `label`, `trans_mat`, `trans_units`.
     if (ss == 1) {
-      if (do_left) {
+      if (do$left) {
         spatial$cortexL$mask <- xii_meta$cortex$medial_wall_mask$left
         if (is.null(spatial$cortexL$mask)) { spatial$cortexL$mask <- rep(TRUE, nV0["cortexL"]) }
       }
-      if (do_right) {
+      if (do$right) {
         spatial$cortexR$mask <- xii_meta$cortex$medial_wall_mask$right
         if (is.null(spatial$cortexR$mask)) { spatial$cortexR$mask <- rep(TRUE, nV0["cortexR"]) }
       }
-      if (do_sub) {
+      if (do$sub) {
         submeta <- xii_meta$subcort
         spatial$subcort$label <- submeta$mask*0;
         spatial$subcort$label[submeta$mask==TRUE] <- submeta$labels
         spatial$subcort$trans_mat <- submeta$trans_mat
         spatial$subcort$trans_units <- submeta$trans_units
-        rm(submeta)
+      } else {
+        submeta <- NULL
       }
     # For multi-session: ensure medial walls and subcortex masks match.
     # [TO DO]: just use their intersection.
     } else {
-      if (do_left) {
+      if (do$left) {
         stopifnot(all(spatial$cortexL$mask == xii_meta$cortex$medial_wall_mask$left))
       }
-      if (do_right) {
+      if (do$right) {
         stopifnot(all(spatial$cortexR$mask == xii_meta$cortex$medial_wall_mask$right))
       }
-      if (do_sub) {
+      if (do$sub) {
         stopifnot(length(dim(spatial$subcort$label)) == length(dim(xii_meta$subcort$mask)))
         stopifnot(all(dim(spatial$subcort$label)) == dim(xii_meta$subcort$mask))
         stopifnot(all((spatial$subcort$label!=0) == xii_meta$subcort$mask))
@@ -455,9 +452,9 @@ BayesGLM_cifti <- function(
     function(bs){ setNames(lapply(BOLD, '[[', bs), session_names) }
   )
   names(BOLD) <- c("cortexL", "cortexR", "subcort")
-  if (!do_left) { BOLD$cortexL <- NULL }
-  if (!do_right) { BOLD$cortexR <- NULL }
-  if (!do_sub) { BOLD$subcort <- NULL }
+  if (!do$left) { BOLD$cortexL <- NULL }
+  if (!do$right) { BOLD$cortexR <- NULL }
+  if (!do$sub) { BOLD$subcort <- NULL }
 
   # Transpose all `BOLD` to `TxV`.
   BOLD <- lapply(BOLD, function(q){lapply(q, t)})
@@ -516,7 +513,7 @@ BayesGLM_cifti <- function(
       nuisance = nuisance,
       spatial = spatial[[dname_bb]],
       scale_BOLD = scale_BOLD,
-      Bayes = do_Bayesian,
+      Bayes = do$Bayesian,
       #EM = do_EM,
       ar_order = ar_order,
       ar_smooth = ar_smooth,
@@ -536,14 +533,18 @@ BayesGLM_cifti <- function(
   NULL
 
   # if (design_type != "multi") {
-  #   estimate_xii <- list(Bayes=NULL, classical=NULL)
-  #   for (method in c("classical", "Bayes")[seq(1+do_Bayesian)]) {
-  #     estimate_xii[[method]] <- BayesGLM_cifti_format_results(
-  #       BayesGLM_results = BayesGLM_results,
-  #       session_names = session_names,
-  #       method = method
-  #     )
-  #   }
+    estimate_xii <- list(Bayes=NULL, classical=NULL)
+    for (method in c("classical", "Bayes")[seq(1+do$Bayesian)]) {
+      estimate_xii[[method]] <- BayesGLM_cifti_format_results(
+        BayesGLM_results = BayesGLM_results,
+        do = do,
+        spatial = spatial,
+        submeta = submeta,
+        session_names = session_names,
+        field_names = field_names,
+        method = method
+      )
+    }
   #   bestmodel_xii <- sigma2_xii <- NULL
 
   # } else {
@@ -562,26 +563,19 @@ BayesGLM_cifti <- function(
   #   # field_names <- field_names
   # }
 
-  # result <- list(
-  #   estimate_xii = estimate_xii,
-  #   bestmodel_xii = bestmodel_xii,
-  #   sigma2_xii = sigma2_xii,
-  #   design = design, # after centering/scaling, before nuisance regression / prewhitening
-  #   design_type = design_type,
-  #   nuisance = nuisance,
-  #   #stimulus = stimulus,
-  #   #HRFs = HRFs, #convolved HRFs
-  #   #HRF_basis = HRF, #HRF basis functions
-  #   #FIR = FIR,
-  #   #design_FIR = design_FIR,
-  #   field_names = colnames(design$design[[1]]),
-  #   session_names = session_names,
-  #   dim = c(n_sess = nS, n_time = nT, n_location = nV_bs[nV_bs!=0]),
-  #   BayesGLM_results = BayesGLM_results
-  # )
+  result <- list(
+    estimate_xii = estimate_xii,
+    #bestmodel_xii = bestmodel_xii,
+    #sigma2_xii = sigma2_xii,
+    nuisance = nuisance,
+    #FIR = FIR,
+    #design_FIR = design_FIR,
+    field_names = field_names,
+    session_names = session_names,
+    dim = c(n_sess = nS, n_time = nT, n_location = nV0),
+    BayesGLM_results = BayesGLM_results
+  )
+  class(result) <- "BayesGLM_cifti"
 
-  # class(result) <- "BayesGLM_cifti"
-
-  # if (verbose>0) cat('Done!\n')
-  # result
+  result
 }

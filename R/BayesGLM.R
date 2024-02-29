@@ -239,6 +239,7 @@ BayesGLM <- function(
   )
   var_resid <- x$var_resid
   sqrtInv_all <- x$sqrtInv_all # `NULL` if `!do_pw`
+  prewhiten_info <- x[c("AR_coefs_avg", "var_avg", "max_AIC")]
   rm(x)
 
   # Classical GLM. -------------------------------------------------------------
@@ -260,7 +261,7 @@ BayesGLM <- function(
     # Apply prewhitening, if applicable.
     x <- sparse_and_PW(
       BOLD[[ss]], design[[ss]], nV$T, nV$D,
-      session_names, field_names, design_type,
+      field_names, design_type,
       vcols_ss, nT[ss], nD,
       sqrtInv_all
     )
@@ -272,10 +273,10 @@ BayesGLM <- function(
     # Compute classical GLM.
     result_classical[[ss]] <- GLM_classical(
       BOLD[[ss]], design[[ss]], nV$D,
-      session_names, field_names, design_type,
+      field_names, design_type,
       vcols_ss, nT[ss], nD,
       var_resid, sqrtInv_all,
-      compute_SE=TRUE
+      do_pw, compute_SE=TRUE
     )
 
     # Set up for Bayesian GLM.
@@ -295,8 +296,6 @@ BayesGLM <- function(
       rm(XA_ss, A_sparse_ss)
     }
   }
-
-  browser()
 
   # [NOTE] Moved to `GLM_FIR.R`: FIR Model.
 
@@ -370,46 +369,31 @@ BayesGLM <- function(
   #   )
   #   attr(INLA_model_obj, "format") <- return_INLA
   # } else {
-  #   field_estimates <- lapply(result_classical, function(x){ x$estimates })
-  #   attr(field_estimates, "GLM_type") <- "classical"
+    field_estimates <- lapply(result_classical, function(x){ x$estimates })
+    attr(field_estimates, "GLM_type") <- "classical"
   # }
 
-  NULL
+  result <- list(
+    field_estimates = field_estimates, # new in 6.0: these are masked.
+    INLA_model_obj = INLA_model_obj,
+    hyperpar_posteriors = hyperpar_posteriors,
+    theta_estimates = theta_estimates,
+    result_classical = result_classical,
+    #result_FIR = result_FIR,
+    spatial = spatial,
+    spde = spde,
+    mask_qc = mask_qc,
+    field_names = field_names,
+    session_names = session_names,
+    # For joint group model ~~~~~~~~~~~~~
+    #posterior_Sig_inv = Sig_inv,
+    y = y_all,
+    X = XA_all_list,
+    prewhiten_info = prewhiten_info,
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    call = match.call()
+  )
+  class(result) <- "BayesGLM"
 
-  # # Clean up and return. -----------------------------------------------------
-  # result_multiple <- NULL
-  # prewhiten_info <- if (do_pw) {
-  #   list(phi = avg_AR, sigma_sq = avg_var, AIC = max_AIC)
-  # } else {
-  #   NULL
-  # }
-  # result <- list(
-  #   field_estimates = field_estimates,
-  #   INLA_model_obj = INLA_model_obj,
-  #   hyperpar_posteriors = hyperpar_posteriors,
-  #   theta_estimates = theta_estimates,
-  #   result_classical = result_classical,
-  #   result_multiple = result_multiple,
-  #   #result_FIR = result_FIR,
-  #   mesh = mesh,
-  #   spde = spde,
-  #   mesh_orig = mesh_orig,
-  #   mask = mask,
-  #   mask_orig = mask_orig, #[TO DO] return the params passed into the function instead?
-  #   mask_qc = mask_qc,
-  #   design = design,
-  #   field_names = field_names,
-  #   session_names = session_names,
-  #   n_sess_orig = nS_orig,
-  #   # For joint group model ~~~~~~~~~~~~~
-  #   #posterior_Sig_inv = Sig_inv,
-  #   y = y_all,
-  #   X = XA_all_list,
-  #   prewhiten_info = prewhiten_info,
-  #   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  #   call = match.call()
-  # )
-  # class(result) <- "BayesGLM"
-
-  # result
+  result
 }
