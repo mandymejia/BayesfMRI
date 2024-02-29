@@ -397,7 +397,7 @@ BayesGLM <- function(
       if (is.null(num.threads) | num.threads < 2) {
         # Initialize the block diagonal covariance matrix
         template_pw <- Matrix::bandSparse(
-          n = nT, k = 0:(ar_order + 1), symmetric = TRUE. #[TO DO]: Check that nT is correct here for multi-session analysis
+          n = nT, k = 0:(ar_order + 1), symmetric = TRUE #[TO DO]: Check that nT is correct here for multi-session analysis
         )
         template_pw_list <- rep(list(template_pw), nV)
         for (vv in 1:nV) {
@@ -760,15 +760,23 @@ BayesGLM <- function(
     names(result_multiple) <- session_names
     for (ss in seq(nS)) {
 
-      y_ss <- t(fMRItools::scale_timeseries(t(data[[ss]]$BOLD), scale=scale_BOLD, transpose=FALSE))
+      y_ss <- data[[ss]]$BOLD
       X_ss <- design_multiple[[ss]]
       X2_ss <- data[[ss]]$nuisance
+
+      #ingredients for computing out-of-sample prediction error
+      nT2 <- round(nT/2)
+      inds1 <- 1:nT2 #indices of first half of timeseries
+      inds2 <- setdiff(1:nT, inds1) #indices of second half of timeseries
+      y_ss1 <- y_ss[inds1,]
+      y_ss2 <- y_ss[inds2,]
+      X2_ss2 <- cbind(1, X2_ss[inds2,]) #need this for nuisance regression of the "held out" data
 
       #loop over models
       nP <- dim(X_ss)[3]
       beta_hat_s <- array(NA, dim=c(nV_all, nK, nP),
                           dimnames = list(loc = 1:nV_all, field = field_names, model = 1:nP))
-      sigma2_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
+      sigma2_s <- RSS_OS_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
       AIC_s <- AIC2_s <- matrix(NA, nrow=nV_all, ncol=nP) #compute AIC for comparison with no-HRF model
       #AIC2 is based on assuming that the true DOF is nT/2 to account for autocorrelation. This just a hack to examine the sensitivity to residual dependence.
       for(pp in 1:nP){
@@ -783,8 +791,8 @@ BayesGLM <- function(
           X_sp <- X_ss[,,pp]#/max(X_ss[,,pp])
         }
         X_sp <- cbind(X_sp, rep(1, nT), X2_ss) #combine design (possibly NULL) with intercept and nuisance
-        #[TO DO]: Check that nT is correct in the line above for multi-session analysis. Should it be nT[ss] ?
 
+        #1. Compute standard model fit metrics (s2, AIC)
 
         XtX_inv_pp <- try(Matrix::solve(Matrix::crossprod(X_sp)))
         if (inherits(XtX_inv_pp, "try-error")) {
@@ -799,6 +807,29 @@ BayesGLM <- function(
         #[TO DO] Consider CV prediction instead of AIC since the true DOF should be less than nT. Can split the timeseries into blocks to preserve the dependence structure.
         AIC_s[mask==TRUE,pp] <- 2*ncol(X_sp) + nT*log(colSums(resid_pp^2)/nT)
         AIC2_s[mask==TRUE,pp] <- 2*ncol(X_sp) + (nT/2)*log(colSums(resid_pp^2)/nT) #replace nT with nT/2. This just a hack to examine the sensitivity to residual dependence.
+
+        #2. Compute out-of-sample prediction error
+
+        X_sp1 <- X_sp[inds1,] #for training the model
+        X_sp2 <- X_ss[inds2,,pp] #for testing the model (only use the task regressors, will do nuisance regression on holdout set first)
+
+        #2a. fit model using first half
+        XtX_inv_pp1 <- try(Matrix::solve(Matrix::crossprod(X_sp1)))
+        if (inherits(XtX_inv_pp1, "try-error")) {
+          warning(paste0("Numerical instability in design matrix for model ",pp))
+        }
+        coef_pp1 <- XtX_inv_pp1 %*% t(X_sp1) %*% y_ss1 #a vector of (estimates for location 1, estimates for location 2, ...)
+
+        #2a. do nuisance regression for second half (because this should be tailored to the data)
+        Imat <- diag(1, nrow(X2_ss2))
+        Hmat <- X2_ss2 %*% try(Matrix::solve(Matrix::crossprod(X2_ss2))) %*% t(X2_ss2)
+        y_ss2_nuis <- (Imat - Hmat) %*% y_ss2 #regress out nuisance from y[inds2]
+        X_sp2_nuis <- (Imat - Hmat) %*% X_sp2 #regress out nuisance from X[inds2,]
+
+        #2b. apply coefficient estimates to second half
+        coef_tasks <- coef_pp1[1:nK,] #these are only the coefficients corresponding to the HRFs
+        resid_pp2 <- y_ss2_nuis - X_sp2_nuis %*% coef_tasks #if X_sp2 is all zeros (no HRF model, the second term will be zero, which works)
+        RSS_OS_s[mask==TRUE,pp] <- colSums(resid_pp2^2)
       }
 
       #determine best model (minimum residual error)
@@ -810,9 +841,20 @@ BayesGLM <- function(
         wm
       })
 
+      #determine best model (out-of-sample prediction error)
+      bestmodel_OS_s <- apply(RSS_OS_s, 1, function(x){
+        wm <- which.min(x)
+        varx <- var(x, na.rm=TRUE)
+        if(is.na(varx)) varx <- 0
+        if(varx==0) wm <- NA
+        wm
+      })
+
       result_multiple[[ss]] <- list(beta_estimates = beta_hat_s,
                                     bestmodel = bestmodel_s,
+                                    bestmodel_OS = bestmodel_OS_s,
                                     sigma2 = sigma2_s,
+                                    RSS_OS = RSS_OS_s,
                                     AIC = AIC_s,
                                     AIC2 = AIC2_s)
     }
