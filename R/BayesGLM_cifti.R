@@ -134,7 +134,7 @@ BayesGLM_cifti <- function(
   scale_BOLD <- x$scale_BOLD
   do$Bayesian <- x$Bayes; rm(Bayes) # rename
   do$EM <- x$do_EM; rm(EM) # rename
-  do$pw <- x$do_pw
+  do$pw <- x$do_pw # unused
   return_INLA <- x$return_INLA
   rm(x)
 
@@ -471,7 +471,7 @@ BayesGLM_cifti <- function(
         "If provided, `nuisance` should be a sessions-length list."
       }
       if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
-        warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
+        #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
       }
     }
     names(nuisance) <- session_names

@@ -121,6 +121,8 @@ BayesGLM <- function(
   rm(is_mesh, is_voxel, mesh_spatial_names, voxel_spatial_names)
   nV <- get_nV(spatial, spatial_type)
 
+  do <- vector("list")
+
   # In a separate function because these checks are shared with `BayesGLM_cifti`.
   x <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
@@ -137,9 +139,9 @@ BayesGLM <- function(
     emTol = emTol
   )
   scale_BOLD <- x$scale_BOLD
-  do_Bayesian <- x$Bayes; rm(Bayes) # rename
-  do_EM <- x$do_EM; rm(EM) # rename
-  do_pw <- x$do_pw
+  do$Bayesian <- x$Bayes; rm(Bayes) # rename
+  do$EM <- x$do_EM; rm(EM) # rename
+  do$pw <- x$do_pw
   return_INLA <- x$return_INLA
   rm(x)
 
@@ -224,7 +226,7 @@ BayesGLM <- function(
   rm(nuisance, nuis_ss)
 
   # [TO DO] Question: mesh vs surf? same?
-  if (spatial_type=="voxel" && do_pw && ar_smooth > 0) {
+  if (spatial_type=="voxel" && do$pw && ar_smooth > 0) {
     stop("[TO DO] How to support this?")
   }
   # mesh$loc,mesh$graph$tv,mesh$n
@@ -235,10 +237,10 @@ BayesGLM <- function(
     session_names, field_names, design_type,
     valid_cols, nT, nD,
     ar_order, ar_smooth, aic, n_threads,
-    do_pw, verbose
+    do$pw, verbose
   )
   var_resid <- x$var_resid
-  sqrtInv_all <- x$sqrtInv_all # `NULL` if `!do_pw`
+  sqrtInv_all <- x$sqrtInv_all # `NULL` if `!do$pw`
   prewhiten_info <- x[c("AR_coefs_avg", "var_avg", "max_AIC")]
   rm(x)
 
@@ -263,7 +265,7 @@ BayesGLM <- function(
       BOLD[[ss]], design[[ss]], nV$T, nV$D,
       field_names, design_type,
       vcols_ss, nT[ss], nD,
-      sqrtInv_all
+      sqrtInv_all[[ss]]
     )
     BOLD[[ss]] <- x$BOLD
     design[[ss]] <- x$design
@@ -275,8 +277,8 @@ BayesGLM <- function(
       BOLD[[ss]], design[[ss]], nV$D,
       field_names, design_type,
       vcols_ss, nT[ss], nD,
-      var_resid, sqrtInv_all,
-      do_pw, compute_SE=TRUE
+      var_resid, sqrtInv_all[[ss]],
+      do$pw, compute_SE=TRUE
     )
 
     # Set up for Bayesian GLM.
@@ -284,7 +286,7 @@ BayesGLM <- function(
       y_all <- vector("numeric")
       XA_all_list <- NULL
     }
-    if (do_Bayesian) {
+    if (do$Bayesian) {
       y_all <- c(y_all, BOLD[[ss]])
       #XA_ss <- design
       #post-multiply each design matrix by A (n_data x n_mesh) for Bayesian GLM
@@ -300,7 +302,7 @@ BayesGLM <- function(
   # [NOTE] Moved to `GLM_FIR.R`: FIR Model.
 
   # # Bayesian GLM. --------------------------------------------------------------
-  # if (do_Bayesian) {
+  # if (do$Bayesian) {
   #   #construct betas and repls objects
   #   if (spatial_type == "mesh") {
   #     n_mesh <- length(mesh$idx$loc)

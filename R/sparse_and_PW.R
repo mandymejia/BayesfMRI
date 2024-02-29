@@ -52,7 +52,6 @@ sparse_and_PW <- function(
     # bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
 	}
 
-
   # Prewhiten, if applicable. -----
   if (!is.null(sqrtInv_all)) {
      y <- as.vector(sqrtInv_all %*% y)

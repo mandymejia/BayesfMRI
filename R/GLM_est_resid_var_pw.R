@@ -27,6 +27,7 @@ GLM_est_resid_var_pw <- function(
   }
 
   # Estimate parameters for each session.
+  if (do_pw && verbose>0) { cat("\tPrewhitening...\n") }
   for (ss in seq(nS)) {
     vcols_ss <- valid_cols[ss,]
     #[TO DO] if design matrix varies spatially, need to adapt this
@@ -63,9 +64,9 @@ GLM_est_resid_var_pw <- function(
     rm(x)
   }
 
-  sqrtInv_all <- make_sqrtInv_all(
-    nT, nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg, verbose
-  )
+  sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q, 
+    nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg, verbose
+  )})
 
   list(
     var_resid=var_resid, sqrtInv_all=sqrtInv_all,

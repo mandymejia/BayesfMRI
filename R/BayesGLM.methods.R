@@ -13,11 +13,9 @@ summary.BayesGLM <- function(object, ...) {
   x <- list(
     fields = object$field_names,
     sessions = object$session_names,
-    n_sess_orig = object$n_sess_orig,
-    n_loc_total = length(object$mask),
-    n_loc_modeled = sum(object$mask),
-    GLM_type = attr(object$field_estimates, "GLM_type"),
-    design_is_multiple = !is.null(object$result_multiple)
+    n_loc_total = length(object$spatial$mask),
+    n_loc_modeled = sum(object$spatial$mask),
+    GLM_type = attr(object$field_estimates, "GLM_type")
   )
 
   class(x) <- "summary.BayesGLM"
@@ -40,11 +38,7 @@ print.summary.BayesGLM <- function(x, ...) {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
   }
   cat("Locations:", x$n_loc_modeled, "modeled,", x$n_loc_total, "total", "\n")
-  if (x$design_is_multiple) {
-    cat("GLM type: ", "classical (multiple designs)", "\n")
-  } else {
-    cat("GLM type: ", x$GLM_type, "\n")
-  }
+  cat("GLM type: ", x$GLM_type, "\n")
   cat("\n")
   invisible(NULL)
 }

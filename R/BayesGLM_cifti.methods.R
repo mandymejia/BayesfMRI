@@ -19,8 +19,7 @@ summary.BayesGLM_cifti <- function(object, ...) {
     n_loc_total = lapply(x, '[[', "n_loc_total"),
     n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
     #xii = summary(x$estimate_xii$classical[[1]]),
-    GLM_type = x[[1]]$GLM_type,
-    design_is_multiple = x[[1]]$design_is_multiple
+    GLM_type = x[[1]]$GLM_type
   )
   class(x) <- "summary.BayesGLM_cifti"
 
@@ -48,11 +47,7 @@ print.summary.BayesGLM_cifti <- function(x, ...) {
       "modeled,", x$n_loc_total[[ii]], "total", "\n"
     )
   }
-  if (x$design_is_multiple) {
-    cat("GLM type: ", "classical (multiple designs)", "\n")
-  } else {
-    cat("GLM type: ", x$GLM_type, "\n")
-  }
+  cat("GLM type: ", x$GLM_type, "\n")
   cat("\n")
   invisible(NULL)
 }
