@@ -212,7 +212,7 @@ BayesGLM <- function(
       ) #[TO DO] if design matrix varies spatially, need to adapt this.
       # Design matrix will start as TxKxV and continue in that format after this step.
       # [TO DO] Re-scale design?
-      nuisance[[ss]] <- NULL
+      nuisance[ss] <- list(NULL)
     }
 
     # Scale data.

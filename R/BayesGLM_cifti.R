@@ -274,7 +274,7 @@ BayesGLM_cifti <- function(
 
   BOLD_input_msg <- function(ss, nS, do=c("read", "resample")){
     do <- switch(do, read="Reading", resample="Resampling")
-    out <- paste0("\t", do,  " BOLD data")
+    out <- if (ss==1) { paste0("\t", do,  " BOLD data") } else { "" }
     if (nS==1) {
       out <- paste0(out, ".\n")
     } else {
@@ -488,12 +488,12 @@ BayesGLM_cifti <- function(
   ### Make DCT bases in `design` for the high-pass filter. ---------------------
   for (ss in seq(nS)) {
     nuisance[[ss]] <- cbind2(nuisance[[ss]],
-      BayesGLM_cifti_make_DCT(DCT, hpf, nT, verbose)
+      BayesGLM_cifti_make_DCT(DCT, hpf, nT[ss], verbose)
     )
   }
 
   # Do GLM. --------------------------------------------------------------------
-  BayesGLM_results <- list(cortex_left = NULL, cortex_right = NULL, subcort = NULL)
+  BayesGLM_results <- list(cortexL = NULL, cortexR = NULL, subcort = NULL)
 
   ## Loop through brainstructures. ---------------------------------------------
   bs_names <- data.frame(

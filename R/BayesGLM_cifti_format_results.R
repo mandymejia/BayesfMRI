@@ -1,43 +1,41 @@
 #' Format BayesGLM results into \code{"xifti"} objects
-#' 
-#' Format beta estimates of the BayesGLM results into list of \code{"xifti"} 
+#'
+#' Format beta estimates of the BayesGLM results into list of \code{"xifti"}
 #'  objects for each session.
-#' 
+#'
 #' @param BayesGLM_results The list of BayesGLM results
 #' @param do,spatial,submeta,session_names,field_names See \code{BayesGLM_cifti}.
 #' @param method \code{"classical"} or \code{"Bayesian"}
-#' @return The list of \code{"xifti"} objects 
-#' @keywords internal 
-#' 
+#' @return The list of \code{"xifti"} objects
+#' @keywords internal
+#'
 BayesGLM_cifti_format_results <- function(
-  BayesGLM_results, do, 
-  spatial, submeta, 
-  session_names, field_names, 
+  BayesGLM_results, do,
+  spatial, submeta,
+  session_names, field_names,
   method=c("classical", "Bayesian")){
 
   nS <- length(session_names)
   method <- match.arg(method, c("classical", "Bayesian"))
-
-  browser()
 
   result_xii <- setNames(vector("list", nS), session_names)
   datL <- datR <- datSub <- NULL
   for (ss in seq(nS)) {
     if (do$left) {
       datL <- switch(method,
-        classical = BayesGLM_results$cortex_left$result_classical[[ss]]$estimates,
-        Bayesian = BayesGLM_results$cortex_left$field_estimates[[ss]]
+        classical = BayesGLM_results$cortexL$result_classical[[ss]]$estimates,
+        Bayesian = BayesGLM_results$cortexL$field_estimates[[ss]]
       )
       # Update mwall b/c `mask2` in `BayesGLM` can change the medial wall.
-      mwallL <- BayesGLM_results$cortex_left$spatial$mask
+      mwallL <- BayesGLM_results$cortexL$spatial$mask
       colnames(datL) <- NULL
     }
     if (do$right) {
       datR <- switch(method,
-        classical = BayesGLM_results$cortex_right$result_classical[[ss]]$estimates,
-        Bayesian = BayesGLM_results$cortex_right$field_estimates[[ss]]
+        classical = BayesGLM_results$cortexR$result_classical[[ss]]$estimates,
+        Bayesian = BayesGLM_results$cortexR$field_estimates[[ss]]
       )
-      mwallR <- BayesGLM_results$cortex_right$spatial$mask
+      mwallR <- BayesGLM_results$cortexR$spatial$mask
       colnames(datR) <- NULL
     }
     if (do$sub) {
@@ -65,16 +63,16 @@ BayesGLM_cifti_format_results <- function(
 }
 
 # #' Format BayesGLM results into \code{"xifti"} objects for the multi-model case
-# #' 
-# #' Format beta estimates of the BayesGLM results for the multi-model case into 
+# #'
+# #' Format beta estimates of the BayesGLM results for the multi-model case into
 # #'  list of \code{"xifti"} objects for each session.
-# #' 
+# #'
 # #' @param BayesGLM_results The list of BayesGLM results
 # #' @param session_names The session names
 # #' @param method \code{"classical"} or \code{"Bayesian"}
-# #' @return The list of \code{"xifti"} objects 
-# #' @keywords internal 
-# #' 
+# #' @return The list of \code{"xifti"} objects
+# #' @keywords internal
+# #'
 # BayesGLM_cifti_format_results_multi <- function(
 #   BayesGLM_results, session_names, method=c("classical", "Bayesian")){
 
@@ -156,8 +154,8 @@ BayesGLM_cifti_format_results <- function(
 #     }
 
 #   list(
-#     bestmodel_xii = bestmodel_xii, 
-#     result_xii = result_xii, 
+#     bestmodel_xii = bestmodel_xii,
+#     result_xii = result_xii,
 #     sigma2_xii = sigma2_xii
 #   )
 # }

@@ -392,7 +392,7 @@ BayesGLM2 <- function(
 
   if (is_cifti) {
     out <- list(
-      contrast_estimates_xii = as.xifti(
+      contrast_estimate_xii = as.xifti(
         out$model_results$cortex_left$estimates,
         out$model_results$cortex_left$mask,
         out$model_results$cortex_right$estimates,
@@ -401,7 +401,7 @@ BayesGLM2 <- function(
       activations_xii = NULL,
       BayesGLM2_results = out
     )
-    out$contrast_estimates_xii$meta$cifti$names <- names(contrasts)
+    out$contrast_estimate_xii$meta$cifti$names <- names(contrasts)
     if (do_excur) {
       act_xii <- as.xifti(
         out$BayesGLM2_results$model_results$cortex_left$active,

@@ -18,7 +18,7 @@ summary.BayesGLM_cifti <- function(object, ...) {
     n_sess_orig = x[[1]]$n_sess_orig,
     n_loc_total = lapply(x, '[[', "n_loc_total"),
     n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
-    #xii = summary(x$estimates_xii$classical[[1]]),
+    #xii = summary(x$estimate_xii$classical[[1]]),
     GLM_type = x[[1]]$GLM_type,
     design_is_multiple = x[[1]]$design_is_multiple
   )
