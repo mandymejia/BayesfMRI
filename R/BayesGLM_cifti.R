@@ -185,7 +185,7 @@ BayesGLM_cifti <- function(
   rm(x)
   if (verbose>0) {
     cat("Number of timepoints:    ",
-      if (length(unique(nT))==1) { nT } else { paste0(min(nT), "-", max(nT)) }, "\n")
+      if (length(unique(nT))==1) { nT[1] } else { paste0(min(nT), "-", max(nT)) }, "\n")
     cat("Number of fields:        ", nK, "\n")
   }
 
@@ -318,6 +318,7 @@ BayesGLM_cifti <- function(
   BOLD_input_msg <- function(ss, nS, do=c("read", "resample")){
     do <- switch(do, read="Reading", resample="Resampling")
     out <- if (ss==1) { paste0("\t", do,  " BOLD data") } else { "" }
+    if (do=="resample") { out <- paste0(out, " to ", resamp_res) }
     if (nS==1) {
       out <- paste0(out, ".\n")
     } else {
@@ -334,7 +335,7 @@ BayesGLM_cifti <- function(
         if (!is.null(resamp_res)) {
           if (any(ciftiTools::infer_resolution(BOLD[[ss]])!=resamp_res)) {
             if (verbose>0) { cat(BOLD_input_msg(ss, nS, "resample")) }
-            BOLD[[ss]] <- resample_xifti(BOLD[[ss]], resamp_res=resamp_res)
+            BOLD[[ss]] <- resample_xifti(BOLD[[ss]], resamp_res=resamp_res, verbose=FALSE)
           }
         }
       }

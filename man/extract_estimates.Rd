@@ -19,8 +19,6 @@ extract_estimates(
 \item{session_names}{Vector of fMRI session names}
 
 \item{stat}{A string representing the posterior summary statistic to be returned}
-
-\item{mask}{(Optional) Original mask applied to data before model fitting}
 }
 \value{
 Estimates from inla model

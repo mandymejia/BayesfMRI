@@ -27,7 +27,6 @@ GLM_est_resid_var_pw <- function(
   }
 
   # Estimate parameters for each session.
-  if (do_pw && verbose>0) { cat("\tPrewhitening.\n") }
   for (ss in seq(nS)) {
     vcols_ss <- valid_cols[ss,]
     #[TO DO] if design matrix varies spatially, need to adapt this
@@ -35,6 +34,7 @@ GLM_est_resid_var_pw <- function(
       BOLD[[ss]], design[[ss]][,vcols_ss]
     )
     if (do_pw) {
+      if (verbose>0) { cat("\tEstimating prewhitening parameters.\n") }
       pw_est_ss <- pw_estimate(resid_ss, ar_order, aic=aic)
       var_resid[,ss] <- pw_est_ss$sigma_sq
       AR_coefs[,,ss] <- pw_est_ss$phi

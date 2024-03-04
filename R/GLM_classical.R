@@ -43,6 +43,8 @@ GLM_classical <- function(
     SE_beta_hat <- NULL
   }
 
+  colnames(beta_hat) <- colnames(SE_beta_hat) <- field_names[vcols_ss]
+
   list(
     estimates = beta_hat,
     SE_estimates = SE_beta_hat,

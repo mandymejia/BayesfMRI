@@ -69,8 +69,8 @@ sparse_and_PW <- function(
 
   # Prewhiten, if applicable. -----
   if (!is.null(sqrtInv_all)) {
-     y <- as.vector(sqrtInv_all %*% y)
-     X_all <- lapply(X_all, function(X_all_kk) { sqrtInv_all %*% X_all_kk } )
+    y <- as.vector(sqrtInv_all %*% y)
+    X_all <- lapply(X_all, function(X_all_kk) { sqrtInv_all %*% X_all_kk } )
   }
 
   # Return results. -----

@@ -404,7 +404,6 @@ BayesGLM <- function(
     if (verbose>0) cat("\tDone!\n")
 
     #extract useful stuff from INLA model result
-    browser() # [TO DO] [LEFT OFF HERE: REVISE `extract_estimates`]
     field_estimates <- extract_estimates(
       INLA_model_obj=INLA_model_obj,
       session_names=session_names,

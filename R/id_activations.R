@@ -203,9 +203,13 @@ id_activations <- function(
     the_xii <- cifti_obj$estimate_xii$classical[[session]]
     act_xii_ss <- 0*select_xifti(the_xii, match(fields, the_xii$meta$cifti$names))
     for (bs in names(the_xii$data)) {
+      bs2 <- switch(bs,
+        cortex_left="cortexL",
+        cortex_right="cortexR",
+        subcort="subcort"
+      )
       if (!is.null(the_xii$data[[bs]])) {
-        dat <- Reduce("+", lapply(activations[[bs]][[session]], function(q){1*q$active}))
-        colnames(dat) <- NULL
+        dat <- Reduce("+", lapply(activations[[bs2]][[session]], function(q){1*q$active}))
         if (method=="classical") { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
         act_xii_ss$data[[bs]] <- dat
       }
@@ -290,8 +294,7 @@ id_activations.posterior <- function(
   #excur_method <- match.arg(excur_method, c("EB","QC"))
 
   sess_ind <- which(model_obj$session_names == session)
-  mesh <- model_obj$mesh
-  n_vox <- mesh$n
+  n_vox <- nrow(model_obj$spatial$surf$vertices)
   #indices of beta vector corresponding to specified session
   inds <- (1:n_vox) + (sess_ind-1)*n_vox
 
@@ -299,28 +302,31 @@ id_activations.posterior <- function(
 	excur <- vector('list', length=length(fields))
 	act <- matrix(NA, nrow=n_vox, ncol=length(fields))
 	colnames(act) <- fields
-	for(f in fields){
+	for (field in fields) {
 
 		#if(is.null(area.limit)){
-			res.exc <- excursions.inla(
+	  stop("Broken.")
+		res.exc <- excursions.inla(
         model_obj$INLA_model_obj,
-        name=f, ind=inds, u=gamma, type='>', alpha=alpha, method="EB"
+        name=field, ind=inds, u=gamma, type='>', alpha=alpha, method="EB",
+        verbose=TRUE
       )
 		#} else {
 		#	res.exc <- excursions.inla.no.spurious(model_obj$INLA_model_obj, mesh=mesh, name=f, ind=inds, u=gamma, type='>', method=excur_method, alpha=alpha, area.limit = area.limit, use.continuous=FALSE, verbose=FALSE)
 		#}
-	  which_f <- which(fields==f)
+	  which_f <- which(fields==field)
 		act[,which_f] <- res.exc$E[inds] == 1
     excur[[which_f]] <- res.exc
 	}
 	result <- list(active=act, excursions_result=excur)
 
-  #compute size of activations
-  areas_all <- diag(INLA::inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
-  areas_act <- apply(act, 2, function(x) sum(areas_all[x==1]))
+  # [TO DO]: get the mesh
+  # #compute size of activations
+  # areas_all <- diag(INLA::inla.fmesher.smorg(mesh$loc, mesh$graph$tv, fem = 0, output = list("c0"))$c0) #area of each vertex
+  # areas_act <- apply(act, 2, function(x) sum(areas_all[x==1]))
 
-  result$areas_all <- areas_all
-  result$areas_act <- areas_act
+  # result$areas_all <- areas_all
+  # result$areas_act <- areas_act
 
 	result
 }
@@ -361,23 +367,23 @@ id_activations.classical <- function(model_obj,
   # fields, session, alpha, gamma checked in `id_activations`
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
-  beta_est <- model_obj$result_classical[[session]]$estimates
-  se_beta <- model_obj$result_classical[[session]]$SE_estimates
+  fields_idx <- model_obj$field_names %in% fields
+  stopifnot(any(fields_idx))
+  beta_est <- model_obj$result_classical[[session]]$estimates[,fields_idx,drop=FALSE]
+  se_beta <- model_obj$result_classical[[session]]$SE_estimates[,fields_idx,drop=FALSE]
   DOF <- model_obj$result_classical[[session]]$DOF
 
-  nvox <- nrow(beta_est)
+  nV_D <- nrow(beta_est)
   #if(any(!(fields %in% 1:K))) stop(paste0('fields must be between 1 and the number of fields, ',K))
-  beta_est <- matrix(beta_est[,fields], nrow=nvox) #need matrix() in case beta_est[,fields] is a vector
-  se_beta <- matrix(se_beta[,fields], nrow=nvox) #need matrix() in case beta_est[,fields] is a vector
-  K <- length(fields)
+  nK <- length(fields)
 
   #Compute t-statistics and p-values
   t_star <- (beta_est - gamma) / se_beta
-  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nvox)
+  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nV_D)
   #perform multiple comparisons correction
-  p_values <- p_values_adj <- active <- matrix(NA, nvox, K)
+  p_values <- p_values_adj <- active <- matrix(NA, nV_D, nK)
 
-  for (kk in 1:K) {
+  for (kk in seq(nK)) {
     p_values_k <- sapply(t_star[,kk], pt, df = DOF, lower.tail = F)
     p_vals_adj_k <- switch(correction,
       FWER = p.adjust(p_values_k, method='bonferroni'),
@@ -401,9 +407,9 @@ id_activations.classical <- function(model_obj,
 
   na_pvalues <- which(is.na(p_values[,1]))
   if (length(na_pvalues) > 0) {
-    p_values <- p_values[-na_pvalues,, drop = F]
-    p_values_adj <- p_values_adj[-na_pvalues,, drop = F]
-    active <- active[-na_pvalues,, drop = F]
+    p_values <- p_values[-na_pvalues,,drop=FALSE]
+    p_values_adj <- p_values_adj[-na_pvalues,,drop=FALSE]
+    active <- active[-na_pvalues,,drop=FALSE]
   }
 
   result <- list(

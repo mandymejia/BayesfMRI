@@ -8,6 +8,8 @@
 #' @keywords internal
 make_A_mat <- function(surf, surf_rs){
 
+  stop("[TO DO] refine")
+
   stopifnot(ciftiTools::is.surf(surf))
   stopifnot(ciftiTools::is.surf(surf_rs))
 

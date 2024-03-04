@@ -114,7 +114,6 @@ make_data_list <- function(y, X, betas, repls){
 #' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
 #'  \code{inla}.
 #' @param session_names Vector of fMRI session names
-#' @param mask (Optional) Original mask applied to data before model fitting
 #' @param stat A string representing the posterior summary statistic to be returned
 #'
 #' @return Estimates from inla model
@@ -127,22 +126,23 @@ extract_estimates <- function(
   if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
   res.beta <- INLA_model_obj$summary.random
-  nbeta <- length(res.beta)
+  nK <- length(res.beta)
   field_names <- names(res.beta)
 
   nS <- length(session_names)
-
-  inds <- NULL # [TO DO]
+  mask <- if (spatial_type=="mesh") {
+    spatial$mask
+  } else {
+    stop("[TO DO]")
+  }
 
   #determine number of locations
   #	nV  = the number of data locations used in model fitting
   # nV2 or nMesh = the number of mesh locations, which may be a superset
   # nV0 = the number of data locations prior to applying a mask
-  if(is.null(mask)) mask <- rep(1, length(inds))
-  nV0 <- length(mask) #number of data locations prior to applying a mask pre-model fitting
-  nV <- length(inds) #number of data locations included in the model -- should match sum(mask)
-  if(sum(mask) != nV) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
-  nV2 <- length(res.beta[[1]]$mean)/nS #number of locations in beta estimates
+  nV_T <- length(mask) #number of data locations prior to applying a mask pre-model fitting
+  nV_D <- sum(mask) #number of data locations included in the model -- should match sum(mask)
+  stopifnot(nV_D*nS == length(res.beta[[1]]$mean))
 
   betas <- vector('list', nS)
   names(betas) <- session_names
@@ -152,18 +152,10 @@ extract_estimates <- function(
   stat_ind <- which(stat_names==stat)
 
   for (ss in seq(nS)) {
-    inds_ss <- (1:nV2) + (ss-1)*nV2 #indices of beta vector corresponding to session v
-    betas_ss <- matrix(NA, nrow=nV2, ncol=nbeta)
-    for (bb in seq(nbeta)) {
-      est_iv <- res.beta[[bb]][[stat_ind]][inds_ss]
-      betas_ss[,bb] <- est_iv
-    }
-    #remove boundary locations
-    betas_ss <- betas_ss[inds_ss,]
-    #unmask, with NA for data locations excluded from analysis
-    betas[[ss]] <- matrix(NA, nrow=nV0, ncol=nbeta)
-    betas[[ss]][mask==1,] <- betas_ss
-    colnames(betas[[ss]]) <- field_names
+    inds_ss <- seq(nV_D) + (ss-1)*nV_T # [TO DO] FIX for subcortical. indices of beta vector corresponding to session v
+    betas[[ss]] <- do.call(cbind, lapply(setNames(seq(nK), field_names), function(kk){
+      res.beta[[kk]][[stat_ind]][inds_ss]
+    }))
   }
 
   attr(betas, "GLM_type") <- "Bayesian"
