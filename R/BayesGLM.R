@@ -783,6 +783,8 @@ BayesGLM <- function(
       X2_train <- X2_list[[train]]
       X1_train <- X1_list[[train]]
       X_train_can <- cbind(X1_train, X2_train)
+      print(head(X_train_can))
+      save(X_train_can, file='~/Dropbox/RESEARCH/HRF-Adaptation/tmp.RData')
       XtX_inv <- try(Matrix::solve(Matrix::crossprod(X_train_can))) #this includes nuisance regressors
       if (inherits(XtX_inv, "try-error")) {
         warning(paste0("Numerical instability in design matrix"))
