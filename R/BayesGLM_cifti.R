@@ -16,14 +16,16 @@
 #' @inheritSection INLA_Latent_Fields_Limit_Description INLA Latent Fields Limit
 #'
 #' @inheritParams BOLD_param_BayesGLM_cifti
-#' @param design A \code{"BayesfMRI_design"} object from \code{\link{make_design}}.
+#' @inheritParams design_param_BayesGLM_cifti
+#' @inheritParams session_names_param_BayesGLM_cifti
+#' @inheritParams TR_param_BayesGLM_cifti
 #' @inheritParams brainstructures_param_BayesGLM_cifti
 #' @inheritParams surfaces_Param_BayesGLM_cifti
 #' @inheritParams resamp_res_Param_BayesGLM_cifti
 #' @inheritParams nbhd_order_Param
 #' @inheritParams buffer_Param
 #' @inheritParams nuisance_param_BayesGLM_cifti
-#' @inheritParams detrending_param_BayesGLM_cifti
+#' @inheritParams hpf_param_BayesGLM_cifti
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams Bayes_Param
 # @inheritParams EM_Param
@@ -49,7 +51,7 @@
 #'
 # @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
 #' @import ciftiTools
-#' @importFrom fMRItools unmask_mat match_input
+#' @importFrom fMRItools match_input is_1
 #' @importFrom matrixStats rowVars rowSums2 colVars
 #' @importFrom parallel detectCores
 #' @importFrom Matrix bdiag
@@ -59,15 +61,19 @@
 BayesGLM_cifti <- function(
   BOLD,
   design,
+  session_names=NULL, 
   brainstructures=c('left','right'),
+  TR=NULL,
+  # For surface models
   surfL=NULL,
   surfR=NULL,
   resamp_res=10000,
+  # For volume model
   nbhd_order=1,
   buffer=c(1,1,3,4,4),
-  nuisance=NULL,
-  TR=NULL, hpf=NULL,
-  DCT=if(is.null(hpf)) {4} else {NULL},
+  # Nuisance
+  nuisance=NULL, 
+  hpf=NULL,
   # Below arguments shared with `BayesGLM`.
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
@@ -85,30 +91,9 @@ BayesGLM_cifti <- function(
   EM <- FALSE
   emTol <- 1e-3
 
-  # Preliminaries. -------------------------------------------------------------
-  ### Simple parameter checks. -------------------------------------------------
-
-  # `design`: check it's from `make_design` and grab the data dimensions.
-  stopifnot(inherits(design, "BfMRI_design"))
-  des_type <- design$design_type
-  if (des_type == "compare") { stop("Use `CompareGLM_cifti` to compare models.") }
-  des_dims <- setNames(design$dims$count, rownames(design$dims))
-  nS <- as.numeric(des_dims["sessions"])
-  session_names <- names(design$design)
-  nT <- vapply(design$design, function(q){dim(q)[1]}, 0)
-  nK <- as.numeric(des_dims["fields"])
-  field_names <- design$field_names
-  if (Bayes && nK > 5) {
-    message(
-      "The number of regressors to be modeled spatially exceeds five. ",
-      "INLA computation may be slow. Consider reducing the number of design ",
-      "matrix columns, e.g. by modeling HRF derivatives as nuisance. See ",
-      "`remove_from_design` for a helper function for this task."
-    )
-    Sys.sleep(10)
-  }
-  nD <- as.numeric(des_dims["design_matrices"])
-
+  # Argument checks. -----------------------------------------------------------
+  ### Simple parameters. -------------------------------------------------------
+  stopifnot(is.null(TR) || (fMRItools::is_1(TR, "numeric") && TR>0))
   stopifnot(is.numeric(nbhd_order))
   stopifnot(fMRItools::is_1(nbhd_order, "numeric"))
   stopifnot(nbhd_order>0 && nbhd_order==round(nbhd_order))
@@ -153,26 +138,12 @@ BayesGLM_cifti <- function(
   do$cortex <- do$left || do$right
   if (!do$cortex) { resamp_res <- NULL }
 
-  ### Initialize `spatial` to store all spatial information.
-  spatial <- list(
-    cortexL = list(surf=NULL, mask=NULL),
-    cortexR = list(surf=NULL, mask=NULL),
-    subcort = list(
-      label=NULL,
-      trans_mat=NULL, trans_units=NULL,
-      nbhd_order=nbhd_order, buffer=buffer
-    )
-  )
-  if (!do$left) { spatial$cortexL <- NULL }
-  if (!do$right) { spatial$cortexR <- NULL }
-  if (!do$sub) { spatial$subcort <- NULL }
+  # Check `BOLD` w/o reading CIFTIs in; check `design` and `nuisance`. ---------
+  #   Get all dimensions except for `nV` (because `BOLD` is not read in yet.)
 
-  ### Initialize `nV0` to store the total number of locations for each brain structure.
-  nV0 <- as.character(lapply(spatial, function(q){NA}))
-
-  ### Checks for `BOLD` that don't require reading the data in. ----------------
+  ### Check `BOLD`. ------------------------------------------------------------
   # Make `BOLD` a sessions-length character vector, or a sessions-length list of
-  #  \code{"xifti"} objects.
+  #  \code{"xifti"} objects. Get `nS`. Do not read or check dims yet.
   is_xifti <- FALSE
   if (is.character(BOLD)) {
     BOLD <- as.list(BOLD)
@@ -194,24 +165,95 @@ BayesGLM_cifti <- function(
     stop('`BOLD` should be a character vector or list of `"xifti"` objects.')
   }
 
-  if (length(BOLD) != nS) {
-    stop(
-      "The length of `BOLD`, ", length(BOLD),
-      " does not match the number of sessions indicated by `design`, ", nS, "."
-    )
+  nS <- length(BOLD)
+  if (verbose>0) {
+    cat("Number of BOLD sessions:      ", nS, "\n")
   }
-  if (!is.null(names(BOLD)) && !all(names(BOLD) == session_names)) {
-    warning("Using session names from `design`; ignoring BOLD names.")
-  }
-  names(BOLD) <- session_names
 
-  if (verbose > 0) {
-    if (nS==1) {
-      cat("Preparing to analyze a single task fMRI session.\n")
-    } else {
-      cat("Preparing to analyze", nS, "task fMRI sessions with a common set of tasks.\n")
-    }
+  ### Check `design`. ----------------------------------------------------------
+  # Make `design` a sessions-length list of design matrices.
+  #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
+  #   across sessions.
+  x <- BayesGLM_format_design(design, nS_expect=nS)
+  design <- x$design
+  nT <- x$nT
+  nK <- x$nK
+  nD <- x$nD
+  field_names <- x$field_names
+  design_names <- x$design_names
+  valid_cols <- x$valid_cols
+  do$perLocDesign <- x$per_location_design
+  rm(x)
+  if (verbose>0) {
+    cat("Number of timepoints:        ",
+      if (length(nT)==1) { nT } else { cat(min(nT), "-", max(nT)) }, "\n")
+    cat("Number of fields:            ", nK, "\n")
   }
+
+  if (any(!valid_cols)) {
+    stop("No support (yet) for `NA` in `design` (due to tasks missing for certain sessions).")
+  }
+  rm(valid_cols)
+
+  if (do$Bayesian && nK > 5) {
+    message(
+      "The number of regressors to be modeled spatially exceeds five. ",
+      "INLA computation may be slow. Consider reducing the number of design ",
+      "matrix columns, e.g. by modeling HRF derivatives as nuisance. See ",
+      "`remove_from_design` for a helper function for this task."
+    )
+    Sys.sleep(5)
+  }
+
+  ### Get `session_names`. -----------------------------------------------------
+  session_names <- BayesGLM_session_names(session_names, BOLD, design)
+  names(BOLD) <- session_names
+  names(design) <- session_names
+
+  if (verbose>0) {
+    cat("Brain structures:     '", paste0(brainstructures, collapse="', '"), "'")
+    cat(paste0("Session names: '", paste0(session_names, collapse="', '"), "'"))
+    cat(paste0("Field names:   '", paste0(field_names, collapse="', '")), "'")
+  }
+
+  ### Check `nuisance`. --------------------------------------------------------
+  if (!is.null(nuisance)) {
+    nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)
+
+    if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
+      #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
+    }
+  } else {
+    nuisance <- vector("list", nS)
+  }
+  names(nuisance) <- session_names
+
+  ### Make DCT bases in `design` for the high-pass filter. ---------------------
+  if (!is.null(hpf)) {
+    stopifnot(fMRItools::is_1(hpf, "numeric") && hpf>0)
+    DCTs <- lapply(nT, function(nT_ss){ BayesGLM_cifti_make_DCT(hpf, nT_ss) })
+    nDCTs <- vapply(DCTs, ncol, 0)
+    if (verbose > 0) {
+      cat("Including ",
+        if (length(unique(nDCTs))==1) { nDCTs[1] } else { cat(min(nDCTs), "-", max(nDCTs)) }, 
+        " DCT bases in `nuisance` for highpass filtering.\n")
+    }
+    for (ss in seq(nS)) { nuisance[[ss]] <- cbind2(nuisance[[ss]], DCTs ) }
+  }
+
+  # Initialize `spatial` to store all spatial information. ---------------------
+  spatial <- list(
+    cortexL = list(surf=NULL, mask=NULL),
+    cortexR = list(surf=NULL, mask=NULL),
+    subcort = list(
+      label=NULL,
+      trans_mat=NULL, trans_units=NULL,
+      nbhd_order=nbhd_order, buffer=buffer
+    )
+  )
+  if (!do$left) { spatial$cortexL <- NULL }
+  if (!do$right) { spatial$cortexR <- NULL }
+  if (!do$sub) { spatial$subcort <- NULL }
 
   ### Surfaces for cortex analysis. --------------------------------------------
   # Use surfaces in this order of priority: `surfL` parameter; surface included
@@ -271,6 +313,12 @@ BayesGLM_cifti <- function(
   }
 
   # `BOLD`: read in data and metadata, for each brain structure. ---------------
+  if (verbose) { cat("\n") }
+
+  # Total number of locations, `nV_T`. Check it's consistent across sessions. 
+  #   Just use to check for the same resolution across multiple-sessions. 
+  #   Instead of passing `nV_T`, `spatial` is passed on to `BayesGLM`.
+  nV_T <- as.character(lapply(spatial, function(q){NA}))
 
   BOLD_input_msg <- function(ss, nS, do=c("read", "resample")){
     do <- switch(do, read="Reading", resample="Resampling")
@@ -304,16 +352,25 @@ BayesGLM_cifti <- function(
     }
 
     if (ncol(BOLD[[ss]]) != nT[ss]) { stop(
-      "The design for session ", session_names[ss], " indicates ", nT[ss], " ",
-      "volumes, but the `xifti` data for this session has ", ncol(BOLD[[ss]]), " ",
-      "volumes. Repeat `make_design` with a revised `nTime`, or correct `BOLD`."
+      "The design for session '", session_names[ss], "' indicates ", nT[ss], 
+      " volumes, but the `xifti` data for this session has ", ncol(BOLD[[ss]]), 
+      " volumes. These must match. Correct either `design` or `BOLD`."
     )}
+
+    if (do$per_location_design) {
+      if (nrow(BOLD[[ss]]) != nD[ss]) { stop(
+        "The design for session ", session_names[ss], " indicates ", nD[ss],
+        " total locations, each being modeled with its own design matrix. ",
+        "However, the `xifti` data for this session has ", ncol(BOLD[[ss]]),
+        " total locations. These must match. Correct either `design` or `BOLD`."
+      )}
+    }
 
     if (do$left && is.null(BOLD[[ss]]$data$cortex_left)) { stop("Left cortex data is missing from this BOLD session.") }
     if (do$right && is.null(BOLD[[ss]]$data$cortex_right)) { stop("Right cortex data is missing from this BOLD session.") }
     if (do$sub && is.null(BOLD[[ss]]$data$subcort)) { stop("Subcortex data is missing from this BOLD session.") }
-
-    ### Total spatial dims, `nV0`. Check it's consistent across sessions. ------
+    
+    ### Check `BOLD` data dimensions. ------------------------------------------
     # `xii_res`: total spatial dims according to the BOLD data.
     #   Names: 'left', 'right', 'subcort'.
     xii_res <- vector("numeric", 0)
@@ -324,7 +381,7 @@ BayesGLM_cifti <- function(
       xii_res <- c(xii_res, c(subcort=sum(BOLD[[ss]]$meta$subcort$mask)))
     }
 
-    # Set `nV0` based on the `xii_res` of the first session...
+    # Set `nV_T` based on the `xii_res` of the first session...
     if (ss == 1) {
       if (do$left) {
         # Check that the left cortex data is nonempty.
@@ -343,7 +400,7 @@ BayesGLM_cifti <- function(
             stop("The left surface could not be resampled to the resolution of the left cortex BOLD data,", xii_res["left"])
           }
         }
-        nV0["cortexL"] <- xii_res["left"]
+        nV_T["cortexL"] <- xii_res["left"]
       }
       if (do$right) {
         # Check that the right cortex data is nonempty.
@@ -362,91 +419,113 @@ BayesGLM_cifti <- function(
             stop("The right surface could not be resampled to the resolution of the right cortex BOLD data,", xii_res["left"])
           }
         }
-        nV0["cortexR"] <- xii_res["right"]
+        nV_T["cortexR"] <- xii_res["right"]
       }
       if (do$sub) {
-        nV0["subcort"] <- sum(BOLD[[ss]]$meta$subcort$mask)
+        nV_T["subcort"] <- sum(BOLD[[ss]]$meta$subcort$mask)
       }
 
-      # Per-location design: check `sum(nV0)` matches with `design`.
-      if (des_type == "per_loc") {
-        if (sum(nV0) != dim(design$design[[1]])[3]) { stop(
+      # Per-location design: check `sum(nV_T)` matches with `design`.
+      if (do$perLocDesign) {
+        if (sum(nV_T) != dim(design$design[[1]])[3]) { stop(
           "`design` indicates ", dim(design$design[[1]])[3], " ",
           "total locations, but the `xifti` data for this session has ",
-          sum(nV0), " total locations. Repeat `make_design` with a corrected ",
+          sum(nV_T), " total locations. Repeat `make_design` with a corrected ",
           "design, or fix `BOLD`."
         )}
       }
 
-    # Check `nV0` matches `xii_res` of other sessions.
+    # ...Check `nV_T` matches `xii_res` of other sessions.
     } else {
-      if (do$left && (xii_res["left"] != nV0["cortexL"])) {
+      if (do$left && (xii_res["left"] != nV_T["cortexL"])) {
         stop(
           "This BOLD session appears to have left cortex data with ",
           xii_res["left"], "total vertices, while the first session ",
-          "appears to have", nV0["cortexL"], "total vertices."
+          "appears to have", nV_T["cortexL"], "total vertices."
         )
       }
-      if (do$right && (xii_res["right"] != nV0["cortexR"])) {
+      if (do$right && (xii_res["right"] != nV_T["cortexR"])) {
         stop(
           "This BOLD session appears to have right cortex data with ",
           xii_res["right"], "total vertices, while the first session ",
-          "appears to have", nV0["cortexR"], "total vertices."
+          "appears to have", nV_T["cortexR"], "total vertices."
         )
       }
-      if (do$sub && (xii_res["subcort"] != nV0["subcort"])) {
+      if (do$sub && (xii_res["subcort"] != nV_T["subcort"])) {
         stop(
           "This BOLD session appears to have subcortical data with",
           xii_res["subcort"], "total voxels, while the first session ",
-          "appears to have", nV0["subcort"], " total voxels."
+          "appears to have", nV_T["subcort"], " total voxels."
         )
       }
     }
     rm(xii_res)
+  }
 
-    ### Collect `spatial` metadata. --------------------------------------------
-    # Separate BOLD data and metadata.
-    xii_meta <- BOLD[[ss]]$meta
-    BOLD[[ss]] <- BOLD[[ss]]$data
+   ### Collect `spatial` metadata. ---------------------------------------------
+   # Cortex: ROI `mask`. Use the intersection.
+   # Subcortex: `label`, `trans_mat`, `trans_units`. Require same across sessions.
+  if (do$left) {
+    maskL <- lapply(BOLD, function(q){
+      mask_ss <- q$meta$cortex$medial_wall_mask$left
+      if (is.null(mask_ss)) { mask_ss <- rep(TRUE, nV_T["cortexL"]) }
+    })
+    maskL <- colSums(do.call(rbind, maskL))
+    maskL_has_diffs <- (all(maskL %in% c(0, nS)))
+    if (maskL_has_diffs && verbose>0) {
+      cat("BOLD left cortex initial ROIs do not match; using their intersection by setting mismatch locations to `NA`.")
+    }
+    spatial$cortexL$mask <- maskL == nS
+    if (maskL_has_diffs) {
+      # Set to `NA`--masking of data (and design for per-location model) will be handled in `BayesGLM`.
+      for (ss in seq(nS)) {
+        new_mask_ss <- maskL[BOLD[[ss]]$meta$cortex$medial_wall_mask$left]
+        BOLD[[ss]]$data$cortex_left[new_mask_ss,] <- NA
+      }
+    }
+    rm(maskL, maskL_has_diffs)
+  }
 
-    # cortex: `mask`. subcortex: `label`, `trans_mat`, `trans_units`.
-    if (ss == 1) {
-      if (do$left) {
-        spatial$cortexL$mask <- xii_meta$cortex$medial_wall_mask$left
-        if (is.null(spatial$cortexL$mask)) { spatial$cortexL$mask <- rep(TRUE, nV0["cortexL"]) }
+  if (do$right) {
+    maskR <- lapply(BOLD, function(q){
+      mask_ss <- q$meta$cortex$medial_wall_mask$right
+      if (is.null(mask_ss)) { mask_ss <- rep(TRUE, nV_T["cortexR"]) }
+    })
+    maskR <- colSums(do.call(rbind, maskR))
+    maskR_has_diffs <- (all(maskR %in% c(0, nS)))
+    if (maskR_has_diffs && verbose>0) {
+      cat("BOLD right cortex initial ROIs do not match; using their intersection by setting mismatch locations to `NA`.")
+    }
+    spatial$cortexR$mask <- maskR == nS
+    if (maskR_has_diffs) {
+      # Set to `NA`--masking of data (and design for per-location model) will be handled in `BayesGLM`.
+      for (ss in seq(nS)) {
+        new_mask_ss <- maskR[BOLD[[ss]]$meta$cortex$medial_wall_mask$right]
+        BOLD[[ss]]$data$cortex_right[new_mask_ss,] <- NA
       }
-      if (do$right) {
-        spatial$cortexR$mask <- xii_meta$cortex$medial_wall_mask$right
-        if (is.null(spatial$cortexR$mask)) { spatial$cortexR$mask <- rep(TRUE, nV0["cortexR"]) }
-      }
-      if (do$sub) {
-        submeta <- xii_meta$subcort
+    }
+    rm(maskR, maskR_has_diffs)
+  }
+
+  if (do$sub) {
+    for (ss in seq(nS)) {
+      if (ss == 1) {
+        submeta <- BOLD[[ss]]$subcort
         spatial$subcort$label <- submeta$mask*0;
         spatial$subcort$label[submeta$mask==TRUE] <- submeta$labels
         spatial$subcort$trans_mat <- submeta$trans_mat
         spatial$subcort$trans_units <- submeta$trans_units
       } else {
-        submeta <- NULL
-      }
-    # For multi-session: ensure medial walls and subcortex masks match.
-    # [TO DO]: just use their intersection.
-    } else {
-      if (do$left) {
-        stopifnot(all(spatial$cortexL$mask == xii_meta$cortex$medial_wall_mask$left))
-      }
-      if (do$right) {
-        stopifnot(all(spatial$cortexR$mask == xii_meta$cortex$medial_wall_mask$right))
-      }
-      if (do$sub) {
-        stopifnot(length(dim(spatial$subcort$label)) == length(dim(xii_meta$subcort$mask)))
-        stopifnot(all(dim(spatial$subcort$label)) == dim(xii_meta$subcort$mask))
-        stopifnot(all((spatial$subcort$label!=0) == xii_meta$subcort$mask))
+        stopifnot(length(dim(spatial$subcort$label)) == length(dim(BOLD[[ss]]$subcort$mask)))
+        stopifnot(all(dim(spatial$subcort$label)) == dim(BOLD[[ss]]$subcort$mask))
+        stopifnot(all((spatial$subcort$label!=0) == BOLD[[ss]]$subcort$mask))
       }
     }
-    rm(xii_meta)
+    rm(submeta)
   }
 
-  ### Collate `BOLD` by brainstructure. ----------------------------------------
+  # Collate `BOLD` by brainstructure. 
+  BOLD <- lapply(BOLD, '[[', "data")
   BOLD <- lapply(
     c("cortex_left", "cortex_right", "subcort"),
     function(bs){ setNames(lapply(BOLD, '[[', bs), session_names) }
@@ -458,39 +537,6 @@ BayesGLM_cifti <- function(
 
   # Transpose all `BOLD` to `TxV`.
   BOLD <- lapply(BOLD, function(q){lapply(q, t)})
-
-  ### Check `nuisance`. --------------------------------------------------------
-  if (!is.null(nuisance)) {
-    # Make `nuisance` an `nS`-length list.
-    if (!is.list(nuisance)) {
-      if (nS==1) { nuisance = list(nuisance) } else { stop(
-        "If provided, `nuisance` should be a sessions-length list."
-      )}
-    } else {
-      if (length(nuisance) != nS) {
-        "If provided, `nuisance` should be a sessions-length list."
-      }
-      if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
-        #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
-      }
-    }
-    names(nuisance) <- session_names
-    # Ensure each element is a numeric matrix with `nT` rows.
-    for (ss in seq(length(nS))) {
-      stopifnot(is.matrix.or.df(nuisance[[ss]]))
-      stopifnot(is.numeric(nuisance[[ss]]))
-      stopifnot(nrow(nuisance[[ss]]) == nT[ss])
-    }
-  } else {
-    nuisance <- vector("list", nS)
-  }
-
-  ### Make DCT bases in `design` for the high-pass filter. ---------------------
-  for (ss in seq(nS)) {
-    nuisance[[ss]] <- cbind2(nuisance[[ss]],
-      BayesGLM_cifti_make_DCT(DCT, hpf, nT[ss], verbose)
-    )
-  }
 
   # Do GLM. --------------------------------------------------------------------
   BayesGLM_results <- list(cortexL = NULL, cortexR = NULL, subcort = NULL)
@@ -507,6 +553,7 @@ BayesGLM_cifti <- function(
     if (verbose>0) { cat(bs_names$v[bb], "analysis:\n") }
 
     ## `BayesGLM` call. --------------------------------------------------------
+    browser()
     BayesGLM_results[[dname_bb]] <- BayesGLM(
       BOLD = BOLD[[dname_bb]],
       design = design,
@@ -563,6 +610,8 @@ BayesGLM_cifti <- function(
   #   # field_names <- field_names
   # }
 
+  # [TO DO] HRF_info
+
   result <- list(
     estimate_xii = estimate_xii,
     #bestmodel_xii = bestmodel_xii,
@@ -572,7 +621,7 @@ BayesGLM_cifti <- function(
     #design_FIR = design_FIR,
     field_names = field_names,
     session_names = session_names,
-    dim = c(n_sess = nS, n_time = nT, n_location = nV0),
+    dim = c(n_sess = nS, n_time = nT, n_location = nV_T),
     BayesGLM_results = BayesGLM_results
   )
   class(result) <- "BayesGLM_cifti"

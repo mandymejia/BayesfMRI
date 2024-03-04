@@ -65,11 +65,13 @@ BayesGLM_check_nuisance <- function(design, design_type, nS, nT) {
 }
 
 #' Make DCT bases
-#' @param DCT,hpf,nT,TR,verbose See \code{BayesGLM_cifti}
+#' @param hpf,nT,TR See \code{BayesGLM_cifti}
 #' @return The matrix of DCT bases, or \code{NULL} if none
 #' @importFrom fMRItools dct_bases is_posNum dct_convert
 #' @keywords internal 
-BayesGLM_cifti_make_DCT <- function(DCT, hpf, nT, TR, verbose){
+BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
+  DCT <- NULL # used to be an argument.
+
   if (!is.null(DCT)) {
     stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
     if (DCT==0) { DCT <- NULL }
@@ -83,9 +85,6 @@ BayesGLM_cifti_make_DCT <- function(DCT, hpf, nT, TR, verbose){
     # Get the num. of bases for this session.
     if (!is.null(hpf)) {
       nDCT <- round(dct_convert(nT, TR, f=hpf))
-      if (verbose > 0) {
-        cat('\tIncluding',nDCT,'DCT basis functions in the model for hpf =',hpf,'Hz\n')
-      }
     } else {
       nDCT <- DCT
     }
@@ -221,4 +220,9 @@ get_nV <- function(spatial, type=c("mesh", "voxel"), spde=NULL){
   }
 
   out
+}
+
+nT_message <- function(nT) {
+  if (length(nT)==1) { return(nT) }
+  cat(min(nT), "-", max(nT))
 }

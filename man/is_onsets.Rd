@@ -15,6 +15,6 @@ Length-one logical vector.
 \description{
 Is this valid data for a single task's onsets? Expects a data.frame or
 numeric matrix with two numeric columns, onsets and durations, and at least
-one row.
+one row. Or, the value \code{NA} for an empty task.
 }
 \keyword{internal}

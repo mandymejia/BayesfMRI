@@ -9,13 +9,7 @@
 #'  properties of \code{object}.
 #' @method summary BfMRI_design
 summary.BfMRI_design <- function(object, ...) {
-  x <- object[c("design_type", "field_names", "dims")]
-  x$design_type <- switch(x$design_type,
-    design = "The design was directly provided.",
-    compare = "Comparing several designs for classical GLM.",
-    per_loc = "Each location has its own design.",
-    onsets = "Design calculated from onsets & durations."
-  )
+  x <- object[c("field_names")]
   class(x) <- "summary.BfMRI_design"
   return(x)
 }
@@ -28,10 +22,8 @@ summary.BfMRI_design <- function(object, ...) {
 #' @method print summary.BfMRI_design
 print.summary.BfMRI_design <- function(x, ...) {
   cat("====BfMRI_design =======================\n")
-  cat(x$design_type, "\n")
   cat("Fields:", paste(x$field_names, collapse=", "), "\n")
   cat("----------------------------------------\n")
-  print(x$dims)
   invisible(NULL)
 }
 

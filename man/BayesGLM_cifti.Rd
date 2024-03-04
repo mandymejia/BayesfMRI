@@ -7,20 +7,16 @@
 BayesGLM_cifti(
   BOLD,
   design,
+  session_names = NULL,
   brainstructures = c("left", "right"),
+  TR = NULL,
   surfL = NULL,
   surfR = NULL,
   resamp_res = 10000,
   nbhd_order = 1,
   buffer = c(1, 1, 3, 4, 4),
   nuisance = NULL,
-  TR = NULL,
   hpf = NULL,
-  DCT = if (is.null(hpf)) {
-     4
- } else {
-     NULL
- },
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
   ar_order = 6,
@@ -44,12 +40,20 @@ If \code{BOLD} is a \code{"xifti"} object(s), the surfaces, if any, will be
 used for the spatial model. However, if \code{surfL} and \code{surfR} are
 provided, they will override any surfaces in \code{BOLD}.}
 
-\item{design}{A \code{"BayesfMRI_design"} object from \code{\link{make_design}}.}
+\item{design}{A numeric matrix or \code{data.frame}, or a
+\code{"BayesfMRI_design"} object from \code{\link{make_design}}.}
+
+\item{session_names}{The names of the task-fMRI \code{BOLD} sessions, for
+multi-session analysis. If not provided here, will be inferred from
+\code{names(BOLD)}, inferred from \code{names(design)}, or generated
+automatically, in that order.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
 and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
 (cortex only).}
+
+\item{TR}{Temporal resolution of the data, in seconds.}
 
 \item{surfL, surfR}{For cortex spatial model. Left and right cortex surface
 geometry in GIFTI format ("*.surf.gii"). These can be a file path to
@@ -89,23 +93,14 @@ not being modeled as tasks, and other sources of noise.
 Detrending/high-pass filtering is accomplished by adding DCT bases to the
 nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
 
-\item{TR}{Temporal resolution of the data, in seconds.}
-
-\item{hpf, DCT}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
-filter to the data, for detrending? Only one of these should be provided:
-the filter frequency \code{hpf}, or the number of DCT bases \code{DCT}.
-If \code{hpf} is provided, \code{TR} must be provided too and the
-corresponding number of DCT bases will be calculated.
-
-Default: \code{DCT=4}. For typical \code{TR} and length of \code{BOLD}, four
-DCT bases amounts to a lower frequency cutoff than the approximately .01 Hz
-used in most studies. We selected this default to err on the side of
-retaining more low-frequency information, but recommend setting these
-arguments to values most appropriate for the analysis at hand.
+\item{hpf}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
+filter to the data, for detrending? \code{hpf} is the filter frequency.
+Use \code{NULL} to skip detrending. Detrending is strongly recommended for
+fMRI data, to help reduce the autocorrelation in the residuals.
 
 Using at least two DCT bases is as sufficient for detrending as using linear
-and quadratic drift terms in the design matrix. So if DCT detrending is
-being used used, there is no need to add linear and quadratic drift terms to
+and quadratic drift terms in the nuisance matrix. So if DCT detrending is
+being used here, there is no need to add linear and quadratic drift terms to
 \code{nuisance}.}
 
 \item{scale_BOLD}{Controls scaling the BOLD response at each location.

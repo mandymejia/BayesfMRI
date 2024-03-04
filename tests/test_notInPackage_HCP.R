@@ -71,38 +71,9 @@ des_o1 <- make_design(
   TR = 0.72, nTime=nTime, dHRF=0
 )
 des_o2 <- make_design(
-  onsets = list(events[seq(3)], events[seq(4,6)]),
+  onsets = events[seq(4,6)],
   TR = 0.72, nTime=nTime, dHRF=0
 )
-testthat::expect_equal(des_o1$design[[1]], des_o2$design[[1]])
-testthat::expect_equal(des_o1$HRF_info[[1]], des_o2$HRF_info[[1]])
-testthat::expect_equal(des_o1$dims[c(2,3,4),], des_o2$dims[c(2,3,4),])
-testthat::expect_equal(des_o1$valid_cols[1,], des_o2$valid_cols[1,])
-des_o3 <- testthat::expect_warning(make_design(
-  onsets = list(eventsB[seq(3)], eventsB[seq(4,6)]),
-  TR = 0.72, nTime=c(nTime, 280),
-))
-testthat::expect_equal(names(des_o2), names(des_o3))
-testthat::expect_equal(lapply(des_o2, names), lapply(des_o3, names))
-testthat::expect_equal(lapply(des_o2, dim), lapply(des_o3, dim))
-
-# From `design`.
-des_d1 <- make_design(des_o1$design)
-testthat::expect_equal(des_d1, make_design(des_o1$design[[1]]))
-testthat::expect_equal(des_d1$design, des_o1$design)
-testthat::expect_equal(des_d1$dims, des_o1$dims)
-testthat::expect_equal(des_d1$valid_cols, des_o1$valid_cols)
-
-# From `design_compare`.
-des_c1 <- make_design(design_compare=array(rep(c(des_o1$design[[1]], 5)), dim=c(dim(des_o1$design[[1]]), 5)))
-
-# From `design_per_location`.
-# [TO DO]
-
-# Summary functions.
-# des_o3
-# des_d1
-# des_c1
 
 # BayesGLM ---------------------------------------------------------------------
 ### Classical vs Bayes; Single- vs Multi-session -----
@@ -124,7 +95,6 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
   )
 }
 
-des_
 
 ##### First pass to detect errors
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))

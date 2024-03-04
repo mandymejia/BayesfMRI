@@ -7,8 +7,8 @@
 extract_estimates(
   INLA_model_obj,
   session_names,
-  mask = NULL,
-  inds,
+  spatial,
+  spatial_type,
   stat = "mean"
 )
 }
@@ -18,11 +18,9 @@ extract_estimates(
 
 \item{session_names}{Vector of fMRI session names}
 
-\item{mask}{(Optional) Original mask applied to data before model fitting}
-
-\item{inds}{the indices in the mesh that correspond to the V data locations}
-
 \item{stat}{A string representing the posterior summary statistic to be returned}
+
+\item{mask}{(Optional) Original mask applied to data before model fitting}
 }
 \value{
 Estimates from inla model

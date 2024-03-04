@@ -115,7 +115,6 @@ make_data_list <- function(y, X, betas, repls){
 #'  \code{inla}.
 #' @param session_names Vector of fMRI session names
 #' @param mask (Optional) Original mask applied to data before model fitting
-#' @param inds the indices in the mesh that correspond to the V data locations
 #' @param stat A string representing the posterior summary statistic to be returned
 #'
 #' @return Estimates from inla model
@@ -132,6 +131,8 @@ extract_estimates <- function(
   field_names <- names(res.beta)
 
   nS <- length(session_names)
+
+  inds <- NULL # [TO DO]
 
   #determine number of locations
   #	nV  = the number of data locations used in model fitting
@@ -158,7 +159,7 @@ extract_estimates <- function(
       betas_ss[,bb] <- est_iv
     }
     #remove boundary locations
-    betas_ss <- betas_ss[inds,]
+    betas_ss <- betas_ss[inds_ss,]
     #unmask, with NA for data locations excluded from analysis
     betas[[ss]] <- matrix(NA, nrow=nV0, ncol=nbeta)
     betas[[ss]][mask==1,] <- betas_ss

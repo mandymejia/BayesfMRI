@@ -4,10 +4,10 @@
 \alias{BayesGLM_cifti_make_DCT}
 \title{Make DCT bases}
 \usage{
-BayesGLM_cifti_make_DCT(DCT, hpf, nT, TR, verbose)
+BayesGLM_cifti_make_DCT(hpf, nT, TR)
 }
 \arguments{
-\item{DCT, hpf, nT, TR, verbose}{See \code{BayesGLM_cifti}}
+\item{hpf, nT, TR}{See \code{BayesGLM_cifti}}
 }
 \value{
 The matrix of DCT bases, or \code{NULL} if none

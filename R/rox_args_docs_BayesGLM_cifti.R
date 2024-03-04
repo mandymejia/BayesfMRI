@@ -13,6 +13,31 @@
 #' @name BOLD_param_BayesGLM_cifti
 NULL
 
+#' design
+#' 
+#' @param design A numeric matrix or \code{data.frame}, or a 
+#'  \code{"BayesfMRI_design"} object from \code{\link{make_design}}.
+#' 
+#' @name design_param_BayesGLM_cifti
+NULL
+
+#' session_names
+#' 
+#' @param session_names The names of the task-fMRI \code{BOLD} sessions, for  
+#'  multi-session analysis. If not provided here, will be inferred from 
+#'  \code{names(BOLD)}, inferred from \code{names(design)}, or generated
+#'  automatically, in that order.
+#' 
+#' @name session_names_param_BayesGLM_cifti
+NULL
+
+#' TR
+#' 
+#' @param TR Temporal resolution of the data, in seconds.
+#' 
+#' @name TR_param_BayesGLM_cifti 
+NULL
+
 #' brainstructures
 #'
 #' @param brainstructures Character vector indicating which brain structure(s)
@@ -66,25 +91,17 @@ NULL
 #' @name nuisance_param_BayesGLM_cifti 
 NULL
 
-#' detrending
+#' hpf
 #' 
-#' @param TR Temporal resolution of the data, in seconds.
-#' @param hpf,DCT Add DCT bases to \code{nuisance} to apply a temporal high-pass 
-#'  filter to the data, for detrending? Only one of these should be provided:
-#'  the filter frequency \code{hpf}, or the number of DCT bases \code{DCT}.
-#'  If \code{hpf} is provided, \code{TR} must be provided too and the 
-#'  corresponding number of DCT bases will be calculated. 
-#'
-#'  Default: \code{DCT=4}. For typical \code{TR} and length of \code{BOLD}, four
-#'  DCT bases amounts to a lower frequency cutoff than the approximately .01 Hz
-#'  used in most studies. We selected this default to err on the side of 
-#'  retaining more low-frequency information, but recommend setting these 
-#'  arguments to values most appropriate for the analysis at hand.
+#' @param hpf Add DCT bases to \code{nuisance} to apply a temporal high-pass 
+#'  filter to the data, for detrending? \code{hpf} is the filter frequency.
+#'  Use \code{NULL} to skip detrending. Detrending is strongly recommended for
+#'  fMRI data, to help reduce the autocorrelation in the residuals.
 #'
 #'  Using at least two DCT bases is as sufficient for detrending as using linear
-#'  and quadratic drift terms in the design matrix. So if DCT detrending is 
-#'  being used used, there is no need to add linear and quadratic drift terms to
+#'  and quadratic drift terms in the nuisance matrix. So if DCT detrending is 
+#'  being used here, there is no need to add linear and quadratic drift terms to
 #'  \code{nuisance}.
 #' 
-#' @name detrending_param_BayesGLM_cifti 
+#' @name hpf_param_BayesGLM_cifti 
 NULL
