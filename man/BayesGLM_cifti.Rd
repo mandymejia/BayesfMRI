@@ -7,7 +7,6 @@
 BayesGLM_cifti(
   BOLD,
   design,
-  session_names = NULL,
   brainstructures = c("left", "right"),
   TR = NULL,
   surfL = NULL,
@@ -17,6 +16,7 @@ BayesGLM_cifti(
   buffer = c(1, 1, 3, 4, 4),
   nuisance = NULL,
   hpf = NULL,
+  session_names = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
   ar_order = 6,
@@ -42,11 +42,6 @@ provided, they will override any surfaces in \code{BOLD}.}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
 \code{"BayesfMRI_design"} object from \code{\link{make_design}}.}
-
-\item{session_names}{The names of the task-fMRI \code{BOLD} sessions, for
-multi-session analysis. If not provided here, will be inferred from
-\code{names(BOLD)}, inferred from \code{names(design)}, or generated
-automatically, in that order.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
@@ -102,6 +97,11 @@ Using at least two DCT bases is as sufficient for detrending as using linear
 and quadratic drift terms in the nuisance matrix. So if DCT detrending is
 being used here, there is no need to add linear and quadratic drift terms to
 \code{nuisance}.}
+
+\item{session_names}{The names of the task-fMRI \code{BOLD} sessions, for
+multi-session analysis. If not provided here, will be inferred from
+\code{names(BOLD)}, inferred from \code{names(design)}, or generated
+automatically, in that order.}
 
 \item{scale_BOLD}{Controls scaling the BOLD response at each location.
 \describe{

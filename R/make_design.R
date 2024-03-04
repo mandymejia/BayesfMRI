@@ -2,23 +2,17 @@
 #'
 #' Make the design matrix for the GLM, from the task information.
 
-#' @param onsets Task stimulus information, from which a design matrix (or
-#'  matrices, for multi-session data) will be constructed. This is a list where
-#'  each entry represents a task as a matrix of onsets (first column) and
-#'  durations (second column) for each stimuli (each row) of the task, in
-#'  seconds. List names should be the task names. \code{nTime} and \code{TR} are
-#'  required with \code{onsets}.
+#' @param onsets Task stimulus information, from which a design matrix will be 
+#'  constructed. This is a list where each entry represents a task as a matrix
+#'  of onsets (first column) and durations (second column) for each stimuli 
+#'  (each row) of the task, in seconds. List names should be the task names. 
+#'  \code{nTime} and \code{TR} are required with \code{onsets}.
 #'
-#'  For multi-session modeling, this argument should be a list of such lists.
-#'  The list names should be the session names. Task names must match across
-#'  sessions; if any task is missing from any session, include a list element
-#'  equal to \code{NA} in its place.
-#'
-#'  An example of a properly-formatted single-session \code{onsets} is:
-#'  \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
-#'  In this session, there are two tasks: the first has three 1s-long stimuli,
-#'  while the second has two 5s-long stimuli. A multi-session \code{onsets}
-#'  would look like \code{on_multi <- list(s1=on_s1, s2=on_s2)},
+#'  An example of a properly-formatted \code{onsets} is:
+#'  \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), 
+#'  taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
+#'  In this example, there are two tasks: the first has three 1s-long stimuli,
+#'  while the second has two 5s-long stimuli. 
 #'  with \code{on_s2} formatted similarly to \code{on_s1}.
 #' @param nTime the number of timepoints (volumes) in the task fMRI data.
 #' @param TR the temporal resolution of the data, in seconds.
@@ -37,7 +31,7 @@
 #'  nuisance signals rather than as fields. To do so, move the corresponding
 #'  columns from the design matrix to the \code{nuisance} argument for
 #'  \code{BayesGLM_cifti}.
-#' @param downsample Upsample factor for convolving stimulus boxcar or stick
+#' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
@@ -104,11 +98,15 @@ make_design <- function(
   stimulus  <- vector("list", nJ)
   design <- matrix(NA, nrow=nTime, ncol=(dHRF+1)*nJ)
   field_names <- vector("character", (dHRF+1)*nJ)
-  field_valid <- vector("logical", nJ)
   for (jj in seq(nJ)) {
+    # Field names for this task.
+    field_names[seq(dHRF+1) + (jj-1)*(dHRF+1)] <- paste0(
+      task_names[jj],
+      c("", "_dHRF", "_ddHRF")[seq(dHRF+1)]
+    )
+
     # Skip if no stimulus for this task.
-    field_valid[jj] <- !(length(onsets[[jj]])==1 && is.na(onsets[[jj]]))
-    if (!field_valid[jj]) { #NA is placeholder for missing tasks
+    if (length(onsets[[jj]])==1 && is.na(onsets[[jj]])) { #NA is placeholder for missing tasks
       warning(
         "For task '", task_names[jj],
         "': inputting constant-zero column in design matrix for lack of stimulus. ",
@@ -117,7 +115,7 @@ make_design <- function(
       next()
     }
 
-    # Define `ots` (onset times) and `dur` (durations) for this sess & task.
+    # Define `ots` (onset times) and `dur` (durations) for this task.
     ots_sj <- onsets[[jj]][,1]
     dur_sj <- onsets[[jj]][,2]
 
@@ -134,14 +132,9 @@ make_design <- function(
     stimulus[[jj]] <- c(stim_sj,0)[inds]
 
     ##### Get `design` by convolving stimulus and HRFs. ------------------------
-    design[,seq(nJ) + (jj-1)*(dHRF+1)] <- do.call(cbind,
+    design[,seq(dHRF+1) + (jj-1)*(dHRF+1)] <- do.call(cbind,
       lapply(HRF, function(q){ convolve(stim_sj, rev(q), type="open") })
     )[inds,]
-    # Field names for this task.
-    field_names[seq(nJ) + (jj-1)*(dHRF+1)] <- paste0(
-      task_names[jj],
-      c("", "_dHRF", "_ddHRF")[seq(dHRF+1)]
-    )
 
     ##### Get `FIR`. -----------------------------------------------------------
     if (FIR_nSec > 0) {
@@ -183,7 +176,6 @@ make_design <- function(
       HRF=HRF,
       stimulus=stimulus
     ),
-    #field_valid=field_valid,
     per_location_modeling=FALSE
   )
   class(out) <- "BfMRI_design"

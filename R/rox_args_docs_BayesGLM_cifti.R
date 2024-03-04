@@ -10,7 +10,7 @@
 #'  used for the spatial model. However, if \code{surfL} and \code{surfR} are 
 #'  provided, they will override any surfaces in \code{BOLD}.
 #'
-#' @name BOLD_param_BayesGLM_cifti
+#' @name BOLD_Param_BayesGLM_cifti
 NULL
 
 #' design
@@ -18,24 +18,14 @@ NULL
 #' @param design A numeric matrix or \code{data.frame}, or a 
 #'  \code{"BayesfMRI_design"} object from \code{\link{make_design}}.
 #' 
-#' @name design_param_BayesGLM_cifti
-NULL
-
-#' session_names
-#' 
-#' @param session_names The names of the task-fMRI \code{BOLD} sessions, for  
-#'  multi-session analysis. If not provided here, will be inferred from 
-#'  \code{names(BOLD)}, inferred from \code{names(design)}, or generated
-#'  automatically, in that order.
-#' 
-#' @name session_names_param_BayesGLM_cifti
+#' @name design_Param_BayesGLM_cifti
 NULL
 
 #' TR
 #' 
 #' @param TR Temporal resolution of the data, in seconds.
 #' 
-#' @name TR_param_BayesGLM_cifti 
+#' @name TR_Param_BayesGLM_cifti 
 NULL
 
 #' brainstructures
@@ -45,7 +35,7 @@ NULL
 #'  and/or \code{"subcortical"} structures. Default: \code{c("left","right")} 
 #'  (cortex only).
 #'
-#' @name brainstructures_param_BayesGLM_cifti
+#' @name brainstructures_Param_BayesGLM_cifti
 NULL
 
 #' surfaces 
@@ -88,7 +78,7 @@ NULL
 #'  Detrending/high-pass filtering is accomplished by adding DCT bases to the
 #'  nuisance matrix; see the parameters \code{hpf} and \code{DCT}.
 #' 
-#' @name nuisance_param_BayesGLM_cifti 
+#' @name nuisance_Param_BayesGLM_cifti 
 NULL
 
 #' hpf
@@ -103,5 +93,5 @@ NULL
 #'  being used here, there is no need to add linear and quadratic drift terms to
 #'  \code{nuisance}.
 #' 
-#' @name hpf_param_BayesGLM_cifti 
+#' @name hpf_Param_BayesGLM_cifti 
 NULL

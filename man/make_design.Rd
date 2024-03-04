@@ -7,23 +7,17 @@
 make_design(onsets, nTime, TR, dHRF = c(1, 0, 2), downsample = 100, ...)
 }
 \arguments{
-\item{onsets}{Task stimulus information, from which a design matrix (or
-matrices, for multi-session data) will be constructed. This is a list where
-each entry represents a task as a matrix of onsets (first column) and
-durations (second column) for each stimuli (each row) of the task, in
-seconds. List names should be the task names. \code{nTime} and \code{TR} are
-required with \code{onsets}.
+\item{onsets}{Task stimulus information, from which a design matrix will be
+constructed. This is a list where each entry represents a task as a matrix
+of onsets (first column) and durations (second column) for each stimuli
+(each row) of the task, in seconds. List names should be the task names.
+\code{nTime} and \code{TR} are required with \code{onsets}.
 
-For multi-session modeling, this argument should be a list of such lists.
-The list names should be the session names. Task names must match across
-sessions; if any task is missing from any session, include a list element
-equal to \code{NA} in its place.
-
-An example of a properly-formatted single-session \code{onsets} is:
-\code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
-In this session, there are two tasks: the first has three 1s-long stimuli,
-while the second has two 5s-long stimuli. A multi-session \code{onsets}
-would look like \code{on_multi <- list(s1=on_s1, s2=on_s2)},
+An example of a properly-formatted \code{onsets} is:
+\code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), 
+ taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
+In this example, there are two tasks: the first has three 1s-long stimuli,
+while the second has two 5s-long stimuli.
 with \code{on_s2} formatted similarly to \code{on_s1}.}
 
 \item{nTime}{the number of timepoints (volumes) in the task fMRI data.}
@@ -46,7 +40,7 @@ nuisance signals rather than as fields. To do so, move the corresponding
 columns from the design matrix to the \code{nuisance} argument for
 \code{BayesGLM_cifti}.}
 
-\item{downsample}{Upsample factor for convolving stimulus boxcar or stick
+\item{downsample}{Downsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
 \item{...}{Additional arguments to \code{\link{HRF_calc}}.}

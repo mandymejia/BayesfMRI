@@ -4,9 +4,10 @@
 \alias{session_names_Param}
 \title{session_names}
 \arguments{
-\item{session_names}{(Optional, and only relevant for multi-session modeling)
-Names of each session. Default: \code{NULL}. Will overwrite the names of the
-\code{BOLD} data, if both are provided.}
+\item{session_names}{The names of the task-fMRI \code{BOLD} sessions, for
+multi-session analysis. If not provided here, will be inferred from
+\code{names(BOLD)}, inferred from \code{names(design)}, or generated
+automatically, in that order.}
 }
 \description{
 session_names

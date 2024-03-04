@@ -35,6 +35,8 @@ BayesGLM_session_names <- function(nS, session_names, BOLD_names, design_names){
     if (length(design_names) != nS) { 
       stop("`design_names` length should match the number of session of BOLD data, ", nS, ".")
     }
+  } else {
+    session_names <- if (nS==1) { "single_sess" } else { paste0("sess_", seq(nS)) }
   }
   session_names
 }

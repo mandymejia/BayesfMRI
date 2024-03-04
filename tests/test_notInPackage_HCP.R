@@ -80,13 +80,13 @@ des_o2 <- make_design(
 BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
   list(
     BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-    design = switch(n_sess, des_o1, des_o2),
+    design = switch(n_sess, des_o1, list(des_o1, des_o2)),
+    TR = 0.72,
     brainstructures = "both",
     surfL=ciftiTools.files()$surf["left"],
     surfR=ciftiTools.files()$surf["right"],
     resamp_res = resamp_res * resamp_factor,
     nuisance=switch(n_sess, nuis$rp_1, nuis),
-    TR = 0.72,
     #Bayes = TRUE,
     ar_order = 1,
     ar_smooth = 3,
@@ -94,7 +94,6 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
     verbose = TRUE
   )
 }
-
 
 ##### First pass to detect errors
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))

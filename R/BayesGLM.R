@@ -19,6 +19,7 @@
 #'    \item{nbhd_order}{See documentation for \code{\link{BayesGLM_cifti}}.}
 #'    \item{buffer}{See documentation for \code{\link{BayesGLM_cifti}}.}
 #' }
+#' @inheritParams session_names_Param
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams Bayes_Param
 # @inheritParams EM_Param
@@ -68,7 +69,9 @@
 #' @importFrom methods as
 #' @export
 BayesGLM <- function(
-  BOLD, design, nuisance=NULL,
+  BOLD,
+  design,
+  nuisance=NULL,
   spatial,
   # Below arguments shared with `BayesGLM_cifti`.
   scale_BOLD = c("auto", "mean", "sd", "none"),
@@ -94,36 +97,11 @@ BayesGLM <- function(
   field_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
   theta_estimates <- Sig_inv <- mesh <- mesh_orig <- NULL
 
-  # Preliminaries. -------------------------------------------------------------
-  ### Simple parameter checks. -------------------------------------------------
-
-  session_names <- names(design$design)
-  nS <- nS_orig <- length(session_names)
-  field_names <- design$field_names
-  nK <- length(field_names)
-
-  design_type <- design$design_type
-  valid_cols <- design$valid_cols
-  design <- design$design
-
-  nT <- vapply(design, nrow, 0)
-  nD <- if (design_type %in% c("design", "onsets")) { 1 } else { dim(design[[1]])[3] }
-
-  stopifnot(is.list(spatial))
-  mesh_spatial_names <- c("surf", "mask")
-  is_mesh <- length(names(spatial))==2 && all(names(spatial)==mesh_spatial_names)
-  voxel_spatial_names <- c(
-    "label", "trans_mat", "trans_units", "nbhd_order", "buffer"
-  )
-  is_voxel <- length(names(spatial))==5 && all(names(spatial)==voxel_spatial_names)
-  if (!is_mesh && !is_voxel) { stop("`spatial` is not correctly formatted. Please fix.") }
-  spatial_type <- if (is_mesh) { "mesh" } else { "voxel" }
-  rm(is_mesh, is_voxel, mesh_spatial_names, voxel_spatial_names)
-  nV <- get_nV(spatial, spatial_type)
-
+  # Argument checks. -----------------------------------------------------------
+  ### Simple parameters. -------------------------------------------------------
   do <- vector("list")
 
-  # In a separate function because these checks are shared with `BayesGLM_cifti`.
+  # In a separate function because these checks are shared with `BayesGLM`.
   x <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
     Bayes = Bayes,
@@ -141,26 +119,89 @@ BayesGLM <- function(
   scale_BOLD <- x$scale_BOLD
   do$Bayesian <- x$Bayes; rm(Bayes) # rename
   do$EM <- x$do_EM; rm(EM) # rename
-  do$pw <- x$do_pw
+  do$pw <- x$do_pw # unused
   return_INLA <- x$return_INLA
   rm(x)
 
-  # More checks, in case `BayesGLM` was run directly (not w/ CIFTI) ------------
-  # [TO DO] Refine.
-  if (is.null(nuisance)) { nuisance <- vector("list", nS) }
+  # Modeled after `BayesGLM_cifti` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ### Check `BOLD`. ------------------------------------------------------------
+  nS <- length(BOLD)
+  ### Check `design`. ----------------------------------------------------------
+  # Make `design` a sessions-length list of design matrices.
+  #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
+  #   across sessions.
+  x <- BayesGLM_format_design(design, nS_expect=nS)
+  design <- x$design
+  nT <- x$nT
+  nK <- x$nK
+  nD <- x$nD
+  field_names <- x$field_names
+  design_names <- x$design_names
+  do$perLocDesign <- x$per_location_design
+  rm(x)
+  # if (verbose>0) {
+  #   cat("Number of timepoints:    ",
+  #     if (length(unique(nT))==1) { nT } else { paste0(min(nT), "-", max(nT)) }, "\n")
+  #   cat("Number of fields:        ", nK, "\n")
+  # }
+
+  ### Get `session_names`. -----------------------------------------------------
+  session_names <- BayesGLM_session_names(
+    nS, session_names=NULL, names(BOLD), names(design)
+  )
+  names(BOLD) <- session_names
+  names(design) <- session_names
+
+  # if (verbose>0) {
+  #   cat("Session names:           ", paste0(session_names, collapse=", "), "\n")
+  #   cat("Field names:             ", paste0(field_names, collapse=", "), "\n")
+  # }
+
+  ### Check `nuisance`. --------------------------------------------------------
+  if (!is.null(nuisance)) {
+    nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)
+
+    if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
+      #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
+    }
+  } else {
+    nuisance <- vector("list", nS)
+  }
+  names(nuisance) <- session_names
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  design_type <- if (do$perLocDesign) { "per_location" } else { "regular" }
+  valid_cols <- do.call(rbind, lapply(design, function(q) {
+    apply(q, 2, function(r){!all(is.na(r))})
+  }))
+  if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing from every session.") }
   for (ss in seq(nS)) {
-    stopifnot(is.matrix(BOLD[[ss]]) && is.numeric(BOLD[[ss]]))
-    stopifnot(nrow(BOLD[[ss]]) == nT[ss])
-    stopifnot(ncol(BOLD[[ss]]) == nV$D)
-    if (!is.null(nuisance[[ss]])) {
-      stopifnot(nrow(nuisance[[ss]]) == nT[ss])
+    any_bad_design_cols <- if (nD == 1) {
+      any(is.na(c(design[[ss]][,valid_cols[ss,]])))
+    } else {
+      any(is.na(c(design[[ss]][,valid_cols[ss,],])))
+    }
+    if (any_bad_design_cols) {
+      stop("`design` has some sessions & tasks for which some data values ",
+        "are `NA`. Partially missing data is not allowed. (Missing tasks ",
+        "should have all `NA`.)")
     }
   }
 
-  ## Set up spatial data, SPDE -------------------------------------------------
-  spatial_og <- spatial
+  ### Check `spatial` and get `nV`. --------------------------------------------
 
+  stopifnot(is.list(spatial))
+  mesh_spatial_names <- c("surf", "mask")
+  is_mesh <- length(names(spatial))==2 && all(names(spatial)==mesh_spatial_names)
+  voxel_spatial_names <- c(
+    "label", "trans_mat", "trans_units", "nbhd_order", "buffer"
+  )
+  is_voxel <- length(names(spatial))==5 && all(names(spatial)==voxel_spatial_names)
+  if (!is_mesh && !is_voxel) { stop("`spatial` is not correctly formatted. Please fix.") }
+  spatial_type <- if (is_mesh) { "mesh" } else { "voxel" }
+  rm(is_mesh, is_voxel, mesh_spatial_names, voxel_spatial_names)
   nV <- get_nV(spatial, spatial_type)
+
   if (spatial_type=="mesh" && (nV$T != nV$D)) {
     if (verbose>0) {
       cat(paste0(
@@ -170,6 +211,7 @@ BayesGLM <- function(
     }
   }
 
+  # QC mask. -------------------------------------------------------------------
   # Mask based on quality control metrics of the BOLD data.
   mask_qc <- make_mask(
     BOLD,
@@ -194,7 +236,9 @@ BayesGLM <- function(
   spatial <- x$spatial
   rm(x)
 
-  # Get and display the number of data locations. ------------------------------
+  # Adjust design for per-location modeling.
+
+  # Update and display the number of data locations. ---------------------------
   nV <- get_nV(spatial, spatial_type)
   if (verbose>0) {
     cat('\tNumber of data locations:', nV$D, '\n')
@@ -210,10 +254,10 @@ BayesGLM <- function(
   for (ss in seq(nS)) {
     # Remove any missing fields from design matrix for classical GLM
     vcols_ss <- valid_cols[ss,]
-    if (!all(vcols_ss)) { warning(
-      'For session ',ss,', ignoring ',sum(!vcols_ss),
-      ' design matrix columns of zeros for classical GLM.'
-    )}
+    # if (!all(vcols_ss)) { warning(
+    #   'For session ',ss,', ignoring ',sum(!vcols_ss),
+    #   ' design matrix columns of zeros for classical GLM.'
+    # )}
 
     # Regress nuisance parameters from BOLD data and design matrix.
     if (!is.null(nuisance[[ss]])) {
@@ -229,6 +273,7 @@ BayesGLM <- function(
       # Design matrix will start as TxKxV and continue in that format after this step.
       # [TO DO] Re-scale design?
       nuisance[ss] <- list(NULL)
+      rm(nuis_ss)
     }
 
     # Scale data.
@@ -237,7 +282,7 @@ BayesGLM <- function(
       t(BOLD[[ss]]), scale=scale_BOLD, transpose=FALSE
     ))
   }
-  rm(nuisance, nuis_ss)
+  rm(nuisance)
 
   # [TO DO] Question: mesh vs surf? same?
   if (spatial_type=="voxel" && do$pw && ar_smooth > 0) {
