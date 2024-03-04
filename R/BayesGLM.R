@@ -756,84 +756,80 @@ BayesGLM <- function(
     # ------------------------------------------------------------------------------
     # Case 2: Fit and compare multiple models
 
-    result_multiple <- vector('list', length=nS)
-    names(result_multiple) <- session_names
-    for (ss in seq(nS)) {
+    y_ss <- data[[1]]$BOLD
+    X_ss <- design_multiple[[1]]
+    X2_ss <- data[[1]]$nuisance
 
-      y_ss <- data[[ss]]$BOLD
-      X_ss <- design_multiple[[ss]]
-      X2_ss <- data[[ss]]$nuisance
+    # Step 1: Identify no-signal locations. Compare null vs. canonical model using out-of-sample prediction error.
 
-      #ingredients for computing out-of-sample prediction error
-      nT2 <- round(nT/2)
-      inds1 <- 1:nT2 #indices of first half of timeseries
-      inds2 <- setdiff(1:nT, inds1) #indices of second half of timeseries
-      y_ss1 <- y_ss[inds1,]
-      y_ss2 <- y_ss[inds2,]
-      X2_ss2 <- cbind(1, X2_ss[inds2,]) #need this for nuisance regression of the "held out" data
+    #ingredients for prediction
+    nT2 <- round(nT/2)
+    inds1 <- 1:nT2
+    inds2 <- setdiff(1:nT, inds1)
+    y_list <- list(y_ss[inds1,], y_ss[inds2,])
+    X2_list <- list(cbind(1, X2_ss[inds1,]), cbind(1, X2_ss[inds2,])) #for nuisance regression of the "held out" data
+    which_can <- 22 #[TO DO] this must be provided as an argument
+    X1_list <- list(X_ss[inds1,,which_can], X_ss[inds2,,which_can]) #canonical HRF task regressors
 
-      #loop over models
-      nP <- dim(X_ss)[3]
-      beta_hat_s <- array(NA, dim=c(nV_all, nK, nP),
-                          dimnames = list(loc = 1:nV_all, field = field_names, model = 1:nP))
-      sigma2_s <- RSS_OS_s <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual SD (proxy for R^2 or AIC)
-      AIC_s <- AIC2_s <- matrix(NA, nrow=nV_all, ncol=nP) #compute AIC for comparison with no-HRF model
-      #AIC2 is based on assuming that the true DOF is nT/2 to account for autocorrelation. This just a hack to examine the sensitivity to residual dependence.
-      for(pp in 1:nP){
+    RSS_OS <- matrix(0, nrow=nV_all, ncol=2)
+    RSS_OS[mask==FALSE,] <- NA
+    for(pred in 1:2){
 
-        cat(paste0('\tFitting model ',pp,'\n'))
+      train <- pred
+      test <- setdiff(1:2, train)
 
-        #first, check whether we are dealing with the no-HRF model
-        if(all(X_ss[,,pp] == 0)) {
-          X_sp <- NULL #if no HRF, no task design columns
-        } else {
-          #set up and scale design matrix
-          X_sp <- X_ss[,,pp]#/max(X_ss[,,pp])
-        }
-        X_sp <- cbind(X_sp, rep(1, nT), X2_ss) #combine design (possibly NULL) with intercept and nuisance
-
-        #1. Compute standard model fit metrics (s2, AIC)
-
-        XtX_inv_pp <- try(Matrix::solve(Matrix::crossprod(X_sp)))
-        if (inherits(XtX_inv_pp, "try-error")) {
-          warning(paste0("Numerical instability in design matrix for model ",pp))
-        }
-        coef_pp <- XtX_inv_pp %*% t(X_sp) %*% y_ss #a vector of (estimates for location 1, estimates for location 2, ...)
-        beta_hat_s[mask==TRUE,,pp] <- t(coef_pp[1:nK,]) #drop the intercept and nuisance, transpose to V x nFIR
-        resid_pp <- y_ss - X_sp %*% coef_pp #TxV matrix
-        sigma2_s[mask==TRUE,pp] <- sqrt(colSums(resid_pp^2)/(nT - ncol(X_sp)))
-
-        #Compute AIC = 2*k + n*ln(sigma2), where sigma2 is the MLE (i.e. divide by nT)
-        #[TO DO] Consider CV prediction instead of AIC since the true DOF should be less than nT. Can split the timeseries into blocks to preserve the dependence structure.
-        AIC_s[mask==TRUE,pp] <- 2*ncol(X_sp) + nT*log(colSums(resid_pp^2)/nT)
-        AIC2_s[mask==TRUE,pp] <- 2*ncol(X_sp) + (nT/2)*log(colSums(resid_pp^2)/nT) #replace nT with nT/2. This just a hack to examine the sensitivity to residual dependence.
-
-        #2. Compute out-of-sample prediction error
-
-        X_sp1 <- X_sp[inds1,] #for training the model
-        X_sp2 <- X_ss[inds2,,pp] #for testing the model (only use the task regressors, will do nuisance regression on holdout set first)
-
-        #2a. fit model using first half
-        XtX_inv_pp1 <- try(Matrix::solve(Matrix::crossprod(X_sp1)))
-        if (inherits(XtX_inv_pp1, "try-error")) {
-          warning(paste0("Numerical instability in design matrix for model ",pp))
-        }
-        coef_pp1 <- XtX_inv_pp1 %*% t(X_sp1) %*% y_ss1 #a vector of (estimates for location 1, estimates for location 2, ...)
-
-        #2a. do nuisance regression for second half (because this should be tailored to the data)
-        Imat <- diag(1, nrow(X2_ss2))
-        Hmat <- X2_ss2 %*% try(Matrix::solve(Matrix::crossprod(X2_ss2))) %*% t(X2_ss2)
-        y_ss2_nuis <- (Imat - Hmat) %*% y_ss2 #regress out nuisance from y[inds2]
-        X_sp2_nuis <- (Imat - Hmat) %*% X_sp2 #regress out nuisance from X[inds2,]
-
-        #2b. apply coefficient estimates to second half
-        coef_tasks <- coef_pp1[1:nK,] #these are only the coefficients corresponding to the HRFs
-        resid_pp2 <- y_ss2_nuis - X_sp2_nuis %*% coef_tasks #if X_sp2 is all zeros (no HRF model, the second term will be zero, which works)
-        RSS_OS_s[mask==TRUE,pp] <- colSums(resid_pp2^2)
+      # (i) estimate task coefficients based on training set (for canonical model only, not necessary for null model)
+      y_train <- y_list[[train]]
+      X2_train <- X2_list[[train]]
+      X1_train <- X1_list[[train]]
+      X_train_can <- cbind(X1_train, X2_train)
+      XtX_inv <- try(Matrix::solve(Matrix::crossprod(X_train_can))) #this includes nuisance regressors
+      if (inherits(XtX_inv, "try-error")) {
+        warning(paste0("Numerical instability in design matrix"))
       }
+      coefs_can <- (XtX_inv %*% t(X_train_can) %*% y_train)[1:nK,] #save task coefficients only (KxV)
 
-      #determine best model (minimum residual error)
-      bestmodel_s <- apply(sigma2_s, 1, function(x){
+      # (ii) do nuisance regression on test set
+      y_test <- y_list[[test]]
+      X2_test <- X2_list[[test]]
+      X1_test <- X1_list[[test]]
+
+      Imat <- diag(1, nrow(X2_test))
+      Hmat <- X2_test %*% try(Matrix::solve(Matrix::crossprod(X2_test))) %*% t(X2_test)
+      y_test_nuis <- (Imat - Hmat) %*% y_test #regress out nuisance from y
+      X1_test_nuis <- (Imat - Hmat) %*% X1_test #regress out nuisance from task regressors
+
+      # (iii) apply coefficients to generate prediction errors
+      resid_list <- list(canonical = y_test_nuis - X1_test_nuis %*% coefs_can, null = y_test_nuis)
+      RSS_OS_pred <- sapply(resid_list, function(x) colSums(x^2)) #Vx2
+      RSS_OS[mask==TRUE,] <- RSS_OS[mask==TRUE,] + RSS_OS_pred #sum over both directions of prediction
+    }
+
+    noHRF <- (RSS_OS[,2] < RSS_OS[,1]) #for which locations is the null model RSS less than the canonical error RSS
+
+    #loop over models
+    nP <- dim(X_ss)[3]
+    RSS <- matrix(NA, nrow=nV_all, ncol=nP) #keep track of residual sum of squares (proxy for R^2 or AIC)
+
+    if(verbose > 0) cat('\tFitting models: Model ')
+    for(pp in 1:nP){
+
+      if(verbose > 0) cat(paste0(pp,'\t'))
+
+      X_sp <- cbind(X_ss[,,pp], rep(1, nT), X2_ss) #combine design with intercept and nuisance
+
+      #1. Compute residual SD
+
+      XtX_inv_pp <- try(Matrix::solve(Matrix::crossprod(X_sp)))
+      if (inherits(XtX_inv_pp, "try-error")) {
+        warning(paste0("Numerical instability in design matrix for model ",pp))
+      }
+      coef_pp <- XtX_inv_pp %*% t(X_sp) %*% y_ss
+      resid_pp <- y_ss - X_sp %*% coef_pp #TxV matrix
+      RSS[mask==TRUE,pp] <- sqrt(colSums(resid_pp^2)/(nT - ncol(X_sp)))
+
+      #determine best model (minimum residual squared error)
+      bestmodel <- apply(RSS, 1, function(x){
         wm <- which.min(x)
         varx <- var(x, na.rm=TRUE)
         if(is.na(varx)) varx <- 0
@@ -841,22 +837,10 @@ BayesGLM <- function(
         wm
       })
 
-      #determine best model (out-of-sample prediction error)
-      bestmodel_OS_s <- apply(RSS_OS_s, 1, function(x){
-        wm <- which.min(x)
-        varx <- var(x, na.rm=TRUE)
-        if(is.na(varx)) varx <- 0
-        if(varx==0) wm <- NA
-        wm
-      })
-
-      result_multiple[[ss]] <- list(beta_estimates = beta_hat_s,
-                                    bestmodel = bestmodel_s,
-                                    bestmodel_OS = bestmodel_OS_s,
-                                    sigma2 = sigma2_s,
-                                    RSS_OS = RSS_OS_s,
-                                    AIC = AIC_s,
-                                    AIC2 = AIC2_s)
+      result_multiple <- list(bestmodel = bestmodel,
+                                    noHRF = noHRF,
+                                    RSS = RSS,
+                                    RSS_OS = RSS_OS)
     }
 
     result_classical <- prewhiten_info <- design <- NULL
