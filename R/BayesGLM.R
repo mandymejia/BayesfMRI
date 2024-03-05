@@ -801,9 +801,6 @@ BayesGLM <- function(
       X1_test_nuis <- (Imat - Hmat) %*% X1_test #regress out nuisance from task regressors
 
       # (iii) apply coefficients to generate prediction errors
-      print(dim(y_test_nuis))
-      print(dim(X1_test_nuis))
-      print(dim(coefs_can))
       resid_list <- list(canonical = y_test_nuis - X1_test_nuis %*% coefs_can, null = y_test_nuis)
       RSS_OS_pred <- sapply(resid_list, function(x) colSums(x^2)) #Vx2
       RSS_OS[mask==TRUE,] <- RSS_OS[mask==TRUE,] + RSS_OS_pred #sum over both directions of prediction
