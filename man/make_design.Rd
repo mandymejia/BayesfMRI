@@ -4,7 +4,15 @@
 \alias{make_design}
 \title{Make design matrix}
 \usage{
-make_design(onsets, nTime, TR, dHRF = c(1, 0, 2), downsample = 100, ...)
+make_design(
+  onsets,
+  nTime,
+  TR,
+  dHRF = c(1, 0, 2),
+  downsample = 100,
+  scale_design = TRUE,
+  ...
+)
 }
 \arguments{
 \item{onsets}{Task stimulus information, from which a design matrix will be
@@ -14,7 +22,7 @@ of onsets (first column) and durations (second column) for each stimuli
 \code{nTime} and \code{TR} are required with \code{onsets}.
 
 An example of a properly-formatted \code{onsets} is:
-\code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), 
+\code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)),
  taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
 In this example, there are two tasks: the first has three 1s-long stimuli,
 while the second has two 5s-long stimuli.
@@ -42,6 +50,8 @@ columns from the design matrix to the \code{nuisance} argument for
 
 \item{downsample}{Downsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
+
+\item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
 
 \item{...}{Additional arguments to \code{\link{HRF_calc}}.}
 }

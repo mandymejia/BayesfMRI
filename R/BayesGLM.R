@@ -91,6 +91,7 @@ BayesGLM <- function(
 
   EM <- FALSE
   emTol <- 1e-3
+  scale_design <- FALSE
 
   # Initialize return values that may or may not be computed. ------------------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
@@ -130,7 +131,7 @@ BayesGLM <- function(
   # Make `design` a sessions-length list of design matrices.
   #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
   #   across sessions.
-  x <- BayesGLM_format_design(design, nS_expect=nS)
+  x <- BayesGLM_format_design(design, scale_design=scale_design, nS_expect=nS)
   design <- x$design
   nT <- x$nT
   nK <- x$nK
@@ -259,30 +260,41 @@ BayesGLM <- function(
     #   ' design matrix columns of zeros for classical GLM.'
     # )}
 
-    # Regress nuisance parameters from BOLD data and design matrix.
-    if (!is.null(nuisance[[ss]])) {
-      nuis_ss <- nuisance[[ss]]
-      stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
-      nuis_ss <- scale(nuis_ss, scale=FALSE)
-      # Add intercept to nuisance in case BOLD is not centered.
-      BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], cbind(1, nuis_ss))
-      # Do not add intercept, because `design` should already be centered.
-      design[[ss]][,vcols_ss] <- fMRItools::nuisance_regression(
-        design[[ss]][,vcols_ss], nuis_ss
-      ) #[TO DO] if design matrix varies spatially, need to adapt this.
-      # Design matrix will start as TxKxV and continue in that format after this step.
-      # [TO DO] Re-scale design?
-      nuisance[ss] <- list(NULL)
-      rm(nuis_ss)
-    }
-
     # Scale data.
     # (`scale_timeseries` expects VxT data, so transpose before and after.)
     BOLD[[ss]] <- t(fMRItools::scale_timeseries(
       t(BOLD[[ss]]), scale=scale_BOLD, transpose=FALSE
     ))
+
+    # Center design matrix.
+    if (!do$perLocDesign) {
+      design[[ss]][,vcols_ss] <- scale(design[[ss]][,vcols_ss,drop=FALSE], scale=FALSE)
+    } else {
+      des_means <- rep(colMeans(design[[ss]][,vcols_ss,,drop=FALSE]), nV$D)
+      design[[ss]][,vcols_ss,] <- design[[ss]][,vcols_ss,,drop=FALSE] - des_means
+    }
+
+    # Regress nuisance parameters from BOLD data and design matrix.
+    if (!is.null(nuisance[[ss]])) {
+      nuis_ss <- nuisance[[ss]]
+      stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
+      nuis_ss <- scale(nuis_ss, scale=FALSE)
+      ## Add intercept to nuisance in case BOLD is not centered.
+      BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], nuis_ss)
+      # Do not add intercept, because `design` should already be centered.
+      if (!do$perLocDesign) {
+        design[[ss]][,vcols_ss] <- fMRItools::nuisance_regression(
+          design[[ss]][,vcols_ss], nuis_ss
+        )
+      } else {
+        stop("[TO DO]")
+        # Design matrix will start as TxKxV and continue in that format after this step.
+      }
+      #nuisance[ss] <- list(NULL)
+      #rm(nuis_ss)
+    }
   }
-  rm(nuisance)
+  #rm(nuisance)
 
   # [TO DO] Question: mesh vs surf? same?
   if (spatial_type=="voxel" && do$pw && ar_smooth > 0) {
@@ -305,7 +317,6 @@ BayesGLM <- function(
   rm(x)
 
   # Classical GLM. -------------------------------------------------------------
-
   result_classical <- setNames(vector('list', length=nS), session_names)
   for (ss in seq(nS)) {
     if (verbose>0) {

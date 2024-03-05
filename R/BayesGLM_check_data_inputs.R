@@ -176,23 +176,24 @@ BayesGLM_format_design <- function(
 
   # Scale design matrix. -------------------------------------------------------
   stopifnot(is_1(scale_design, "logical"))
-  if (!des_is_array) {
-    design <- if(scale_design) {
-      lapply(design, scale_design_mat)
-    } else {
-      lapply(design, scale, scale = FALSE)
-    }
-  } else {
-    for (dd in seq(nD)) {
-      for (ss in seq(nS)) {
-        if (scale_design) {
-          design[[ss]][,,dd] <- scale_design_mat(design[[ss]][,,dd])
-        } else {
-          design[[ss]][,,dd] <- scale(design[[ss]][,,dd], scale=FALSE)
-        }
-      }
-    }
-  }
+  if (scale_design) { stop() }
+  # if (!des_is_array) {
+  #   design <- if(scale_design) {
+  #     lapply(design, scale_design_mat)
+  #   } else {
+  #     lapply(design, scale, scale = FALSE)
+  #   }
+  # } else {
+  #   for (dd in seq(nD)) {
+  #     for (ss in seq(nS)) {
+  #       if (scale_design) {
+  #         design[[ss]][,,dd] <- scale_design_mat(design[[ss]][,,dd])
+  #       } else {
+  #         design[[ss]][,,dd] <- scale(design[[ss]][,,dd], scale=FALSE)
+  #       }
+  #     }
+  #   }
+  # }
 
   # Identify any missing fields in `valid_cols` for bookkeeping. ---------------
   valid_cols <- if (!des_is_array) {

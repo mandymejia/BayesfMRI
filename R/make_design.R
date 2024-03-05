@@ -2,17 +2,17 @@
 #'
 #' Make the design matrix for the GLM, from the task information.
 
-#' @param onsets Task stimulus information, from which a design matrix will be 
+#' @param onsets Task stimulus information, from which a design matrix will be
 #'  constructed. This is a list where each entry represents a task as a matrix
-#'  of onsets (first column) and durations (second column) for each stimuli 
-#'  (each row) of the task, in seconds. List names should be the task names. 
+#'  of onsets (first column) and durations (second column) for each stimuli
+#'  (each row) of the task, in seconds. List names should be the task names.
 #'  \code{nTime} and \code{TR} are required with \code{onsets}.
 #'
 #'  An example of a properly-formatted \code{onsets} is:
-#'  \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)), 
+#'  \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)),
 #'  taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
 #'  In this example, there are two tasks: the first has three 1s-long stimuli,
-#'  while the second has two 5s-long stimuli. 
+#'  while the second has two 5s-long stimuli.
 #'  with \code{on_s2} formatted similarly to \code{on_s1}.
 #' @param nTime the number of timepoints (volumes) in the task fMRI data.
 #' @param TR the temporal resolution of the data, in seconds.
@@ -33,6 +33,7 @@
 #'  \code{BayesGLM_cifti}.
 #' @param downsample Downsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
+#' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
 #' @importFrom fMRItools is_1
@@ -47,7 +48,7 @@
 #' }
 #' @export
 make_design <- function(
-  onsets, nTime, TR, dHRF=c(1, 0, 2), downsample=100, ...
+  onsets, nTime, TR, dHRF=c(1, 0, 2), downsample=100, scale_design=TRUE, ...
 ){
 
   # Check inputs. --------------------------------------------------------------
@@ -90,9 +91,9 @@ make_design <- function(
 
   # Canonical HRF to use in convolution as a function of time (in seconds).
   u <- seq(0, 30, by=1/downsample) #go out 30 sec
-  HRF <- list(c=HRF_calc(t = u, deriv=0, ...)[-1])
-  if (dHRF > 0) { HRF$d = HRF_calc(t = u, deriv=1, ...)[-1] }
-  if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)[-1] }
+  HRF <- list(c=HRF_calc(t = u, deriv=0, ...))#[-1])
+  if (dHRF > 0) { HRF$d = HRF_calc(t = u, deriv=1, ...)}#[-1] }
+  if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)}#[-1] }
 
   ### Iterate over tasks. ------------------------------------------------------
   stimulus  <- vector("list", nJ)
@@ -167,6 +168,13 @@ make_design <- function(
 
   colnames(design) <- field_names
   stimulus <- do.call(cbind, stimulus)
+
+
+  design <- if(scale_design) {
+    scale_design_mat(design)
+  } else {
+    scale(design, scale=FALSE)
+  }
 
   out <- list(
     design=design,

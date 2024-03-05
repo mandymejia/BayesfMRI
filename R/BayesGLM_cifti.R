@@ -90,6 +90,7 @@ BayesGLM_cifti <- function(
 
   EM <- FALSE
   emTol <- 1e-3
+  scale_design <- FALSE
 
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
@@ -174,7 +175,7 @@ BayesGLM_cifti <- function(
   # Make `design` a sessions-length list of design matrices.
   #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
   #   across sessions.
-  x <- BayesGLM_format_design(design, nS_expect=nS)
+  x <- BayesGLM_format_design(design, scale_design=FALSE, nS_expect=nS)
   design <- x$design
   nT <- x$nT
   nK <- x$nK
@@ -227,7 +228,9 @@ BayesGLM_cifti <- function(
   ### Make DCT bases in `design` for the high-pass filter. ---------------------
   if (!is.null(hpf)) {
     stopifnot(fMRItools::is_1(hpf, "numeric") && hpf>0)
-    DCTs <- lapply(nT, function(nT_ss){ BayesGLM_cifti_make_DCT(hpf, nT_ss, TR) })
+    DCTs <- lapply(nT, function(nT_ss){ 
+      fMRItools::dct_bases(nT_ss, round(dct_convert(T_=nT_ss, TR=TR, f=hpf))) 
+    })
     nDCTs <- vapply(DCTs, ncol, 0)
     if (verbose > 0) {
       cat("Including",
