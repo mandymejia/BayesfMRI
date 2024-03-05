@@ -782,13 +782,13 @@ BayesGLM <- function(
       X2_train <- X2_list[[train]]
       X1_train <- X1_list[[train]]
       X_train_can <- cbind(X1_train, X2_train)
-      print(head(X_train_can))
-      save(X_train_can, file='~/Dropbox/RESEARCH/HRF-Adaptation/tmp.RData')
+      nK_can <- ncol(X1_train)
+
       XtX_inv <- try(Matrix::solve(Matrix::crossprod(X_train_can))) #this includes nuisance regressors
       if (inherits(XtX_inv, "try-error")) {
         warning(paste0("Numerical instability in design matrix"))
       }
-      coefs_can <- (XtX_inv %*% t(X_train_can) %*% y_train)[1:nK,] #save task coefficients only (KxV)
+      coefs_can <- (XtX_inv %*% t(X_train_can) %*% y_train)[1:nK_can,] #save task coefficients only (KxV)
 
       # (ii) do nuisance regression on test set
       y_test <- y_list[[test]]
@@ -801,6 +801,9 @@ BayesGLM <- function(
       X1_test_nuis <- (Imat - Hmat) %*% X1_test #regress out nuisance from task regressors
 
       # (iii) apply coefficients to generate prediction errors
+      print(dim(y_test_nuis))
+      print(dim(X1_test_nuis))
+      print(dim(coefs_can))
       resid_list <- list(canonical = y_test_nuis - X1_test_nuis %*% coefs_can, null = y_test_nuis)
       RSS_OS_pred <- sapply(resid_list, function(x) colSums(x^2)) #Vx2
       RSS_OS[mask==TRUE,] <- RSS_OS[mask==TRUE,] + RSS_OS_pred #sum over both directions of prediction
