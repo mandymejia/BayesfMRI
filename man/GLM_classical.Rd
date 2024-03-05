@@ -7,6 +7,7 @@
 GLM_classical(
   BOLD,
   design,
+  nK2,
   nV_D,
   field_names,
   design_type,

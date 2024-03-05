@@ -8,7 +8,7 @@
 #' @return A list of results
 #' @keywords internal
 GLM_classical <- function(
-  BOLD, design, nV_D,
+  BOLD, design, nK2, nV_D,
   field_names, design_type,
   vcols_ss, nT_ss, nD,
   var_resid, sqrtInv_all,
@@ -18,7 +18,6 @@ GLM_classical <- function(
   y <- c(BOLD)
   X <- do.call(cbind, design[vcols_ss])
   nK_ss <- sum(vcols_ss) # without empty columns # [TO DO] integrate CompareGLM
-  nK2 <- 0 # [TO DO] integrate CompareGLM
 
   XTX_inv <- try(Matrix::solve(Matrix::crossprod(X)))
   if (inherits(XTX_inv, "try-error")) {

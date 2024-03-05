@@ -251,7 +251,7 @@ BayesGLM <- function(
   # Scale, nuisance regress, and/or concatenate session data. ------------------
 
   #collect data and design matrices
-  # nK2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) } #number of nuisance regressors
+  nK2 <- vector("numeric", nS)  
   for (ss in seq(nS)) {
     # Remove any missing fields from design matrix for classical GLM
     vcols_ss <- valid_cols[ss,]
@@ -275,6 +275,7 @@ BayesGLM <- function(
     }
 
     # Regress nuisance parameters from BOLD data and design matrix.
+    nK2[ss] <- if (is.null(nuisance[[ss]])) { 0 } else { ncol(nuisance[[ss]]) }
     if (!is.null(nuisance[[ss]])) {
       nuis_ss <- nuisance[[ss]]
       stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
@@ -346,7 +347,7 @@ BayesGLM <- function(
 
     # Compute classical GLM.
     result_classical[[ss]] <- GLM_classical(
-      BOLD[[ss]], design[[ss]], nV$D,
+      BOLD[[ss]], design[[ss]], nK2[ss], nV$D,
       field_names, design_type,
       vcols_ss, nT[ss], nD,
       var_resid, sqrtInv_all[[ss]],
