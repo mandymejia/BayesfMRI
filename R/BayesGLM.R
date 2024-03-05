@@ -283,8 +283,8 @@ BayesGLM <- function(
   if(verbose==1) cat(paste0('\tNumber of data + boundary locations: ',spde$n.spde,'\n'))
 
   # ------------------------------------------------------------------------------
-  # Case 1: Fit a models including prewhitening, inference and spatial Bayesian GLM
 
+  # Case 1: Fit a models including prewhitening, inference and spatial Bayesian GLM
   if(!design_is_multi){
 
     # Identify any missing fields across sessions for bookkeeping -----------------
@@ -323,7 +323,7 @@ BayesGLM <- function(
         nuis_ss <- scale(nuis_ss, scale=FALSE)
         data[[ss]]$BOLD <- nuisance_regression(data[[ss]]$BOLD, nuis_ss)
         data[[ss]]$design[,cols_ss] <- nuisance_regression(data[[ss]]$design[,cols_ss], nuis_ss) #[TO DO] if design matrix varies spatially, need to adapt this. Design matrix will start as TxKxV and continue in that format after this step.
-        data[[ss]]$nuisance <- NULL
+        #data[[ss]]$nuisance <- NULL
       }
     }
 

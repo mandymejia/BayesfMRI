@@ -140,7 +140,7 @@ for (ii in seq(nrow(params))) {
     fname=paste0(pfname_pre, "_est.png")
   )
 
-  oli_ii <- if (is.null(x_ii$bfmri$estimates_xii$classical[[1]]$data$cortex_left)) {
+  oli_ii <- if (is.null(x_ii$bfmri$estimate_xii$classical[[1]]$data$cortex_left)) {
     oli2
   } else {
     oli1
