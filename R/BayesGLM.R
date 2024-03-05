@@ -768,8 +768,7 @@ BayesGLM <- function(
     inds2 <- setdiff(1:nT, inds1)
     y_list <- list(y_ss[inds1,], y_ss[inds2,])
     X2_list <- list(cbind(1, X2_ss[inds1,]), cbind(1, X2_ss[inds2,])) #for nuisance regression of the "held out" data
-    which_can <- 22 #[TO DO] this must be provided as an argument
-    X1_list <- list(X_ss[inds1,,which_can], X_ss[inds2,,which_can]) #canonical HRF task regressors
+    X1_list <- list(design_can[inds1,], design_can[inds2,]) #canonical HRF task regressors
 
     RSS_OS <- matrix(0, nrow=nV_all, ncol=2)
     RSS_OS[mask==FALSE,] <- NA
