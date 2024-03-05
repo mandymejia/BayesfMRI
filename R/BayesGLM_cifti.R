@@ -227,14 +227,14 @@ BayesGLM_cifti <- function(
   ### Make DCT bases in `design` for the high-pass filter. ---------------------
   if (!is.null(hpf)) {
     stopifnot(fMRItools::is_1(hpf, "numeric") && hpf>0)
-    DCTs <- lapply(nT, function(nT_ss){ BayesGLM_cifti_make_DCT(hpf, nT_ss) })
+    DCTs <- lapply(nT, function(nT_ss){ BayesGLM_cifti_make_DCT(hpf, nT_ss, TR) })
     nDCTs <- vapply(DCTs, ncol, 0)
     if (verbose > 0) {
-      cat("Including ",
+      cat("Including",
         if (length(unique(nDCTs))==1) { nDCTs[1] } else { cat(min(nDCTs), "-", max(nDCTs)) },
-        " DCT bases in `nuisance` for highpass filtering.\n")
+        "DCT bases in `nuisance` for highpass filtering.\n")
     }
-    for (ss in seq(nS)) { nuisance[[ss]] <- cbind2(nuisance[[ss]], DCTs ) }
+    for (ss in seq(nS)) { nuisance[[ss]] <- cbind2(nuisance[[ss]], DCTs[[ss]] ) }
   }
 
   # Initialize `spatial` to store all spatial information. ---------------------

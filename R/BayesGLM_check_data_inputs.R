@@ -110,7 +110,6 @@ BayesGLM_format_design <- function(
     "should not differ across sessions.")
   }
   field_names <- field_names[[1]]
-
   # Set `field_names` if not provided.
   if (is.null(field_names)) {
     cat("Setting field names to 'field_1'")
@@ -119,6 +118,8 @@ BayesGLM_format_design <- function(
     cat(".\n")
     field_names <- paste0("field_", nK)
   }
+  if (any(duplicated(field_names))) { stop("All field names should be unique.") }
+
 
   # Third dimension, nD
   if (des_is_array) {

@@ -16,11 +16,11 @@ scale_design_mat <- function(design_mat) {
 }
 
 #' Check design matrix or matrices
-#' 
+#'
 #' @param design,design_type,nS,nT See \code{"BayesGLM"}
 #' @return The design matrix as an \code{nS}-length list.
-#' @keywords internal 
-#' 
+#' @keywords internal
+#'
 BayesGLM_check_design <- function(design, design_type, nS, nT) {
   design_type <- match.arg(
     design_type, c("design", "compare", "per_loc", "onsets")
@@ -47,11 +47,11 @@ BayesGLM_check_design <- function(design, design_type, nS, nT) {
 }
 
 #' Check nuisance matrix or matrices
-#' 
+#'
 #' @param nuisance,nS,nT See \code{"BayesGLM"}
 #' @return The nuisance matrix as an \code{nS}-length list.
-#' @keywords internal 
-#' 
+#' @keywords internal
+#'
 BayesGLM_check_nuisance <- function(design, design_type, nS, nT) {
   if (is.matrix(nuisance)) { nuisance <- list(single_sess=nuisance) }
 
@@ -68,7 +68,7 @@ BayesGLM_check_nuisance <- function(design, design_type, nS, nT) {
 #' @param hpf,nT,TR See \code{BayesGLM_cifti}
 #' @return The matrix of DCT bases, or \code{NULL} if none
 #' @importFrom fMRItools dct_bases is_posNum dct_convert
-#' @keywords internal 
+#' @keywords internal
 BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
   DCT <- NULL # used to be an argument.
 
@@ -84,7 +84,7 @@ BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
   if (!is.null(hpf) || !is.null(DCT)) {
     # Get the num. of bases for this session.
     if (!is.null(hpf)) {
-      nDCT <- round(dct_convert(nT, TR, f=hpf))
+      nDCT <- round(dct_convert(T_=nT, TR=TR, f=hpf))
     } else {
       nDCT <- DCT
     }
@@ -190,21 +190,21 @@ BayesGLM_argChecks <- function(
 }
 
 #' Get number of locations for various masks
-#' 
+#'
 #' Get number of locations for various masks: total, model, data.
-#' 
+#'
 #' @param spatial \code{spatial}
 #' @param type \code{"mesh"}, or \code{"voxel"}.
 #' @param spde \code{NULL} or the SPDE.
 #' @keywords internal
-#' @return A list of two: \code{T} for the total number of locations, and 
+#' @return A list of two: \code{T} for the total number of locations, and
 #'  \code{D} for the number of data locations. If \code{spatial} is provided for
-#'  voxel data, there is also \code{DB} for the number of data locations plus 
+#'  voxel data, there is also \code{DB} for the number of data locations plus
 #'  the number of boundary locations.
 get_nV <- function(spatial, type=c("mesh", "voxel"), spde=NULL){
   type <- match.arg(type, c("mesh", "voxel"))
 
-  out <- switch(type, 
+  out <- switch(type,
     mesh = list(
       T=nrow(spatial$surf$vertices),
       D=sum(spatial$mask)

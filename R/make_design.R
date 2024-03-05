@@ -99,8 +99,9 @@ make_design <- function(
   design <- matrix(NA, nrow=nTime, ncol=(dHRF+1)*nJ)
   field_names <- vector("character", (dHRF+1)*nJ)
   for (jj in seq(nJ)) {
+    field_idx <- jj + seq(0, dHRF)*nJ
     # Field names for this task.
-    field_names[seq(dHRF+1) + (jj-1)*(dHRF+1)] <- paste0(
+    field_names[field_idx] <- paste0(
       task_names[jj],
       c("", "_dHRF", "_ddHRF")[seq(dHRF+1)]
     )
@@ -132,7 +133,7 @@ make_design <- function(
     stimulus[[jj]] <- c(stim_sj,0)[inds]
 
     ##### Get `design` by convolving stimulus and HRFs. ------------------------
-    design[,seq(dHRF+1) + (jj-1)*(dHRF+1)] <- do.call(cbind,
+    design[,field_idx] <- do.call(cbind,
       lapply(HRF, function(q){ convolve(stim_sj, rev(q), type="open") })
     )[inds,]
 

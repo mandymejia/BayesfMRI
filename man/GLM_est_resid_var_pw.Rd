@@ -19,8 +19,7 @@ GLM_est_resid_var_pw(
   ar_smooth,
   aic,
   n_threads,
-  do_pw,
-  verbose
+  do_pw
 )
 }
 \arguments{
@@ -28,7 +27,7 @@ GLM_est_resid_var_pw(
 
 \item{session_names, field_names, design_type}{See \code{BayesGLM}.}
 
-\item{valid_cols, nT, nD, do_pw, verbose}{See \code{BayesGLM}.}
+\item{valid_cols, nT, nD, do_pw}{See \code{BayesGLM}.}
 }
 \value{
 List of results

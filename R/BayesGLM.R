@@ -291,12 +291,13 @@ BayesGLM <- function(
   # mesh$loc,mesh$graph$tv,mesh$n
 
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
+  if (do$pw && verbose>0) { cat("\tEstimating prewhitening parameters.\n") }
   x <- GLM_est_resid_var_pw(
     BOLD, design, spatial, spatial_type,
     session_names, field_names, design_type,
     valid_cols, nT, nD,
     ar_order, ar_smooth, aic, n_threads,
-    do$pw, verbose
+    do$pw
   )
   var_resid <- x$var_resid
   sqrtInv_all <- x$sqrtInv_all # `NULL` if `!do$pw`

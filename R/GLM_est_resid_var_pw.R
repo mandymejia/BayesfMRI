@@ -3,7 +3,7 @@
 #' Standardize data variance and prewhiten if applicable, for the GLM.
 #' @param BOLD,design,spatial,spatial_type See \code{BayesGLM}.
 #' @param session_names,field_names,design_type See \code{BayesGLM}.
-#' @param valid_cols,nT,nD,do_pw,verbose See \code{BayesGLM}.
+#' @param valid_cols,nT,nD,do_pw See \code{BayesGLM}.
 #' @return List of results
 #' @keywords internal
 GLM_est_resid_var_pw <- function(
@@ -11,7 +11,7 @@ GLM_est_resid_var_pw <- function(
   session_names, field_names, design_type,
   valid_cols, nT, nD,
   ar_order, ar_smooth, aic, n_threads,
-  do_pw, verbose
+  do_pw
 ){
 
   nS <- length(session_names)
@@ -34,7 +34,6 @@ GLM_est_resid_var_pw <- function(
       BOLD[[ss]], design[[ss]][,vcols_ss]
     )
     if (do_pw) {
-      if (verbose>0) { cat("\tEstimating prewhitening parameters.\n") }
       pw_est_ss <- pw_estimate(resid_ss, ar_order, aic=aic)
       var_resid[,ss] <- pw_est_ss$sigma_sq
       AR_coefs[,,ss] <- pw_est_ss$phi

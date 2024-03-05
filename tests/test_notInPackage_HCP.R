@@ -66,27 +66,29 @@ eventsB[c(2, 6)] <- NA
 # Test `make_design` -----------------------------------------------------------
 
 # From `onsets`.
-des_o1 <- make_design(
-  onsets = events[seq(3)],
-  TR = 0.72, nTime=nTime, dHRF=0
+des <- lapply(
+  list(events[seq(3)], events[seq(4,6)]),
+  function(q) { make_design(onsets=q, TR=.72, nTime=nTime, dHRF=1) }
 )
-des_o2 <- make_design(
-  onsets = events[seq(4,6)],
-  TR = 0.72, nTime=nTime, dHRF=0
-)
+for (ss in seq(2)) {
+  nuis[[ss]] <- cbind(nuis[[ss]], des[[ss]]$design[,seq(4,6)])
+  des[[ss]] <- des[[ss]]$design[,seq(3)]
+}
+
 
 # BayesGLM ---------------------------------------------------------------------
 ### Classical vs Bayes; Single- vs Multi-session -----
 BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
   list(
     BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-    design = switch(n_sess, des_o1, list(des_o1, des_o2)),
+    design = switch(n_sess, des[[1]], des[seq(n_sess)]),
     TR = 0.72,
     brainstructures = "both",
     surfL=ciftiTools.files()$surf["left"],
     surfR=ciftiTools.files()$surf["right"],
     resamp_res = resamp_res * resamp_factor,
     nuisance=switch(n_sess, nuis$rp_1, nuis),
+    hpf=.01,
     #Bayes = TRUE,
     ar_order = 1,
     ar_smooth = 3,
@@ -95,25 +97,25 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
   )
 }
 
-##### First pass to detect errors
-bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
-bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
-#bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
-#bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+# ##### First pass to detect errors
+# bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+# bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+# bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+# bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
 
 ##### Second pass to get results of decent resolution
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
-#bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1))) # STALLIING
+bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1))) # STALLIING
 #bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, dtype="multi")))
 bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2)))
-#bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2)))
+bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2)))
 #bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, dtype="multi")))
 
 act_c1 <- id_activations(bglm_c1, sessions=1)
-#act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
 #act_m1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
 act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
-#act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
+act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
 #act_m2 <- id_activations(bglm_b1, gamma=.01, sessions=1)
 #
 # ### Misc. cases; not checking these results, but checking for errors
@@ -152,17 +154,17 @@ save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_HCP.rda"))
 
 # Plot ---
 plot(bglm_c1, fname=file.path(dir_resultThis, "HCP_bglm_c1"), together="idx")
-#plot(bglm_b1, fname=file.path(dir_resultThis, "HCP_bglm_b1"), together="idx")
+plot(bglm_b1, fname=file.path(dir_resultThis, "HCP_bglm_b1"), together="idx")
 #plot(bglm_m1, fname=file.path(dir_resultThis, "HCP_bglm_m1"), together="idx")
 plot(bglm_c2, fname=file.path(dir_resultThis, "HCP_bglm_c2"), together="idx")
-#plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_b2"), together="idx")
+plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_b2"), together="idx")
 #plot(bglm_m2, fname=file.path(dir_resultThis, "HCP_bglm_m2"), together="idx")
 
 plot(act_c1, fname=file.path(dir_resultThis, "HCP_act_c1"), together="idx")
-#plot(act_b1, fname=file.path(dir_resultThis, "HCP_act_b1"), together="idx")
+plot(act_b1, fname=file.path(dir_resultThis, "HCP_act_b1"), together="idx")
 #plot(act_m1, fname=file.path(dir_resultThis, "HCP_act_m1"), together="idx")
 plot(act_c2, fname=file.path(dir_resultThis, "HCP_act_c2"), together="idx")
-#plot(act_b2, fname=file.path(dir_resultThis, "HCP_act_b2"), together="idx")
+plot(act_b2, fname=file.path(dir_resultThis, "HCP_act_b2"), together="idx")
 #plot(act_m2, fname=file.path(dir_resultThis, "HCP_act_m2"), together="idx")
 
 #plot(bglm_x1, fname=file.path(dir_resultThis, "HCP_bglm_x1"), together="idx")
