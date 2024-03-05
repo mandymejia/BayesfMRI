@@ -290,11 +290,11 @@ BayesGLM <- function(
         stop("[TO DO]")
         # Design matrix will start as TxKxV and continue in that format after this step.
       }
-      #nuisance[ss] <- list(NULL)
-      #rm(nuis_ss)
+      nuisance[ss] <- list(NULL)
+      rm(nuis_ss)
     }
   }
-  #rm(nuisance)
+  rm(nuisance)
 
   # [TO DO] Question: mesh vs surf? same?
   if (spatial_type=="voxel" && do$pw && ar_smooth > 0) {
