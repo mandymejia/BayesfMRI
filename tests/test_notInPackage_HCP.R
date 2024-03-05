@@ -27,6 +27,7 @@ if (doINLA) {
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
+roxygen2::roxygenize("~/Documents/GitHub/BayesfMRI2")
 #library(BayesfMRI)
 
 # Get file names.
@@ -82,6 +83,7 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1, dtype=c("single", "mult
     design=switch(n_sess, des1, des),
     TR = 0.72,
     dHRF=1,
+    dHRF_as="nuis",
     nuisance=switch(n_sess, nuis$rp_1, nuis),
     #Bayes = TRUE,
     ar_order = 1,
@@ -93,7 +95,7 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1, dtype=c("single", "mult
 }
 
 ##### First pass to detect errors
-bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+#bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
 bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1, dtype="multi")))
 bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))

@@ -432,7 +432,7 @@ BayesGLM_cifti <- function(
   if (length(design$design) != nS) { stop("The length of `design` should match the number of sessions, ", nS, ".") }
   design_is_multiple <- length(dim(design$design[[1]])) == 3
   nD <- if (design_is_multiple) { dim(design$design[[1]])[3] } else { 1 }
-  design_is_from_onsets <- !is.null(design[[1]]$onsets_misc)
+  design_is_from_onsets <- !is.null(design$onsets_misc)
   # [TO DO]: more rigorous checks?
 
   # Determine what to do with the HRF derivatives, if `dHRF_as=="auto`
@@ -474,10 +474,10 @@ BayesGLM_cifti <- function(
         }
       } else if (dHRF_as=="nuisance") {
         to_add <- switch(dHRF,
-          design[[ss]]$onsets_misc$HRFs_d,
-          cbind(design[[ss]]$onsets_misc$HRFs_d, design[[ss]]$onsets_misc$HRFs_dd)
+          design$onsets_misc$HRFs_d,
+          cbind(design$onsets_misc$HRFs_d, design$onsets_misc$HRFs_dd)
         )
-        nuisance[[ss]] <- cbind2(nuisance[[ss]], to_add)
+        nuisance[[ss]] <- cbind2(nuisance[[ss]], to_add[[ss]])
       }
     }
   }
