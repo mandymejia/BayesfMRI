@@ -619,6 +619,11 @@ BayesGLM_cifti <- function(
 
   # [TO DO] HRF_info
 
+  result_dim <- c(
+    c(sess = nS, time = nT), 
+    setNames(nV_T, paste0("loc_", names(nV_T)))
+  )
+
   result <- list(
     estimate_xii = estimate_xii,
     #bestmodel_xii = bestmodel_xii,
@@ -628,7 +633,7 @@ BayesGLM_cifti <- function(
     #design_FIR = design_FIR,
     field_names = field_names,
     session_names = session_names,
-    dim = c(n_sess = nS, n_time = nT, n_location = nV_T),
+    dim = result_dim,
     BayesGLM_results = BayesGLM_results
   )
   class(result) <- "BayesGLM_cifti"

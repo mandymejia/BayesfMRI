@@ -260,12 +260,6 @@ BayesGLM <- function(
     #   ' design matrix columns of zeros for classical GLM.'
     # )}
 
-    # Scale data.
-    # (`scale_timeseries` expects VxT data, so transpose before and after.)
-    BOLD[[ss]] <- t(fMRItools::scale_timeseries(
-      t(BOLD[[ss]]), scale=scale_BOLD, transpose=FALSE
-    ))
-
     # Center design matrix.
     if (!do$perLocDesign) {
       design[[ss]][,vcols_ss] <- scale(design[[ss]][,vcols_ss,drop=FALSE], scale=FALSE)
@@ -294,6 +288,12 @@ BayesGLM <- function(
       nuisance[ss] <- list(NULL)
       rm(nuis_ss)
     }
+
+    # Scale data.
+    # (`scale_timeseries` expects VxT data, so transpose before and after.)
+    BOLD[[ss]] <- t(fMRItools::scale_timeseries(
+      t(BOLD[[ss]]), scale=scale_BOLD, transpose=FALSE
+    ))
   }
   rm(nuisance)
 

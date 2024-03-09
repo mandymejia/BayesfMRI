@@ -21,11 +21,7 @@
 #' }
 #' @inheritParams session_names_Param
 #' @inheritParams scale_BOLD_Param
-#' @inheritParams Bayes_Param
 # @inheritParams EM_Param
-#' @inheritParams ar_order_Param
-#' @inheritParams ar_smooth_Param
-#' @inheritParams aic_Param
 #' @inheritParams n_threads_Param
 #' @inheritParams return_INLA_Param
 #' @inheritParams verbose_Param
@@ -77,42 +73,31 @@ multiGLM <- function(
   #emTol = 1e-3
   ){
 
-  EM <- FALSE
-  emTol <- 1e-3
-
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
-  do <- vector("list")
-
-  # In a separate function because these checks are shared with `BayesGLM`.
-  x <- BayesGLM_argChecks(
-    scale_BOLD = scale_BOLD,
-    Bayes = Bayes,
-    EM = EM,
-    ar_order = ar_order,
-    ar_smooth = ar_smooth,
-    aic = aic,
-    n_threads = n_threads,
-    return_INLA = return_INLA,
-    verbose = verbose,
-    meanTol = meanTol,
-    varTol = varTol,
-    emTol = emTol
-  )
-  scale_BOLD <- x$scale_BOLD
-  rm(x)
-  rm(EM, emTol) # not used here.
+  if (isTRUE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+  }
+  if (isFALSE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
+  }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
+  stopifnot(fMRItools::is_posNum(verbose, zero_ok=TRUE))
+  stopifnot(fMRItools::is_posNum(meanTol))
+  stopifnot(fMRItools::is_posNum(varTol))
 
   # Modeled after `BayesGLM_cifti` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  #   But note that `BOLD`, `design`, and `nuisance` will be 
+  #   matrix/array rather than lists.
   ### Check `BOLD`. ------------------------------------------------------------
-  nS <- length(BOLD)
+  nS <- 1
   if(nS!=1) stop("Not supported: multi-session in `compareGLM`.")
   ### Check `design`. ----------------------------------------------------------
   # Make `design` a sessions-length list of design matrices.
   #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
   #   across sessions.
-  x <- BayesGLM_format_design(design, nS_expect=nS)
-  design <- x$design
+  x <- BayesGLM_format_design(design, scale_design=scale_design, nS_expect=nS)
+  design <- x$design[[1]]
   nT <- x$nT
   nK <- x$nK
   nD <- x$nD
@@ -120,11 +105,6 @@ multiGLM <- function(
   design_names <- x$design_names
   if(x$per_location_design) stop("Not supported: per-location design in `compareGLM`.")
   rm(x)
-  # if (verbose>0) {
-  #   cat("Number of timepoints:    ",
-  #     if (length(unique(nT))==1) { nT } else { paste0(min(nT), "-", max(nT)) }, "\n")
-  #   cat("Number of fields:        ", nK, "\n")
-  # }
 
   ### Get `session_names`. -----------------------------------------------------
   session_names <- "single_sess"
@@ -133,27 +113,17 @@ multiGLM <- function(
 
   ### Check `nuisance`. --------------------------------------------------------
   if (!is.null(nuisance)) {
-    nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)
+    nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)[[1]]
 
     if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
       #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
     }
-  } else {
-    nuisance <- vector("list", nS)
   }
-  names(nuisance) <- session_names
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  valid_cols <- do.call(rbind, lapply(design, function(q) {
-    apply(q, 2, function(r){!all(is.na(r))})
-  }))
+  valid_cols <- apply(design, 2, function(r){!all(is.na(r))})
   if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing from every session.") }
-  for (ss in seq(nS)) {
-    any_bad_design_cols <- if (nD == 1) {
-      any(is.na(c(design[[ss]][,valid_cols[ss,]])))
-    } else {
-      any(is.na(c(design[[ss]][,valid_cols[ss,],])))
-    }
+  if (any(is.na(c(design[,valid_cols[ss,],])))) {
     if (any_bad_design_cols) {
       stop("`design` has some sessions & tasks for which some data values ",
         "are `NA`. Partially missing data is not allowed. (Missing tasks ",
@@ -162,7 +132,7 @@ multiGLM <- function(
   }
 
   ### Get `nV`. ----------------------------------------------------------------
-  nV <- stop("[TO DO]")
+  nV <- list(T=NULL, D=nrow(BOLD))
 
   # QC mask. -------------------------------------------------------------------
   # Mask based on quality control metrics of the BOLD data.
@@ -177,71 +147,33 @@ multiGLM <- function(
     } else if (spatial_type == "voxel") {
       spatial$labels[spatial$labels!=0][!mask_qc] <- 0 # [TO DO] check
     } else { stop() }
-    BOLD <- lapply(BOLD, function(q){ q[,mask_qc,drop=FALSE] })
-  }
-
-  # Update and display the number of data locations. ---------------------------
-  nV <- get_nV(spatial, spatial_type)
-  if (verbose>0) {
-    cat('\tNumber of data locations:', nV$D, '\n')
-    if (spatial_type == "voxel") {
-      cat('\tNumber of data + boundary locations:', nV$DB, '\n')
-    }
+    BOLD <- BOLD[,mask_qc,drop=FALSE]
   }
 
   # Scale, nuisance regress, and/or concatenate session data. ------------------
 
   #collect data and design matrices
-  # nK2 <- if (is.null(data[[1]]$nuisance)) { 0 } else { ncol(data[[1]]$nuisance) } #number of nuisance regressors
-  for (ss in seq(nS)) {
-    # Remove any missing fields from design matrix for classical GLM
-    vcols_ss <- valid_cols[ss,]
-    # if (!all(vcols_ss)) { warning(
-    #   'For session ',ss,', ignoring ',sum(!vcols_ss),
-    #   ' design matrix columns of zeros for classical GLM.'
-    # )}
+  nK2 <- if (is.null(nuisance)) { 0 } else { ncol(nuisance) } #number of nuisance regressors
 
-    # # Regress nuisance parameters from BOLD data and design matrix.
-    # if (!is.null(nuisance[[ss]])) {
-    #   nuis_ss <- nuisance[[ss]]
-    #   stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
-    #   nuis_ss <- scale(nuis_ss, scale=FALSE)
-    #   # Add intercept to nuisance in case BOLD is not centered.
-    #   BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], cbind(1, nuis_ss))
-    #   # Do not add intercept, because `design` should already be centered.
-    #   design[[ss]][,vcols_ss] <- fMRItools::nuisance_regression(
-    #     design[[ss]][,vcols_ss], nuis_ss
-    #   ) #[TO DO] if design matrix varies spatially, need to adapt this.
-    #   # Design matrix will start as TxKxV and continue in that format after this step.
-    #   # [TO DO] Re-scale design?
-    #   nuisance[ss] <- list(NULL)
-    #   rm(nuis_ss)
-    # }
+  # Center design matrix.
+  des_means <- rep(colMeans(design[,vcols_ss,,drop=FALSE]), nV$D)
+  design[,vcols_ss,] <- design[,vcols_ss,,drop=FALSE] - des_means
 
-    # Scale data.
-    # (`scale_timeseries` expects VxT data, so transpose before and after.)
-    BOLD[[ss]] <- t(fMRItools::scale_timeseries(
-      t(BOLD[[ss]]), scale=scale_BOLD, transpose=FALSE
-    ))
-  }
-  rm(nuisance)
+  # # Regress nuisance parameters from BOLD data and design matrix.
+  # if (!is.null(nuisance)) {
+  #   stopifnot((is.matrix(nuisance) || is.data.frame(nuisance)) && is.numeric(nuisance))
+  #   nuisance <- scale(nuisance, scale=FALSE)
+  #   # Add intercept to nuisance in case BOLD is not centered.
+  #   BOLD <- fMRItools::nuisance_regression(BOLD, cbind(1, nuisance))
+  #   # Do not add intercept, because `design` should already be centered.
+  #   design[,valid_cols] <- fMRItools::nuisance_regression(
+  #     design[,valid_cols], nuisance
+  #   ) #[TO DO] if design matrix varies spatially, need to adapt this.
+  #   # Design matrix will start as TxKxV and continue in that format after this step.
+  #   # [TO DO] Re-scale design?
+  #   nuisance[ss] <- list(NULL)
+  #   rm(nuisance)
+  # }
 
-  # [TO DO] Question: mesh vs surf? same?
-  if (spatial_type=="voxel" && do$pw && ar_smooth > 0) {
-    stop("[TO DO] How to support this?")
-  }
-  # mesh$loc,mesh$graph$tv,mesh$n
-
-  stop("TO DO")
-  # Replace these:
-  # GLM_est_resid_var_pw
-  # sparse_and_PW
-  # GLM_classical
-
-  x <- GLM_multi(
-    BOLD[[1]], design[[1]], nuisance[[1]],
-    spatial
-  )
-
-  result_classical <- prewhiten_info <- design <- NULL
+  result <- GLM_multi(BOLD, design, nuisance)
 }

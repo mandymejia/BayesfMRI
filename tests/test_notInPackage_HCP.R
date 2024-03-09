@@ -103,6 +103,18 @@ bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, r
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
 
+## MULTI GLM
+BOLD <- as.matrix(read_cifti(fnames$cifti_1))
+design <- abind::abind(des[[1]], des[[2]], along=3)
+nuisance <- nuis$rp_1
+
+multiGLM(
+  BOLD = BOLD,
+  design = design,
+  nuisance=cbind(nuisance, dct_bases(253, 5)),
+  verbose = TRUE
+)
+
 ##### Second pass to get results of decent resolution
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1)))

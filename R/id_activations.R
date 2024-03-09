@@ -294,7 +294,7 @@ id_activations.posterior <- function(
   #excur_method <- match.arg(excur_method, c("EB","QC"))
 
   sess_ind <- which(model_obj$session_names == session)
-  n_vox <- nrow(model_obj$spatial$surf$vertices)
+  n_vox <- model_obj$spde$n.spde
   #indices of beta vector corresponding to specified session
   inds <- (1:n_vox) + (sess_ind-1)*n_vox
 
@@ -305,7 +305,6 @@ id_activations.posterior <- function(
 	for (field in fields) {
 
 		#if(is.null(area.limit)){
-	  stop("Broken.")
 		res.exc <- excursions.inla(
         model_obj$INLA_model_obj,
         name=field, ind=inds, u=gamma, type='>', alpha=alpha, method="EB",
