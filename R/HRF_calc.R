@@ -189,8 +189,8 @@ HRF_main <- function(t, a1=6, b1=1, a2=NULL, b2=NULL, c=1/6, o=0){ #}, mt=16){
 #' @return HRF vector (or dHRF, or d2HRF) corresponding to time
 #'
 #' @examples
-#' downsample <- 100
-#' HRF96(seq(0, 30, by=1/downsample))
+#' upsample <- 100
+#' HRF96(seq(0, 30, by=1/upsample))
 #'
 #' @importFrom fMRItools is_1
 #' @export

@@ -9,7 +9,7 @@ make_design(
   nTime,
   TR,
   dHRF = c(1, 0, 2),
-  downsample = 100,
+  upsample = 100,
   scale_design = TRUE,
   ...
 )
@@ -48,7 +48,7 @@ nuisance signals rather than as fields. To do so, move the corresponding
 columns from the design matrix to the \code{nuisance} argument for
 \code{BayesGLM_cifti}.}
 
-\item{downsample}{Downsample factor for convolving stimulus boxcar or stick
+\item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
 \item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}

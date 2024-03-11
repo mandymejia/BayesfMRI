@@ -31,7 +31,7 @@
 #'  nuisance signals rather than as fields. To do so, move the corresponding
 #'  columns from the design matrix to the \code{nuisance} argument for
 #'  \code{BayesGLM_cifti}.
-#' @param downsample Downsample factor for convolving stimulus boxcar or stick
+#' @param upsample Upsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
@@ -48,7 +48,7 @@
 #' }
 #' @export
 make_design <- function(
-  onsets, nTime, TR, dHRF=c(1, 0, 2), downsample=100, scale_design=TRUE, ...
+  onsets, nTime, TR, dHRF=c(1, 0, 2), upsample=100, scale_design=TRUE, ...
 ){
 
   # Check inputs. --------------------------------------------------------------
@@ -60,13 +60,13 @@ make_design <- function(
   stopifnot(fMRItools::is_1(TR, "numeric"))
   stopifnot(TR > 0)
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
-  downsample <- round(TR*downsample)/TR # TR*downsample must be an integer
+  upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
 
   # In the future, this might be an argument.
   FIR_nSec <- 0
   do_FIR <- FIR_nSec > 0
   if (do_FIR) {
-    FIR_nSec <- round(FIR_nSec/TR)*TR # FIR_nSec/TR must be an integer to match indices of downsampled stimulus, must round if not
+    FIR_nSec <- round(FIR_nSec/TR)*TR # FIR_nSec/TR must be an integer to match indices of upsampled stimulus, must round if not
     FIR_nTimeR <- FIR_nSec/TR # (sec)/(sec/vol) = vol  #number of TRs to model with FIR
   }
 
@@ -76,22 +76,22 @@ make_design <- function(
 
   # Compute HRFs. --------------------------------------------------------------
 
-  # Prepare to downsample the stimulus function.
+  # Prepare to upsample the stimulus function.
   nSec <- nTime*TR; # Total time of experiment in seconds
-  inds <- seq(TR*downsample, nTime*TR*downsample, by = TR*downsample) # Extract EVs by TR after convolution
-  #note: since nTime is an integer, the inds will always be integers, as long as TR*downsample is also an integer
+  inds <- seq(TR*upsample, nTime*TR*upsample, by = TR*upsample) # Extract EVs by TR after convolution
+  #note: since nTime is an integer, the inds will always be integers, as long as TR*upsample is also an integer
   if(max(abs(inds - round(inds))) > 1e-6) stop('Contact developer: detected non-integer indices for downsampling')
   inds <- round(inds) #to fix tiny deviations from zero
 
   # For FIR.
   if (do_FIR) {
-    inds_FIR <- seq(1, by = TR*downsample, length.out = FIR_nTimeR) #first index for each FIR basis function
+    inds_FIR <- seq(1, by = TR*upsample, length.out = FIR_nTimeR) #first index for each FIR basis function
     if(max(abs(inds_FIR - round(inds_FIR))) > 1e-6) stop('Contact developer: detected non-integer indices for FIR. Set FIR_nSec = 0 to skip FIR basis set calculation.')
   }
 
   # Canonical HRF to use in convolution as a function of time (in seconds).
-  u <- seq(0, 30, by=1/downsample) #go out 30 sec
-  HRF <- list(c=HRF_calc(t = u, deriv=0, ...))#[-1])
+  u <- seq(0, 30, by=1/upsample) #go out 30 sec
+  HRF <- list(c=HRF_calc(t = u, deriv=0, ...))#[-1]) # [TO DO] confirm removal of [-1]
   if (dHRF > 0) { HRF$d = HRF_calc(t = u, deriv=1, ...)}#[-1] }
   if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)}#[-1] }
 
@@ -125,10 +125,10 @@ make_design <- function(
     ots_sj <- ifelse(dur_sj==0, round(ots_sj/TR)*TR, ots_sj)
 
     ##### Get `stimulus`. -----------------------------------------------------
-    stim_sj <- rep(0, nSec*downsample)
+    stim_sj <- rep(0, nSec*upsample)
     for (ii in seq(length(ots_sj))) {
-      start_ii <- round(ots_sj[ii]*downsample)
-      end_ii <- round(ots_sj[ii]*downsample + dur_sj[ii]*downsample)
+      start_ii <- round(ots_sj[ii]*upsample)
+      end_ii <- round(ots_sj[ii]*upsample + dur_sj[ii]*upsample)
       stim_sj[start_ii:end_ii] <- 1
     }
     stimulus[[jj]] <- c(stim_sj,0)[inds]
@@ -141,9 +141,9 @@ make_design <- function(
     ##### Get `FIR`. -----------------------------------------------------------
     if (FIR_nSec > 0) {
       for (tt in seq(FIR_nTimeR)) {
-        dummy_tt <- rep(0, TR*downsample*FIR_nTimeR)
+        dummy_tt <- rep(0, TR*upsample*FIR_nTimeR)
         start_tt <- inds_FIR[tt]
-        end_tt <- start_tt + TR*downsample - 1 #each FIR basis spans a single TR
+        end_tt <- start_tt + TR*upsample - 1 #each FIR basis spans a single TR
         dummy_tt[start_tt:end_tt] <- 1
         FIR_tj <- convolve(stim_sj, rev(dummy_tt), type='open')
         FIR_tj <- round(FIR_tj, 5)

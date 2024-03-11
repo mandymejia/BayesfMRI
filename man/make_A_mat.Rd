@@ -9,7 +9,7 @@ make_A_mat(surf, surf_rs)
 \arguments{
 \item{surf}{The full-resolution \code{"surf"} object.}
 
-\item{surf_rs}{The downsampled \code{"surf"} object.}
+\item{surf_rs}{The upsampled \code{"surf"} object.}
 }
 \value{
 The A matrix
