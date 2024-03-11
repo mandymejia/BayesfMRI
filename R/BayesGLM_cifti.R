@@ -124,6 +124,21 @@ BayesGLM_cifti <- function(
   return_INLA <- x$return_INLA
   rm(x)
 
+  # `hpf` and `TR`.
+  if (is.null(hpf)) {
+    warn_msg <- if (is.null(TR)) { "`hpf` and `TR`" } else { "`hpf`" }
+    warning("Highpass-filtering (HPF) is recommended for computing a GLM on ",
+      "time series data, such as fMRI. Set ", warn_msg, " to enable the HPF. ",
+      "Or, set `hpf='already'` if the data, design, and nuisance inputs have ",
+      "already been high-pass filtered.")
+  } else {
+    if (fMRItools::is_1(hpf, "character") && hpf=="already") { 
+      hpf <- NULL
+    } else if (is.null(TR)) {
+      stop("`hpf` requires `TR`.")
+    }
+  }
+
   ### Brain structures. --------------------------------------------------------
   if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
   if ("all" %in% brainstructures) {
