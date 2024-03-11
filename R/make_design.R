@@ -134,9 +134,17 @@ make_design <- function(
     stimulus[[jj]] <- c(stim_sj,0)[inds]
 
     ##### Get `design` by convolving stimulus and HRFs. ------------------------
-    design[,field_idx] <- do.call(cbind,
-      lapply(HRF, function(q){ convolve(stim_sj, rev(q), type="open") })
-    )[inds,]
+    # Convolve.
+    HRF_conv <- lapply(HRF, function(q){ 
+      convolve(stim_sj, rev(q), type="open") 
+    })
+
+    # Normalize each by dividing by its maximum, so the peak = 1. 
+    # Note that this occurs prior to downsampling.
+    HRF_conv <- lapply(HRF_conv, function(q){ q / max(q) })
+
+    # Downsample and save to `design`.
+    design[,field_idx] <- do.call(cbind, HRF_conv)[inds,]
 
     ##### Get `FIR`. -----------------------------------------------------------
     if (FIR_nSec > 0) {
