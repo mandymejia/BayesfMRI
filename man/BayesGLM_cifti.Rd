@@ -91,7 +91,9 @@ nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
 \item{hpf}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
 filter to the data, for detrending? \code{hpf} is the filter frequency.
 Use \code{NULL} to skip detrending. Detrending is strongly recommended for
-fMRI data, to help reduce the autocorrelation in the residuals.
+fMRI data, to help reduce the autocorrelation in the residuals, so
+\code{NULL} will induce a warning. Use \code{"already"} to disable the
+warning while skipping highpass filtering.
 
 Using at least two DCT bases is as sufficient for detrending as using linear
 and quadratic drift terms in the nuisance matrix. So if DCT detrending is
