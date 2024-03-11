@@ -296,8 +296,10 @@ BayesGLM <- function(
         stop("Both the design and nuisance for session ", ss, " has an ",
           "intercept column. Remove one.") 
       }
+      cat("\tSession ", ss, ": modeling BOLD means using the intercept field in the provided `design`.")
     } else if (!nuis_has_intercept[ss]) {
       nuisance[[ss]] <- cbind2(nuisance[[ss]], rep(1, nT[ss]))
+      cat("\tSession ", ss, ": demeaning BOLD and design during nuisance regression.")
     }
 
     # Regress nuisance parameters from BOLD data and design matrix.
