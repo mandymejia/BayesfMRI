@@ -36,3 +36,5 @@
 ^R/excursions\.R$
 ^R/make_spde_surf\.R$
 ^R/summarize_sessions\.R$
+^R/GLM_multi\.R$
+^R/multiGLM\.R$

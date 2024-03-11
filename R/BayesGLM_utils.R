@@ -15,55 +15,6 @@ scale_design_mat <- function(design_mat) {
   })
 }
 
-#' Check design matrix or matrices
-#'
-#' @param design,design_type,nS,nT See \code{"BayesGLM"}
-#' @return The design matrix as an \code{nS}-length list.
-#' @keywords internal
-#'
-BayesGLM_check_design <- function(design, design_type, nS, nT) {
-  design_type <- match.arg(
-    design_type, c("design", "compare", "per_loc", "onsets")
-  )
-  if (!is.list(design) || !is.list(design$design)) {
-    stop("`design` is not formatted correctly. See `make_design`.")
-  }
-  if (length(design$design) != nS) {
-    stop("The length of `design$design` should match the number of BOLD sessions, ", nS, ".")
-  }
-  # (Repeat) the checks from `make_design`.
-  # `nD`: num. of designs (>1 for per-location or multi modeling). Not used.
-  stopifnot(all(vapply(design$design, is.numeric, FALSE)))
-  stopifnot(length(unique(lapply(design$design, dim)))==1)
-  if (design_type %in% c("regular", "from_onsets")) {
-    stopifnot(all(vapply(design$design, is.matrix.or.df, FALSE)))
-    # nD <- 1
-  } else if (design_type %in% c("multi", "per_location")) {
-    stopifnot(all(vapply(design$design, is.array, FALSE)))
-    # nD <- dim(design$design[[1]])[3]
-  } else { stop() }
-
-  design
-}
-
-#' Check nuisance matrix or matrices
-#'
-#' @param nuisance,nS,nT See \code{"BayesGLM"}
-#' @return The nuisance matrix as an \code{nS}-length list.
-#' @keywords internal
-#'
-BayesGLM_check_nuisance <- function(design, design_type, nS, nT) {
-  if (is.matrix(nuisance)) { nuisance <- list(single_sess=nuisance) }
-
-  if (!is.null(nuisance)) {
-    stopifnot(all(vapply(nuisance, is.matrix, FALSE)))
-    stopifnot(all(vapply(nuisance, is.numeric, FALSE)))
-  } else {
-    nuisance <- vector("list", length = nS)
-  }
-  nuisance
-}
-
 #' Make DCT bases
 #' @param hpf,nT,TR See \code{BayesGLM_cifti}
 #' @return The matrix of DCT bases, or \code{NULL} if none

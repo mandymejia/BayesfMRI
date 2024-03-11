@@ -24,7 +24,7 @@
 sparse_and_PW <- function(
   BOLD, design,
   spatial, spatial_type,
-  field_names, design_type,
+  session_names, field_names, design_type,
   valid_cols, nT, nD,
   sqrtInv_all
   ){

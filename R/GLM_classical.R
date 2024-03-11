@@ -2,8 +2,8 @@
 #'
 #' Classical GLM for BayesGLM
 #'
-#' @param data,spatial,spatial_type,session_names,field_names,design_type See \code{BayesGLM}.
-#' @param vcols_ss,nT_ss,nD,var_resid,sqrtInv_all See \code{BayesGLM}.
+#' @param BOLD,design,nK2,nV_D,field_names,design_type See \code{BayesGLM}.
+#' @param vcols_ss,nT_ss,nD,var_resid,sqrtInv_all,do_pw See \code{BayesGLM}.
 #' @param compute_SE compute SE?
 #' @return A list of results
 #' @keywords internal

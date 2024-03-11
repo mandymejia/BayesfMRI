@@ -4,16 +4,7 @@
 \alias{make_sqrtInv_all}
 \title{Make \code{sqrtInv_all}}
 \usage{
-make_sqrtInv_all(
-  nT,
-  nV,
-  do_pw,
-  n_threads,
-  ar_order,
-  AR_coefs_avg,
-  var_avg,
-  verbose
-)
+make_sqrtInv_all(nT, nV, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg)
 }
 \arguments{
 \item{nT, nV, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg}{See \code{\link{GLM_est_resid_var_pw}}.}

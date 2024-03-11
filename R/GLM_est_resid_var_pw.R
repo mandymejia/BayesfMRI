@@ -64,7 +64,7 @@ GLM_est_resid_var_pw <- function(
   }
 
   sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q, 
-    nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg, verbose
+    nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg
   )})
 
   list(
@@ -80,7 +80,7 @@ GLM_est_resid_var_pw <- function(
 #' @return \code{sqrtInv_all}
 #' @keywords internal
 make_sqrtInv_all <- function(
-  nT, nV, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg, verbose){
+  nT, nV, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg){
 
   if (do_pw) {
     # Case 1A: Prewhitening; not parallel.
@@ -91,7 +91,7 @@ make_sqrtInv_all <- function(
       )
       template_pw_list <- rep(list(template_pw), nV)
       for (vv in seq(nV)) {
-        if (vv %% 100 == 0) if (verbose>1) { cat("\tLocation",vv,"of",nV,"\n") }
+        #if (vv %% 100 == 0) if (verbose>1) { cat("\tLocation",vv,"of",nV,"\n") }
         template_pw_list[[vv]] <- .getSqrtInvCpp(
           AR_coefs = AR_coefs_avg[vv,],
           nTime = nT,
