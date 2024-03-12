@@ -6,19 +6,6 @@
 #'
 #' @param BOLD,design,nuisance Session-length list of numeric matrices/arrays,
 #'  each with volumes along the first dimension.
-#' @param spatial Gives the spatial information. For surface data, a list of two:
-#'  \describe{
-#'    \item{surf}{A list of two: \code{vertices} \eqn{V \times 3} numeric matrix of vertex locations in XYZ coordinate space, and \code{faces}, \eqn{F \times 3} matrix of positive integers defining the triangular faces.}
-#'    \item{mask}{Mask of locations with valid data.}
-#' }
-#'  For voxel data, a list of six:
-#'  \describe{
-#'    \item{label}{3D array of labeled locations to include in the model.}
-#'    \item{trans_mat}{Projection matrix to convert voxel indices to XYZ position. Can be \code{NULL}.}
-#'    \item{trans_units}{XYZ units. Can be \code{NULL}.}
-#'    \item{nbhd_order}{See documentation for \code{\link{BayesGLM_cifti}}.}
-#'    \item{buffer}{See documentation for \code{\link{BayesGLM_cifti}}.}
-#' }
 #' @inheritParams session_names_Param
 #' @inheritParams scale_BOLD_Param
 # @inheritParams EM_Param
@@ -73,6 +60,8 @@ multiGLM <- function(
   #emTol = 1e-3
   ){
 
+  scale_design <- FALSE
+
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
   if (isTRUE(scale_BOLD)) {
@@ -123,7 +112,9 @@ multiGLM <- function(
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   valid_cols <- apply(design, 2, function(r){!all(is.na(r))})
   if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing from every session.") }
-  if (any(is.na(c(design[,valid_cols[ss,],])))) {
+
+  any_bad_design_cols <- any(is.na(c(design[,valid_cols,])))
+  if (any(is.na(c(design[,valid_cols,])))) {
     if (any_bad_design_cols) {
       stop("`design` has some sessions & tasks for which some data values ",
         "are `NA`. Partially missing data is not allowed. (Missing tasks ",
@@ -141,39 +132,41 @@ multiGLM <- function(
     meanTol=meanTol, varTol=varTol, verbose=verbose>0
   ) #, snrTol=snrTol)
   if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
-  if (any(!mask_qc$mask)) {
-    if (spatial_type == "mesh") {
-      spatial$mask[spatial$mask] <- mask_qc
-    } else if (spatial_type == "voxel") {
-      spatial$labels[spatial$labels!=0][!mask_qc] <- 0 # [TO DO] check
-    } else { stop() }
-    BOLD <- BOLD[,mask_qc,drop=FALSE]
-  }
+  if (any(!mask_qc$mask)) { BOLD <- BOLD[,mask_qc,drop=FALSE] }
 
   # Scale, nuisance regress, and/or concatenate session data. ------------------
+
+  # Check for intercepts and flat columns in design and nuisance matrices.
+  # Stop if any zero-var, zero-mean column exists.
+  des_is_flat <- apply(abs(design) < 1e-8, 2, all)
+  if (any(des_is_flat)) {
+    stop("The design matrix has at least one column that is ",
+      "flat (all values are near-zero).")
+  }
+
+  # Detect zero-var, nonzero-mean columns.
+  des_is_intercept <- matrixStats::colVars(design) < 1e-8
+  if (sum(des_is_intercept) > 1) {
+    stop("The design matrix has more than one intercept ",
+      "column. That means they are collinear, which will cause problems ",
+      "during GLM model estimation. Please fix.")
+  }
+  des_has_intercept <- any(des_is_intercept)
+
+  # For nuisance: detect zero-var, nonzero-mean columns.
+  if (!is.null(nuisance)) {
+    nuis_is_intercept <- matrixStats::colVars(nuisance) < 1e-8
+    nuis_has_intercept <- any(nuis_is_intercept)
+  } else {
+    nuis_has_intercept <- FALSE
+  }
 
   #collect data and design matrices
   nK2 <- if (is.null(nuisance)) { 0 } else { ncol(nuisance) } #number of nuisance regressors
 
   # Center design matrix.
-  des_means <- rep(colMeans(design[,vcols_ss,,drop=FALSE]), nV$D)
-  design[,vcols_ss,] <- design[,vcols_ss,,drop=FALSE] - des_means
+  des_means <- rep(colMeans(design[,valid_cols,,drop=FALSE]), nV$D)
+  design[,valid_cols,] <- design[,valid_cols,,drop=FALSE] - des_means
 
-  # # Regress nuisance parameters from BOLD data and design matrix.
-  # if (!is.null(nuisance)) {
-  #   stopifnot((is.matrix(nuisance) || is.data.frame(nuisance)) && is.numeric(nuisance))
-  #   nuisance <- scale(nuisance, scale=FALSE)
-  #   # Add intercept to nuisance in case BOLD is not centered.
-  #   BOLD <- fMRItools::nuisance_regression(BOLD, cbind(1, nuisance))
-  #   # Do not add intercept, because `design` should already be centered.
-  #   design[,valid_cols] <- fMRItools::nuisance_regression(
-  #     design[,valid_cols], nuisance
-  #   ) #[TO DO] if design matrix varies spatially, need to adapt this.
-  #   # Design matrix will start as TxKxV and continue in that format after this step.
-  #   # [TO DO] Re-scale design?
-  #   nuisance[ss] <- list(NULL)
-  #   rm(nuisance)
-  # }
-
-  result <- GLM_multi(BOLD, design, nuisance)
+  result <- GLM_multi(y=BOLD, X=design, X2=nuisance, verbose=verbose)
 }

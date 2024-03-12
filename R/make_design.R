@@ -91,9 +91,9 @@ make_design <- function(
 
   # Canonical HRF to use in convolution as a function of time (in seconds).
   u <- seq(0, 30, by=1/upsample) #go out 30 sec
-  HRF <- list(c=HRF_calc(t = u, deriv=0, ...))#[-1]) # [TO DO] confirm removal of [-1]
-  if (dHRF > 0) { HRF$d = HRF_calc(t = u, deriv=1, ...)}#[-1] }
-  if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)}#[-1] }
+  HRF <- list(c=HRF_calc(t = u, deriv=0, ...))
+  if (dHRF > 0) { HRF$d = HRF_calc(t = u, deriv=1, ...)}
+  if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)}
 
   ### Iterate over tasks. ------------------------------------------------------
   stimulus  <- vector("list", nJ)

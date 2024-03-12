@@ -13,12 +13,22 @@
   zlim = c(round(1/x$n_results - 0.005, 2), 1),
   ...
 )
+
+\method{plot}{prev_BayesGLM_cifti}(
+  x,
+  idx = NULL,
+  session = NULL,
+  drop_zeros = NULL,
+  colors = "plasma",
+  zlim = c(round(1/x$n_results - 0.005, 2), 1),
+  ...
+)
 }
 \arguments{
 \item{x}{An object of class "prev_BayesGLM_cifti"}
 
-\item{idx}{Which field should be plotted? Give the numeric indices or the
-names. \code{NULL} (default) will show all fields. This argument overrides
+\item{idx}{Which task should be plotted? Give the numeric indices or the
+names. \code{NULL} (default) will show all tasks. This argument overrides
 the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
 
 \item{session}{Which session should be plotted? \code{NULL} (default) will
@@ -36,7 +46,11 @@ are overrided to use the Viridis \code{"plasma"} color scale between
 }
 \value{
 Result of the call to \code{ciftiTools::view_cifti_surface}.
+
+Result of the call to \code{ciftiTools::view_cifti_surface}.
 }
 \description{
+S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"prev_BayesGLM_cifti"} object
+
 S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"prev_BayesGLM_cifti"} object
 }
