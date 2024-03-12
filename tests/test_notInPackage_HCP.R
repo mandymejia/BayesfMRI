@@ -5,8 +5,8 @@
 doINLA <- TRUE
 saveResults <- TRUE
 overwriteResults <- TRUE
-resamp_res <- 4000
-my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
+resamp_res <- 7000
+# my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
@@ -20,14 +20,16 @@ if (!overwriteResults && dir.exists(dir_resultThis)) { stop("Results exist alrea
 if (!dir.exists(dir_resultThis)) { dir.create(dir_resultThis) }
 
 library(testthat)
+library(stats)
 if (doINLA) {
   library(INLA)
-  inla.setOption(pardiso.license = my_pardiso)
-  inla.pardiso.check()
+  # inla.setOption(pardiso.license = my_pardiso)
+  # inla.pardiso.check()
 }
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
-library(BayesfMRI)
+roxygen2::roxygenize("~/Documents/GitHub/BayesfMRI")
+#library(BayesfMRI)
 
 # Get file names.
 fnames <- list(
@@ -55,50 +57,89 @@ names(events) <- rep(c("win", "loss", "neut"), 2)
 nuis <- lapply(fnames[grepl("rp", names(fnames))], read.table, header=FALSE)
 nuis <- lapply(nuis, as.matrix)
 
+nTime <- 253#vapply(lapply(fnames[c("cifti_1", "cifti_2")], read_cifti), ncol, 0)
+
+# Make version of `events` with no stimuli for some tasks, for testing.
+eventsB <- events
+eventsB[c(2, 6)] <- NA
+
+# Test `make_design` -----------------------------------------------------------
+
+# From `onsets`.
+des <- lapply(
+  list(events[seq(3)], events[seq(4,6)]),
+  function(q) { make_design(onsets=q, TR=.72, nTime=nTime, dHRF=1) }
+)
+for (ss in seq(2)) {
+  nuis[[ss]] <- cbind(nuis[[ss]], des[[ss]]$design[,seq(4,6)])
+  des[[ss]] <- des[[ss]]$design[,seq(3)]
+}
+
+
 # BayesGLM ---------------------------------------------------------------------
-n_sess <- 2
-BayesGLM_cifti_args <- list(
-  cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-  surfL_fname=ciftiTools.files()$surf["left"],
-  surfR_fname=ciftiTools.files()$surf["right"],
-  brainstructures = "both",
-  onsets = switch(n_sess, events[seq(3)], list(events[seq(3)], events[seq(4,6)])),
-  TR = 2.2,
-  dHRF=2,
-  nuisance=switch(n_sess, nuis$rp_1, nuis),
-  Bayes = TRUE,
-  ar_order = 0,
-  ar_smooth = 3,
-  resamp_res = 800,
-  verbose = FALSE,
-  return_INLA = "trim",
-  combine_sessions = FALSE
-)
-bglm <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+### Classical vs Bayes; Single- vs Multi-session -----
+BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
+  list(
+    BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
+    design = switch(n_sess, des[[1]], des[seq(n_sess)]),
+    TR = 0.72,
+    brainstructures = "both",
+    surfL=ciftiTools.files()$surf["left"],
+    surfR=ciftiTools.files()$surf["right"],
+    resamp_res = resamp_res * resamp_factor,
+    nuisance=switch(n_sess, nuis$rp_1, nuis),
+    hpf=.01,
+    #Bayes = TRUE,
+    ar_order = 1,
+    ar_smooth = 3,
+    return_INLA = "trim",
+    verbose = TRUE
+  )
+}
 
-# Change `brainstructures`, `n_sess`, and `meanTol`.
-# Expect same classical model results, where they exist.
-n_sess <- 1
-BayesGLM_cifti_args <- list(
-  cifti_fname = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-  surfL_fname=ciftiTools.files()$surf["left"],
-  surfR_fname=ciftiTools.files()$surf["right"],
-  brainstructures = "left",
-  onsets = switch(n_sess, events[rev(seq(3))], list(events[rev(seq(3))], events[rev(seq(4,6))])),
-  TR = 2.2,
-  dHRF=2,
-  nuisance=switch(n_sess, nuis$rp_1, nuis),
-  Bayes = TRUE,
-  ar_order = 0,
-  ar_smooth = 3,
-  resamp_res = 800,
-  verbose = TRUE,
-  return_INLA = "full",
-  meanTol=9999,
-  combine_sessions = FALSE
-)
-bglm2 <- do.call(BayesGLM_cifti, BayesGLM_cifti_args)
+# ##### First pass to detect errors
+bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
+bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
 
-z <- bglm$BayesGLM_results$cortex_left$result_classical
-y <- bglm2$BayesGLM_results$cortex_left$result_classical
-q <- y$single_session$estimates - z$session1$estimates[,c(3,2,1)]
+## MULTI GLM
+BOLD <- as.matrix(read_cifti(fnames$cifti_1))
+design <- abind::abind(des[[1]], des[[2]], along=3)
+nuisance <- nuis$rp_1
+
+multiGLM(
+  BOLD = BOLD,
+  design = design,
+  nuisance=cbind(nuisance, dct_bases(253, 5)),
+  verbose = TRUE
+)
+
+##### Second pass to get results of decent resolution
+bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
+bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1)))
+#bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, dtype="multi")))
+bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2)))
+bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2)))
+#bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, dtype="multi")))
+
+act_c1 <- id_activations(bglm_c1, sessions=1)
+act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+#act_m1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
+act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
+#act_m2 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+
+# Save ---
+save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_HCP.rda"))
+
+# Plot ---
+plot(bglm_c1, fname=file.path(dir_resultThis, "HCP_bglm_c1"), together="idx")
+plot(bglm_b1, fname=file.path(dir_resultThis, "HCP_bglm_b1"), together="idx")
+plot(bglm_c2, fname=file.path(dir_resultThis, "HCP_bglm_c2"), together="idx")
+plot(bglm_b2, fname=file.path(dir_resultThis, "HCP_bglm_b2"), together="idx")
+
+plot(act_c1, fname=file.path(dir_resultThis, "HCP_act_c1"), together="idx")
+plot(act_b1, fname=file.path(dir_resultThis, "HCP_act_b1"), together="idx")
+plot(act_c2, fname=file.path(dir_resultThis, "HCP_act_c2"), together="idx")
+plot(act_b2, fname=file.path(dir_resultThis, "HCP_act_b2"), together="idx")

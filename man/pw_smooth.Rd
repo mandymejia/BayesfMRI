@@ -4,16 +4,10 @@
 \alias{pw_smooth}
 \title{Smooth AR coefficients and white noise variance}
 \usage{
-pw_smooth(vertices, faces, mask = NULL, AR, var, FWHM = 5)
+pw_smooth(surf, mask = NULL, AR, var, FWHM = 5)
 }
 \arguments{
-\item{vertices}{A \eqn{V \times 3} matrix, where each row contains the Euclidean
-coordinates at which a given vertex in the mesh is located. \eqn{V} is the
-number of vertices in the mesh}
-
-\item{faces}{An \eqn{F \times 3} matrix, where each row contains the vertex
-indices for a given triangular face in the mesh. \eqn{F} is the number of
-faces in the mesh.}
+\item{surf}{A \code{"surf"} object with vertices and triangular faces.}
 
 \item{mask}{A logical vector indicating, for each vertex, whether to include
 it in smoothing. \code{NULL} (default) will use a vector of all \code{TRUE},
@@ -25,7 +19,7 @@ meaning that no vertex is masked out; all are used for smoothing.}
 
 \item{FWHM}{FWHM parameter for smoothing. Remember that
 \eqn{\sigma = \frac{FWHM}{2*sqrt(2*log(2)}}. Set to \code{0} or \code{NULL}
-to not do any smoothing. Default: \code{5}.#'}
+to not do any smoothing. Default: \code{5}.}
 }
 \value{
 Smoothed AR coefficients and residual variance at every vertex
@@ -33,3 +27,4 @@ Smoothed AR coefficients and residual variance at every vertex
 \description{
 Smooth AR coefficients and white noise variance
 }
+\keyword{internal}

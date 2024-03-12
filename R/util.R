@@ -1,6 +1,6 @@
 # #' Plot BayesfMRI.spde objects
 # #'
-# #' @param object Object of class BayesfMRI.spde (see \code{help(create_spde_vol3D)})
+# #' @param object Object of class BayesfMRI.spde (see \code{help(make_spde_vol3D)})
 # #' @param colors (Optional) Vector of colors to represent each region.
 # #' @param alpha Transparency level.
 # #'
@@ -11,7 +11,7 @@
 # #' @importFrom viridis viridis_pal
 #
 # plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
-#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(create_spde_vol3D).')
+#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(make_spde_vol3D).')
 #   num_regions <- length(object$vertices)
 #   if(is.null(colors)) colors <- viridis_pal()(num_regions)
 #   if(length(colors) < num_regions) {
@@ -38,15 +38,15 @@
 # #' @method plot BayesGLM
 # plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
 # {
-#   session_names <- names(object$task_estimates)
+#   session_names <- names(object$field_estimates)
 #
 #   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
 #   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
 #
 #   if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
 #
-#   ind <- which(names(object$task_estimates) == session_name) #which element of list
-#   est <- (object$task_estimates)[[ind]]
+#   ind <- which(names(object$field_estimates) == session_name) #which element of list
+#   est <- (object$field_estimates)[[ind]]
 #   K <- ncol(est)
 #
 #
@@ -139,22 +139,20 @@ s2m_B <- function(B,sigma){
 }
 
 #' Mask out invalid data
-#' 
+#'
 #' Mask out data locations that are invalid (missing data, low mean, or low
 #'  variance) for any session.
 #'
-#' @param data A list of sessions, where each session is a list with elements
-#'  \code{BOLD}, \code{design}, and optionally \code{nuisance}. See 
-#'  \code{?is.BfMRI.sess} for details.
-#' @param meanTol,varTol Tolerance for mean and variance of each data location. 
-#'  Locations which do not meet these thresholds are masked out of the analysis. 
+#' @param BOLD A session-length list of \eqn{T \times V} numeric BOLD data.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location.
+#'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Defaults: \code{1e-6}.
 #' @param verbose Print messages counting how many locations are removed?
 #'  Default: \code{TRUE}.
 #'
 #' @importFrom matrixStats colVars
 #' @return A logical vector indicating locations that are valid across all sessions.
-#' 
+#'
 #' @examples
 #' nT <- 30
 #' nV <- 400
@@ -162,32 +160,38 @@ s2m_B <- function(B,sigma){
 #' BOLD1[,seq(30,50)] <- NA
 #' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
 #' BOLD2[,65] <- BOLD2[,65] / 1e10
-#' data <- list(sess1=list(BOLD=BOLD1, design=NULL), sess2=list(BOLD=BOLD2, design=NULL))
-#' make_mask(data)
+#' BOLD <- list(sess1=BOLD1, sess2=BOLD2)
+#' make_mask(BOLD)
 #'
 #' @export
-make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+make_mask <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+
+  nS <- length(BOLD)
+  nV <- ncol(BOLD[[1]])
 
   # For each BOLD data matrix,
-  mask_na <- mask_mean <- mask_var <- rep(TRUE, ncol(data[[1]]$BOLD))
-  for (ss in seq(length(data))) {
-    dss <- data[[ss]]$BOLD
+  mask_na <- mask_mean <- mask_var <- mask_snr <- rep(TRUE, nV)
+  for (ss in seq(nS)) {
     # Mark columns with any NA or NaN values for removal.
-    dss_na <- is.na(dss) | is.nan(dss)
-    mask_na[apply(dss_na, 2, any)] <- FALSE
+    na_ss <- is.na(BOLD[[ss]]) | is.nan(BOLD[[ss]])
+    mask_na[apply(na_ss, 2, any)] <- FALSE
     # Calculate means and variances of columns, except those with any NA or NaN.
     # Mark columns with mean/var falling under the thresholds for removal.
-    mask_mean[mask_na][colMeans(dss[,mask_na,drop=FALSE]) < meanTol] <- FALSE
-    mask_var[mask_na][matrixStats::colVars(dss[,mask_na,drop=FALSE]) < varTol] <- FALSE
+    means_ss <- colMeans(BOLD[[ss]][,mask_na,drop=FALSE])
+    vars_ss <- matrixStats::colVars(BOLD[[ss]][,mask_na,drop=FALSE])
+    snr_ss <- means_ss/sqrt(vars_ss)
+    mask_mean[mask_na][means_ss < meanTol] <- FALSE
+    mask_var[mask_na][vars_ss < varTol] <- FALSE
+    #mask_snr[mask_na][snr_ss < snrTol] <- FALSE
   }
 
   # Print counts of locations removed, for each reason.
   if (verbose) {
     warn_part1 <- " locations"
-    warn_part2 <- if (length(data) > 1) { " in at least one session.\n" } else { ".\n" }
+    warn_part2 <- if (nS > 1) { " in at least one session.\n" } else { ".\n" }
     if (any(!mask_na)) {
       cat(paste0(
-        "\t", sum(!mask_na), warn_part1, 
+        "\t", sum(!mask_na), warn_part1,
         " removed due to NA/NaN values", warn_part2
       ))
       warn_part1 <- " additional locations"
@@ -196,7 +200,7 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     mask_mean2 <- mask_mean | (!mask_na)
     if (any(!mask_mean2)) {
       cat(paste0(
-        "\t", sum(!mask_mean2), warn_part1, 
+        "\t", sum(!mask_mean2), warn_part1,
         " removed due to low mean", warn_part2
       ))
       warn_part1 <- " additional locations"
@@ -205,12 +209,52 @@ make_mask <- function(data, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
     if (any(!mask_var2)) {
       cat(paste0(
-        "\t", sum(!mask_var2), warn_part1, 
+        "\t", sum(!mask_var2), warn_part1,
         " removed due to low variance", warn_part2
       ))
     }
+    # # Do not include NA or low-mean or low-var locations in count.
+    # mask_snr2 <- mask_snr | (!mask_mean) | (!mask_var) | (!mask_na)
+    # if (any(!mask_snr2)) {
+    #   cat(paste0(
+    #     "\t", sum(!mask_snr2), warn_part1,
+    #     " removed due to low SNR", warn_part2
+    #   ))
+    # }
   }
 
-  # Return composite mask.
-  mask_na & mask_mean & mask_var
+  # Return composite mask and other masks
+  list(
+    mask =  mask_na & mask_mean & mask_var, # & mask_snr,
+    mask_na = mask_na,
+    mask_mean = mask_mean,
+    mask_var = mask_var,
+    mask_snr = snr_ss #just return the actual SNR values for now
+  )
+}
+
+#' Is a matrix or data.frame?
+#'
+#' Is this a matrix or data.frame?
+#'
+#' @param q The object
+#' @return Length-one logical.
+#' @keywords internal
+is.matrix.or.df <- function(q){
+  is.matrix(q) || is.data.frame(q)
+}
+
+#' `cbind` if first argument might be \code{NULL}
+#'
+#' `cbind`, but return the second argument if the first is \code{NULL}
+#' @param mat_or_NULL \code{NULL} or a numeric matrix
+#' @param to_add A numeric matrix with the same number of rows as \code{mat_or_NULL}
+#' @return \code{cbind(mat_or_NULL, to_add)}, or just \code{to_add} if the first argument is NULL.
+#' @keywords internal
+cbind2 <- function(mat_or_NULL, to_add) {
+  if (!is.null(mat_or_NULL)) {
+    cbind(mat_or_NULL, to_add)
+  } else {
+    to_add
+  }
 }

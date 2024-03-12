@@ -14,11 +14,13 @@
 ^tests/data_notInPackage
 ^tests/results_notInPackage
 ^tests/test_notInPackage
+^tests/temp
+^tests/test_notInPackage_HCP_sub\.R$
 # below: was going to add to pkg, but didn't
 ^tests/data
 # Volumetric -------------------
 ^R/BayesGLM_vol3D\.R$
-#^R/create_spde_vol3D\.R$
+#^R/make_spde_vol3D\.R$
 ^R/vol2mesh\.R$
 ^R/make_slice_mesh\.R$
 ^R/plot_slice\.R$
@@ -32,5 +34,7 @@
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
-^R/create_spde_surf\.R$
+^R/make_spde_surf\.R$
 ^R/summarize_sessions\.R$
+^R/GLM_multi\.R$
+^R/multiGLM\.R$

@@ -4,10 +4,12 @@
 .RData
 .Ruserdata
 vignettes/output/*
-!vignettes/output/.gitkeep 
+!vignettes/output/.gitkeep
 *~
 *.out
 *.Rout
 R/summarize_sessions.R
 inst/doc
 tests/results_notInPackage
+tests/test_notInPackage_HCP_sub.R
+tests/temp*

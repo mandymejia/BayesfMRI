@@ -2,14 +2,14 @@
 % Please edit documentation in R/EM_utils.R
 \name{Q_prime}
 \alias{Q_prime}
-\title{Gives the portion of the Q matrix independent of phi}
+\title{Q prime}
 \usage{
 Q_prime(kappa2, spde)
 }
 \arguments{
 \item{kappa2}{scalar}
 
-\item{spde}{An spde object}
+\item{spde}{spde object}
 }
 \value{
 a dgCMatrix

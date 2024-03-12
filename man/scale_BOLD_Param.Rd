@@ -4,17 +4,15 @@
 \alias{scale_BOLD_Param}
 \title{scale_BOLD}
 \arguments{
-\item{scale_BOLD}{Option for scaling the BOLD response.
-
-\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
-data is detected (if any mean is less than one), in which case \code{"sd"}
-scaling will be used instead.
-
-\code{"mean"} scaling will scale the data to percent local signal change.
-
-\code{"sd"} scaling will scale the data by local standard deviation.
-
-\code{"none"} will only center the data, not scale it.}
+\item{scale_BOLD}{Controls scaling the BOLD response at each location.
+\describe{
+\item{"auto":}{   (default) Use \code{"mean"} scaling, except if
+demeaned data is detected (any location's mean < 1), use \code{"sd"}
+scaling.}
+\item{"mean":}{   Scale the data to percent local signal change.}
+\item{"sd":}{   Scale the data by local standard deviation.}
+\item{"none":}{   Center the data but do not scale it.}
+}}
 }
 \description{
 scale_BOLD

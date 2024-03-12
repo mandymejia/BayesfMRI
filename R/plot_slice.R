@@ -161,7 +161,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   # Extract the point estimates
   if(is.null(session_name)) session_name <- BayesGLM_object$GLMs_Bayesian$session_names
   # point_estimates <- sapply(session_name, function(sn){
-  #   as.matrix(convert_mat_A %*% BayesGLM_object$task_estimates[[sn]])
+  #   as.matrix(convert_mat_A %*% BayesGLM_object$field_estimates[[sn]])
   # }, simplify = F)
   point_estimates <- BayesGLM_object$betas_Bayesian
   if(is.null(zlim)) zlim <- c(min(unlist(point_estimates), na.rm = T),
@@ -174,7 +174,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   #     beta_out[beta_out == 0] <- NA
   #     return(beta_out)
   #   }, simplify = F)
-  #   names(out) <- BayesGLM_object$task_names
+  #   names(out) <- BayesGLM_object$field_names
   #   return(out)
   # }, simplify= F)
 
@@ -182,7 +182,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, session_name = NULL, zlim = NUL
   # ggplot(melt_mat2(coef_images)) +
   point_df <- melt_mat2(point_estimates)
   if(!is.null(BayesGLM_object$GLMs_Bayesian)) {
-    point_df$L2 <- BayesGLM_object$GLMs_Bayesian$task_names[point_df$L2]
+    point_df$L2 <- BayesGLM_object$GLMs_Bayesian$field_names[point_df$L2]
   }
   out_grob <- ggplot(point_df) +
   geom_raster(aes(x = Var1, y = Var2, fill = value)) +
@@ -267,7 +267,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim
   # Extract the point estimates
   if(is.null(session_name)) session_name <- BayesGLM_object$session_names
   point_estimates <- sapply(session_name, function(sn){
-    as.matrix(convert_mat_A %*% BayesGLM_object$task_estimates[[sn]])
+    as.matrix(convert_mat_A %*% BayesGLM_object$field_estimates[[sn]])
   }, simplify = F)
   if(is.null(zlim)) zlim <- c(min(unlist(point_estimates)),
                               max(unlist(point_estimates)))
@@ -281,7 +281,7 @@ plot_BayesGLM_slice <- function(BayesGLM_object, mask, session_name = NULL, zlim
       beta_out[beta_out == 0] <- NA
       return(beta_out)
     }, simplify = F)
-    names(out) <- BayesGLM_object$task_names
+    names(out) <- BayesGLM_object$field_names
     return(out)
   }, simplify= F)
   out_grob <- BayesfMRI:::melt_mat2(coef_images) %>%

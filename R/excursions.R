@@ -160,7 +160,7 @@ find.smallest.activation <- function(res,mesh,area.limit,factor,area.el){
 #' @param ind Indices of the nodes that should be analyzed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
 #' @inheritParams verbose_Param
-#' @inheritParams max.threads_Param
+#' @inheritParams max_threads_Param
 #' @inheritParams seed_Param
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
 #' number are removed.
@@ -193,7 +193,7 @@ excursions.no.spurious <- function(
   ind,
   max.size,
   verbose=1,
-  max.threads=0,
+  max_threads=0,
   seed,
   area.limit,
   use.continuous = FALSE,
@@ -395,7 +395,7 @@ excursions.no.spurious <- function(
                            vars = vars,
                            max.size,
                            verbose = verbose>1,
-                           max.threads = max.threads,
+                           max_threads = max_threads,
                            seed = seed)
     res.exc <- crop.lists(res.exc)
     if (verbose>0) cat("Calculate sizes\n")
@@ -443,7 +443,7 @@ excursions.no.spurious <- function(
                            vars = vars,
                            max.size,
                            verbose = verbose>1,
-                           max.threads = max.threads,
+                           max_threads = max_threads,
                            seed = seed)
     res.exc <- crop.lists(res.exc)
     if (verbose>0) cat("Calculate sizes\n")
@@ -509,7 +509,7 @@ excursions.no.spurious <- function(
 #' @param ind Indices of the nodes that should be analyzed (optional).
 #' @param max.size Maximum number of nodes to include in the set of interest (optional).
 #' @inheritParams verbose_Param
-#' @inheritParams max.threads_Param
+#' @inheritParams max_threads_Param
 #' @inheritParams seed_Param
 #' @param mesh The mesh on which the model is defined.
 #' @param area.limit Positive number. All connected excursion sets with an area smaller than this
@@ -537,7 +537,7 @@ excursions.inla.no.spurious <- function(result.inla,
                             ind=NULL,
                             max.size,
                             verbose=1,
-                            max.threads=0,
+                            max_threads=0,
                             seed=NULL,
                             mesh,
                             area.limit,
@@ -662,7 +662,7 @@ excursions.inla.no.spurious <- function(result.inla,
                                   rho = rho,
                                   ind = ind,
                                   n.iter = n.iter,
-                                  max.threads = max.threads,
+                                  max_threads = max_threads,
                                   seed = seed,
                                   verbose = verbose>1,
                                   plot.progress = plot.progress)

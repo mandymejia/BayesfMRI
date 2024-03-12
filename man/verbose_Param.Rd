@@ -4,9 +4,9 @@
 \alias{verbose_Param}
 \title{verbose}
 \arguments{
-\item{verbose}{Should updates be printed? Use \code{1} (default) for
-occasional updates, \code{2} for occasional updates as well as running INLA
-in verbose mode (if applicable), or \code{0} for no updates.}
+\item{verbose}{\code{1} (default) to print occasional updates during model
+computation; \code{2} for occasional updates as well as running INLA in
+verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 }
 \description{
 verbose

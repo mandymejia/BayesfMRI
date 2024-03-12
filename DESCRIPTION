@@ -1,17 +1,12 @@
 Package: BayesfMRI
 Type: Package
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.3.11
+Version: 0.7.2
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
            email = "mandy.mejia@gmail.com",
            role = c("aut", "cre")),
-    person(given = "Daniel",
-           family = "Spencer",
-           email = "danieladamspencer@gmail.com",
-           role = c("aut"),
-           comment = c(ORCID = "0000-0002-9705-3605")),
     person(given = "Damon",
            family = "Pham",
            email = "damondpham@gmail.com",
@@ -21,15 +16,20 @@ Authors@R: c(
            family = "Bolin",
            email = "david.bolin@kaust.edu.sa",
            role = c("ctb")),
-    person(given = "Sarah",
-           family = "Ryan",
-           email = "sarahryan320@gmail.com",
-           role = c("ctb")),
     person(given = "Yu (Ryan)",
            family = "Yue",
            email = "yybaruch@gmail.com",
+           role = c("ctb")),
+    person(given = "Daniel",
+           family = "Spencer",
+           email = "danieladamspencer@gmail.com",
+           role = c("aut"),
+           comment = c(ORCID = "0000-0002-9705-3605")),
+    person(given = "Sarah",
+           family = "Ryan",
+           email = "sarahryan320@gmail.com",
            role = c("ctb"))
-    )
+           )
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: Performs a spatial Bayesian general linear model (GLM) for task 
     functional magnetic resonance imaging (fMRI) data on the cortical surface. 
@@ -47,7 +47,7 @@ Imports:
     ciftiTools (>= 0.8.0),
     excursions,
     foreach,
-    fMRItools,
+    fMRItools (>= 0.3.0),
     MASS,
     Matrix,
     matrixStats,
@@ -55,12 +55,12 @@ Imports:
     Rcpp,
     stats,
     sp,
-    utils
+    utils,
+    viridisLite
 Suggests:
     covr,
     abind,
     dplyr,
-    geometry,
     ggplot2,
     grDevices,
     INLA (>= 0.0-1468840039),
@@ -68,12 +68,11 @@ Suggests:
     MatrixModels,
     parallel,
     purrr,
-    rdist,
     rmarkdown,
     SQUAREM,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 URL: https://github.com/mandymejia/BayesfMRI
 BugReports: https://github.com/mandymejia/BayesfMRI/issues
 LinkingTo:

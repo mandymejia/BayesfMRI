@@ -4,16 +4,16 @@
 \alias{id_activations.posterior}
 \title{Identify activations using joint posterior probabilities}
 \usage{
-id_activations.posterior(model_obj, tasks, session, alpha = 0.05, gamma)
+id_activations.posterior(model_obj, fields, session, alpha = 0.05, gamma)
 }
 \arguments{
 \item{model_obj}{Result of \code{BayesGLM}, of class \code{"BayesGLM"}.}
 
-\item{tasks, session, alpha, gamma}{See \code{\link{id_activations}}.}
+\item{fields, session, alpha, gamma}{See \code{\link{id_activations}}.}
 }
 \value{
 A list with two elements: \code{active}, which gives a matrix of zeros
-and ones of the same dimension as \code{model_obj$task_estimates${session}},
+and ones of the same dimension as \code{model_obj$field_estimates${session}},
 and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
 more information).
 }

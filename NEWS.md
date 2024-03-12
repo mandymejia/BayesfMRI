@@ -1,14 +1,18 @@
-# 3.11
+# 5.0
 
-* A few bug fixes
-* Rename `threshold` argument to `gamma` 
-* Add activations prevalences!
+* Many changes, undocumented
+
+# 4.0
+
+* Undocumented
 
 # 3.0 
 
-* Rehaul
+* Many changes, undocumented
 
-...
+# 2.0
+
+* Undocumented
 
 # 1.5
 

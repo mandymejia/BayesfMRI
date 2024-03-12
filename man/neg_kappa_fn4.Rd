@@ -9,7 +9,7 @@ neg_kappa_fn4(kappa2, spde, a_star, b_star, n_sess)
 \arguments{
 \item{kappa2}{scalar}
 
-\item{spde}{SPDE prior matrix}
+\item{spde}{a list of SPDE prior matrices from}
 
 \item{a_star}{precomputed coefficient (scalar)}
 

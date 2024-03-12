@@ -1,273 +1,179 @@
-#' Check INLA and PARDISO
+#' Scale the design matrix
 #'
-#' @param require_PARDISO Is PARDISO required? Default: \code{FALSE}.
-#' @return \code{NULL}, invisibly
+#' @param design_mat The original (unscaled) design matrix that is T x K, where
+#'     T is the number of time points, and k is the number of field covariates
+#'
+#' @return A scaled design matrix
 #'
 #' @keywords internal
-check_INLA <- function(require_PARDISO=TRUE){
+#'
+scale_design_mat <- function(design_mat) {
+  stopifnot(is.matrix(design_mat))
+  apply(design_mat,2,function(field) {
+    #(field - mean(field)) / max(abs(field))
+    field / max((field))
+  })
+}
 
-  # Check packages -------------------------------------------------------------
+#' Make DCT bases
+#' @param hpf,nT,TR See \code{BayesGLM_cifti}
+#' @return The matrix of DCT bases, or \code{NULL} if none
+#' @importFrom fMRItools dct_bases is_posNum dct_convert
+#' @keywords internal
+BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
+  DCT <- NULL # used to be an argument.
 
-  # Check to see that the INLA package is installed
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop("This function requires the `INLA` package. See www.r-inla.org/download")
+  if (!is.null(DCT)) {
+    stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
+    if (DCT==0) { DCT <- NULL }
+  }
+  if (!is.null(hpf)) {
+    stopifnot(is_posNum(hpf, zero_ok=TRUE))
+    if (hpf==0) { hpf <- NULL }
   }
 
-  # Check to see if PARDISO is installed
-  if (require_PARDISO) {
-    if (any(grepl("FAILURE", toupper(INLA::inla.pardiso.check())))) {
-      warning("Consider enabling `PARDISO` for faster computation. See `inla.pardiso()`")
+  if (!is.null(hpf) || !is.null(DCT)) {
+    # Get the num. of bases for this session.
+    if (!is.null(hpf)) {
+      nDCT <- round(dct_convert(T_=nT, TR=TR, f=hpf))
     } else {
-      INLA::inla.setOption(smtp='pardiso')
+      nDCT <- DCT
     }
-    #inla.pardiso()
-  }
-
-  invisible(NULL)
-}
-
-#' Make data list for \code{estimate_model}
-#'
-#' Make data list to be passed to \code{estimate_model}
-#'
-#' @param y Vectorized BOLD data (all voxels, sessions, etc.)
-#' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `organize_data()`
-#' @param betas List (length = number of tasks) of bbeta objects from organize_replicates
-#' @param repls List (length = number of tasks) of repl objects from organize_replicates
-#'
-#' @return List
-#'
-#' @importFrom Matrix bdiag
-#'
-#' @keywords internal
-make_data_list <- function(y, X, betas, repls){
-
-  # Check length/dimensions of y, X, elements of betas and repls all match
-  nx <- length(betas) #check same as length(repls)
-  #figure out nvox
-  #check dim(X)
-  #check length of betas and repls
-
-  numel <- 1 + length(betas) + length(repls) + 1
-  model_data <- vector('list', length=numel)
-  names(model_data) <- c('y', 'X', names(betas), names(repls))
-  model_data$y <- y
-  model_data$X <- bdiag(X) #row/col structure: sess1_beta1, sess1_beta2, sess2_beta1, sess2_beta2, ...
-
-  nbeta <- length(betas)
-  for(i in 1:nbeta){
-    model_data[[2+i]] <- betas[[i]]
-    model_data[[2+nbeta+i]] <- repls[[i]]
-  }
-
-  return(model_data)
-}
-
-
-#' Extract Estimates of Activation
-#'
-#' Obtains the posterior mean or other summary statistic for each latent field
-#'
-#' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
-#'  \code{inla}.
-#' @param session_names Vector of fMRI session names
-#' @param mask (Optional) Original mask applied to data before model fitting
-#' @param stat A string representing the posterior summary statistic to be returned
-#'
-#' @return Estimates from inla model
-#'
-#' @keywords internal
-extract_estimates <- function(INLA_model_obj, session_names, mask=NULL, stat='mean'){
-
-  if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
-
-  res.beta <- INLA_model_obj$summary.random
-  nbeta <- length(res.beta)
-  task_names <- names(res.beta)
-
-  nS <- length(session_names)
-  n_loc <- length(res.beta[[1]]$mean)/nS #number of locations for which beta is estimated
-  if(!is.null(mask)) {
-    V <- length(mask)
-    if(sum(mask) != n_loc) warning('Number of nonzeros in mask does not equal the number of data locations in the model')
-  } else {
-    V <- n_loc
-    mask <- rep(1,V)
-  }
-  betas <- vector('list', nS)
-  names(betas) <- session_names
-
-  stat_names <- names(res.beta[[1]])
-  if(! (stat %in% stat_names) ) stop(paste0('stat must be one of following: ', paste(stat_names, collapse = ', ')))
-  stat_ind <- which(stat_names==stat)
-
-
-  for (ss in seq(nS)) {
-    inds_ss <- (1:n_loc) + (ss-1)*n_loc #indices of beta vector corresponding to session v
-    betas_ss <- matrix(NA, nrow=n_loc, ncol=nbeta)
-    for (bb in seq(nbeta)) {
-      est_iv <- res.beta[[bb]][[stat_ind]][inds_ss]
-      betas_ss[,bb] <- est_iv
+    if (nDCT > 0) {
+      fMRItools::dct_bases(nT, nDCT)
+    } else {
+      NULL
     }
-    betas[[ss]] <- matrix(NA, nrow=V, ncol=nbeta)
-    betas[[ss]][mask==1,] <- betas_ss
-    colnames(betas[[ss]]) <- task_names
+  } else {
+    NULL
   }
-
-  attr(betas, "GLM_type") <- "Bayesian"
-  return(betas)
 }
 
-
-#' Extracts posterior density estimates for hyperparameters
+#' Bayes GLM arg checks
 #'
-#' @inheritSection INLA_Description INLA Requirement
+#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
 #'
-#' @param INLA_model_obj An object of class \code{"inla"}, a result of a call to
-#'  \code{inla()}
-#' @param spde The model used for the latent fields in the \code{inla()} call,
-#'  an object of class \code{"inla.spde"}
-#' @param task_names Descriptive names of model regressors (tasks).
+#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
 #'
-#' @return Long-form data frame containing posterior densities for the
-#'  hyperparameters associated with each latent field
+#' @param scale_BOLD See \code{\link{BayesGLM}}.
+#' @param Bayes,EM See \code{\link{BayesGLM}}.
+#' @param ar_order,ar_smooth,aic See \code{\link{BayesGLM}}.
+#' @param n_threads See \code{\link{BayesGLM}}.
+#' @param return_INLA See \code{\link{BayesGLM}}.
+#' @param verbose See \code{\link{BayesGLM}}.
+# @param combine_sessions See \code{\link{BayesGLM}}.
+#' @param meanTol,varTol,emTol See \code{\link{BayesGLM}}.
 #'
+#' @return The arguments that may have changed, in a list: \code{scale_BOLD},
+#'  \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
+#'
+#' @importFrom fMRItools is_1
 #' @keywords internal
-get_posterior_densities <- function(INLA_model_obj, spde, task_names){
+BayesGLM_argChecks <- function(
+    scale_BOLD,
+    Bayes,
+    EM,
+    ar_order,
+    ar_smooth,
+    aic,
+    n_threads,
+    return_INLA,
+    verbose,
+    meanTol,
+    varTol,
+    emTol
+){
 
-  numbeta <- length(task_names)
+  if (isTRUE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+  }
+  if (isFALSE(scale_BOLD)) {
+    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
+  }
+  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
 
-  for(b in 1:numbeta){
-    name_b <- task_names[b]
-    result.spde.b <- INLA::inla.spde2.result(INLA_model_obj, name_b, spde)
-    # Kappa and Tau
-    log_kappa.b <- as.data.frame(result.spde.b$marginals.log.kappa$kappa.1)
-    log_tau.b <- as.data.frame(result.spde.b$marginals.log.tau$tau.1)
-    names(log_kappa.b) <- names(log_tau.b) <- c('value','density')
-    log_kappa.b$param <- 'log_kappa'
-    log_tau.b$param <- 'log_tau'
-    df.b <- rbind(log_kappa.b, log_tau.b)
-    df.b$beta <- name_b
-    if(b == 1) df <- df.b else df <- rbind(df, df.b)
+  stopifnot(fMRItools::is_1(Bayes, "logical"))
+  stopifnot(fMRItools::is_1(EM, "logical"))
+  if (EM && !Bayes) {
+    warning("EM is a Bayesian method: setting `Bayes` to `TRUE`.")
+    Bayes <- TRUE
+  }
+  if (Bayes) {
+    if (!EM) { check_INLA(require_PARDISO=FALSE) }
   }
 
-  df[,c('beta','param','value','density')]
-}
+  if(EM) stop("EM not available.") #not currently available
 
-#' Summarize a \code{"BayesGLM"} object
-#'
-#' Summary method for class \code{"BayesGLM"}
-#'
-#' @param object Object of class \code{"BayesGLM"}.
-#' @param ... further arguments passed to or from other methods.
-#' @export
-#' @return A \code{"summary.BayesGLM"} object, a list summarizing the properties
-#'  of \code{object}.
-#' @method summary BayesGLM
-summary.BayesGLM <- function(object, ...) {
+  if (is.null(ar_order)) ar_order <- 0
+  stopifnot(fMRItools::is_1(ar_order, "numeric"))
+  do_pw <- ar_order > 0
+  if (is.null(ar_smooth)) ar_smooth <- 0
+  stopifnot(fMRItools::is_1(ar_smooth, "numeric"))
+  stopifnot(fMRItools::is_1(aic, "logical"))
 
-  x <- list(
-    tasks = object$task_names,
-    sessions = object$session_names,
-    n_sess_orig = object$n_sess_orig,
-    n_loc_total = length(object$mask),
-    n_loc_modeled = sum(object$mask),
-    GLM_type = attr(object$task_estimates, "GLM_type")
+  stopifnot(fMRItools::is_1(n_threads, "numeric"))
+  stopifnot(n_threads <= parallel::detectCores())
+
+  if (isTRUE(return_INLA)) {
+    message("Setting `return_INLA` to 'trimmed'"); return_INLA <- "trimmed"
+  }
+  if (isFALSE(return_INLA)) {
+    message("Setting `return_INLA` to 'minimal'"); return_INLA <- "minimal"
+  }
+  return_INLA <- match.arg(return_INLA, c("trimmed", "full", "minimal"))
+
+  if (isTRUE(verbose)) { verbose <- 2 }
+  if (isFALSE(verbose)) { verbose <- 0 }
+  stopifnot(fMRItools::is_posNum(verbose, zero_ok=TRUE))
+
+  stopifnot(fMRItools::is_posNum(meanTol))
+  stopifnot(fMRItools::is_posNum(varTol))
+  stopifnot(fMRItools::is_posNum(emTol))
+
+  # Return new parameters, and parameters that may have changed.
+  list(
+    scale_BOLD=scale_BOLD,
+    Bayes=Bayes,
+    EM = EM,
+    do_pw = do_pw,
+    return_INLA=return_INLA
   )
-
-  class(x) <- "summary.BayesGLM"
-
-  return(x)
 }
 
-#' @rdname summary.BayesGLM
-#' @export
+#' Get number of locations for various masks
 #'
-#' @param x Object of class \code{"summary.BayesGLM"}.
-#' @return \code{NULL}, invisibly.
-#' @method print summary.BayesGLM
-print.summary.BayesGLM <- function(x, ...) {
-  cat("====BayesGLM result====================\n")
-  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
-  if (length(x$sessions)==1 && x$sessions == "session_combined") {
-    cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
-  } else {
-    cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
-  }
-  cat("Locations:", x$n_loc_modeled, "modeled,", x$n_loc_total, "total", "\n")
-  cat("GLM type: ", x$GLM_type, "\n")
-  cat("\n")
-  invisible(NULL)
-}
-
-#' @rdname summary.BayesGLM
-#' @export
+#' Get number of locations for various masks: total, model, data.
 #'
-#' @return \code{NULL}, invisibly.
-#' @method print BayesGLM
-print.BayesGLM <- function(x, ...) {
-  print.summary.BayesGLM(summary(x))
-}
+#' @param spatial \code{spatial}
+#' @param type \code{"mesh"}, or \code{"voxel"}.
+#' @param spde \code{NULL} or the SPDE.
+#' @keywords internal
+#' @return A list of two: \code{T} for the total number of locations, and
+#'  \code{D} for the number of data locations. If \code{spatial} is provided for
+#'  voxel data, there is also \code{DB} for the number of data locations plus
+#'  the number of boundary locations.
+get_nV <- function(spatial, type=c("mesh", "voxel"), spde=NULL){
+  type <- match.arg(type, c("mesh", "voxel"))
 
-#' Summarize a \code{"BayesGLM_cifti"} object
-#'
-#' Summary method for class \code{"BayesGLM_cifti"}
-#'
-#' @param object Object of class \code{"BayesGLM_cifti"}.
-#' @param ... further arguments passed to or from other methods.
-#' @export
-#' @return A \code{"summary.BayesGLM_cifti"} object, a list summarizing the 
-#'  properties of \code{object}.
-#' @method summary BayesGLM_cifti
-summary.BayesGLM_cifti <- function(object, ...) {
-
-  x <- lapply(object$BayesGLM_results, summary)
-  x <- x[!vapply(object$BayesGLM_results, is.null, FALSE)]
-  x <- list(
-    tasks = x[[1]]$tasks,
-    sessions = x[[1]]$sessions,
-    n_sess_orig = x[[1]]$n_sess_orig,
-    n_loc_total = lapply(x, '[[', "n_loc_total"),
-    n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
-    #xii = summary(x$task_estimates_xii$classical[[1]]),
-    GLM_type = x[[1]]$GLM_type
-  )
-  class(x) <- "summary.BayesGLM_cifti"
-
-  return(x)
-}
-
-#' @rdname summary.BayesGLM_cifti
-#' @export
-#'
-#' @param x Object of class \code{"summary.BayesGLM_cifti"}.
-#' @return \code{NULL}, invisibly.
-#' @method print summary.BayesGLM_cifti
-print.summary.BayesGLM_cifti <- function(x, ...) {
-  cat("====BayesGLM_cifti result==============\n")
-  cat("Tasks:    ", paste0("(", length(x$tasks), ") ", paste(x$tasks, collapse=", ")), "\n")
-  if (length(x$sessions)==1 && x$sessions == "session_combined") {
-    cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
-  } else {
-    cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
-  }
-  cat("Locations:\n")
-  for (ii in seq(length(x$n_loc_total))) {
-    cat(
-      "          ", paste0(names(x$n_loc_total)[ii], ": ", x$n_loc_modeled[[ii]]),
-      "modeled,", x$n_loc_total[[ii]], "total", "\n"
+  out <- switch(type,
+    mesh = list(
+      T=nrow(spatial$surf$vertices),
+      D=sum(spatial$mask)
+    ),
+    voxel = list(
+      T=prod(dim(spatial$label)), # [TO DO] redefine?
+      D=sum(spatial$label!=0)
     )
+  )
+
+  if (type=="voxel" && !is.null(spde)) {
+    out <- c(out, list(DB=spde$n.spde))
   }
-  cat("GLM type: ", x$GLM_type, "\n")
-  cat("\n")
-  invisible(NULL)
+
+  out
 }
 
-#' @rdname summary.BayesGLM_cifti
-#' @export
-#'
-#' @return \code{NULL}, invisibly.
-#' @method print BayesGLM_cifti
-print.BayesGLM_cifti <- function(x, ...) {
-  print.summary.BayesGLM_cifti(summary(x))
+nT_message <- function(nT) {
+  if (length(nT)==1) { return(nT) }
+  cat(min(nT), "-", max(nT))
 }

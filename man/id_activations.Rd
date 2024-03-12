@@ -2,26 +2,27 @@
 % Please edit documentation in R/id_activations.R
 \name{id_activations}
 \alias{id_activations}
-\title{Identify task activations}
+\title{Identify field activations}
 \usage{
 id_activations(
   model_obj,
-  tasks = NULL,
+  fields = NULL,
   sessions = NULL,
   method = c("Bayesian", "classical"),
   alpha = 0.05,
   gamma = NULL,
   correction = c("FWER", "FDR", "none"),
-  verbose = 1
+  verbose = 1,
+  threshold = NULL
 )
 }
 \arguments{
 \item{model_obj}{Result of \code{BayesGLM} or \code{BayesGLM_cifti} model
 call, of class \code{"BayesGLM"} or \code{"BayesGLM_cifti"}.}
 
-\item{tasks}{The task(s) to identify activations for. Give either the name(s)
+\item{fields}{The field(s) to identify activations for. Give either the name(s)
 as a character vector, or the numerical indices. If \code{NULL} (default),
-analyze all tasks.}
+analyze all fields.}
 
 \item{sessions}{The session(s) to identify activations for. Give either the
 name(s) as a character vector, or the numerical indices. If \code{NULL}
@@ -37,24 +38,28 @@ to \code{FALSE}, only the \code{"classical"} method can be used.}
 
 \item{alpha}{Significance level. Default: \code{0.05}.}
 
-\item{gamma}{Activation threshold, for example \code{1} for 1\\% signal
-change if \code{scale_BOLD=="mean"} during model estimation. Setting a
-\code{gamma} is required for the Bayesian method; \code{NULL} (default)
-will use a \code{gamma} of zero for the classical method.}
+\item{gamma}{Activation threshold, for example \code{1} for 1 percent
+signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
+a \code{gamma} is required for the Bayesian method; \code{NULL}
+(default) will use a \code{gamma} of zero for the classical method.}
 
 \item{correction}{For the classical method only: Type of multiple comparisons
 correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
 (Benjamini Hochberg), or \code{"none"}.}
 
-\item{verbose}{Should updates be printed? Use \code{1} (default) for
-occasional updates, \code{2} for occasional updates as well as running INLA
-in verbose mode (if applicable), or \code{0} for no updates.}
+\item{verbose}{\code{1} (default) to print occasional updates during model
+computation; \code{2} for occasional updates as well as running INLA in
+verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
+
+\item{threshold}{DEPRECATED. This argument has been renamed to \code{gamma}.
+Please use \code{gamma} instead of \code{threshold}. \code{threshold} will
+be removed in a later version.}
 }
 \value{
 An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
 list which indicates the activated locations along with related information.
 }
 \description{
-Identify areas of activation for each task from the result of \code{BayesGLM}
+Identify areas of activation for each field from the result of \code{BayesGLM}
 or \code{BayesGLM_cifti}.
 }

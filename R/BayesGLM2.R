@@ -10,32 +10,32 @@
 #'  objects saved with \code{\link{saveRDS}}.
 #' @param contrasts (Optional) A list of contrast vectors that specify the
 #'  group-level summaries of interest. If \code{NULL}, use contrasts that compute
-#'  the average of each field (task HRF) across subjects and sessions.
+#'  the average of each field (field HRF) across subjects and sessions.
 #'
 #'  Each contrast vector is length \eqn{K * S * N} vector specifying a
 #'  group-level summary of interest, where \eqn{K} is the number
-#'  of fields (task HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
+#'  of fields (field HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
 #'  number of subjects. For a single subject-session the contrast
 #'  for the first field would be:
 #'
 #'  \code{contrast1 <- c(1, rep(0, K-1))}
 #'
 #'  and so the full contrast vector representing the group average across
-#'  sessions and subjects for the first task would be:
+#'  sessions and subjects for the first field would be:
 #'
 #'  \code{rep(rep(contrast1, S), N) /S /N}.
 #'
-#'  To obtain the group average for the first task, for just the first sessions
+#'  To obtain the group average for the first field, for just the first sessions
 #'  from each subject:
 #'
 #'  \code{rep(c(contrast1, rep(0, K*(S-1))), N) /N}.
 #'
 #'  To obtain the mean difference between the first and second sessions, for the
-#'  first task:
+#'  first field:
 #'
 #'  \code{rep(c(contrast1, -contrast1, rep(0, K-2)), N) /N}.
 #'
-#'  To obtain the mean across sessions of the first task, just for the first
+#'  To obtain the mean across sessions of the first field, just for the first
 #'  subject:
 #'
 #'  \code{c(rep(contrast1, S-1), rep(0, K*S*(N-1)) /S}.
@@ -64,6 +64,7 @@
 #'
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
+#' @importFrom ciftiTools as.xifti
 #'
 #' @export
 BayesGLM2 <- function(
@@ -78,8 +79,6 @@ BayesGLM2 <- function(
   nsamp_beta = 100,
   num_cores = NULL,
   verbose = 1){
-
-  use_INLA <- TRUE # alternative: use EM model, but it's been removed.
 
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
@@ -112,12 +111,12 @@ BayesGLM2 <- function(
   nM <- length(model_names)                 # models
   nN <- length(results)                     # subjects
   nS <- length(results[[1]]$session_names)  # sessions
-  nK <- length(results[[1]]$task_names)     # fields
+  nK <- length(results[[1]]$field_names)     # fields
 
   session_names <- results[[1]]$session_names
-  task_names <- results[[1]]$task_names
+  field_names <- results[[1]]$field_names
 
-  # Check that every subject has the same models, sessions, tasks
+  # Check that every subject has the same models, sessions, fields
   for (nn in seq(nN)) {
     sub_nn <- results[[nn]]
     stopifnot(identical(
@@ -125,16 +124,16 @@ BayesGLM2 <- function(
       names(sub_nn$BayesGLM_results)[!vapply(sub_nn$BayesGLM_results, is.null, FALSE)]
     ))
     stopifnot(identical(session_names, sub_nn$session_names))
-    stopifnot(identical(task_names, sub_nn$task_names))
+    stopifnot(identical(field_names, sub_nn$field_names))
   }
 
   # Check `contrasts`.
   # `contrasts` should be fields * sessions * subjects
   if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
   if(is.null(contrasts)) {
-    if (verbose>0) cat('Using a contrast that computes the average across subjects for each task. If other contrasts are desired, provide `contrasts`.\n')
+    if (verbose>0) cat('Using a contrast that computes the average across subjects for each field. If other contrasts are desired, provide `contrasts`.\n')
     contrasts <- vector('list', length=nK)
-    names(contrasts) <- paste0(task_names, '_avg')
+    names(contrasts) <- paste0(field_names, '_avg')
     for (kk in 1:nK) {
       # (1/J, 0, 0, ..., 0) for k=1,
       # (0, 1/J, 0, ..., 0) for k=2,
@@ -205,13 +204,9 @@ BayesGLM2 <- function(
     if (need_Mask) {
       mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
     }
-    if (use_INLA) {
-      spde <- INLA::inla.spde2.matern(mesh)
-      Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one task and subject, a VxN matrix, V=num_vox, N=num_mesh)
-      Amat <- Amat[mesh$idx$loc,]
-    } else {
-      stop()
-    }
+    spde <- INLA::inla.spde2.matern(mesh)
+    Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one field and subject, a VxN matrix, V=num_vox, N=num_mesh)
+    Amat <- Amat[mesh$idx$loc,]
     Amat.tot <- bdiag(rep(list(Amat), nK)) #Psi_m from paper (VKxNK)
 
     # Collecting theta posteriors from subject models
@@ -261,27 +256,26 @@ BayesGLM2 <- function(
     }
     rm(results_mm, y_vec, X_list, Xmat) # save memory
 
-    if (use_INLA) {
-      mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
-      #### DRAW SAMPLES FROM q(theta|y)
-      #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
-      if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
-      theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
-      #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
-      if (verbose>0) cat('Computing weights for each theta sample \n')
-      logwt <- rep(NA, nsamp_theta)
-      for (tt in seq(nsamp_theta)) {
-        logwt[tt] <- F.logwt(theta.samp[,tt], spde, mu_theta, Q_theta, nN)
-      }
-      #weights to apply to each posterior sample of theta
-      wt.tmp <- exp(logwt - max(logwt))
-      wt <- wt.tmp/(sum(wt.tmp))
-    } else {
-      # theta.samp <- qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta) # ?
-      mu_theta <- mu_theta / nN
-      theta.samp <- as.matrix(mu_theta)
-      wt <- 1
+    mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+    #### DRAW SAMPLES FROM q(theta|y)
+    #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
+    if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
+    theta.samp <- INLA::inla.qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta)
+    #### COMPUTE WEIGHT OF EACH SAMPLES FROM q(theta|y) BASED ON PRIOR
+    if (verbose>0) cat('Computing weights for each theta sample \n')
+    logwt <- rep(NA, nsamp_theta)
+    for (tt in seq(nsamp_theta)) {
+      logwt[tt] <- F.logwt(theta.samp[,tt], spde, mu_theta, Q_theta, nN)
     }
+    #weights to apply to each posterior sample of theta
+    wt.tmp <- exp(logwt - max(logwt))
+    wt <- wt.tmp/(sum(wt.tmp))
+
+    # # Above, but trying to not use INLA.
+    # # theta.samp <- qsample(n=nsamp_theta, Q = Q_theta, mu = mu_theta) # ?
+    # mu_theta <- mu_theta / nN
+    # theta.samp <- as.matrix(mu_theta)
+    # wt <- 1
 
     #get posterior quantities of beta, conditional on a value of theta
     if (verbose>0) cat(paste0('Sampling ',nsamp_beta,' betas for each value of theta \n'))
@@ -387,7 +381,7 @@ BayesGLM2 <- function(
     model_results = out,
     contrasts = contrasts,
     excursion_type = excursion_type,
-    task_names=task_names,
+    field_names=field_names,
     session_names=session_names,
     gamma = gamma,
     alpha = alpha,
@@ -398,7 +392,7 @@ BayesGLM2 <- function(
 
   if (is_cifti) {
     out <- list(
-      contrast_estimates_xii = as.xifti(
+      contrast_estimate_xii = as.xifti(
         out$model_results$cortex_left$estimates,
         out$model_results$cortex_left$mask,
         out$model_results$cortex_right$estimates,
@@ -407,7 +401,7 @@ BayesGLM2 <- function(
       activations_xii = NULL,
       BayesGLM2_results = out
     )
-    out$contrast_estimates_xii$meta$cifti$names <- names(contrasts)
+    out$contrast_estimate_xii$meta$cifti$names <- names(contrasts)
     if (do_excur) {
       act_xii <- as.xifti(
         out$BayesGLM2_results$model_results$cortex_left$active,
@@ -416,6 +410,7 @@ BayesGLM2 <- function(
         out$BayesGLM2_results$model_results$cortex_right$mask
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
+      out$activations_xii$meta$cifti$names <- names(contrasts)
       names(out$activations_xii$meta$cifti$labels) <- names(contrasts)
     }
     class(out) <- "BayesGLM2_cifti"

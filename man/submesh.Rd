@@ -9,8 +9,7 @@ submesh(mask, mesh)
 \arguments{
 \item{mask}{a 0-1 vector}
 
-\item{mesh}{a mesh resulting from a call to \code{make_mesh} with
-\code{use_INLA = FALSE}}
+\item{mesh}{a mesh from \code{\link{make_mesh}}.}
 }
 \value{
 a mesh object with fewer vertices than the original input mesh
@@ -18,4 +17,10 @@ a mesh object with fewer vertices than the original input mesh
 \description{
 Remove part of a mesh without using INLA functions
 }
+\section{INLA Requirement}{
+
+This function requires the \code{INLA} package, which is not a CRAN package.
+See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+
 \keyword{internal}

@@ -336,7 +336,7 @@ simulate_cifti_multiple <- function(wb_path,
   design <- BayesfMRI::make_HRFs(
     onsets=lapply(onsets, as.matrix),
     TR=TR,
-    duration=ntime,
+    nT=ntime,
     dHRF=0
   )$design
   # neuRosim::specifydesign(

@@ -2,16 +2,16 @@
 % Please edit documentation in R/plot.R
 \name{plot.BayesGLM_cifti}
 \alias{plot.BayesGLM_cifti}
-\title{S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_cifti"} object}
+\title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object}
 \usage{
 \method{plot}{BayesGLM_cifti}(x, idx = NULL, session = NULL, method = NULL, zlim = c(-1, 1), ...)
 }
 \arguments{
 \item{x}{An object of class "BayesGLM_cifti"}
 
-\item{idx}{Which task should be plotted? Give the numeric indices or the
-names. \code{NULL} (default) will show all tasks. This argument overrides
-the \code{idx} argument to \code{\link[ciftiTools]{view_xifti_surface}}.}
+\item{idx}{Which field should be plotted? Give the numeric indices or the
+names. \code{NULL} (default) will show all fields. This argument overrides
+the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
 
 \item{session}{Which session should be plotted? \code{NULL} (default) will
 use the first.}
@@ -20,13 +20,13 @@ use the first.}
 the Bayesian results if available, and the classical results if not.}
 
 \item{zlim}{Overrides the \code{zlim} argument for
-\code{\link[ciftiTools]{view_xifti_surface}}. Default: \code{c(-1, 1)}.}
+\code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.}
 
-\item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti_surface}}}
+\item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti}}}
 }
 \value{
-Result of the call to \code{ciftiTools::view_cifti_surface}.
+Result of the call to \code{ciftiTools::view_cifti}.
 }
 \description{
-S3 method: use \code{\link[ciftiTools]{view_xifti_surface}} to plot a \code{"BayesGLM_cifti"} object
+S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object
 }

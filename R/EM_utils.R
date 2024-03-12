@@ -164,13 +164,13 @@ GLMEM_fixptseparate <- function(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
 #' @param Psi a conversion matrix (N by V) (or N by n)
 #' @param K number of covariates
 #' @param A The value for Matrix::crossprod(X%*%Psi) (saves time on computation)
-#' @param num.threads Needed for SQUAREM (it is an argument to the fixed-point functions)
+#' @param n_threads Needed for SQUAREM (it is an argument to the fixed-point functions)
 #' @param Ns The number of samples used to approximate traces using the Hutchinson
 #'   estimator. If set to 0, the exact trace is found.
 #'
 #' @return A scalar value for the negative expected log-likelihood
 #' @keywords internal
-GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, num.threads = NULL, Ns = NULL) {
+GLMEM_objfn <- function(theta, spde, model_data, Psi, K, A, n_threads = NULL, Ns = NULL) {
   if(length(theta) > 3) { # This condition means that parameters are being updated separately
     kappa2_inds <- seq(K)
     phi_inds <- seq(K) + K
@@ -239,13 +239,16 @@ make_Q <- function(theta, spde, n_sess) {
   return(Q)
 }
 
+#' Q prime
+#' 
 #' Gives the portion of the Q matrix independent of phi
 #'
 #' @param kappa2 scalar
-#' @param spde An spde object
+#' @param spde spde object
 #'
 #' @return a dgCMatrix
 #' @keywords internal
+#' 
 Q_prime <- function(kappa2, spde) {
   # Cmat <- spde$M0
   # Gmat <- (spde$M1 + Matrix::t(spde$M1))/2
@@ -331,7 +334,7 @@ neg_kappa_fn3 <- function(kappa2, spde, a_star, b_star, n_sess) {
 #' Streamlined negative objective function for kappa2 using precompiled values
 #'
 #' @param kappa2 scalar
-#' @param spde SPDE prior matrix
+#' @param spde a list of SPDE prior matrices from
 #' @param a_star precomputed coefficient (scalar)
 #' @param b_star precomputed coefficient (scalar)
 #' @param n_sess number of sessions (scalar)
@@ -391,7 +394,7 @@ prep_kappa2_optim <- function(spde, mu, phi, P, vh) {
 #' @importFrom methods as
 #' @keywords internal
 create_listRcpp <- function(spde) {
-  Cmat <- as(spde$M0,"dgCMatrix")
+  Cmat <- as(as(spde$M0, "generalMatrix"), "CsparseMatrix")
   Gmat <- as((spde$M1 + Matrix::t(spde$M1)) / 2,"CsparseMatrix")
   GtCinvG <- as(spde$M2,"CsparseMatrix")
   out <- list(Cmat = Cmat,

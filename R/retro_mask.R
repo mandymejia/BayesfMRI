@@ -11,7 +11,7 @@
 retro_mask_BGLM <- function(x, mask){
   stopifnot(inherits(x, "BayesGLM"))
   nS <- length(x$session_names)
-  nK <- length(x$task_names)
+  nK <- length(x$field_names)
   nV <- sum(x$mask)
   nT <- length(x$y) / nV / nS
   stopifnot(nT == round(nT))
@@ -24,8 +24,8 @@ retro_mask_BGLM <- function(x, mask){
   x$mask[x$mask][!mask] <- FALSE
   x$mask[!mask2] <- FALSE
 
-  for (ii in seq(length(x$task_estimates))) {
-    x$task_estimates[[ii]][!mask2,] <- NA
+  for (ii in seq(length(x$field_estimates))) {
+    x$field_estimates[[ii]][!mask2,] <- NA
   }
 
   if ("result_classical" %in% names(x)) {

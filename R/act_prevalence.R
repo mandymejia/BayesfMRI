@@ -2,6 +2,8 @@
 #' 
 #' @param act_list List of activations from \code{\link{id_activations}}. All
 #'  should have the same sessions, fields, and brainstructures.
+#' @param gamma_idx If activtions at multiple thresholds were computed, which 
+#'  threshold should be used for prevalence? Default: the first (lowest).
 #'  
 #' @return A list containing the prevalances of activation, as a proportion of
 #'  the results from \code{act_list}.
@@ -10,7 +12,7 @@
 #' @importFrom ciftiTools convert_xifti
 #' 
 #' @export 
-act_prevalance <- function(act_list){
+act_prevalance <- function(act_list, gamma_idx=1){
 
   # Determine if `act_BayesGLM_cifti` or `act_BayesGLM`.
   is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BayesGLM_cifti") }, FALSE))
@@ -27,8 +29,8 @@ act_prevalance <- function(act_list){
   nA <- length(act_list)
   session_names <- act_list[[1]]$session_names
   nS <- length(session_names)
-  task_names <- act_list[[1]]$task_names
-  nK <- length(task_names)
+  field_names <- act_list[[1]]$field_names
+  nK <- length(field_names)
   if (is_cifti) {
     bs_names <- names(act_list[[1]]$activations)
   } else {
@@ -42,11 +44,11 @@ act_prevalance <- function(act_list){
     if (!all(act_list[[aa]]$session_names == session_names)) {
       warning("Result ", aa, " has different session names than the first result.")
     }
-    if (length(act_list[[aa]]$task_names) != nK) {
-      stop("Result ", aa, " has a different number of tasks than the first result.")
+    if (length(act_list[[aa]]$field_names) != nK) {
+      stop("Result ", aa, " has a different number of fields than the first result.")
     }
-    if (!all(act_list[[aa]]$task_names == task_names)) {
-      warning("Result ", aa, " has different task names than the first result.")
+    if (!all(act_list[[aa]]$field_names == field_names)) {
+      warning("Result ", aa, " has different field names than the first result.")
     }
     if (is_cifti) {
       if (length(act_list[[aa]]$activations) != nB) {
@@ -58,13 +60,13 @@ act_prevalance <- function(act_list){
     }
   }
 
-  # Compute prevalance, for every session and every task.
+  # Compute prevalance, for every session and every field.
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
   for (bb in seq(nB)) {
     for (ss in seq(nS)) {
       x <- lapply(act_list, function(y){
         y <- if (is_cifti) { y$activations[[bb]] } else { y$activations }
-        y[[ss]]$active
+        y[[ss]][[gamma_idx]]$active
       })
       prev[[bb]][[ss]] <- Reduce("+", x)/nA
     }
@@ -75,7 +77,7 @@ act_prevalance <- function(act_list){
   result <- list(
     prevalence = prev,
     n_results = nA,
-    task_names = task_names,
+    field_names = field_names,
     session_names = session_names
   )
 
@@ -90,7 +92,7 @@ act_prevalance <- function(act_list){
   names(prev_xii) <- session_names
   for (session in session_names) {
     prev_xii_ss <- 0*convert_xifti(act_list[[1]]$activations_xii[[session]], "dscalar")
-    prev_xii_ss$meta$cifti$names <- task_names
+    prev_xii_ss$meta$cifti$names <- field_names
     for (bs in names(prev_xii_ss$data)) {
       if (!is.null(prev_xii_ss$data[[bs]])) {
         dat <- prev[[bs]][[session]]

@@ -66,13 +66,12 @@ for (ii in seq(nrow(params))) {
     ar_smooth = params$smooth[ii],
     resamp_res = resamp_res / ((params$bs[ii]=="both") + 1), # / (params$Bayes[ii] + 1)
     verbose = FALSE,
-    return_INLA = "trimmed",
-    combine_sessions = params$cmb[ii]
+    return_INLA = "trimmed"
   ))
 
   act_ii <- id_activations(
     bfmri_ii,
-    threshold=.1,
+    gamma=.1,
     method=ifelse(params$Bayes[ii], "Bayesian", "classical"),
     correction="FDR",
     alpha=0.05
@@ -141,7 +140,7 @@ for (ii in seq(nrow(params))) {
     fname=paste0(pfname_pre, "_est.png")
   )
 
-  oli_ii <- if (is.null(x_ii$bfmri$task_estimates_xii$classical[[1]]$data$cortex_left)) {
+  oli_ii <- if (is.null(x_ii$bfmri$estimate_xii$classical[[1]]$data$cortex_left)) {
     oli2
   } else {
     oli1
@@ -153,7 +152,7 @@ for (ii in seq(nrow(params))) {
   x_ii$act$activations_xii[[1]] <- convert_xifti(
     x_ii$act$activations_xii[[1]], "dlabel", colors=c("red", "grey", "#aa1111"))
 
-  names(x_ii$act$activations_xii[[1]]$meta$cifti$labels) <- x_ii$bfmri$task_names
+  names(x_ii$act$activations_xii[[1]]$meta$cifti$labels) <- x_ii$bfmri$field_names
   plot(
     x_ii$act,
     idx=seq(3), together="idx", together_ncol=1,

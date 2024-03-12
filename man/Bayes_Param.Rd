@@ -4,8 +4,9 @@
 \alias{Bayes_Param}
 \title{Bayes}
 \arguments{
-\item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
-addition to the classical GLM. (The classical GLM is always returned.)}
+\item{Bayes}{Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
+\code{FALSE}, only fit the classical GLM. (The classical GLM is always
+returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)}
 }
 \description{
 Bayes
