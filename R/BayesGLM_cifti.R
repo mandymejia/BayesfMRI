@@ -209,8 +209,7 @@ BayesGLM_cifti <- function(
     message(
       "The number of regressors to be modeled spatially exceeds five. ",
       "INLA computation may be slow. Consider reducing the number of design ",
-      "matrix columns, e.g. by modeling HRF derivatives as nuisance. See ",
-      "`remove_from_design` for a helper function for this task."
+      "matrix columns, e.g. by modeling HRF derivatives as nuisance."
     )
     Sys.sleep(5)
   }

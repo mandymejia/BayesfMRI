@@ -254,13 +254,13 @@ BayesGLM <- function(
   des_has_intercept <- nuis_has_intercept <- vector("logical", nS)
   for (ss in seq(nS)) {
     # Stop if any zero-var, zero-mean column exists.
-    des_ss_is_flat <- apply(max(abs(design[[ss]])) < 1e-8, 2, all)
+    des_ss_is_flat <- apply(abs(design[[ss]]) < 1e-8, 2, all)
     if (any(des_ss_is_flat)) {
       stop("Design matrix for session ", ss, " has at least one column that is ",
         "flat (all values are near-zero).")
     }
 
-    # Detect zero-var, nonzero-mean columns. 
+    # Detect zero-var, nonzero-mean columns.
     des_ss_is_intercept <- matrixStats::colVars(design[[ss]]) < 1e-8
     if (sum(des_ss_is_intercept) > 1) {
       stop("Design matrix for session ", ss, " has more than one intercept ",
@@ -269,7 +269,7 @@ BayesGLM <- function(
     }
     des_has_intercept[ss] <- any(des_ss_is_intercept)
 
-    # For nuisance: detect zero-var, nonzero-mean columns. 
+    # For nuisance: detect zero-var, nonzero-mean columns.
     if (!is.null(nuisance[[ss]])) {
       nuis_ss_is_intercept <- matrixStats::colVars(nuisance[[ss]]) < 1e-8
       nuis_has_intercept[ss] <- any(nuis_ss_is_intercept)
@@ -279,7 +279,7 @@ BayesGLM <- function(
   }
 
   #collect data and design matrices
-  nK2 <- vector("numeric", nS)  
+  nK2 <- vector("numeric", nS)
   for (ss in seq(nS)) {
     # Remove any missing fields from design matrix for classical GLM
     vcols_ss <- valid_cols[ss,]
@@ -289,17 +289,18 @@ BayesGLM <- function(
     # )}
 
     # If the design matrix has an intercept, ensure the nuisance matrix does not.
-    # If neither have an intercept, add one to the nuisance for centering 
+    # If neither have an intercept, add one to the nuisance for centering
     #   `BOLD` and `design`.
     if (des_has_intercept[ss]) {
-      if (nuis_has_intercept[ss]) { 
+      if (nuis_has_intercept[ss]) {
         stop("Both the design and nuisance for session ", ss, " has an ",
-          "intercept column. Remove one.") 
+          "intercept column. Remove one.")
       }
-      cat("\tSession ", ss, ": modeling BOLD means using the intercept field in the provided `design`.")
+      cat(paste0("\t\tSession ", ss, ": modeling BOLD means using the intercept field in the provided `design`.\n"))
     } else if (!nuis_has_intercept[ss]) {
       nuisance[[ss]] <- cbind2(nuisance[[ss]], rep(1, nT[ss]))
-      cat("\tSession ", ss, ": demeaning BOLD and design during nuisance regression.")
+      cat(paste0("\t\tSession ", ss, ": demeaning BOLD and design during nuisance regression.\n"))
+      nuis_has_intercept[ss] <- TRUE
     }
 
     # Regress nuisance parameters from BOLD data and design matrix.
@@ -307,7 +308,7 @@ BayesGLM <- function(
     if (!is.null(nuisance[[ss]])) {
       nuis_ss <- nuisance[[ss]]
       stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
-      nuis_ss <- scale(nuis_ss, scale=FALSE)
+      if (!nuis_has_intercept[ss]) { nuis_ss <- scale(nuis_ss, scale=FALSE) }
       BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], nuis_ss)
       if (!do$perLocDesign) {
         design[[ss]][,vcols_ss] <- fMRItools::nuisance_regression(
@@ -323,9 +324,7 @@ BayesGLM <- function(
 
     # Scale data.
     # (`scale_timeseries` expects VxT data, so transpose before and after.)
-    BOLD[[ss]] <- t(scale_BOLD(
-      t(BOLD[[ss]]), scale=scale_BOLD, transpose=FALSE
-    ))
+    BOLD[[ss]] <- t(scale_BOLD(t(BOLD[[ss]]), scale=scale_BOLD))
   }
   rm(des_has_intercept, nuis_has_intercept, vcols_ss, nuisance)
 
