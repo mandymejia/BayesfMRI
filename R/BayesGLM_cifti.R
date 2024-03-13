@@ -821,8 +821,8 @@ BayesGLM_cifti <- function(
 
     #format as xii: (1) index of best model and (2) locations of no signal
     result_multiple_xii <- vector('list', length=2)
-    names(result_multiple_xii) <- c('bestmodel','noHRF')
-    for(meas in c('bestmodel','noHRF')){
+    names(result_multiple_xii) <- c('bestmodel','pval_F')
+    for(meas in c('bestmodel','pval_F')){
 
       datL <- datR <- datSub <- NULL
 
