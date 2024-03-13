@@ -33,6 +33,11 @@
 #'  \code{BayesGLM_cifti}.
 #' @param upsample Upsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
+#' @param onset,offset Add task regressors indicating the onset and/or offset of
+#'  each event? Provide the names of the tasks as a character vector. All
+#'  onsets (or offsets) across the specified tasks will be represented by one
+#'  additional column in the design matrix. The task names must match the names
+#'  of \code{onsets}.
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
@@ -48,7 +53,9 @@
 #' }
 #' @export
 make_design <- function(
-  onsets, nTime, TR, dHRF=c(1, 0, 2), upsample=100, scale_design=TRUE, ...
+  onsets, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
+  onset=NULL, offset=NULL,
+  scale_design=TRUE, ...
 ){
 
   # Check inputs. --------------------------------------------------------------
@@ -71,6 +78,31 @@ make_design <- function(
   }
 
   # Define dimension variables and names.
+  task_names <- names(onsets)
+  nJ <- length(task_names)
+
+  # Add `onset` and `offset` to `onsets`. --------------------------------------
+  if (!is.null(onset)) {
+    stopifnot(is.character(onset))
+    stopifnot(all(onset %in% task_names))
+    onset <- onsets[onset]
+    onset <- lapply(onset, function(q){q$duration <- 0; q})
+    onset <- do.call(rbind, onset)
+    onset$onset <- sort(onset$onset)
+    onsets <- c(onsets, list(onset=onset))
+  }
+
+  if (!is.null(offset)) {
+    stopifnot(is.character(offset))
+    stopifnot(all(offset %in% task_names))
+    offset <- onsets[offset]
+    offset <- lapply(offset, function(q){q$duration <- 0; q})
+    offset <- do.call(rbind, offset)
+    offset$onset <- sort(offset$onset)
+    onsets <- c(onsets, list(offset=offset))
+  }
+
+  # Define dimension variables and names again (after `onset` & `offset`).
   task_names <- names(onsets)
   nJ <- length(task_names)
 
@@ -135,11 +167,11 @@ make_design <- function(
 
     ##### Get `design` by convolving stimulus and HRFs. ------------------------
     # Convolve.
-    HRF_conv <- lapply(HRF, function(q){ 
-      convolve(stim_sj, rev(q), type="open") 
+    HRF_conv <- lapply(HRF, function(q){
+      convolve(stim_sj, rev(q), type="open")
     })
 
-    # Normalize each by dividing by its maximum, so the peak = 1. 
+    # Normalize each by dividing by its maximum, so the peak = 1.
     # Note that this occurs prior to downsampling.
     HRF_conv <- lapply(HRF_conv, function(q){ q / max(q) })
 
@@ -161,6 +193,7 @@ make_design <- function(
   } #end loop over tasks
 
   # Format results and return. -------------------------------------------------
+
   # `FIR` stuff.
   # Binarize FIR matrix.
   # if (do_FIR) out$FIR <- 1*(out$FIR > 0)

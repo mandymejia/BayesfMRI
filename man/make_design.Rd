@@ -10,6 +10,8 @@ make_design(
   TR,
   dHRF = c(1, 0, 2),
   upsample = 100,
+  onset = NULL,
+  offset = NULL,
   scale_design = TRUE,
   ...
 )
@@ -50,6 +52,12 @@ columns from the design matrix to the \code{nuisance} argument for
 
 \item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
+
+\item{onset, offset}{Add task regressors indicating the onset and/or offset of
+each event? Provide the names of the tasks as a character vector. All
+onsets (or offsets) across the specified tasks will be represented by one
+additional column in the design matrix. The task names must match the names
+of \code{onsets}.}
 
 \item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
 
