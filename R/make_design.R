@@ -37,7 +37,7 @@
 #'  each event? Provide the names of the tasks as a character vector. All
 #'  onsets (or offsets) across the specified tasks will be represented by one
 #'  additional column in the design matrix. The task names must match the names
-#'  of \code{onsets}.
+#'  of \code{onsets}. Can also be \code{"all"} to use all tasks.
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
@@ -84,6 +84,7 @@ make_design <- function(
   # Add `onset` and `offset` to `onsets`. --------------------------------------
   if (!is.null(onset)) {
     stopifnot(is.character(onset))
+    if (length(onset)==1 && onset=="all") { onset <- task_names }
     stopifnot(all(onset %in% task_names))
     onset <- onsets[onset]
     onset <- lapply(onset, function(q){q$duration <- 0; q})
@@ -94,12 +95,19 @@ make_design <- function(
 
   if (!is.null(offset)) {
     stopifnot(is.character(offset))
+    if (length(offset)==1 && offset=="all") { offset <- task_names }
     stopifnot(all(offset %in% task_names))
     offset <- onsets[offset]
-    offset <- lapply(offset, function(q){q$duration <- 0; q})
+    offset <- lapply(offset, function(q){q$onset <- q$onset + q$duration; q$duration <- 0; q})
     offset <- do.call(rbind, offset)
     offset$onset <- sort(offset$onset)
     onsets <- c(onsets, list(offset=offset))
+  }
+
+  if ((!is.null(onset)) && (!is.null(offset))) {
+    if (any(onset$onset %in% offset$onset)) {
+      warning("At least one `onset` coincides with an `offset`.")
+    }
   }
 
   # Define dimension variables and names again (after `onset` & `offset`).

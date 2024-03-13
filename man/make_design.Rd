@@ -57,7 +57,7 @@ function with canonical HRF. Default: \code{100}.}
 each event? Provide the names of the tasks as a character vector. All
 onsets (or offsets) across the specified tasks will be represented by one
 additional column in the design matrix. The task names must match the names
-of \code{onsets}.}
+of \code{onsets}. Can also be \code{"all"} to use all tasks.}
 
 \item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
 
