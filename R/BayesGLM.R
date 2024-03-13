@@ -773,7 +773,7 @@ BayesGLM <- function(
     Fstat <- pval_F <- rep(0, nV_all)
     Fstat[mask==FALSE] <- pval_F[mask==FALSE] <- NA
 
-    m0 <- 22
+    m0 <- 1
     X1_ss <- cbind(X_ss[,,m0], rep(1, nT), X2_ss) #combine design with intercept and nuisance
     X0_ss <- cbind(rep(1, nT), X2_ss) #no task regressors in null model
     nK_can <- ncol(X_ss[,,m0]) #number of task regressors
