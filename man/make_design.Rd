@@ -5,7 +5,7 @@
 \title{Make design matrix}
 \usage{
 make_design(
-  onsets,
+  EVs,
   nTime,
   TR,
   dHRF = c(1, 0, 2),
@@ -17,13 +17,13 @@ make_design(
 )
 }
 \arguments{
-\item{onsets}{Task stimulus information, from which a design matrix will be
-constructed. This is a list where each entry represents a task as a matrix
-of onsets (first column) and durations (second column) for each stimuli
-(each row) of the task, in seconds. List names should be the task names.
-\code{nTime} and \code{TR} are required with \code{onsets}.
+\item{EVs}{The explanatory variables i.e. the task stimulus information,
+from which a design matrix will be constructed. This is a list where each
+entry represents a task as a matrix of onsets (first column) and durations
+(second column) for each stimuli (each row) of the task, in seconds. List
+names should be the task names. \code{nTime} and \code{TR} are required.
 
-An example of a properly-formatted \code{onsets} is:
+An example of a properly-formatted \code{EVs} is:
 \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)),
  taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
 In this example, there are two tasks: the first has three 1s-long stimuli,
@@ -57,7 +57,7 @@ function with canonical HRF. Default: \code{100}.}
 each event? Provide the names of the tasks as a character vector. All
 onsets (or offsets) across the specified tasks will be represented by one
 additional column in the design matrix. The task names must match the names
-of \code{onsets}. Can also be \code{"all"} to use all tasks.}
+of \code{EVs}. Can also be \code{"all"} to use all tasks.}
 
 \item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
 

@@ -2,13 +2,13 @@
 #'
 #' Make the design matrix for the GLM, from the task information.
 
-#' @param onsets Task stimulus information, from which a design matrix will be
-#'  constructed. This is a list where each entry represents a task as a matrix
-#'  of onsets (first column) and durations (second column) for each stimuli
-#'  (each row) of the task, in seconds. List names should be the task names.
-#'  \code{nTime} and \code{TR} are required with \code{onsets}.
+#' @param EVs The explanatory variables i.e. the task stimulus information,
+#'  from which a design matrix will be constructed. This is a list where each
+#'  entry represents a task as a matrix of onsets (first column) and durations
+#'  (second column) for each stimuli (each row) of the task, in seconds. List
+#'  names should be the task names. \code{nTime} and \code{TR} are required.
 #'
-#'  An example of a properly-formatted \code{onsets} is:
+#'  An example of a properly-formatted \code{EVs} is:
 #'  \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)),
 #'  taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
 #'  In this example, there are two tasks: the first has three 1s-long stimuli,
@@ -37,7 +37,7 @@
 #'  each event? Provide the names of the tasks as a character vector. All
 #'  onsets (or offsets) across the specified tasks will be represented by one
 #'  additional column in the design matrix. The task names must match the names
-#'  of \code{onsets}. Can also be \code{"all"} to use all tasks.
+#'  of \code{EVs}. Can also be \code{"all"} to use all tasks.
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
@@ -53,14 +53,14 @@
 #' }
 #' @export
 make_design <- function(
-  onsets, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
+  EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
   scale_design=TRUE, ...
 ){
 
   # Check inputs. --------------------------------------------------------------
-  stopifnot(is.list(onsets))
-  stopifnot(all(vapply(onsets, is_onsets, FALSE)))
+  stopifnot(is.list(EVs))
+  stopifnot(all(vapply(EVs, is_EVs, FALSE)))
   stopifnot(fMRItools::is_1(nTime, "numeric"))
   stopifnot(all(nTime > 0))
   stopifnot(all(nTime == round(nTime)))
@@ -77,31 +77,30 @@ make_design <- function(
     FIR_nTimeR <- FIR_nSec/TR # (sec)/(sec/vol) = vol  #number of TRs to model with FIR
   }
 
-  # Define dimension variables and names.
-  task_names <- names(onsets)
-  nJ <- length(task_names)
+  # Add `onset` and `offset` to `EVs`. --------------------------------------
+  task_names <- names(EVs) # will be updated
+  nJ0 <- length(task_names) # not including `onset` or `offset`
 
-  # Add `onset` and `offset` to `onsets`. --------------------------------------
   if (!is.null(onset)) {
     stopifnot(is.character(onset))
     if (length(onset)==1 && onset=="all") { onset <- task_names }
     stopifnot(all(onset %in% task_names))
-    onset <- onsets[onset]
+    onset <- EVs[onset]
     onset <- lapply(onset, function(q){q$duration <- 0; q})
     onset <- do.call(rbind, onset)
     onset$onset <- sort(onset$onset)
-    onsets <- c(onsets, list(onset=onset))
+    EVs <- c(EVs, list(onset=onset))
   }
 
   if (!is.null(offset)) {
     stopifnot(is.character(offset))
     if (length(offset)==1 && offset=="all") { offset <- task_names }
     stopifnot(all(offset %in% task_names))
-    offset <- onsets[offset]
+    offset <- EVs[offset]
     offset <- lapply(offset, function(q){q$onset <- q$onset + q$duration; q$duration <- 0; q})
     offset <- do.call(rbind, offset)
     offset$onset <- sort(offset$onset)
-    onsets <- c(onsets, list(offset=offset))
+    EVs <- c(EVs, list(offset=offset))
   }
 
   if ((!is.null(onset)) && (!is.null(offset))) {
@@ -111,7 +110,7 @@ make_design <- function(
   }
 
   # Define dimension variables and names again (after `onset` & `offset`).
-  task_names <- names(onsets)
+  task_names <- names(EVs)
   nJ <- length(task_names)
 
   # Compute HRFs. --------------------------------------------------------------
@@ -136,19 +135,35 @@ make_design <- function(
   if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)}
 
   ### Iterate over tasks. ------------------------------------------------------
-  stimulus  <- vector("list", nJ)
-  design <- matrix(NA, nrow=nTime, ncol=(dHRF+1)*nJ)
-  field_names <- vector("character", (dHRF+1)*nJ)
-  for (jj in seq(nJ)) {
-    field_idx <- jj + seq(0, dHRF)*nJ
-    # Field names for this task.
-    field_names[field_idx] <- paste0(
-      task_names[jj],
-      c("", "_dHRF", "_ddHRF")[seq(dHRF+1)]
+  nK <- (dHRF+1)*nJ0 + (!is.null(onset)) + (!is.null(offset))
+
+  if ((!is.null(onset)) || (!is.null(offset))) {
+    if (dHRF>0) { cat(
+      "Not making fields for HRF derivatives of `onset` or `offset`. If these are desired, provide with `EVs`.\n"
     )
+    }
+  }
+
+  stimulus  <- vector("list", nJ)
+  design <- matrix(NA, nrow=nTime, ncol=nK)
+  field_names <- vector("character", nK)
+  for (jj in seq(nJ)) {
+    is_onset_or_offset <- jj > nJ0
+
+    # Get design matrix indices and field names for this task.
+    if (is_onset_or_offset) {
+      field_idx <- jj + dHRF*nJ0
+      field_names[field_idx] <- task_names[jj]
+    } else {
+      field_idx <- jj + seq(0, dHRF)*nJ0
+      field_names[field_idx] <- paste0(
+        task_names[jj],
+        c("", "_dHRF", "_ddHRF")[seq(dHRF+1)]
+      )
+    }
 
     # Skip if no stimulus for this task.
-    if (length(onsets[[jj]])==1 && is.na(onsets[[jj]])) { #NA is placeholder for missing tasks
+    if (length(EVs[[jj]])==1 && is.na(EVs[[jj]])) { #NA is placeholder for missing tasks
       warning(
         "For task '", task_names[jj],
         "': inputting constant-zero column in design matrix for lack of stimulus. ",
@@ -158,8 +173,8 @@ make_design <- function(
     }
 
     # Define `ots` (onset times) and `dur` (durations) for this task.
-    ots_sj <- onsets[[jj]][,1]
-    dur_sj <- onsets[[jj]][,2]
+    ots_sj <- EVs[[jj]][,1]
+    dur_sj <- EVs[[jj]][,2]
 
     ### Round `ots_sj` to TR for event-related designs.
     ots_sj <- ifelse(dur_sj==0, round(ots_sj/TR)*TR, ots_sj)
@@ -175,7 +190,8 @@ make_design <- function(
 
     ##### Get `design` by convolving stimulus and HRFs. ------------------------
     # Convolve.
-    HRF_conv <- lapply(HRF, function(q){
+    HRF_jj <- if (is_onset_or_offset) { HRF[1] } else { HRF }
+    HRF_conv <- lapply(HRF_jj, function(q){
       convolve(stim_sj, rev(q), type="open")
     })
 
@@ -218,7 +234,6 @@ make_design <- function(
   colnames(design) <- field_names
   stimulus <- do.call(cbind, stimulus)
 
-
   design <- if(scale_design) {
     scale_design_mat(design)
   } else {
@@ -240,18 +255,18 @@ make_design <- function(
   out
 }
 
-#' Is this a valid entry in `onsets`?
+#' Is this a valid entry in `EVs`?
 #'
-#' Is this valid data for a single task's onsets? Expects a data.frame or
-#'  numeric matrix with two numeric columns, onsets and durations, and at least
+#' Is this valid data for a single task's EVs? Expects a data.frame or
+#'  numeric matrix with two numeric columns, EVs and durations, and at least
 #'  one row. Or, the value \code{NA} for an empty task.
 #'
-#' @param x The putative onsets matrix or data frame
+#' @param x The putative EVs matrix or data frame
 #' @keywords internal
 #' @return Length-one logical vector.
 #'
-is_onsets <- function(x){
-  # First check if onsets is NA, which can be the case in multi-session analysis
+is_EVs <- function(x){
+  # First check if EVs is NA, which can be the case in multi-session analysis
   #   where not all fields are present in all sessions.
   if(length(x)==1 && is.na(x)) { return(TRUE) }
 
@@ -259,13 +274,13 @@ is_onsets <- function(x){
   #   Except missing tasks, which should just be the value `NA`.
   is_nummat <- is.numeric(x) & is.matrix(x)
   is_df <- is.data.frame(x) && all(vapply(x, class, "") == "numeric")
-  if (!(is_nummat || is_df)) { warning("The onsets are not a numeric matrix or data.frame."); return(FALSE) }
+  if (!(is_nummat || is_df)) { warning("The EVs are not a numeric matrix or data.frame."); return(FALSE) }
 
-  if (nrow(x)<1) { warning("The onsets must have at least one row."); return(FALSE) }
+  if (nrow(x)<1) { warning("The EVs must have at least one row."); return(FALSE) }
 
-  if (ncol(x) != 2) { warning("The onsets should have two columns named `onset` and `duration`."); return(FALSE) }
+  if (ncol(x) != 2) { warning("The EVs should have two columns named `onset` and `duration`."); return(FALSE) }
   if (!all(colnames(x) == c("onset", "duration"))) {
-    warning("The onsets should have two columns named `onset` and `duration`."); return(FALSE)
+    warning("The EVs should have two columns named `onset` and `duration`."); return(FALSE)
   }
 
   TRUE

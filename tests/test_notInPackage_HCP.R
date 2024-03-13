@@ -68,7 +68,7 @@ eventsB[c(2, 6)] <- NA
 # From `onsets`.
 des <- lapply(
   list(events[seq(3)], events[seq(4,6)]),
-  function(q) { make_design(onsets=q, TR=.72, nTime=nTime, dHRF=1) }
+  function(q) { make_design(EVs=q, TR=.72, nTime=nTime, dHRF=1) }
 )
 for (ss in seq(2)) {
   nuis[[ss]] <- cbind(nuis[[ss]], des[[ss]]$design[,seq(4,6)])
