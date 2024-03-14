@@ -43,7 +43,7 @@
 #'
 #' @importFrom car vif
 #' @importFrom fMRItools is_1
-#' @importFrom stats convolve
+#' @importFrom stats convolve cor lm
 #'
 #' @return A \code{"BfMRI_design"} object: a list with elements
 #'  \describe{
