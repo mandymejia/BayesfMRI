@@ -71,17 +71,17 @@ BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
 #' @keywords internal
 BayesGLM_argChecks <- function(
     scale_BOLD,
-    Bayes,
-    EM,
-    ar_order,
-    ar_smooth,
-    aic,
-    n_threads,
-    return_INLA,
-    verbose,
-    meanTol,
-    varTol,
-    emTol
+    Bayes=TRUE,
+    EM=FALSE,
+    ar_order=6,
+    ar_smooth=5,
+    aic=FALSE,
+    n_threads=4,
+    return_INLA=c("trimmed", "full", "minimal"),
+    verbose=1,
+    meanTol=1e-6,
+    varTol=1e-6,
+    emTol=1e-3
 ){
 
   if (isTRUE(scale_BOLD)) {

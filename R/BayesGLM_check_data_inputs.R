@@ -151,7 +151,7 @@ BayesGLM_format_design <- function(
         if (nK>1) { cat(", 'design_2'") }
         if (nK>2) { cat(", and so on") }
         cat(".\n")
-        design_names <- paste0("design_", nD)
+        design_names <- paste0("design_", seq(des_nD))
       }
     }
   } else {

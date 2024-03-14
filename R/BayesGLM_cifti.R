@@ -5,8 +5,7 @@
 #'  are modeled as distinct volumetric regions. Includes the pre-processing
 #'  steps of nuisance regression, prewhitening, scaling, and variance
 #'  normalization. Supports both single- and multi-session analysis. Can also
-#'  compute just the classical (spatially-independent) GLM. Can also compare
-#'  different choices of designs for single-session classical GLM.
+#'  compute just the classical (spatially-independent) 
 #'
 #' To use \code{BayesGLM_cifti}, the design matrix must first be constructed
 #'  with \code{\link{make_design}}.

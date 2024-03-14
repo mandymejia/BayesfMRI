@@ -11,6 +11,7 @@
 # @inheritParams EM_Param
 #' @inheritParams n_threads_Param
 #' @inheritParams return_INLA_Param
+#' @param m0 TO DO
 #' @inheritParams verbose_Param
 # @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean, variance and SNR of each data location.
@@ -50,9 +51,10 @@
 multiGLM <- function(
   BOLD,
   design,
+  # Below arguments shared with `mutliGLM_cifti`.
   nuisance=NULL,
-  # Below arguments shared with `BayesGLM_cifti`.
   scale_BOLD = c("auto", "mean", "sd", "none"),
+  m0=1,
   verbose = 1,
   meanTol = 1e-6,
   varTol = 1e-6#,
@@ -76,7 +78,7 @@ multiGLM <- function(
   stopifnot(fMRItools::is_posNum(varTol))
 
   # Modeled after `BayesGLM_cifti` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  #   But note that `BOLD`, `design`, and `nuisance` will be 
+  #   But note that `BOLD`, `design`, and `nuisance` will be
   #   matrix/array rather than lists.
   ### Check `BOLD`. ------------------------------------------------------------
   nS <- 1
@@ -111,7 +113,7 @@ multiGLM <- function(
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   valid_cols <- apply(design, 2, function(r){!all(is.na(r))})
-  if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing from every session.") }
+  if (any(valid_cols==0)) { stop("Some tasks are missing from every session.") }
 
   any_bad_design_cols <- any(is.na(c(design[,valid_cols,])))
   if (any(is.na(c(design[,valid_cols,])))) {
@@ -128,7 +130,7 @@ multiGLM <- function(
   # QC mask. -------------------------------------------------------------------
   # Mask based on quality control metrics of the BOLD data.
   mask_qc <- make_mask(
-    BOLD,
+    list(BOLD),
     meanTol=meanTol, varTol=varTol, verbose=verbose>0
   ) #, snrTol=snrTol)
   if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
@@ -145,9 +147,9 @@ multiGLM <- function(
   }
 
   # Detect zero-var, nonzero-mean columns.
-  des_is_intercept <- matrixStats::colVars(design) < 1e-8
-  if (sum(des_is_intercept) > 1) {
-    stop("The design matrix has more than one intercept ",
+  des_is_intercept <- apply(design, c(2,3), var) < 1e-8
+  if (any(colSums(des_is_intercept) > 1)) {
+    stop("At least one design matrix has more than one intercept ",
       "column. That means they are collinear, which will cause problems ",
       "during GLM model estimation. Please fix.")
   }
@@ -164,9 +166,11 @@ multiGLM <- function(
   #collect data and design matrices
   nK2 <- if (is.null(nuisance)) { 0 } else { ncol(nuisance) } #number of nuisance regressors
 
-  # Center design matrix.
-  des_means <- rep(colMeans(design[,valid_cols,,drop=FALSE]), nV$D)
-  design[,valid_cols,] <- design[,valid_cols,,drop=FALSE] - des_means
+  # [TO DO] centering?
 
-  result <- GLM_multi(y=BOLD, X=design, X2=nuisance, verbose=verbose)
+  # # Center design matrix.
+  # des_means <- rep(colMeans(design[,valid_cols,,drop=FALSE]), nV$D)
+  # design[,valid_cols,] <- design[,valid_cols,,drop=FALSE] - des_means
+
+  result <- GLM_multi(y=t(BOLD), X=design, X2=nuisance, m0=m0, verbose=verbose)
 }
