@@ -65,6 +65,9 @@ eventsB[c(2, 6)] <- NA
 
 # Test `make_design` -----------------------------------------------------------
 
+# quick little test w/ the other options
+des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=2, onset="win", offset=c("loss", "neut"))
+
 # From `onsets`.
 des <- lapply(
   list(events[seq(3)], events[seq(4,6)]),

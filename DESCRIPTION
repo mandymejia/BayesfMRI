@@ -44,6 +44,7 @@ License: GPL-3
 Additional_repositories: https://inla.r-inla-download.org/R/testing
 Encoding: UTF-8
 Imports: 
+    car,
     ciftiTools (>= 0.8.0),
     excursions,
     foreach,
