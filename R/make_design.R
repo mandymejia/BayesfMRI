@@ -41,6 +41,7 @@
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
+#' @importFrom car vif
 #' @importFrom fMRItools is_1
 #' @importFrom stats convolve
 #'
@@ -125,7 +126,10 @@ make_design <- function(
   # For FIR.
   if (do_FIR) {
     inds_FIR <- seq(1, by = TR*upsample, length.out = FIR_nTimeR) #first index for each FIR basis function
-    if(max(abs(inds_FIR - round(inds_FIR))) > 1e-6) stop('Contact developer: detected non-integer indices for FIR. Set FIR_nSec = 0 to skip FIR basis set calculation.')
+    if(max(abs(inds_FIR - round(inds_FIR))) > 1e-6) {
+      stop('Contact developer: detected non-integer indices for FIR. ',
+        'Set FIR_nSec = 0 to skip FIR basis set calculation.')
+    }
   }
 
   # Canonical HRF to use in convolution as a function of time (in seconds).
@@ -138,9 +142,8 @@ make_design <- function(
   nK <- (dHRF+1)*nJ0 + (!is.null(onset)) + (!is.null(offset))
 
   if ((!is.null(onset)) || (!is.null(offset))) {
-    if (dHRF>0) { cat(
-      "Not making fields for HRF derivatives of `onset` or `offset`. If these are desired, provide with `EVs`.\n"
-    )
+    if (dHRF>0) { cat("Not making fields for HRF derivatives of `onset` or ",
+      "`offset`. If these are desired, provide with `EVs`.\n")
     }
   }
 
@@ -215,6 +218,48 @@ make_design <- function(
       } #end loop over FIR bases
     } #end FIR basis set construction
   } #end loop over tasks
+
+  # Diagnostics ----------------------------------------------------------------
+
+  # Correlation
+  des_cor <- cor(design)
+  des_cor_max <- max(des_cor[upper.tri(des_cor)])
+  if (des_cor_max < .9) {
+    cat("Maximum corr.: ", round(des_cor_max, 3), "\n")
+  } else {
+    warning("Maximum corr. between design matrix columns is high (", 
+      round(des_cor_max, 3), "). The design may ",
+      "be too collinear, causing issues for model estimation. Consider ",
+      "modeling some fields as nuisance instead of task, if possible.")
+  }
+
+  # VIF
+  f_rhs <- paste(field_names, collapse = ' + ')
+  des2 <- design
+  colnames(des2) <- field_names
+  des2 <- as.data.frame(des2)
+  des2$y <- rnorm(nTime) #add fake y variable, has no influence
+  f <- as.formula(paste0('y ~ ',f_rhs))
+  des_vif <-  car::vif(lm(f, data = des2))
+  des_vif_max <- max(des_vif)
+  if (des_vif_max < 5) {
+    cat("Maximum VIF:   ", round(des_vif_max, 3), "\n")
+  } else {
+    warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
+      "be too collinear, causing issues for model estimation. Consider ",
+      "modeling some fields as nuisance instead of task, if possible.")
+  }
+
+  # onset-offset minimum time between
+  if (!is.null(onset) && !is.null(offset)) {
+    tdiffs <- outer(onset$onset, offset$onset, '-')
+    tdiff_min <- min(abs(tdiffs))
+    if (tdiff_min > 1) {
+      cat("Minimum onset-offset time diff: ", round(tdiff_min, 3), "\n")
+    } else {
+      warning("Minimum onset-offset time diff is small (", round(tdiff_min, 3), "). ")
+    }
+  }
 
   # Format results and return. -------------------------------------------------
 
