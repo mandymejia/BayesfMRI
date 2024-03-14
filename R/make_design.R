@@ -62,7 +62,7 @@ make_design <- function(
   # Check inputs. --------------------------------------------------------------
   stopifnot(is.list(EVs))
   EVs <- lapply(EVs, format_EV)
-  stopifnot(!any(lapply(EVs, isFALSE)))
+  stopifnot(!any(vapply(EVs, isFALSE, FALSE)))
   stopifnot(fMRItools::is_1(nTime, "numeric"))
   stopifnot(all(nTime > 0))
   stopifnot(all(nTime == round(nTime)))
