@@ -13,6 +13,7 @@ make_design(
   onset = NULL,
   offset = NULL,
   scale_design = TRUE,
+  ortho_block = FALSE,
   ...
 )
 }

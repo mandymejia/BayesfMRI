@@ -56,7 +56,7 @@
 make_design <- function(
   EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
-  scale_design=TRUE, ...
+  scale_design=TRUE, ortho_block=FALSE, ...
 ){
 
   # Check inputs. --------------------------------------------------------------
@@ -70,6 +70,7 @@ make_design <- function(
   stopifnot(TR > 0)
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
   upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
+  stopifnot(fMRItools::is_1(ortho_block, "logical"))
 
   # In the future, this might be an argument.
   FIR_nSec <- 0
@@ -140,7 +141,8 @@ make_design <- function(
   if (dHRF > 1) { HRF$dd = HRF_calc(t = u, deriv=2, ...)}
 
   ### Iterate over tasks. ------------------------------------------------------
-  nK <- (dHRF+1)*nJ0 + (!is.null(onset)) + (!is.null(offset))
+  nK_block <- (dHRF+1)*nJ0
+  nK <- nK_block + (!is.null(onset)) + (!is.null(offset))
 
   if ((!is.null(onset)) || (!is.null(offset))) {
     if (dHRF>0) { cat("Not making fields for HRF derivatives of `onset` or ",
@@ -219,6 +221,14 @@ make_design <- function(
       } #end loop over FIR bases
     } #end FIR basis set construction
   } #end loop over tasks
+
+  # Ortogonalize block fields wrt onset/offset ---------------------------------
+  if (ortho_block && nK_block < nK) {
+    design[,seq(nK_block)] <- nuisance_regression(
+      design[,seq(nK_block)], cbind(1, design[,seq(nK_block+1, nK)])
+    )
+  }
+
 
   # Diagnostics ----------------------------------------------------------------
 
