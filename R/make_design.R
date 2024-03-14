@@ -61,7 +61,8 @@ make_design <- function(
 
   # Check inputs. --------------------------------------------------------------
   stopifnot(is.list(EVs))
-  stopifnot(all(vapply(EVs, is_EVs, FALSE)))
+  EVs <- lapply(EVs, format_EV)
+  stopifnot(!any(lapply(EVs, isFALSE)))
   stopifnot(fMRItools::is_1(nTime, "numeric"))
   stopifnot(all(nTime > 0))
   stopifnot(all(nTime == round(nTime)))
@@ -306,27 +307,34 @@ make_design <- function(
 #'  numeric matrix with two numeric columns, EVs and durations, and at least
 #'  one row. Or, the value \code{NA} for an empty task.
 #'
-#' @param x The putative EVs matrix or data frame
+#' @param EV The putative EVs matrix or data frame
 #' @keywords internal
 #' @return Length-one logical vector.
 #'
-is_EVs <- function(x){
+format_EV <- function(EV){
   # First check if EVs is NA, which can be the case in multi-session analysis
   #   where not all fields are present in all sessions.
-  if(length(x)==1 && is.na(x)) { return(TRUE) }
+  if(length(EV)==1 && is.na(EV)) { return(TRUE) }
 
   # Otherwise: For each task, expect a two-column numeric matrix; second >= 0.
   #   Except missing tasks, which should just be the value `NA`.
-  is_nummat <- is.numeric(x) & is.matrix(x)
-  is_df <- is.data.frame(x) && all(vapply(x, class, "") == "numeric")
+  is_nummat <- is.numeric(EV) && is.matrix(EV)
+  is_df <- is.data.frame(EV) && all(vapply(EV, class, "") %in% c("integer", "numeric"))
   if (!(is_nummat || is_df)) { warning("The EVs are not a numeric matrix or data.frame."); return(FALSE) }
 
-  if (nrow(x)<1) { warning("The EVs must have at least one row."); return(FALSE) }
+  if (nrow(EV)<1) { warning("The EVs must have at least one row."); return(FALSE) }
 
-  if (ncol(x) != 2) { warning("The EVs should have two columns named `onset` and `duration`."); return(FALSE) }
-  if (!all(colnames(x) == c("onset", "duration"))) {
-    warning("The EVs should have two columns named `onset` and `duration`."); return(FALSE)
+  if (ncol(EV) < 2) { 
+    warning("The EVs should have two columns named `onset` and `duration`.")
+    return(FALSE)
+  } else if (ncol(EV) > 2) {
+    message("The EVs should have two columns named `onset` and `duration`. Using the first two, and dropping the other columns.")
+    EV <- EV[,seq(2)]
+  }
+  if (is.null(colnames(EV)) || !all(colnames(EV) == c("onset", "duration"))) {
+    message("The EVs should have two columns named `onset` and `duration`.")
+    colnames(EV) <- c("onset", "duration")
   }
 
-  TRUE
+  EV
 }
