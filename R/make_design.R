@@ -38,7 +38,7 @@
 #'  onsets (or offsets) across the specified tasks will be represented by one
 #'  additional column in the design matrix. The task names must match the names
 #'  of \code{EVs}. Can also be \code{"all"} to use all tasks.
-#' 
+#'
 #'  Onsets/offset modeling is only compatible with a block deisgn experiment.
 #'  An error will be raised if the events in \code{EVs} do not have duration
 #'  greater than one second.
@@ -206,26 +206,27 @@ make_design <- function(
     }
 
     # Define `ots` (onset times) and `dur` (durations) for this task.
-    ots_sj <- EVs[[jj]][,1]
-    dur_sj <- EVs[[jj]][,2]
+    ots_jj <- EVs[[jj]][,1]
+    dur_jj <- EVs[[jj]][,2]
 
-    ### Round `ots_sj` to TR for event-related designs.
-    ots_sj <- ifelse(dur_sj==0, round(ots_sj/TR)*TR, ots_sj)
+    ### Round `ots_jj` to TR for event-related designs.
+    ots_jj <- ifelse(dur_jj==0, round(ots_jj/TR)*TR, ots_jj)
 
     ##### Get `stimulus`. -----------------------------------------------------
-    stim_sj <- rep(0, nSec*upsample)
-    for (ii in seq(length(ots_sj))) {
-      start_ii <- round(ots_sj[ii]*upsample)
-      end_ii <- round(ots_sj[ii]*upsample + dur_sj[ii]*upsample)
-      stim_sj[start_ii:end_ii] <- 1
+    stim_jj <- rep(0, nSec*upsample)
+    for (ii in seq(length(ots_jj))) {
+      start_ii <- round(ots_jj[ii]*upsample)
+      end_ii <- round(ots_jj[ii]*upsample + dur_jj[ii]*upsample)
+      stim_jj[start_ii:end_ii] <- 1
     }
-    stimulus[[jj]] <- c(stim_sj,0)[inds]
+    stimulus[[jj]] <- c(stim_jj,0)[inds]
 
     ##### Get `design` by convolving stimulus and HRFs. ------------------------
     # Convolve.
     HRF_jj <- if (is_onset_or_offset) { HRF[1] } else { HRF }
+
     HRF_conv <- lapply(HRF_jj, function(q){
-      convolve(stim_sj, rev(q), type="open")
+      convolve(stim_jj, rev(q), type="open")
     })
 
     # Normalize each by dividing by its maximum, so the peak = 1.
@@ -242,7 +243,7 @@ make_design <- function(
         start_tt <- inds_FIR[tt]
         end_tt <- start_tt + TR*upsample - 1 #each FIR basis spans a single TR
         dummy_tt[start_tt:end_tt] <- 1
-        FIR_tj <- convolve(stim_sj, rev(dummy_tt), type='open')
+        FIR_tj <- convolve(stim_jj, rev(dummy_tt), type='open')
         FIR_tj <- round(FIR_tj, 5)
         # out$FIR[,jj,tt] <- FIR_tj[inds]
       } #end loop over FIR bases
@@ -264,7 +265,7 @@ make_design <- function(
   des_cor_max <- max(des_cor[upper.tri(des_cor)])
   if (verbose) { cat("Maximum corr.: ", round(des_cor_max, 3), "\n") }
   if (des_cor_max > .9) {
-    warning("Maximum corr. between design matrix columns is high (", 
+    warning("Maximum corr. between design matrix columns is high (",
       round(des_cor_max, 3), "). The design may ",
       "be too collinear, causing issues for model estimation. Consider ",
       "modeling some fields as nuisance instead of task, if possible.")
@@ -277,13 +278,17 @@ make_design <- function(
   des2 <- as.data.frame(des2)
   des2$y <- rnorm(nTime) #add fake y variable, has no influence
   f <- as.formula(paste0('y ~ ',f_rhs))
-  des_vif <-  car::vif(lm(f, data = des2))
-  des_vif_max <- max(des_vif)
-  if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
-  if (des_vif_max > 5) {
-    warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
-      "be too collinear, causing issues for model estimation. Consider ",
-      "modeling some fields as nuisance instead of task, if possible.")
+  des_vif <-  try(car::vif(lm(f, data = des2)))
+  if (inherits(des_vif, "try-error")) {
+    des_vif_max <- des_vif
+  } else {
+    des_vif_max <- max(des_vif)
+    if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
+    if (des_vif_max > 5) {
+      warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
+              "be too collinear, causing issues for model estimation. Consider ",
+              "modeling some fields as nuisance instead of task, if possible.")
+    }
   }
 
   # onset-offset minimum time between
@@ -362,7 +367,7 @@ format_EV <- function(EV){
 
   if (nrow(EV)<1) { warning("The EVs must have at least one row."); return(FALSE) }
 
-  if (ncol(EV) < 2) { 
+  if (ncol(EV) < 2) {
     warning("The EVs should have two columns named `onset` and `duration`. But there's less than two columns.")
     return(FALSE)
   } else if (ncol(EV) > 2) {
