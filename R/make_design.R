@@ -34,10 +34,14 @@
 #' @param upsample Upsample factor for convolving stimulus boxcar or stick
 #'  function with canonical HRF. Default: \code{100}.
 #' @param onset,offset Add task regressors indicating the onset and/or offset of
-#'  each event? Provide the names of the tasks as a character vector. All
+#'  each event block? Provide the names of the tasks as a character vector. All
 #'  onsets (or offsets) across the specified tasks will be represented by one
 #'  additional column in the design matrix. The task names must match the names
 #'  of \code{EVs}. Can also be \code{"all"} to use all tasks.
+#' 
+#'  Onsets/offset modeling is only compatible with a block deisgn experiment.
+#'  An error will be raised if the events in \code{EVs} do not have duration
+#'  greater than one second.
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
 #' @param verbose Print diagnostic messages? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
@@ -86,6 +90,14 @@ make_design <- function(
   # Add `onset` and `offset` to `EVs`. --------------------------------------
   task_names <- names(EVs) # will be updated
   nJ0 <- length(task_names) # not including `onset` or `offset`
+
+  if (!is.null(onset) || !is.null(offset)) {
+    min_dur <- min(do.call(c, lapply(EVs, '[[', "duration")))
+    if (min_dur == 0) { warning("
+      `onset` and `offset` are only compatible with block-design experiments, ",
+      "but at least one event has duration length zero. Proceeding anyway."
+    ) }
+  }
 
   # [TO DO] check design is actually block design
 

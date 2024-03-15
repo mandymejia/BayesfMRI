@@ -55,10 +55,14 @@ columns from the design matrix to the \code{nuisance} argument for
 function with canonical HRF. Default: \code{100}.}
 
 \item{onset, offset}{Add task regressors indicating the onset and/or offset of
-each event? Provide the names of the tasks as a character vector. All
+each event block? Provide the names of the tasks as a character vector. All
 onsets (or offsets) across the specified tasks will be represented by one
 additional column in the design matrix. The task names must match the names
-of \code{EVs}. Can also be \code{"all"} to use all tasks.}
+of \code{EVs}. Can also be \code{"all"} to use all tasks.
+
+Onsets/offset modeling is only compatible with a block deisgn experiment.
+An error will be raised if the events in \code{EVs} do not have duration
+greater than one second.}
 
 \item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
 
