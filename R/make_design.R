@@ -210,7 +210,7 @@ make_design <- function(
     dur_jj <- EVs[[jj]][,2]
 
     ### Round `ots_jj` to TR for event-related designs.
-    ots_jj <- ifelse(dur_jj==0, round(ots_jj/TR)*TR, ots_jj)
+    #ots_jj <- ifelse(dur_jj==0, round(ots_jj/TR)*TR, ots_jj)
 
     ##### Get `stimulus`. -----------------------------------------------------
     stim_jj <- rep(0, nSec*upsample)
@@ -229,9 +229,11 @@ make_design <- function(
       convolve(stim_jj, rev(q), type="open")
     })
 
-    # Normalize each by dividing by its maximum, so the peak = 1.
-    # Note that this occurs prior to downsampling.
-    HRF_conv <- lapply(HRF_conv, function(q){ q / max(q) })
+    # # Normalize each by dividing by its maximum, so the peak = 1.
+    # # Note that this occurs prior to downsampling.
+    if (scale_design) {
+      HRF_conv <- lapply(HRF_conv, function(q){ q / max(q) })
+    }
 
     # Downsample and save to `design`.
     design[,field_idx] <- do.call(cbind, HRF_conv)[inds,]
@@ -319,11 +321,11 @@ make_design <- function(
   colnames(design) <- field_names
   stimulus <- do.call(cbind, stimulus)
 
-  design <- if(scale_design) {
-    scale_design_mat(design)
-  } else {
-    scale(design, scale=FALSE)
-  }
+  # design <- if(scale_design) {
+  #   scale_design_mat(design)
+  # } else {
+  #   scale(design, scale=FALSE)
+  # }
 
   out <- list(
     design=design,
