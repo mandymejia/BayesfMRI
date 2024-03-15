@@ -300,10 +300,10 @@ make_design <- function(
     }
 
     ### VIF --------------------------------------------------------------------
-    f_rhs <- paste(field_names, collapse = ' + ')
-    des2 <- design
-    colnames(des2) <- field_names
-    des2 <- as.data.frame(des2)
+    fnames2 <- paste0("field_", field_names) # Error during `lm` if field names start w/ number.
+    f_rhs <- paste(fnames2, collapse = ' + ')
+    des2 <- as.data.frame(design)
+    colnames(des2) <- fnames2
     des2$y <- rnorm(nTime) #add fake y variable, has no influence
     f <- as.formula(paste0('y ~ ',f_rhs))
     des_vif <-  try(car::vif(lm(f, data = des2)))
