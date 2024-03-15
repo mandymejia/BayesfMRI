@@ -65,7 +65,37 @@ eventsB[c(2, 6)] <- NA
 
 # Test `make_design` -----------------------------------------------------------
 
-# quick little test w/ the other options
+# # quick little test w/ the other options
+# win_len <- c(0, .1, .3, .5, 1, 3, 5, 10)
+# pdf("~/Desktop/win_duration.pdf")
+# for (ww in seq(length(win_len))) {
+#   events$win[,2] <- win_len[ww]
+#   des <- make_design(
+#     events[seq(3)], TR=.72, nTime=nTime, scale_design = FALSE,
+#     dHRF=0, onset="win", offset=c("win")
+#   )
+#   print(matplot(
+#     des$design, type="l", col=c("blue", "pink", "#ffcc99", "lightblue", "darkblue"),
+#     main=paste0("win duration: ", win_len[ww]), ylim=c(-100, 700),
+#     lty=1, lwd=1.5
+#   ))
+# }
+# dev.off()
+# pdf("~/Desktop/win_duration_scaled.pdf")
+# for (ww in seq(length(win_len))) {
+#   events$win[,2] <- win_len[ww]
+#   des <- make_design(
+#     events[seq(3)], TR=.72, nTime=nTime,
+#     dHRF=0, onset="win", offset=c("win")
+#   )
+#   print(matplot(
+#     des$design, type="l", col=c("blue", "pink", "#ffcc99", "lightblue", "darkblue"),
+#     main=paste0("win duration: ", win_len[ww]), ylim=c(-.1, .7)/.7,
+#     lty=1, lwd=1.5
+#   ))
+# }
+# dev.off()
+
 des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=2, onset="win", offset=c("loss", "neut"))
 
 # From `onsets`.
