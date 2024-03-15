@@ -96,10 +96,9 @@ GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
   nP <- dim(X)[3]
   RSS <- matrix(NA, nrow=nV_D, ncol=nP) #keep track of residual sum of squares (proxy for R^2 or AIC)
 
-  if(verbose > 0) cat('\tFitting models: Model ')
+  if(verbose > 0) { cat('\tFitting models: Model ') }
   for(pp in 1:nP){
-
-    if(verbose > 0) cat(paste0(pp,'\t'))
+    if(verbose > 0) { cat(paste0(pp,'\t')) }
 
     X_sp <- cbind(X[,,pp], rep(1, nT), X2) #combine design with intercept and nuisance
 
@@ -113,6 +112,7 @@ GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
     resid_pp <- y - X_sp %*% coef_pp #TxV matrix
     RSS[,pp] <- sqrt(colSums(resid_pp^2)/(nT - ncol(X_sp)))
   }
+  if (verbose > 0) { cat("\n") }
 
   #determine best model (minimum residual squared error)
   bestmodel <- apply(RSS, 1, function(x){
