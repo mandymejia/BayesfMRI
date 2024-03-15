@@ -65,6 +65,8 @@ eventsB[c(2, 6)] <- NA
 
 # Test `make_design` -----------------------------------------------------------
 
+des <- make_design(events[1], TR=.72, nTime=nTime,dHRF=0)
+
 # # quick little test w/ the other options
 # win_len <- c(0, .1, .3, .5, 1, 3, 5, 10)
 # pdf("~/Desktop/win_duration.pdf")

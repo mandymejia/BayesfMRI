@@ -219,6 +219,7 @@ make_design <- function(
       # Get the stimulus for just one event, to use for scaling.
       stim_jj_one <- stim_jj
       one_idx <- which.min(dur_jj)
+      # [NOTE] If the min-len event occurs close to the end of the session, the peak will be missed.
       if (length(unique(dur_jj)) > 1) {
         warning("Task '", task_names[jj], "' has events with differing ",
           "durations. Using the minimum duration, ", dur_jj[one_idx], ".")
@@ -245,8 +246,8 @@ make_design <- function(
       convolve(stim_jj, rev(q), type="open")
     })
 
-    # # Normalize each by dividing by its maximum, so the peak = 1.
-    # # Note that this occurs prior to downsampling.
+    # Normalize each HRF by dividing by the one-event HRF max.
+    # Note that this occurs prior to downsampling.
     if (scale_design) {
       HRF_one_conv <- lapply(HRF_jj, function(q){
         convolve(stim_jj_one, rev(q), type="open")
