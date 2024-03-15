@@ -1,11 +1,12 @@
 #' GLM multi
 #'
 #' @param y,X,X2 BOLD, design, nuisance
+#' @param Xc (Optional) canonical design matrix
 #' @param verbose verbose?
 #' @return Results for GLM multi
 #' @importFrom stats as.formula var pf pchisq
 #' @keywords internal
-GLM_multi <- function(y, X, X2, m0=1, verbose=TRUE) {
+GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
   # Step 1: Identify no-signal locations. Compare null vs. canonical model using out-of-sample prediction error.
   nT <- nrow(y)
   nV_D <- ncol(y)
@@ -23,26 +24,28 @@ GLM_multi <- function(y, X, X2, m0=1, verbose=TRUE) {
 
   Fstat <- pvalF <- rep(0, nV_D)
 
-  X1 <- cbind(X[,,m0], rep(1, nT), X2) #combine design with intercept and nuisance
-  X0 <- cbind(rep(1, nT), X2) #no task regressors in null model
+  if (!is.null(Xc)) {
+    X1 <- cbind(Xc, rep(1, nT), X2) #combine design with intercept and nuisance
+    X0 <- cbind(rep(1, nT), X2) #no task regressors in null model
 
-  #compute RSS (steps (a) and (b))
-  XtX_inv1 <- try(Matrix::solve(Matrix::crossprod(X1)))
-  XtX_inv0 <- try(Matrix::solve(Matrix::crossprod(X0)))
-  if (inherits(XtX_inv1, "try-error")) { warning(paste0("Numerical instability in design matrix for canonical model ")) }
-  if (inherits(XtX_inv0, "try-error")) { warning(paste0("Numerical instability in design matrix for null model ")) }
-  coef1 <- XtX_inv1 %*% t(X1) %*% y
-  coef0 <- XtX_inv0 %*% t(X0) %*% y
-  resid1 <- y - X1 %*% coef1 #TxV matrix
-  resid0 <- y - X0 %*% coef0 #TxV matrix
-  RSS1 <- colSums(resid1^2)
-  RSS0 <- colSums(resid0^2)
+    #compute RSS (steps (a) and (b))
+    XtX_inv1 <- try(Matrix::solve(Matrix::crossprod(X1)))
+    XtX_inv0 <- try(Matrix::solve(Matrix::crossprod(X0)))
+    if (inherits(XtX_inv1, "try-error")) { warning(paste0("Numerical instability in design matrix for canonical model ")) }
+    if (inherits(XtX_inv0, "try-error")) { warning(paste0("Numerical instability in design matrix for null model ")) }
+    coef1 <- XtX_inv1 %*% t(X1) %*% y
+    coef0 <- XtX_inv0 %*% t(X0) %*% y
+    resid1 <- y - X1 %*% coef1 #TxV matrix
+    resid0 <- y - X0 %*% coef0 #TxV matrix
+    RSS1 <- colSums(resid1^2)
+    RSS0 <- colSums(resid0^2)
 
-  #compute F-statistic (step c)
-  DOF1 <- nT - ncol(X1) #will be over-estimated, but shouldn't matter much because it's essentially Inf
-  Fstat <- (RSS0 - RSS1)/RSS1 * DOF1/nK
-  pvalF <- 1 - pf(Fstat, df1 = nK, df2 = DOF1)
-  #pval_Chi2 <- 1 - pchisq(nK*Fstat, df = nK)
+    #compute F-statistic (step c)
+    DOF1 <- nT - ncol(X1) #will be over-estimated, but shouldn't matter much because it's essentially Inf
+    Fstat <- (RSS0 - RSS1)/RSS1 * DOF1/nK
+    pvalF <- 1 - pf(Fstat, df1 = nK, df2 = DOF1)
+    #pval_Chi2 <- 1 - pchisq(nK*Fstat, df = nK)
+  }
 
   # #ingredients for prediction
   # nT2 <- round(nT/2)

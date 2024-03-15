@@ -11,7 +11,7 @@
 # @inheritParams EM_Param
 #' @inheritParams n_threads_Param
 #' @inheritParams return_INLA_Param
-#' @param m0 TO DO
+#' @param design_canonical TO DO
 #' @inheritParams verbose_Param
 # @inheritParams combine_sessions_Param
 #' @param meanTol,varTol Tolerance for mean, variance and SNR of each data location.
@@ -54,7 +54,7 @@ multiGLM <- function(
   # Below arguments shared with `mutliGLM_cifti`.
   nuisance=NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  m0=1,
+  design_canonical=NULL,
   verbose = 1,
   meanTol = 1e-6,
   varTol = 1e-6#,
@@ -172,5 +172,5 @@ multiGLM <- function(
   # des_means <- rep(colMeans(design[,valid_cols,,drop=FALSE]), nV$D)
   # design[,valid_cols,] <- design[,valid_cols,,drop=FALSE] - des_means
 
-  result <- GLM_multi(y=t(BOLD), X=design, X2=nuisance, m0=m0, verbose=verbose)
+  result <- GLM_multi(y=t(BOLD), X=design, X2=nuisance, Xc=design_canonical, verbose=verbose)
 }

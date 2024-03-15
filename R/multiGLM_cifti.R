@@ -287,7 +287,7 @@ multiGLM_cifti <- function(
       design = design,
       nuisance = nuisance,
       scale_BOLD = scale_BOLD,
-      m0 = m0,
+      design_canonical = design_canonical,
       verbose = verbose,
       meanTol = meanTol,
       varTol = varTol

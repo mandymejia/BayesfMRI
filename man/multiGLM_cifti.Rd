@@ -13,7 +13,7 @@ multiGLM_cifti(
   hpf = NULL,
   nuisance = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  m0 = 1,
+  design_canonical = NULL,
   verbose = 1,
   meanTol = 1e-06,
   varTol = 1e-06
@@ -79,7 +79,7 @@ scaling.}
 \item{"none":}{   Center the data but do not scale it.}
 }}
 
-\item{m0}{TO DO}
+\item{design_canonical}{TO DO}
 
 \item{verbose}{\code{1} (default) to print occasional updates during model
 computation; \code{2} for occasional updates as well as running INLA in

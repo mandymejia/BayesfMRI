@@ -4,10 +4,12 @@
 \alias{GLM_multi}
 \title{GLM multi}
 \usage{
-GLM_multi(y, X, X2, m0 = 1, verbose = TRUE)
+GLM_multi(y, X, X2, Xc = NULL, verbose = TRUE)
 }
 \arguments{
 \item{y, X, X2}{BOLD, design, nuisance}
+
+\item{Xc}{(Optional) canonical design matrix}
 
 \item{verbose}{verbose?}
 }
