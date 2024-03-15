@@ -335,14 +335,14 @@ format_EV <- function(EV){
   if (nrow(EV)<1) { warning("The EVs must have at least one row."); return(FALSE) }
 
   if (ncol(EV) < 2) { 
-    warning("The EVs should have two columns named `onset` and `duration`.")
+    warning("The EVs should have two columns named `onset` and `duration`. But there's less than two columns.")
     return(FALSE)
   } else if (ncol(EV) > 2) {
-    message("The EVs should have two columns named `onset` and `duration`. Using the first two, and dropping the other columns.")
+    #message("The EVs should have two columns named `onset` and `duration`. Using the first two, and dropping the other columns.")
     EV <- EV[,seq(2)]
   }
   if (is.null(colnames(EV)) || !all(colnames(EV) == c("onset", "duration"))) {
-    message("The EVs should have two columns named `onset` and `duration`.")
+    #message("The EVs should have two columns named `onset` and `duration`.")
     colnames(EV) <- c("onset", "duration")
   }
 
