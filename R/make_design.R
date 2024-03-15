@@ -56,8 +56,10 @@
 make_design <- function(
   EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
-  scale_design=TRUE, ortho_block=FALSE, ...
+  scale_design=TRUE, ...
 ){
+
+  ortho_block <- FALSE
 
   # Check inputs. --------------------------------------------------------------
   stopifnot(is.list(EVs))
@@ -86,10 +88,13 @@ make_design <- function(
 
   # [TO DO] check design is actually block design
 
+  do_oomsg <- FALSE
+
   if (!is.null(onset)) {
     stopifnot(is.character(onset))
     if (length(onset)==1 && onset=="all") { onset <- task_names }
     stopifnot(all(onset %in% task_names))
+    if (length(onset)> 1) { do_oomsg <- TRUE; cat("Modeling all onsets as a single task. ") }
     onset <- EVs[onset]
     onset <- lapply(onset, function(q){q$duration <- 0; q})
     onset <- do.call(rbind, onset)
@@ -101,12 +106,19 @@ make_design <- function(
     stopifnot(is.character(offset))
     if (length(offset)==1 && offset=="all") { offset <- task_names }
     stopifnot(all(offset %in% task_names))
+    if (length(offset)> 1) { do_oomsg <- TRUE; cat("Modeling all offsets as a single task. ") }
     offset <- EVs[offset]
     offset <- lapply(offset, function(q){q$onset <- q$onset + q$duration; q$duration <- 0; q})
     offset <- do.call(rbind, offset)
     offset$onset <- sort(offset$onset)
     EVs <- c(EVs, list(offset=offset))
   }
+
+  if (do_oomsg) { cat(
+    "If you want separate regressors for different stimulus onsets or offsets, ",
+    "please add these as events to the EVs argument manually and set ",
+    "`onset` or `offset` to `NULL`.\n"
+  )}
 
   if ((!is.null(onset)) && (!is.null(offset))) {
     if (any(onset$onset %in% offset$onset)) {
