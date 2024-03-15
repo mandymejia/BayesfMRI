@@ -84,6 +84,8 @@ make_design <- function(
   task_names <- names(EVs) # will be updated
   nJ0 <- length(task_names) # not including `onset` or `offset`
 
+  # [TO DO] check design is actually block design
+
   if (!is.null(onset)) {
     stopifnot(is.character(onset))
     if (length(onset)==1 && onset=="all") { onset <- task_names }
@@ -260,14 +262,14 @@ make_design <- function(
   }
 
   # onset-offset minimum time between
-  if (!is.null(onset) && !is.null(offset)) {
-    tdiffs <- outer(onset$onset, offset$onset, '-')
-    tdiff_min <- min(abs(tdiffs))
-    cat("Min. time diff between onset/offset (s): ", round(tdiff_min, 3), "\n")
+  if (!is.null(onset) || !is.null(offset)) {
+    tdiff_min <- min(diff(sort(c(onset$onset, offset$onset))))
+    cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n")
     if (tdiff_min < 1) {
-      warning("Min. time diff between onset/offset is small (", round(tdiff_min, 3), " s). ")
+      warning("Min. time btwn onset/offset is small (", round(tdiff_min, 3), " s). ")
     }
   }
+  cat("\n")
 
   # Format results and return. -------------------------------------------------
 
