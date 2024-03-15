@@ -390,8 +390,6 @@ BayesGLM2 <- function(
   )
   class(out) <- "BayesGLM2"
 
-  browser()
-
   if (is_cifti) {
     out <- list(
       contrast_estimate_xii = as.xifti(

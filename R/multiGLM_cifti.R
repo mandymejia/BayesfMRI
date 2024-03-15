@@ -14,7 +14,7 @@
 #' @inheritParams nuisance_Param_BayesGLM_cifti
 #' @inheritParams hpf_Param_BayesGLM_cifti
 #' @inheritParams scale_BOLD_Param
-#' @param m0 TO DO
+#' @param design_canonical TO DO
 #' @inheritParams verbose_Param
 #' @inheritParams mean_var_Tol_Param
 #'
@@ -42,7 +42,7 @@ multiGLM_cifti <- function(
   # Below arguments shared with `multiGLM`.
   nuisance=NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
-  m0=1,
+  design_canonical=NULL,
   verbose = 1,
   meanTol = 1e-6,
   varTol = 1e-6#,
