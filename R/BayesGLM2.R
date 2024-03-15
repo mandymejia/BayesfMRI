@@ -190,9 +190,9 @@ BayesGLM2 <- function(
     results_mm <- lapply(results, function(x){ x$BayesGLM_results[[mm]] })
 
     # `Mask`
-    Mask <- lapply(results_mm, function(x){ x$mask })
-    if (length(unique(vapply(Mask, length, 0))) != 1) { 
-      stop("Unequal mask lengths--check that the input files are in the same resolution.") 
+    Mask <- lapply(results_mm, function(x){ x$spatial$mask })
+    if (length(unique(vapply(Mask, length, 0))) != 1) {
+      stop("Unequal mask lengths--check that the input files are in the same resolution.")
     }
     Mask <- do.call(rbind, Mask)
     Mask_sums <- colSums(Mask)
@@ -200,7 +200,7 @@ BayesGLM2 <- function(
     Mask <- apply(Mask, 2, all)
 
     # `mesh`, `spde`, `Amat`
-    mesh <- results_mm[[1]]$mesh
+    mesh <- results_mm[[1]]$spde$mesh
     if (need_Mask) {
       mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
     }
@@ -390,13 +390,15 @@ BayesGLM2 <- function(
   )
   class(out) <- "BayesGLM2"
 
+  browser()
+
   if (is_cifti) {
     out <- list(
       contrast_estimate_xii = as.xifti(
-        out$model_results$cortex_left$estimates,
-        out$model_results$cortex_left$mask,
-        out$model_results$cortex_right$estimates,
-        out$model_results$cortex_right$mask
+        out$model_results$cortexL$estimates,
+        out$model_results$cortexL$mask,
+        out$model_results$cortexR$estimates,
+        out$model_results$cortexR$mask
       ),
       activations_xii = NULL,
       BayesGLM2_results = out
@@ -404,10 +406,10 @@ BayesGLM2 <- function(
     out$contrast_estimate_xii$meta$cifti$names <- names(contrasts)
     if (do_excur) {
       act_xii <- as.xifti(
-        out$BayesGLM2_results$model_results$cortex_left$active,
-        out$BayesGLM2_results$model_results$cortex_left$mask,
-        out$BayesGLM2_results$model_results$cortex_right$active,
-        out$BayesGLM2_results$model_results$cortex_right$mask
+        out$BayesGLM2_results$model_results$cortexL$active,
+        out$BayesGLM2_results$model_results$cortexL$mask,
+        out$BayesGLM2_results$model_results$cortexR$active,
+        out$BayesGLM2_results$model_results$cortexR$mask
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)
