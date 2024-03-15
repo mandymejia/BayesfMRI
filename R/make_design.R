@@ -93,8 +93,8 @@ make_design <- function(
 
   if (!is.null(onset) || !is.null(offset)) {
     min_dur <- min(do.call(c, lapply(EVs, '[[', "duration")))
-    if (min_dur == 0) { warning("
-      `onset` and `offset` are only compatible with block-design experiments, ",
+    if (min_dur == 0) { warning(
+      "`onset` and `offset` are only compatible with block-design experiments, ",
       "but at least one event has duration length zero. Proceeding anyway."
     ) }
   }
