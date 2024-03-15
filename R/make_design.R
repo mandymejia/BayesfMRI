@@ -266,9 +266,9 @@ make_design <- function(
     tdiffs <- outer(onset$onset, offset$onset, '-')
     tdiff_min <- min(abs(tdiffs))
     if (tdiff_min > 1) {
-      cat("Minimum onset-offset time diff: ", round(tdiff_min, 3), "\n")
+      cat("Min. onset-offset time diff (s): ", round(tdiff_min, 3), "\n")
     } else {
-      warning("Minimum onset-offset time diff is small (", round(tdiff_min, 3), "). ")
+      warning("Min. onset-offset time diff is small (", round(tdiff_min, 3), " s). ")
     }
   }
 
