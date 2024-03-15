@@ -210,12 +210,28 @@ make_design <- function(
     dur_jj <- EVs[[jj]][,2]
 
     ### Round `ots_jj` to TR for event-related designs.
-    #ots_jj <- ifelse(dur_jj==0, round(ots_jj/TR)*TR, ots_jj)
+    #ots_jj <- ifelse(dur_jj==0, round(ots_jj/TR)*TR, ots_jj) # [NOTE] Damon commented out (see Slack messages)
 
     ##### Get `stimulus`. -----------------------------------------------------
     stim_jj <- rep(0, nSec*upsample)
+
+    if (scale_design) {
+      # Get the stimulus for just one event, to use for scaling.
+      stim_jj_one <- stim_jj
+      one_idx <- which.min(dur_jj)
+      if (length(unique(dur_jj)) > 1) {
+        warning("Task '", task_names[jj], "' has events with differing ",
+          "durations. Using the minimum duration, ", dur_jj[one_idx], ".")
+      }
+      start_ii <- round(ots_jj[one_idx]*upsample)
+      if (start_ii==0) { start_ii <- 1 }
+      end_ii <- round(ots_jj[one_idx]*upsample + dur_jj[one_idx]*upsample)
+      stim_jj_one[start_ii:end_ii] <- 1
+    }
+
     for (ii in seq(length(ots_jj))) {
       start_ii <- round(ots_jj[ii]*upsample)
+      if (start_ii==0) { start_ii <- 1 }
       end_ii <- round(ots_jj[ii]*upsample + dur_jj[ii]*upsample)
       stim_jj[start_ii:end_ii] <- 1
     }
@@ -232,7 +248,13 @@ make_design <- function(
     # # Normalize each by dividing by its maximum, so the peak = 1.
     # # Note that this occurs prior to downsampling.
     if (scale_design) {
-      HRF_conv <- lapply(HRF_conv, function(q){ q / max(q) })
+      HRF_one_conv <- lapply(HRF_jj, function(q){
+        convolve(stim_jj_one, rev(q), type="open")
+      })
+
+      for (hh in seq(length(HRF_conv))) {
+        HRF_conv[[hh]] <- HRF_conv[[hh]] / max(HRF_one_conv[[hh]])
+      }
     }
 
     # Downsample and save to `design`.
@@ -262,46 +284,52 @@ make_design <- function(
 
   # Diagnostics ----------------------------------------------------------------
 
-  # Correlation
-  des_cor <- cor(design)
-  des_cor_max <- max(des_cor[upper.tri(des_cor)])
-  if (verbose) { cat("Maximum corr.: ", round(des_cor_max, 3), "\n") }
-  if (des_cor_max > .9) {
-    warning("Maximum corr. between design matrix columns is high (",
-      round(des_cor_max, 3), "). The design may ",
-      "be too collinear, causing issues for model estimation. Consider ",
-      "modeling some fields as nuisance instead of task, if possible.")
-  }
-
-  # VIF
-  f_rhs <- paste(field_names, collapse = ' + ')
-  des2 <- design
-  colnames(des2) <- field_names
-  des2 <- as.data.frame(des2)
-  des2$y <- rnorm(nTime) #add fake y variable, has no influence
-  f <- as.formula(paste0('y ~ ',f_rhs))
-  des_vif <-  try(car::vif(lm(f, data = des2)))
-  if (inherits(des_vif, "try-error")) {
-    des_vif_max <- des_vif
+  if (nK == 1) {
+    des_cor_max <- des_vif_max <- tdiff_min <- NA
   } else {
-    des_vif_max <- max(des_vif)
-    if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
-    if (des_vif_max > 5) {
-      warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
-              "be too collinear, causing issues for model estimation. Consider ",
-              "modeling some fields as nuisance instead of task, if possible.")
+    ### Correlation ------------------------------------------------------------
+    des_cor <- cor(design)
+    des_cor_max <- max(des_cor[upper.tri(des_cor)])
+    if (verbose) { cat("Maximum corr.: ", round(des_cor_max, 3), "\n") }
+    if (des_cor_max > .9) {
+      warning("Maximum corr. between design matrix columns is high (",
+        round(des_cor_max, 3), "). The design may ",
+        "be too collinear, causing issues for model estimation. Consider ",
+        "modeling some fields as nuisance instead of task, if possible.")
     }
-  }
 
-  # onset-offset minimum time between
-  if (!is.null(onset) || !is.null(offset)) {
-    tdiff_min <- min(diff(sort(c(onset$onset, offset$onset))))
-    if (verbose) { cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n") }
-    if (tdiff_min < 1) {
-      warning("Min. time btwn onset/offset is small (", round(tdiff_min, 3), " s). ")
+    ### VIF --------------------------------------------------------------------
+    f_rhs <- paste(field_names, collapse = ' + ')
+    des2 <- design
+    colnames(des2) <- field_names
+    des2 <- as.data.frame(des2)
+    des2$y <- rnorm(nTime) #add fake y variable, has no influence
+    f <- as.formula(paste0('y ~ ',f_rhs))
+    des_vif <-  try(car::vif(lm(f, data = des2)))
+    if (inherits(des_vif, "try-error")) {
+      des_vif_max <- des_vif
+    } else {
+      des_vif_max <- max(des_vif)
+      if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
+      if (des_vif_max > 5) {
+        warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
+                "be too collinear, causing issues for model estimation. Consider ",
+                "modeling some fields as nuisance instead of task, if possible.")
+      }
     }
+
+    ### Min time btwn onset/offset minimum time between ------------------------
+    if (!is.null(onset) || !is.null(offset)) {
+      tdiff_min <- min(diff(sort(c(onset$onset, offset$onset))))
+      if (verbose) { cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n") }
+      if (tdiff_min < 1) {
+        warning("Min. time btwn onset/offset is small (", round(tdiff_min, 3), " s). ")
+      }
+    } else {
+      tdiff_min <- NA
+    }
+    cat("\n")
   }
-  cat("\n")
 
   # Format results and return. -------------------------------------------------
 
@@ -320,12 +348,6 @@ make_design <- function(
 
   colnames(design) <- field_names
   stimulus <- do.call(cbind, stimulus)
-
-  # design <- if(scale_design) {
-  #   scale_design_mat(design)
-  # } else {
-  #   scale(design, scale=FALSE)
-  # }
 
   out <- list(
     design=design,
