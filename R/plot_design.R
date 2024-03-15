@@ -1,3 +1,17 @@
+#' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object
+#'
+#' @param x An object of class "BfMRI_design".
+#' @param ... Additional arguments to \code{\link{plot_design}}.
+#' @method plot BfMRI_design
+#' @export
+#'
+#' @return Result of the call to \code{\link{plot_design}}
+#'
+plot.BfMRI_design <- function(x, ...){
+  stopifnot(inherits(x, "BfMRI_design"))
+  plot_design(x$design, ...)
+}
+
 #' Plot design matrix
 #'
 #' @param design The timepoints by fields design matrix or data.frame.
