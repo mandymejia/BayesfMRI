@@ -13,6 +13,7 @@ make_design(
   onset = NULL,
   offset = NULL,
   scale_design = TRUE,
+  verbose = TRUE,
   ...
 )
 }
@@ -60,6 +61,8 @@ additional column in the design matrix. The task names must match the names
 of \code{EVs}. Can also be \code{"all"} to use all tasks.}
 
 \item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
+
+\item{verbose}{Print diagnostic messages? Default: \code{TRUE}.}
 
 \item{...}{Additional arguments to \code{\link{HRF_calc}}.}
 }

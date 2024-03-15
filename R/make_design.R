@@ -39,6 +39,7 @@
 #'  additional column in the design matrix. The task names must match the names
 #'  of \code{EVs}. Can also be \code{"all"} to use all tasks.
 #' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
+#' @param verbose Print diagnostic messages? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
 #' @importFrom car vif
@@ -56,7 +57,7 @@
 make_design <- function(
   EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
-  scale_design=TRUE, ...
+  scale_design=TRUE, verbose=TRUE, ...
 ){
 
   ortho_block <- FALSE
@@ -249,7 +250,7 @@ make_design <- function(
   # Correlation
   des_cor <- cor(design)
   des_cor_max <- max(des_cor[upper.tri(des_cor)])
-  cat("Maximum corr.: ", round(des_cor_max, 3), "\n")
+  if (verbose) { cat("Maximum corr.: ", round(des_cor_max, 3), "\n") }
   if (des_cor_max > .9) {
     warning("Maximum corr. between design matrix columns is high (", 
       round(des_cor_max, 3), "). The design may ",
@@ -266,7 +267,7 @@ make_design <- function(
   f <- as.formula(paste0('y ~ ',f_rhs))
   des_vif <-  car::vif(lm(f, data = des2))
   des_vif_max <- max(des_vif)
-  cat("Maximum VIF:   ", round(des_vif_max, 3), "\n")
+  if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
   if (des_vif_max > 5) {
     warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
       "be too collinear, causing issues for model estimation. Consider ",
@@ -276,7 +277,7 @@ make_design <- function(
   # onset-offset minimum time between
   if (!is.null(onset) || !is.null(offset)) {
     tdiff_min <- min(diff(sort(c(onset$onset, offset$onset))))
-    cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n")
+    if (verbose) { cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n") }
     if (tdiff_min < 1) {
       warning("Min. time btwn onset/offset is small (", round(tdiff_min, 3), " s). ")
     }
@@ -316,7 +317,11 @@ make_design <- function(
       HRF=HRF,
       stimulus=stimulus
     ),
-    per_location_modeling=FALSE
+    diagnostics = list(
+      cor = des_cor_max,
+      vif = des_vif_max,
+      tdiff = tdiff_min
+    )
   )
   class(out) <- "BfMRI_design"
   out
