@@ -346,5 +346,5 @@ format_EV <- function(EV){
     colnames(EV) <- c("onset", "duration")
   }
 
-  EV
+  as.data.frame(EV)
 }
