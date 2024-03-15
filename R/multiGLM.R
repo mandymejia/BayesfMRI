@@ -66,16 +66,16 @@ multiGLM <- function(
 
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
-  if (isTRUE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
-  }
-  if (isFALSE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
-  }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-  stopifnot(fMRItools::is_posNum(verbose, zero_ok=TRUE))
-  stopifnot(fMRItools::is_posNum(meanTol))
-  stopifnot(fMRItools::is_posNum(varTol))
+  # In a separate function because these checks are shared with `BayesGLM`.
+  x <- BayesGLM_argChecks(
+    scale_BOLD = scale_BOLD,
+    Bayes=FALSE,
+    verbose = verbose,
+    meanTol = meanTol,
+    varTol = varTol
+  )
+  scale_BOLD <- x$scale_BOLD
+  rm(x)
 
   # Modeled after `BayesGLM_cifti` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #   But note that `BOLD`, `design`, and `nuisance` will be

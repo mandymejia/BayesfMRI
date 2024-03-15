@@ -60,6 +60,7 @@ multiGLM_cifti <- function(
   # In a separate function because these checks are shared with `BayesGLM`.
   x <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
+    Bayes=FALSE,
     verbose = verbose,
     meanTol = meanTol,
     varTol = varTol
