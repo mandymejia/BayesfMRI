@@ -235,9 +235,8 @@ make_design <- function(
   # Correlation
   des_cor <- cor(design)
   des_cor_max <- max(des_cor[upper.tri(des_cor)])
-  if (des_cor_max < .9) {
-    cat("Maximum corr.: ", round(des_cor_max, 3), "\n")
-  } else {
+  cat("Maximum corr.: ", round(des_cor_max, 3), "\n")
+  if (des_cor_max > .9) {
     warning("Maximum corr. between design matrix columns is high (", 
       round(des_cor_max, 3), "). The design may ",
       "be too collinear, causing issues for model estimation. Consider ",
@@ -253,9 +252,8 @@ make_design <- function(
   f <- as.formula(paste0('y ~ ',f_rhs))
   des_vif <-  car::vif(lm(f, data = des2))
   des_vif_max <- max(des_vif)
-  if (des_vif_max < 5) {
-    cat("Maximum VIF:   ", round(des_vif_max, 3), "\n")
-  } else {
+  cat("Maximum VIF:   ", round(des_vif_max, 3), "\n")
+  if (des_vif_max > 5) {
     warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
       "be too collinear, causing issues for model estimation. Consider ",
       "modeling some fields as nuisance instead of task, if possible.")
@@ -265,10 +263,9 @@ make_design <- function(
   if (!is.null(onset) && !is.null(offset)) {
     tdiffs <- outer(onset$onset, offset$onset, '-')
     tdiff_min <- min(abs(tdiffs))
-    if (tdiff_min > 1) {
-      cat("Min. onset-offset time diff (s): ", round(tdiff_min, 3), "\n")
-    } else {
-      warning("Min. onset-offset time diff is small (", round(tdiff_min, 3), " s). ")
+    cat("Min. time diff between onset/offset (s): ", round(tdiff_min, 3), "\n")
+    if (tdiff_min < 1) {
+      warning("Min. time diff between onset/offset is small (", round(tdiff_min, 3), " s). ")
     }
   }
 
