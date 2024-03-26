@@ -2,6 +2,7 @@
 // #define EIGEN_USE_MKL_ALL
 #include <Rcpp.h>
 #include <RcppEigen.h>
+#include <stdlib.h>
 // #include <Eigen/Sparse>
 // #include <unsupported/Eigen/SparseExtra>
 // #include <Eigen/PardisoSupport>
@@ -24,9 +25,14 @@ double logDetQt(double kappa2, const Rcpp::List &in_list, double n_sess) {
   // Create SparseMatrix Q
   Eigen::SparseMatrix<double> Q= kappa2 * Cmat + 2.0 * Gmat + GtCinvG / kappa2;
   SimplicialLDLT<Eigen::SparseMatrix<double>> cholQ(Q);
-  double lDQ = 2 * n_sess * cholQ.vectorD().array().log().sum();
+  double lDQ = n_sess * cholQ.vectorD().array().log().sum();
+  // Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+  // solver.compute(Q);
+  // Rcout << "lDQ = " << lDQ << ", solver.logAbsDeterminant() = " << solver.logAbsDeterminant() << std::endl;
   return lDQ;
 }
+
+
 
 void makeQt(Eigen::SparseMatrix<double>* Q, double kappa2, const Rcpp::List &spde) {
   Eigen::SparseMatrix<double> Cmat     = Eigen::SparseMatrix<double> (spde["Cmat"]);
@@ -195,7 +201,14 @@ double kappa2Obj(double logKappa, const Rcpp::List &spde, double a_star, double 
   //Eigen::SparseMatrix<double> QTilde = makeQtilde(logKappa,spde);
   double kappa2 = exp(2*logKappa);
   double lDQ = logDetQt(kappa2, spde, n_sess);
-  double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ - 2*logKappaPDF(logKappa,0,3); // times -1 to minimize instead of maximize
+
+ // Rcout << "Testing logDetQ: " << lDQ << " \n";
+ // for (int i = 0; i < 100; i++) {
+ //   Rcout << logDetQt(exp(2*(-5 +  i/100.0 *((-1+2)-(-5)))), spde, n_sess) << ", ";
+ // }
+ // exit(1);
+  // double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ - 2*logKappaPDF(logKappa,0,3); // times -1 to minimize instead of maximize
+  double out = n_spde * log(a_star * kappa2 + b_star / kappa2 + c_star) - lDQ ; // times -1 to minimize instead of maximize
   //Rcout << "logKappa: " << logKappa << std::endl;
   return out;
 }
@@ -218,6 +231,14 @@ double kappa2Brent(double lower, double upper, const Rcpp::List &spde, double a_
 
   d = 0.;
   e = 0.;
+// used to show the objective function plot
+// Rcout << "Testing f(kappa)";
+// Rcout << "Lower: "<< lower << " Upper: " << upper + 2 << "\n";
+// for (int i = 0; i < 100; i++) {
+//   Rcout << kappa2Obj(lower +  i/100.0 *(upper-lower+2), spde, a_star, b_star, c_star, n_sess, n_spde) << ", ";
+// }
+// Rcout << "\n ended testing on f(kappa) \n";
+// exit(1);
 
   fx = kappa2Obj(x, spde, a_star, b_star, c_star, n_sess, n_spde); // Initialize f at x=logKappa
   fv = fx;
@@ -425,11 +446,11 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
   // Rcout << "TrAEww = " << TrAEww << std::endl;
   double yXpsiMu = y.transpose() * XpsiMu;
   theta_new[sig2_ind] = (yy - 2 * yXpsiMu + TrAEww) / ySize;
-  Rcout << "sigma_2: " << theta_new[sig2_ind] << std::endl;
+  // Rcout << "sigma_2: " << theta_new[sig2_ind] << std::endl;
   time_sigma2 = clock();
   // Update kappa2 and phi by task
   for(int k = 0; k < K; k++) {
-    Rcout << "Task: k=" << k << std::endl;
+    // Rcout << "Task: k=" << k+1 << std::endl;
     a_star = 0.0;
     b_star = 0.0;
     c_star = 0.0;
@@ -440,7 +461,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     sumDiagPGVkn = 0.0;
     sumDiagPGCGVkn = 0.0;
     for(int ns = 0; ns < n_sess; ns++) {
-      Rcout << "Session: ns= " << ns << std::endl;
+      // Rcout << "Session: ns= " << ns+1 << std::endl;
       idx_start = k * n_spde + ns * K * n_spde;
       // idx_stop = idx_start + n_spde;
       muKns = mu.segment(idx_start,n_spde);
@@ -475,15 +496,34 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     sumDiagPCVkn = sumDiagPCVkn / Ns;
     sumDiagPGVkn = sumDiagPGVkn / Ns;
     sumDiagPGCGVkn = sumDiagPGCGVkn / Ns;
+
+    // if(k==0) {
+    //   // Rcout << "Computing Sigma inverse" << std::endl;
+    //   // Eigen::MatrixXd Sig = cholSigInv.solve(Eigen::MatrixXd::Identity(Sig_inv.rows(), Sig_inv.cols()));
+    //   Rcout << "Computing CSig" << std::endl;
+    //   // Eigen::MatrixXd prod = Cmat * Sig;
+    //   // Rcout << "Tr(C*Sigma) = " << prod.trace() << std::endl;
+    //   Rcout << "Hutch Approx = " << sumDiagPCVkn << std::endl << std::endl;
+    //
+    //   Rcout << "Computing GSig" << std::endl;
+    //   // prod = Gmat * Sig;
+    //   // Rcout << "Tr(G*Sigma) = " << prod.trace() << std::endl;
+    //   Rcout << "Hutch Approx = " << sumDiagPGVkn << std::endl << std::endl;
+    //
+    //   Rcout << "Computing GCG*Sigma" << std::endl;
+    //   // prod = GtCinvG * Sig;
+    //   // Rcout << "Tr(GCGSigma) = " << prod.trace() << std::endl;
+    //   Rcout << "Hutch Approx = " << sumDiagPGCGVkn << std::endl << std::endl;
+    // }
     // Update kappa2
     a_star = (muCmu + sumDiagPCVkn) ;
     b_star = (muGCGmu + sumDiagPGCGVkn) ;
     c_star = 2 * (sumDiagPGVkn + muGmu);
     new_logKappa = kappa2Brent(-5., -1., spde, a_star, b_star, c_star, n_sess, n_spde);
-    Rcout << "a_star: " << a_star << std::endl;
-    Rcout << "b_star: " << b_star << std::endl;
-    Rcout << "c_star: " << c_star << std::endl;
-    Rcout << "logKappa: " << new_logKappa << std::endl;
+    // Rcout << "a_star: " << a_star << std::endl;
+    // Rcout << "b_star: " << b_star << std::endl;
+    // Rcout << "c_star: " << c_star << std::endl;
+    // Rcout << "logKappa: " << new_logKappa << std::endl;
     new_kappa2 = exp(2*new_logKappa);
     theta_new[k] = new_kappa2;
     // Update phi
@@ -496,7 +536,7 @@ Eigen::VectorXd theta_fixpt(Eigen::VectorXd theta, const Eigen::SparseMatrix<dou
     double TrQEww = phi_partA + phi_partB + phi_partC;
     // Rcout << "TrQEww = " << TrQEww << std::endl;
     phi_new = TrQEww / phi_denom;
-    Rcout << "phi: " << phi_new << std::endl;
+    // Rcout << "phi: " << phi_new << std::endl;
     theta_new[k + K] = phi_new;
   }
   time_kappa_phi = clock();
@@ -620,6 +660,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 
     pcpp=pnew;
     if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
+    Rcout<<pcpp.transpose()<<std::endl;
     iter++;
   }
 
@@ -669,6 +710,11 @@ Rcpp::List findTheta(Eigen::VectorXd theta, List spde, Eigen::VectorXd y,
   cholSigInv.factorize(Sig_inv);
 
   if(verbose) {Rcout << "Initial theta: " << theta.transpose() << std::endl;}
+  theta[0] = -1;
+  theta[1] = -1;
+  theta[2] = 1;
+  theta[3] = 1;
+  theta[4] = 2;
   // Initialize everything
   Eigen::SparseMatrix<double> Xpsi = X * Psi;
   Eigen::SparseMatrix<double> Qk(n_spde, n_spde);
