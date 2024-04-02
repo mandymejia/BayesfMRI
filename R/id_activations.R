@@ -370,180 +370,178 @@ id_activations.classical <- function(model_obj,
   result
 }
 
-# #' Identify activations using joint posterior probabilities with EM results
-# #'
-# #' Identifies areas of activation given an activation threshold and significance
-# #'  level using joint posterior probabilities
-# #'
-# #' For a given latent field, identifies locations that exceed a certain activation
-# #'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
-# #'  posterior distribution of the latent field.
-# #'
-# #' @param model_obj An object of class \code{"BayesGLM"}, a result of a call
-# #'  to \code{BayesGLMEM}.
-# #' @param tasks Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
-# #' @param sessions (character) The name of the session that should be examined.
-# #' If \code{NULL} (default), the first session is used.
-# #' @param alpha Significance level (e.g. 0.05)
-# #' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
-# #' @param area.limit Below this value, activations will be considered spurious.  If NULL, no limit.
-# #'
-# #'
-# #' @return A list with two elements: \code{active}, which gives a matrix of zeros
-# #' and ones of the same dimension as \code{model_obj$task_estimates${sessions}},
-# #' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
-# #'  more information).
-# #'
-# #' @importFrom excursions excursions
-# #' @importFrom stats na.omit
-# #'
-# #' @keywords internal
-# id_activations.em <-
-#   function(model_obj,
-#            tasks = NULL,
-#            sessions = NULL,
-#            alpha = 0.05,
-#            threshold,
-#            area.limit = NULL) {
-#     if (!inherits(model_obj, "BayesGLM"))
-#       stop(paste0(
-#         "The model object is of class ",
-#         class(model_obj),
-#         " but should be of class 'BayesGLM'."
-#       ))
-#     #check sessions argument
+#' Identify activations using joint posterior probabilities with EM results
+#'
+#' Identifies areas of activation given an activation threshold and significance
+#'  level using joint posterior probabilities
+#'
+#' For a given latent field, identifies locations that exceed a certain activation
+#'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
+#'  posterior distribution of the latent field.
+#'
+#' @param model_obj An object of class \code{"BayesGLM"}, a result of a call
+#'  to \code{BayesGLMEM}.
+#' @param tasks Name of latent field or vector of names on which to identify activations.  By default, analyze all tasks.
+#' @param sessions (character) The name of the session that should be examined.
+#' If \code{NULL} (default), the first session is used.
+#' @param alpha Significance level (e.g. 0.05)
+#' @param threshold Activation threshold (e.g. 1 for 1 percent signal change if scale=TRUE in model estimation)
+#'
+#'
+#' @return A list with two elements: \code{active}, which gives a matrix of zeros
+#' and ones of the same dimension as \code{model_obj$task_estimates${sessions}},
+#' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+#'  more information).
+#'
+#' @importFrom excursions excursions
+#' @importFrom stats na.omit
+#'
+#' @keywords internal
+id_activations.em <-
+  function(model_obj,
+           tasks = NULL,
+           sessions = NULL,
+           alpha = 0.05,
+           threshold) {
+    if (!inherits(model_obj, "BayesGLM"))
+      stop(paste0(
+        "The model object is of class ",
+        class(model_obj),
+        " but should be of class 'BayesGLM'."
+      ))
+    #check sessions argument
 
-#     #if only one session, analyze that one
-#     all_sessions <- model_obj$sessions
-#     n_sess <- length(all_sessions)
-#     if (n_sess == 1) {
-#       sessions <- all_sessions
-#     }
+    #if only one session, analyze that one
+    all_sessions <- model_obj$sessions
+    n_sess <- length(all_sessions)
+    if (n_sess == 1) {
+      sessions <- all_sessions
+    }
 
-#     #check sessions not NULL, check that a valid session name
-#     if(!is.null(sessions)){
-#       if(!(sessions %in% all_sessions)) stop(paste0('sessions does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
-#       sess_ind <- which(all_sessions == sessions)
-#     }
+    #check sessions not NULL, check that a valid session name
+    if(!is.null(sessions)){
+      if(!(sessions %in% all_sessions)) stop(paste0('sessions does not appear in the list of sessions: ', paste(all_sessions, collapse=', ')))
+      sess_ind <- which(all_sessions == sessions)
+    }
 
-#     #if averages not available and sessions=NULL, pick first session and return a warning
-#     # has_avg <- is.matrix(model_obj$avg_task_estimates)
-#     has_avg <- !is.null(model_obj$avg_task_estimates)
-#     if(is.null(sessions) & !has_avg){
-#       sessions <- all_sessions[1]
-#       warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
-#     }
+    #if averages not available and sessions=NULL, pick first session and return a warning
+    # has_avg <- is.matrix(model_obj$avg_task_estimates)
+    has_avg <- !is.null(model_obj$avg_task_estimates)
+    if(is.null(sessions) & !has_avg){
+      sessions <- all_sessions[1]
+      warning(paste0("Your model object does not have averaged beta estimates. Using the first session instead. For a different session, specify a session name from among: ", paste(all_sessions, collapse = ', ')))
+    }
 
-#     if(is.null(sessions) & has_avg){
-#       sessions <- 'avg'
-#     }
+    if(is.null(sessions) & has_avg){
+      sessions <- 'avg'
+    }
 
-#     # Make an indicator for subcortical data
-#     is_subcort <- "BayesGLMEM_vol3D" %in% as.character(model_obj$call)
+    # Make an indicator for subcortical data
+    is_subcort <- "BayesGLMEM_vol3D" %in% as.character(model_obj$call)
 
-#     #if sessions is still NULL, use average and check excur_method argument
-#     # if(is.null(sessions)){
-#     #   if(has_avg & excur_method != "EB") {
-#     #     excur_method <- 'EB'
-#     #     warning("To id activations for averaged beta estimates, only the excur_method='EB' is supported. Setting excur_method to 'EB'.")
-#     #   }
-#     # }
+    #if sessions is still NULL, use average and check excur_method argument
+    # if(is.null(sessions)){
+    #   if(has_avg & excur_method != "EB") {
+    #     excur_method <- 'EB'
+    #     warning("To id activations for averaged beta estimates, only the excur_method='EB' is supported. Setting excur_method to 'EB'.")
+    #   }
+    # }
 
-#     #check tasks argument
-#     if(is.null(tasks)) tasks <- model_obj$tasks
-#     if(!any(tasks %in% model_obj$tasks)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$tasks, collapse=', ')))
+    #check tasks argument
+    if(is.null(tasks)) tasks <- model_obj$tasks
+    if(!any(tasks %in% model_obj$tasks)) stop(paste0("Please specify only field names that corresponds to one of the latent fields: ",paste(model_obj$tasks, collapse=', ')))
 
-#     #check alpha argument
-#     if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
+    #check alpha argument
+    if(alpha > 1 | alpha < 0) stop('alpha value must be between 0 and 1, and it is not')
 
-#     mesh <- model_obj$mesh
-#     if(is_subcort) {
-#       n_subcort_models <- length(model_obj$spde_obj)
-#       result <- vector("list", length = n_subcort_models)
-#       for(m in 1:n_subcort_models){
-#         # mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
-#         #                   model_obj$spde_obj[[m]]$faces[[1]])
-#         # n_vox <- mesh$n
-#         # excur <- vector('list', length=length(tasks))
-#         # act <- matrix(NA, nrow=n_vox, ncol=length(tasks))
-#         # colnames(act) <- tasks
+    mesh <- model_obj$mesh
+    if(is_subcort) {
+      n_subcort_models <- length(model_obj$spde_obj)
+      result <- vector("list", length = n_subcort_models)
+      for(m in 1:n_subcort_models){
+        # mesh <- make_mesh(model_obj$spde_obj[[m]]$vertices[[1]],
+        #                   model_obj$spde_obj[[m]]$faces[[1]])
+        # n_vox <- mesh$n
+        # excur <- vector('list', length=length(tasks))
+        # act <- matrix(NA, nrow=n_vox, ncol=length(tasks))
+        # colnames(act) <- tasks
 
-#         if(sessions == "avg") {
-#           beta_est <- c(model_obj$EM_result_all[[m]]$posterior_mu)
-#         }
-#         if(sessions != "avg") {
-#           beta_mesh_est <- c(model_obj$task_estimates[[which(all_sessions == sessions)]])
-#           beta_est <- beta_mesh_est[!is.na(beta_mesh_est)]
-#         }
-#         Phi_k <- model_obj$EM_result_all[[m]]$mesh$Amat
-#         # Phi <-
-#         #   Matrix::bdiag(rep(
-#         #     list(Phi_k),
-#         #     length(tasks)
-#         #   ))
-#         # w <- beta_est %*% Phi
-#         Sig_inv <- model_obj$EM_result_all[[m]]$posterior_Sig_inv
-#         # Q_est <- Matrix::tcrossprod(Phi %*% Sig_inv, Phi)
+        if(sessions == "avg") {
+          beta_est <- c(model_obj$EM_result_all[[m]]$posterior_mu)
+        }
+        if(sessions != "avg") {
+          beta_mesh_est <- c(model_obj$task_estimates[[which(all_sessions == sessions)]])
+          beta_est <- beta_mesh_est[!is.na(beta_mesh_est)]
+        }
+        Phi_k <- model_obj$EM_result_all[[m]]$mesh$Amat
+        # Phi <-
+        #   Matrix::bdiag(rep(
+        #     list(Phi_k),
+        #     length(tasks)
+        #   ))
+        # w <- beta_est %*% Phi
+        Sig_inv <- model_obj$EM_result_all[[m]]$posterior_Sig_inv
+        # Q_est <- Matrix::tcrossprod(Phi %*% Sig_inv, Phi)
 
-#         ### use the ind argument for excursions to get the marginal posterior
-#         ### excursions sets (much faster)
+        ### use the ind argument for excursions to get the marginal posterior
+        ### excursions sets (much faster)
 
-#         n_vox <- length(beta_est) / length(tasks)
-#         act <- matrix(NA, nrow=n_vox, ncol=length(tasks))
+        n_vox <- length(beta_est) / length(tasks)
+        act <- matrix(NA, nrow=n_vox, ncol=length(tasks))
 
-#         V <- Matrix::diag(INLA::inla.qinv(Sig_inv))
+        V <- Matrix::diag(INLA::inla.qinv(Sig_inv))
 
-#         for(f in tasks) {
-#           which_f <- which(tasks==f)
-#           f_inds <- (1:n_vox) + (which_f - 1)*n_vox
-#           res.exc <-
-#             excursions(
-#               alpha = alpha,
-#               u = threshold,
-#               mu = beta_est,
-#               Q = Sig_inv,
-#               vars = V,
-#               ind = f_inds,
-#               type = ">", method = "EB"
-#             )
+        for(f in tasks) {
+          which_f <- which(tasks==f)
+          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+          res.exc <-
+            excursions(
+              alpha = alpha,
+              u = threshold,
+              mu = beta_est,
+              Q = Sig_inv,
+              vars = V,
+              ind = f_inds,
+              type = ">", method = "EB"
+            )
 
-#           act[,which_f] <- res.exc$E[f_inds]
-#         }
-#         act <- as.matrix(Phi_k %*% act)
-#         result[[m]] <- list(active = act, excursions_result=res.exc)
-#       }
-#     }
+          act[,which_f] <- res.exc$E[f_inds]
+        }
+        act <- as.matrix(Phi_k %*% act)
+        result[[m]] <- list(active = act, excursions_result=res.exc)
+      }
+    }
 
-#     if(!is_subcort) {
-#       n_vox <- mesh$n
+    if(!is_subcort) {
+      n_vox <- mesh$n
 
-#       #for a specific session
-#       if(!is.null(sessions)){
+      #for a specific session
+      if(!is.null(sessions)){
 
-#         # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
+        # inds <- (1:n_vox) + (sess_ind-1)*n_vox #indices of beta vector corresponding to session v
 
-#         #loop over latent fields
-#         excur <- vector('list', length=length(tasks))
-#         act <- matrix(NA, nrow=n_vox, ncol=length(tasks))
-#         colnames(act) <- tasks
-#         res.exc <-
-#           excursions(
-#             alpha = alpha,
-#             u = threshold,
-#             mu = stats::na.omit(
-#               c(model_obj$task_estimates[[sessions]])
-#             ),
-#             Q = model_obj$posterior_Sig_inv,
-#             type = ">", method = "EB"
-#           )
-#         for(f in tasks) {
-#           which_f <- which(tasks==f)
-#           f_inds <- (1:n_vox) + (which_f - 1)*n_vox
-#           act[,which_f] <- res.exc$E[f_inds]
-#         }
-#       }
-#       result <- list(active=act, excursions_result=res.exc)
-#     }
+        #loop over latent fields
+        excur <- vector('list', length=length(tasks))
+        act <- matrix(NA, nrow=n_vox, ncol=length(tasks))
+        colnames(act) <- tasks
+        res.exc <-
+          excursions(
+            alpha = alpha,
+            u = threshold,
+            mu = stats::na.omit(
+              c(model_obj$task_estimates[[sessions]])
+            ),
+            Q = model_obj$posterior_Sig_inv,
+            type = ">", method = "EB"
+          )
+        for(f in tasks) {
+          which_f <- which(tasks==f)
+          f_inds <- (1:n_vox) + (which_f - 1)*n_vox
+          act[,which_f] <- res.exc$E[f_inds]
+        }
+      }
+      result <- list(active=act, excursions_result=res.exc)
+    }
 
-#     return(result)
-#   }
+    return(result)
+  }
