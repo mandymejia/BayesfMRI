@@ -28,6 +28,7 @@ BayesGLM_cifti(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
+  int.strategy = "eb",
   EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
@@ -173,6 +174,10 @@ maximum and then subtracting the mean? Default: \code{TRUE}. If
 
 \item{Bayes}{If \code{TRUE} (default), will fit a spatial Bayesian GLM in
 addition to the classical GLM. (The classical GLM is always returned.)}
+
+\item{int.strategy}{For INLA only, what numerical integration strategy to use?
+Default: \code{"eb"}. Other choices are \code{"ccd"} and \code{"grid"}. If running
+INLA in experimental mode, then 'grid' equals 'ccd' for more than two hyperparameters.}
 
 \item{EM}{(logical) Should the EM implementation of the Bayesian GLM be used?
 Default: \code{FALSE}. This method is still in development.}

@@ -114,6 +114,9 @@
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
+#' @param int.strategy For INLA only, what numerical integration strategy to use?
+#' Default: \code{"eb"}. Other choices are \code{"ccd"} and \code{"grid"}. If running
+#' INLA in experimental mode, then 'grid' equals 'ccd' for more than two hyperparameters.
 #' @inheritParams EM_Param
 #' @inheritParams ar_order_Param
 #' @inheritParams ar_smooth_Param
@@ -167,6 +170,7 @@ BayesGLM_cifti <- function(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
+  int.strategy = 'eb',
   EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
@@ -534,6 +538,7 @@ BayesGLM_cifti <- function(
       scale_BOLD = scale_BOLD,
       scale_design = FALSE, # done above
       Bayes = do_Bayesian,
+      int.strategy = int.strategy,
       EM = do_EM,
       ar_order = ar_order,
       ar_smooth = ar_smooth,

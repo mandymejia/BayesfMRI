@@ -129,6 +129,9 @@ BayesGLM_argChecks <- function(
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams scale_design_Param
 #' @inheritParams Bayes_Param
+#' @param int.strategy For INLA only, what numerical integration strategy to use?
+#' Default: \code{"eb"}. Other choices are \code{"ccd"} and \code{"grid"}. If running
+#' INLA in experimental mode, then 'grid' equals 'ccd' for more than two hyperparameters.
 #' @inheritParams EM_Param
 #' @inheritParams ar_order_Param
 #' @inheritParams ar_smooth_Param
@@ -188,6 +191,7 @@ BayesGLM <- function(
   scale_BOLD = c("auto", "mean", "sd", "none"),
   scale_design = TRUE,
   Bayes = TRUE,
+  int.strategy = "eb",
   EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
@@ -646,7 +650,7 @@ BayesGLM <- function(
         #data=INLA::inla.stack.data(model_data, spde=spde),
         control.predictor=list(A=model_data$X, compute = TRUE),
         verbose = verbose>1, keep = FALSE, num.threads = num.threads,
-        control.inla = list(strategy = "gaussian", int.strategy = "eb"),
+        control.inla = list(strategy = "gaussian", int.strategy = int.strategy),
         control.family=list(hyper=list(prec=list(initial=1))),
         control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
       )
