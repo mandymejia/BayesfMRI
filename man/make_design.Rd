@@ -13,6 +13,8 @@ make_design(
   onset = NULL,
   offset = NULL,
   scale_design = TRUE,
+  sep_onsets = FALSE,
+  sep_offsets = FALSE,
   verbose = TRUE,
   ...
 )
@@ -64,7 +66,13 @@ Onsets/offset modeling is only compatible with a block deisgn experiment.
 An error will be raised if the events in \code{EVs} do not have duration
 greater than one second.}
 
-\item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
+\item{scale_design}{Scale the columns of the design matrix? Default:
+\code{TRUE}.}
+
+\item{sep_onsets, sep_offsets}{Model the onsets (\code{sep_onsets}) or offsets
+(\code{sep_offsets}) separately for each task? Default: \code{FALSE}, to
+model all onsets together, or all offsets together, as a single field in the
+design.}
 
 \item{verbose}{Print diagnostic messages? Default: \code{TRUE}.}
 
