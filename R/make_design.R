@@ -44,8 +44,8 @@
 #'  greater than one second.
 #' @param scale_design Scale the columns of the design matrix? Default: 
 #'  \code{TRUE}.
-#' @param sep_onsets,sep_offsets Model the onsets (\code{sep_onsets}) or offsets
-#'  (\code{sep_offsets}) separately for each task? Default: \code{FALSE}, to 
+#' @param onsets_sep,offsets_sep Model the onsets (\code{onsets_sep}) or offsets
+#'  (\code{offsets_sep}) separately for each task? Default: \code{FALSE}, to 
 #'  model all onsets together, or all offsets together, as a single field in the
 #'  design. 
 #' @param verbose Print diagnostic messages? Default: \code{TRUE}.
@@ -67,7 +67,7 @@ make_design <- function(
   EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
   scale_design=TRUE, 
-  sep_onsets=FALSE, sep_offsets=FALSE,
+  onsets_sep=FALSE, offsets_sep=FALSE,
   verbose=TRUE, ...
 ){
 
@@ -85,8 +85,8 @@ make_design <- function(
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
   upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
   stopifnot(fMRItools::is_1(ortho_block, "logical"))
-  stopifnot(is_1(sep_onsets, "logical"))
-  stopifnot(is_1(sep_offsets, "logical"))
+  stopifnot(is_1(onsets_sep, "logical"))
+  stopifnot(is_1(offsets_sep, "logical"))
 
   # In the future, this might be an argument.
   FIR_nSec <- 0
@@ -117,7 +117,7 @@ make_design <- function(
     onset <- EVs[onset]
     # Same onset, but set new duration at zero
     onset <- lapply(onset, function(q){q$duration <- 0; q})
-    if (!sep_onsets) {
+    if (!onsets_sep) {
       nJ_on <- 1
       onset <- do.call(rbind, onset)
       onset$onset <- sort(onset$onset)
@@ -138,7 +138,7 @@ make_design <- function(
     offset <- EVs[offset]
     # New onset is onset+duration; new duration is zero
     offset <- lapply(offset, function(q){q$onset <- q$onset + q$duration; q$duration <- 0; q})
-    if (!sep_offsets) {
+    if (!offsets_sep) {
       nJ_off <- 1
       offset <- do.call(rbind, offset)
       offset$onset <- sort(offset$onset)
