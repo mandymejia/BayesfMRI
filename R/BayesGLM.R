@@ -159,7 +159,7 @@ BayesGLM <- function(
   # }
 
   ### Check `nuisance`. --------------------------------------------------------
-  if (!is.null(nuisance)) {
+  if (!is.null(nuisance) && !all(vapply(nuisance, is.null, FALSE))) {
     nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)
 
     if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
@@ -261,7 +261,11 @@ BayesGLM <- function(
     }
 
     # Detect zero-var, nonzero-mean columns.
-    des_ss_is_intercept <- matrixStats::colVars(design[[ss]]) < 1e-8
+    if (design_type=="per_location") {
+      des_ss_is_intercept <- apply(design[[ss]], c(2,3), var) < 1e-8
+    } else {
+      des_ss_is_intercept <- matrixStats::colVars(design[[ss]]) < 1e-8
+    }
     if (sum(des_ss_is_intercept) > 1) {
       stop("Design matrix for session ", ss, " has more than one intercept ",
         "column. That means they are collinear, which will cause problems ",
@@ -298,7 +302,7 @@ BayesGLM <- function(
       }
       cat(paste0("\t\tSession ", ss, ": modeling BOLD means using the intercept field in the provided `design`.\n"))
     } else if (!nuis_has_intercept[ss]) {
-      nuisance[[ss]] <- cbind2(nuisance[[ss]], rep(1, nT[ss]))
+      nuisance[[ss]] <- cbind2(nuisance[[ss]], as.matrix(rep(1, nT[ss])))
       cat(paste0("\t\tSession ", ss, ": demeaning BOLD and design during nuisance regression.\n"))
       nuis_has_intercept[ss] <- TRUE
     }
@@ -315,8 +319,10 @@ BayesGLM <- function(
           design[[ss]][,vcols_ss], nuis_ss
         )
       } else {
-        stop("[TO DO]")
-        # Design matrix will start as TxKxV and continue in that format after this step.
+        design[[ss]][,,vcols_ss][] <- fMRItools::nuisance_regression(
+          matrix(design[[ss]][,,vcols_ss], nrow=dim(design[[ss]])[1]),
+          nuis_ss
+        )
       }
       nuisance[ss] <- list(NULL)
       rm(nuis_ss)
