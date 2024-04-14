@@ -138,21 +138,6 @@ BayesGLM_cifti <- function(
     }
   }
 
-  ### Brain structures. --------------------------------------------------------
-  if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
-  if ("all" %in% brainstructures) {
-    brainstructures <- c("left","right","subcortical")
-  }
-  brainstructures <- fMRItools::match_input(
-    brainstructures, c("left","right","subcortical"),
-    user_value_label="brainstructures"
-  )
-  do$left <- ('left' %in% brainstructures)
-  do$right <- ('right' %in% brainstructures)
-  do$sub <- ('subcortical' %in% brainstructures)
-  do$cortex <- do$left || do$right
-  if (!do$cortex) { resamp_res <- NULL }
-
   # Check `BOLD` w/o reading CIFTIs in; check `design` and `nuisance`. ---------
   #   Get all dimensions except for `nV` (because `BOLD` is not read in yet.)
 
@@ -184,6 +169,25 @@ BayesGLM_cifti <- function(
   if (verbose>0) {
     cat("Number of BOLD sessions: ", nS, "\n")
   }
+
+  ### Brain structures. --------------------------------------------------------
+  if (is_xifti) {
+    brainstructures <- c("left", "right", "subcortical")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
+  } else {
+    if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
+    if ("all" %in% brainstructures) {
+      brainstructures <- c("left","right","subcortical")
+    }
+    brainstructures <- fMRItools::match_input(
+      brainstructures, c("left","right","subcortical"),
+      user_value_label="brainstructures"
+    )
+  }
+  do$left <- ('left' %in% brainstructures)
+  do$right <- ('right' %in% brainstructures)
+  do$sub <- ('subcortical' %in% brainstructures)
+  do$cortex <- do$left || do$right
+  if (!do$cortex) { resamp_res <- NULL }
 
   ### Check `design`. ----------------------------------------------------------
   # Make `design` a sessions-length list of design matrices.
@@ -514,11 +518,11 @@ BayesGLM_cifti <- function(
   if (do$sub) {
     for (ss in seq(nS)) {
       if (ss == 1) {
-        submeta <- BOLD[[ss]]$subcort
-        spatial$subcort$label <- submeta$mask*0;
+        submeta <- BOLD[[ss]]$meta$subcort
+        spatial$subcort["label"] <- list(submeta$mask*0)
         spatial$subcort$label[submeta$mask==TRUE] <- submeta$labels
-        spatial$subcort$trans_mat <- submeta$trans_mat
-        spatial$subcort$trans_units <- submeta$trans_units
+        spatial$subcort["trans_mat"] <- list(submeta$trans_mat)
+        spatial$subcort["trans_units"] <- list(submeta$trans_units)
       } else {
         stopifnot(length(dim(spatial$subcort$label)) == length(dim(BOLD[[ss]]$subcort$mask)))
         stopifnot(all(dim(spatial$subcort$label)) == dim(BOLD[[ss]]$subcort$mask))

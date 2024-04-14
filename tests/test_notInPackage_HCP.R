@@ -154,8 +154,8 @@ multiGLM(
 ### Per-location design
 bglmA <- BayesGLM_cifti(
   BOLD = read_cifti(fnames$cifti_1),
-  design = des[[1]],
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  design = cbind(des[[1]], 1),
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5), 1), Bayes=FALSE,
   verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
 )
 bglmB <- BayesGLM_cifti(
@@ -178,6 +178,15 @@ bglmX <- BayesGLM_cifti(
   resamp_res=100, TR=.72
 )
 ## looks good
+
+### Subcortex
+BOLD <- read_cifti(fnames$cifti_1, brainstructures="sub")
+bglmA <- BayesGLM_cifti(
+  BOLD = BOLD,
+  design = cbind(des[[1]], 1),
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  verbose=TRUE, hpf=.01, ar_order=0, TR=.72
+)
 
 ##### Second pass to get results of decent resolution
 bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
