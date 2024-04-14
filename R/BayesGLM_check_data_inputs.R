@@ -44,7 +44,7 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 BayesGLM_format_design <- function(
   design, scale_design=TRUE,
   nS_expect=NULL, nT_expect=NULL, nD_expect=NULL,
-  per_location_design=FALSE
+  per_location_design=NULL
   ){
 
   # Make `design` a sessions-length list of matrices or arrays.
@@ -59,7 +59,9 @@ BayesGLM_format_design <- function(
     }
   }
 
-  if (is.null(per_location_design)) { per_location_design <- is.array(design[[1]]) }
+  if (is.null(per_location_design)) { 
+    per_location_design <- !is.matrix(design[[1]]) && !is.data.frame(design[[1]]) 
+  }
 
   for (ss in seq(nS)) {
     stopifnot(BayesGLM_is_valid_one_design(design[[ss]]))
@@ -116,7 +118,7 @@ BayesGLM_format_design <- function(
     if (nK>1) { cat(", 'field_2'") }
     if (nK>2) { cat(", and so on") }
     cat(".\n")
-    field_names <- paste0("field_", nK)
+    field_names <- paste0("field_", seq(nK))
   }
   if (any(duplicated(field_names))) { stop("All field names should be unique.") }
 
@@ -124,23 +126,24 @@ BayesGLM_format_design <- function(
   # Third dimension, nD
   if (des_is_array) {
     des_nD <- vapply(des_dims, '[', 0, 3)
+    lapply(design, function(q){dimnames(q)[[3]]})
     #`nD` can differ across sessions only for per-location modeling.
     if (per_location_design) {
+      design_names <- NULL
       if (!is.null(nD_expect)) {
         stopifnot(is.numeric(nD_expect))
         if (length(nD_expect)==1) { nD_expect <- rep(nD_expect, nS) }
         stopifnot(length(nD_expect)==1)
-      }
-      for (ss in seq(nS)) {
-        if (des_nD[ss] != nD_expect[ss]) {
-          stop("The design array's third dimension is size ", des_nD[ss],
-            ", but for per-location modeling it should match",
-            "the number of locations, ", nD_expect[ss], ".")
+        for (ss in seq(nS)) {
+          if (des_nD[ss] != nD_expect[ss]) {
+            stop("The design array's third dimension is size ", des_nD[ss],
+                 ", but for per-location modeling it should match",
+                 "the number of locations, ", nD_expect[ss], ".")
+          }
         }
       }
     } else {
       # for MultiGLM
-      design_names <- lapply(design, function(q){dimnames(q)[[3]]})
       if (length(unique(design_names)) > 1) {
         stop("Design names (third dim. of the design) should not differ across sessions.")
       }
