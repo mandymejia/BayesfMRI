@@ -43,8 +43,12 @@ sparse_and_PW <- function(
   X <- design
 
   ### `A`. -----
+	# [TO DO]
+  # A_sparse <- make_A_mat(
+  #   spatial$surf,
+  #   ciftiTools::mask_surf(spatial$surf, spatial$mask)
+  # )
 	A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,valid_inds]
-  # [TO DO] make_A_mat
 
   ### Make `X_all` (design) and `bigX`. -----
 	X_all <- vector('list', length=nK)
