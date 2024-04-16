@@ -55,9 +55,9 @@ SPDE_from_voxel <- function(spatial){
     }
   }
 
-  # Edit `spatial`.
+  # Edit `spatial`?
   # [TO DO]
-  browser()
+  # browser()
 
   list(
     spde = spde,
