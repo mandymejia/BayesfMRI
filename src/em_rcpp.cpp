@@ -660,7 +660,7 @@ SquaremOutput theta_squarem2(Eigen::VectorXd par, const Eigen::SparseMatrix<doub
 
     pcpp=pnew;
     if(verbose){Rcout<<"Residual: "<<res<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
-    Rcout<<pcpp.transpose()<<std::endl;
+    // if(verbose){Rcout<<pcpp.transpose()<<std::endl;} //Outputs hyperparameters at each iteration
     iter++;
   }
 
