@@ -3,7 +3,7 @@
 #' Make the A matrix for downsampling surface mesh data to a lower resolution.
 #' 
 #' @param surf The full-resolution \code{"surf"} object.
-#' @param surf_rs The upsampled \code{"surf"} object.
+#' @param surf_rs The downsampled \code{"surf"} object.
 #' @return The A matrix 
 #' @keywords internal
 make_A_mat <- function(surf, surf_rs){
@@ -22,7 +22,7 @@ make_A_mat <- function(surf, surf_rs){
     v1.norm[ii,] <- v1[ii,]/v1.sums[1]
   }
   v1.norm <- v1.norm*v1.sums[1]
-  mesh <- INLA::inla.mesh.create(loc = v1.norm, tv = f1) #upsampled mesh
+  mesh <- INLA::inla.mesh.create(loc = v1.norm, tv = f1) #downsampled mesh
 
   #determine the data location coordinates
   v0 <- surf$vertices

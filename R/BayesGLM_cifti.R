@@ -5,7 +5,7 @@
 #'  are modeled as distinct volumetric regions. Includes the pre-processing
 #'  steps of nuisance regression, prewhitening, scaling, and variance
 #'  normalization. Supports both single- and multi-session analysis. Can also
-#'  compute just the classical (spatially-independent) 
+#'  compute just the classical (spatially-independent)
 #'
 #' To use \code{BayesGLM_cifti}, the design matrix must first be constructed
 #'  with \code{\link{make_design}}.
@@ -131,27 +131,12 @@ BayesGLM_cifti <- function(
       "Or, set `hpf='already'` if the data, design, and nuisance inputs have ",
       "already been high-pass filtered.")
   } else {
-    if (fMRItools::is_1(hpf, "character") && hpf=="already") { 
+    if (fMRItools::is_1(hpf, "character") && hpf=="already") {
       hpf <- NULL
     } else if (is.null(TR)) {
       stop("`hpf` requires `TR`.")
     }
   }
-
-  ### Brain structures. --------------------------------------------------------
-  if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
-  if ("all" %in% brainstructures) {
-    brainstructures <- c("left","right","subcortical")
-  }
-  brainstructures <- fMRItools::match_input(
-    brainstructures, c("left","right","subcortical"),
-    user_value_label="brainstructures"
-  )
-  do$left <- ('left' %in% brainstructures)
-  do$right <- ('right' %in% brainstructures)
-  do$sub <- ('subcortical' %in% brainstructures)
-  do$cortex <- do$left || do$right
-  if (!do$cortex) { resamp_res <- NULL }
 
   # Check `BOLD` w/o reading CIFTIs in; check `design` and `nuisance`. ---------
   #   Get all dimensions except for `nV` (because `BOLD` is not read in yet.)
@@ -184,6 +169,25 @@ BayesGLM_cifti <- function(
   if (verbose>0) {
     cat("Number of BOLD sessions: ", nS, "\n")
   }
+
+  ### Brain structures. --------------------------------------------------------
+  if (is_xifti) {
+    brainstructures <- c("left", "right", "subcortical")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
+  } else {
+    if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
+    if ("all" %in% brainstructures) {
+      brainstructures <- c("left","right","subcortical")
+    }
+    brainstructures <- fMRItools::match_input(
+      brainstructures, c("left","right","subcortical"),
+      user_value_label="brainstructures"
+    )
+  }
+  do$left <- ('left' %in% brainstructures)
+  do$right <- ('right' %in% brainstructures)
+  do$sub <- ('subcortical' %in% brainstructures)
+  do$cortex <- do$left || do$right
+  if (!do$cortex) { resamp_res <- NULL }
 
   ### Check `design`. ----------------------------------------------------------
   # Make `design` a sessions-length list of design matrices.
@@ -241,8 +245,8 @@ BayesGLM_cifti <- function(
   ### Make DCT bases in `design` for the high-pass filter. ---------------------
   if (!is.null(hpf)) {
     stopifnot(fMRItools::is_1(hpf, "numeric") && hpf>0)
-    DCTs <- lapply(nT, function(nT_ss){ 
-      fMRItools::dct_bases(nT_ss, round(dct_convert(T_=nT_ss, TR=TR, f=hpf))) 
+    DCTs <- lapply(nT, function(nT_ss){
+      fMRItools::dct_bases(nT_ss, round(dct_convert(T_=nT_ss, TR=TR, f=hpf)))
     })
     nDCTs <- vapply(DCTs, ncol, 0)
     if (verbose > 0) {
@@ -373,7 +377,7 @@ BayesGLM_cifti <- function(
       if (nrow(BOLD[[ss]]) != nD[ss]) { stop(
         "The design for session ", session_names[ss], " indicates ", nD[ss],
         " total locations, each being modeled with its own design matrix. ",
-        "However, the `xifti` data for this session has ", ncol(BOLD[[ss]]),
+        "However, the `xifti` data for this session has ", nrow(BOLD[[ss]]),
         " total locations. These must match. Correct either `design` or `BOLD`."
       )}
     }
@@ -435,16 +439,6 @@ BayesGLM_cifti <- function(
       }
       if (do$sub) {
         nV_T["subcort"] <- sum(BOLD[[ss]]$meta$subcort$mask)
-      }
-
-      # Per-location design: check `sum(nV_T)` matches with `design`.
-      if (do$perLocDesign) {
-        if (sum(nV_T) != dim(design$design[[1]])[3]) { stop(
-          "`design` indicates ", dim(design$design[[1]])[3], " ",
-          "total locations, but the `xifti` data for this session has ",
-          sum(nV_T), " total locations. Repeat `make_design` with a corrected ",
-          "design, or fix `BOLD`."
-        )}
       }
 
     # ...Check `nV_T` matches `xii_res` of other sessions.
@@ -524,11 +518,11 @@ BayesGLM_cifti <- function(
   if (do$sub) {
     for (ss in seq(nS)) {
       if (ss == 1) {
-        submeta <- BOLD[[ss]]$subcort
-        spatial$subcort$label <- submeta$mask*0;
+        submeta <- BOLD[[ss]]$meta$subcort
+        spatial$subcort["label"] <- list(submeta$mask*0)
         spatial$subcort$label[submeta$mask==TRUE] <- submeta$labels
-        spatial$subcort$trans_mat <- submeta$trans_mat
-        spatial$subcort$trans_units <- submeta$trans_units
+        spatial$subcort["trans_mat"] <- list(submeta$trans_mat)
+        spatial$subcort["trans_units"] <- list(submeta$trans_units)
       } else {
         stopifnot(length(dim(spatial$subcort$label)) == length(dim(BOLD[[ss]]$subcort$mask)))
         stopifnot(all(dim(spatial$subcort$label)) == dim(BOLD[[ss]]$subcort$mask))
@@ -562,13 +556,17 @@ BayesGLM_cifti <- function(
     v = c("Left cortex", "Right cortex", "Subcortex") # Verbose names to show user.
   )
 
+  # number of data locations (vs. `nV_T` includes masked locations on the mesh.)
+  nV_D <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
+
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }
     dname_bb <- bs_names$d[bb]
     if (verbose>0) { cat(bs_names$v[bb], "analysis:\n") }
-
     design_bb <- if (do$perLocDesign) {
-      design[,,seq(sum(nV_T[seq(bb-1)]), sum(nV_T[seq(bb)])),drop=FALSE]
+      lapply(design, function(q){q[,,seq(
+        sum(c(0, nV_D)[seq(bb)])+1, sum(nV_D[seq(bb)])
+        ),drop=FALSE]})
     } else {
       design
     }
@@ -633,7 +631,7 @@ BayesGLM_cifti <- function(
   # [TO DO] HRF_info
 
   result_dim <- c(
-    c(sess = nS, time = nT), 
+    c(sess = nS, time = nT),
     setNames(nV_T, paste0("loc_", names(nV_T)))
   )
 

@@ -115,11 +115,15 @@ vol2spde <- function(mask,
   }
 
   #identify locations to remove (no dependence on any in-mask locations)
-  idx <- idx2 <- which(mask_box==1) #indices of in-mask locations
+  idx <- which(mask_box==1) #indices of in-mask locations
   if(nbhd_order > 0){
-    idx2 <- apply(M2[idx,], 1, function(x) which(x != 0)) #locations with any dependence with in-mask locations
-    idx2 <- unique(as.vector(idx2)) #1252 locations for 257 original ROI locations
+    M2 <- M2[idx,,drop=FALSE] != 0
+    M2 <- Matrix::mat2triplet(M2)
+    # locations with any dependence with in-mask locations
+    # 1252 locations for 257 original ROI locations
+    idx2 <- unique(M2$j)
   }
+  rm(M2)
   mask_box2 <- mask_box; mask_box2[idx2] <- mask_box[idx2] + 1 #for visualization
 
   #recreate the SPDE after removing locations

@@ -14,6 +14,9 @@ GLM_est_resid_var_pw <- function(
   do_pw
 ){
 
+  # [NOTE] could remove `nD` argument since multiGLM does not use this;
+  #   so it's always `1` (regular) or `nV_D` (per-location modeling).
+
   nS <- length(session_names)
   nK <- length(field_names)
   nV_D <- get_nV(spatial, spatial_type)$D
@@ -29,10 +32,21 @@ GLM_est_resid_var_pw <- function(
   # Estimate parameters for each session.
   for (ss in seq(nS)) {
     vcols_ss <- valid_cols[ss,]
-    #[TO DO] if design matrix varies spatially, need to adapt this
-    resid_ss <- fMRItools::nuisance_regression(
-      BOLD[[ss]], design[[ss]][,vcols_ss]
-    )
+
+    if (design_type == "regular") {
+      resid_ss <- fMRItools::nuisance_regression(
+        BOLD[[ss]], design[[ss]][,vcols_ss]
+      )
+    } else if (design_type == "per_location") {
+      resid_ss <- BOLD[[ss]]*0
+      for (dd in seq(nV_D)) {
+        resid_ss[,dd] <- fMRItools::nuisance_regression(
+          BOLD[[ss]][,dd,drop=FALSE],
+          matrix(design[[ss]][,vcols_ss,dd,drop=FALSE], nrow=dim(design[[ss]])[1])
+        )
+      }
+    } else { stop() }
+
     if (do_pw) {
       pw_est_ss <- pw_estimate(resid_ss, ar_order, aic=aic)
       var_resid[,ss] <- pw_est_ss$sigma_sq
@@ -44,10 +58,10 @@ GLM_est_resid_var_pw <- function(
   }
 
   # Average across sessions.
-  var_avg <- apply(as.matrix(var_resid), 1, mean)
+  var_avg <- rowMeans(as.matrix(var_resid))
   if (!do_pw) { var_avg <- var_avg/mean(var_avg, na.rm=TRUE) }
   if (do_pw) {
-    AR_coefs_avg <- apply(AR_coefs, 1:2, mean)
+    AR_coefs_avg <- apply(AR_coefs, seq(2), mean)
     if (aic) { max_AIC <- apply(AR_AIC, 1, max) }
   }
 
@@ -63,7 +77,7 @@ GLM_est_resid_var_pw <- function(
     rm(x)
   }
 
-  sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q, 
+  sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q,
     nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg
   )})
 

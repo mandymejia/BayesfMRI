@@ -10,7 +10,7 @@ BayesGLM_format_design(
   nS_expect = NULL,
   nT_expect = NULL,
   nD_expect = NULL,
-  per_location_design = FALSE
+  per_location_design = NULL
 )
 }
 \arguments{

@@ -28,7 +28,6 @@ sparse_and_PW <- function(
   valid_cols, nT, nD,
   sqrtInv_all
   ){
-
   nV <- get_nV(spatial, spatial_type)
   nK <- length(field_names)
 	nIX <- seq(nT*nV$D)
@@ -44,27 +43,36 @@ sparse_and_PW <- function(
   X <- design
 
   ### `A`. -----
+	# [TO DO]
+  # A_sparse <- make_A_mat(
+  #   spatial$surf,
+  #   ciftiTools::mask_surf(spatial$surf, spatial$mask)
+  # )
 	A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,valid_inds]
-  # [TO DO] make_A_mat
 
   ### Make `X_all` (design) and `bigX`. -----
 	X_all <- vector('list', length=nK)
 	for (kk in seq(nK)) {
-    # For missing fields.
-    if (!valid_cols[kk]) { # formerly if (is.nan(X[1,kk]))
-      X[,kk] <- rep(NA, length(X[,kk]))
-    }
-	  # Expand the kth column of X into a VT x V.
-    # Then in `BayesGLM`: will post-multiply by A to get a VT x V2 matrix
-    #   (a V x V2 matrix for each time point).
-    #[TO DO] If X varies spatially, replace rep() below with c() to vectorize the spatially-varying design.
-    # new line: X_all_k <- ifelse(..., rep, c)
-	  X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV$D))
-    # #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
+	  if (design_type == "regular") {
+	    # For missing fields.
+	    if (!valid_cols[kk]) { # formerly if (is.nan(X[1,kk]))
+	      X[,kk] <- rep(NA, length(X[,kk]))
+	    }
+	    # Expand the kth column of X into a VT x V.
+	    # Then in `BayesGLM`: will post-multiply by A to get a VT x V2 matrix
+	    #   (a V x V2 matrix for each time point).
+	    X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV$D))
+	    # #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
 
-	  # # previous approach
-	  # X_k <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], nV$D)) # %*% A #multiply by A to expand to the non-data locations
-    # bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
+	    # # previous approach
+	    # X_k <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], nV$D)) # %*% A #multiply by A to expand to the non-data locations
+	    # bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
+	  } else if (design_type == "per_location") {
+	    if (!valid_cols[kk]) { # formerly if (is.nan(X[1,kk]))
+	      X[,kk,] <- rep(NA, prod(dim(X)[c(1,3)]))
+	    }
+	    X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=c(X[,kk,]))
+	  } else { stop() }
 	}
 
   # Prewhiten, if applicable. -----

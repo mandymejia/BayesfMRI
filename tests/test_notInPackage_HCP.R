@@ -138,16 +138,54 @@ bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, r
 bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
 
-## MULTI GLM
+# Misc
 BOLD <- as.matrix(read_cifti(fnames$cifti_1))
 design <- abind::abind(des[[1]], des[[2]], along=3)
 nuisance <- nuis$rp_1
 
+### MultiGLM
 multiGLM(
   BOLD = BOLD,
   design = design,
   nuisance=cbind(nuisance, dct_bases(253, 5)),
   verbose = TRUE
+)
+
+### Per-location design
+bglmA <- BayesGLM_cifti(
+  BOLD = read_cifti(fnames$cifti_1),
+  design = cbind(des[[1]], 1),
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5), 1), Bayes=FALSE,
+  verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
+)
+bglmB <- BayesGLM_cifti(
+  BOLD = read_cifti(fnames$cifti_1),
+  design = des[[2]],
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
+)
+# alternate every voxel A & B
+desX <- do.call(cbind, des)
+desX <- array(
+  c(rep(c(desX), floor(169/2)), desX[,seq(3)]),
+  dim=c(253, 3, 169)
+)
+bglmX <- BayesGLM_cifti(
+  BOLD = read_cifti(fnames$cifti_1),
+  design = desX,
+  #nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  verbose=TRUE,# hpf=.01, ar_order=0,
+  resamp_res=100, TR=.72
+)
+## looks good
+
+### Subcortex
+BOLD <- read_cifti(fnames$cifti_1, brainstructures="sub")
+bglmA <- BayesGLM_cifti(
+  BOLD = BOLD,
+  design = cbind(des[[1]], 1),
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  verbose=TRUE, hpf=.01, ar_order=0, TR=.72
 )
 
 ##### Second pass to get results of decent resolution

@@ -41,7 +41,9 @@ used for the spatial model. However, if \code{surfL} and \code{surfR} are
 provided, they will override any surfaces in \code{BOLD}.}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
-\code{"BayesfMRI_design"} object from \code{\link{make_design}}.}
+\code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
+be an array where the third dimension is the same length as the number of
+data locations, to model each location with its own design.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;

@@ -42,7 +42,12 @@
 #'  Onsets/offset modeling is only compatible with a block deisgn experiment.
 #'  An error will be raised if the events in \code{EVs} do not have duration
 #'  greater than one second.
-#' @param scale_design Scale the columns of the design matrix? Default: \code{TRUE}.
+#' @param scale_design Scale the columns of the design matrix? Default: 
+#'  \code{TRUE}.
+#' @param onsets_sep,offsets_sep Model the onsets (\code{onsets_sep}) or offsets
+#'  (\code{offsets_sep}) separately for each task? Default: \code{FALSE}, to 
+#'  model all onsets together, or all offsets together, as a single field in the
+#'  design. 
 #' @param verbose Print diagnostic messages? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
@@ -61,7 +66,9 @@
 make_design <- function(
   EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
-  scale_design=TRUE, verbose=TRUE, ...
+  scale_design=TRUE, 
+  onsets_sep=FALSE, offsets_sep=FALSE,
+  verbose=TRUE, ...
 ){
 
   ortho_block <- FALSE
@@ -78,6 +85,8 @@ make_design <- function(
   dHRF <- as.numeric(match.arg(as.character(dHRF), c("1", "0", "2")))
   upsample <- round(TR*upsample)/TR # TR*upsample must be an integer
   stopifnot(fMRItools::is_1(ortho_block, "logical"))
+  stopifnot(is_1(onsets_sep, "logical"))
+  stopifnot(is_1(offsets_sep, "logical"))
 
   # In the future, this might be an argument.
   FIR_nSec <- 0
@@ -101,40 +110,55 @@ make_design <- function(
 
   # [TO DO] check design is actually block design
 
-  do_oomsg <- FALSE
-
   if (!is.null(onset)) {
     stopifnot(is.character(onset))
     if (length(onset)==1 && onset=="all") { onset <- task_names }
     stopifnot(all(onset %in% task_names))
-    if (length(onset)> 1) { do_oomsg <- TRUE; cat("Modeling all onsets as a single task. ") }
     onset <- EVs[onset]
+    # Same onset, but set new duration at zero
     onset <- lapply(onset, function(q){q$duration <- 0; q})
-    onset <- do.call(rbind, onset)
-    onset$onset <- sort(onset$onset)
-    EVs <- c(EVs, list(onset=onset))
+    if (!onsets_sep) {
+      nJ_on <- 1
+      onset <- do.call(rbind, onset)
+      onset$onset <- sort(onset$onset)
+      EVs <- c(EVs, list(onset=onset))
+    } else {
+      nJ_on <- length(onset)
+      names(onset) <- paste0("onset_", names(onset))
+      EVs <- c(EVs, onset)
+    }
+  } else {
+    nJ_on <- 0
   }
 
   if (!is.null(offset)) {
     stopifnot(is.character(offset))
     if (length(offset)==1 && offset=="all") { offset <- task_names }
     stopifnot(all(offset %in% task_names))
-    if (length(offset)> 1) { do_oomsg <- TRUE; cat("Modeling all offsets as a single task. ") }
     offset <- EVs[offset]
+    # New onset is onset+duration; new duration is zero
     offset <- lapply(offset, function(q){q$onset <- q$onset + q$duration; q$duration <- 0; q})
-    offset <- do.call(rbind, offset)
-    offset$onset <- sort(offset$onset)
-    EVs <- c(EVs, list(offset=offset))
+    if (!offsets_sep) {
+      nJ_off <- 1
+      offset <- do.call(rbind, offset)
+      offset$onset <- sort(offset$onset)
+      EVs <- c(EVs, list(offset=offset))
+    } else {
+      nJ_off <- length(offset)
+      names(offset) <- paste0("offset_", names(offset))
+      EVs <- c(EVs, offset)
+    }
+  } else {
+    nJ_off <- 0
   }
 
-  if (do_oomsg) { cat(
-    "If you want separate regressors for different stimulus onsets or offsets, ",
-    "please add these as events to the EVs argument manually and set ",
-    "`onset` or `offset` to `NULL`.\n"
-  )}
+  J_on_idx <- if (is.null(onset)) { NULL } else { seq(nJ0+1, nJ0+nJ_on) }
+  J_off_idx <- if (is.null(offset)) { NULL } else { seq(nJ0+nJ_on+1, nJ0+nJ_on+nJ_off) }
+  all_onset_onset <- do.call(c, lapply(EVs[J_on_idx], '[[', "onset")) # NULL if none
+  all_offset_onset <- do.call(c, lapply(EVs[J_off_idx], '[[', "onset")) # NULL if none
 
   if ((!is.null(onset)) && (!is.null(offset))) {
-    if (any(onset$onset %in% offset$onset)) {
+    if (any(all_onset_onset %in% all_offset_onset)) {
       warning("At least one `onset` coincides with an `offset`.")
     }
   }
@@ -169,11 +193,11 @@ make_design <- function(
 
   ### Iterate over tasks. ------------------------------------------------------
   nK_block <- (dHRF+1)*nJ0
-  nK <- nK_block + (!is.null(onset)) + (!is.null(offset))
+  nK <- nK_block + nJ_on + nJ_off
 
   if ((!is.null(onset)) || (!is.null(offset))) {
-    if (dHRF>0) { cat("Not making fields for HRF derivatives of `onset` or ",
-      "`offset`. If these are desired, provide with `EVs`.\n")
+    if (dHRF>0) { cat("Not making fields for HRF derivatives of onsets and/or",
+      "offsets. If these are desired, provide with `EVs`.\n")
     }
   }
 
@@ -282,7 +306,6 @@ make_design <- function(
     )
   }
 
-
   # Diagnostics ----------------------------------------------------------------
 
   if (nK == 1) {
@@ -321,7 +344,7 @@ make_design <- function(
 
     ### Min time btwn onset/offset minimum time between ------------------------
     if (!is.null(onset) || !is.null(offset)) {
-      tdiff_min <- min(diff(sort(c(onset$onset, offset$onset))))
+      tdiff_min <- min(diff(sort(c(all_onset_onset, all_offset_onset))))
       if (verbose) { cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n") }
       if (tdiff_min < 1) {
         warning("Min. time btwn onset/offset is small (", round(tdiff_min, 3), " s). ")

@@ -1,5 +1,5 @@
 #' SPDE from voxel model
-#' 
+#'
 #' @param spatial See \code{BayesGLM}.
 #' @return List
 #' @keywords internal
@@ -19,6 +19,7 @@ SPDE_from_voxel <- function(spatial){
   C_list <- G_list <- spde_list <- vector('list', length=nR)
   for (rr in seq(nR)) {
     mask_rr <- (label == ROIs[rr])
+    # [stop] this breaks [TO DO]
     spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer)
     C_list[[rr]] <- spde_list[[rr]]$mats$C
     G_list[[rr]] <- spde_list[[rr]]$mats$G
@@ -54,10 +55,10 @@ SPDE_from_voxel <- function(spatial){
     }
   }
 
-  # Edit `spatial`.
+  # Edit `spatial`?
   # [TO DO]
-  browser()
-  
+  # browser()
+
   list(
     spde = spde,
     spatial = spatial
