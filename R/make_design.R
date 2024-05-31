@@ -42,12 +42,12 @@
 #'  Onsets/offset modeling is only compatible with a block deisgn experiment.
 #'  An error will be raised if the events in \code{EVs} do not have duration
 #'  greater than one second.
-#' @param scale_design Scale the columns of the design matrix? Default: 
+#' @param scale_design Scale the columns of the design matrix? Default:
 #'  \code{TRUE}.
 #' @param onsets_sep,offsets_sep Model the onsets (\code{onsets_sep}) or offsets
-#'  (\code{offsets_sep}) separately for each task? Default: \code{FALSE}, to 
+#'  (\code{offsets_sep}) separately for each task? Default: \code{FALSE}, to
 #'  model all onsets together, or all offsets together, as a single field in the
-#'  design. 
+#'  design.
 #' @param verbose Print diagnostic messages? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{\link{HRF_calc}}.
 #'
@@ -66,7 +66,7 @@
 make_design <- function(
   EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
   onset=NULL, offset=NULL,
-  scale_design=TRUE, 
+  scale_design=TRUE,
   onsets_sep=FALSE, offsets_sep=FALSE,
   verbose=TRUE, ...
 ){
@@ -168,7 +168,6 @@ make_design <- function(
   nJ <- length(task_names)
 
   # Compute HRFs. --------------------------------------------------------------
-
   # Prepare to upsample the stimulus function.
   nSec <- nTime*TR; # Total time of experiment in seconds
   inds <- seq(TR*upsample, nTime*TR*upsample, by = TR*upsample) # Extract EVs by TR after convolution
@@ -204,6 +203,7 @@ make_design <- function(
   stimulus  <- vector("list", nJ)
   design <- matrix(NA, nrow=nTime, ncol=nK)
   field_names <- vector("character", nK)
+
   for (jj in seq(nJ)) {
     is_onset_or_offset <- jj > nJ0
 
@@ -313,7 +313,7 @@ make_design <- function(
   } else {
     ### Correlation ------------------------------------------------------------
     des_cor <- cor(design)
-    des_cor_max <- max(des_cor[upper.tri(des_cor)])
+    des_cor_max <- max(des_cor[upper.tri(des_cor)], na.rm=TRUE)
     if (verbose) { cat("Maximum corr.: ", round(des_cor_max, 3), "\n") }
     if (des_cor_max > .9) {
       warning("Maximum corr. between design matrix columns is high (",
@@ -329,11 +329,11 @@ make_design <- function(
     colnames(des2) <- fnames2
     des2$y <- rnorm(nTime) #add fake y variable, has no influence
     f <- as.formula(paste0('y ~ ',f_rhs))
-    des_vif <-  try(car::vif(lm(f, data = des2)))
+    des_vif <-  try(car::vif(try(lm(f, data = des2))))
     if (inherits(des_vif, "try-error")) {
       des_vif_max <- des_vif
     } else {
-      des_vif_max <- max(des_vif)
+      des_vif_max <- max(des_vif, na.rm=TRUE)
       if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
       if (des_vif_max > 5) {
         warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
@@ -405,19 +405,18 @@ make_design <- function(
 format_EV <- function(EV){
   # First check if EVs is NA, which can be the case in multi-session analysis
   #   where not all fields are present in all sessions.
-  if(length(EV)==1 && is.na(EV)) { return(TRUE) }
+  if(length(EV)==1 && is.na(EV)) { return(EV) }
 
   # Otherwise: For each task, expect a two-column numeric matrix; second >= 0.
   #   Except missing tasks, which should just be the value `NA`.
   is_nummat <- is.numeric(EV) && is.matrix(EV)
   is_df <- is.data.frame(EV) && all(vapply(EV, class, "") %in% c("integer", "numeric"))
-  if (!(is_nummat || is_df)) { warning("The EVs are not a numeric matrix or data.frame."); return(FALSE) }
+  if (!(is_nummat || is_df)) { stop("The EVs are not a numeric matrix or data.frame.") }
 
-  if (nrow(EV)<1) { warning("The EVs must have at least one row."); return(FALSE) }
+  if (nrow(EV)<1) { stop("The EVs must have at least one row.") }
 
   if (ncol(EV) < 2) {
-    warning("The EVs should have two columns named `onset` and `duration`. But there's less than two columns.")
-    return(FALSE)
+    stop("The EVs should have two columns named `onset` and `duration`. But there's less than two columns.")
   } else if (ncol(EV) > 2) {
     #message("The EVs should have two columns named `onset` and `duration`. Using the first two, and dropping the other columns.")
     EV <- EV[,seq(2)]
