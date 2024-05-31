@@ -461,7 +461,7 @@ BayesGLM <- function(
     field_estimates <- extract_estimates(
       INLA_model_obj=INLA_model_obj,
       session_names=session_names,
-      spatial=spatial, spatial_type=spatial_type
+      spatial=spatial, spatial_type=spatial_type, spde=spde
     ) #posterior means of latent field
     theta_estimates <- INLA_model_obj$summary.hyperpar$mean
     hyperpar_posteriors <- get_posterior_densities2(

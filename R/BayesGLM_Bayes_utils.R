@@ -121,7 +121,7 @@ make_data_list <- function(y, X, betas, repls){
 #' @keywords internal
 extract_estimates <- function(
   INLA_model_obj, session_names,
-  spatial, spatial_type, stat='mean'){
+  spatial, spatial_type, spde, stat='mean'){
 
   if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
@@ -133,7 +133,7 @@ extract_estimates <- function(
   mask <- if (spatial_type=="mesh") {
     spatial$mask
   } else {
-    stop("[TO DO]")
+    spatial$label != 0
   }
 
   #determine number of locations
@@ -141,8 +141,12 @@ extract_estimates <- function(
   # nV2 or nMesh = the number of mesh locations, which may be a superset
   # nV0 = the number of data locations prior to applying a mask
   nV_T <- length(mask) #number of data locations prior to applying a mask pre-model fitting
-  nV_D <- sum(mask) #number of data locations included in the model -- should match sum(mask)
-  stopifnot(nV_D*nS == length(res.beta[[1]]$mean))
+  nV_DB <- if (spatial_type=="mesh") {
+    sum(mask)
+  } else {
+    get_nV(spatial, "voxel", spde)$DB
+  }
+  stopifnot(nV_DB*nS == length(res.beta[[1]]$mean))
 
   betas <- vector('list', nS)
   names(betas) <- session_names
@@ -151,8 +155,9 @@ extract_estimates <- function(
   if(! (stat %in% stat_names) ) stop(paste0('stat must be one of following: ', paste(stat_names, collapse = ', ')))
   stat_ind <- which(stat_names==stat)
 
+  browser()
   for (ss in seq(nS)) {
-    inds_ss <- seq(nV_D) + (ss-1)*nV_T # [TO DO] FIX for subcortical. indices of beta vector corresponding to session v
+    inds_ss <- seq(nV_DB) + (ss-1)*nV_T # [TO DO] FIX for subcortical. indices of beta vector corresponding to session v
     betas[[ss]] <- do.call(cbind, lapply(setNames(seq(nK), field_names), function(kk){
       res.beta[[kk]][[stat_ind]][inds_ss]
     }))
