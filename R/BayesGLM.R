@@ -240,7 +240,7 @@ BayesGLM <- function(
   # Adjust design for per-location modeling.
 
   # Update and display the number of data locations. ---------------------------
-  nV <- get_nV(spatial, spatial_type)
+  nV <- get_nV(spatial, spatial_type, spde)
   if (verbose>0) {
     cat('\tNumber of data locations:', nV$D, '\n')
     if (spatial_type == "voxel") {
