@@ -15,15 +15,15 @@
 #' @inheritSection INLA_Latent_Fields_Limit_Description INLA Latent Fields Limit
 #'
 #' @inheritParams BOLD_Param_BayesGLM_cifti
-#' @inheritParams design_Param_BayesGLM_cifti
-#' @inheritParams TR_Param_BayesGLM_cifti
 #' @inheritParams brainstructures_Param_BayesGLM_cifti
+#' @inheritParams design_Param_BayesGLM_cifti
+#' @inheritParams nuisance_Param_BayesGLM_cifti
+#' @inheritParams hpf_Param_BayesGLM_cifti
+#' @inheritParams TR_Param_BayesGLM_cifti
 #' @inheritParams surfaces_Param_BayesGLM_cifti
 #' @inheritParams resamp_res_Param_BayesGLM_cifti
 #' @inheritParams nbhd_order_Param
 #' @inheritParams buffer_Param
-#' @inheritParams nuisance_Param_BayesGLM_cifti
-#' @inheritParams hpf_Param_BayesGLM_cifti
 #' @inheritParams session_names_Param
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams Bayes_Param
@@ -59,8 +59,11 @@
 #'
 BayesGLM_cifti <- function(
   BOLD,
-  design,
   brainstructures=c('left','right'),
+  design,
+  # Nuisance
+  nuisance=NULL,
+  hpf=NULL,
   TR=NULL,
   # For surface models
   surfL=NULL,
@@ -69,9 +72,7 @@ BayesGLM_cifti <- function(
   # For volume model
   nbhd_order=1,
   buffer=c(1,1,3,4,4),
-  # Nuisance
-  nuisance=NULL,
-  hpf=NULL,
+
   # Below arguments shared with `BayesGLM`.
   session_names=NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
