@@ -5,7 +5,7 @@
 #' @keywords internal
 SPDE_from_voxel <- function(spatial){
   label <- spatial$label
-  mask <- label[label!=0]
+  mask <- label!=0
   nbhd_order <- spatial$nbhd_order
   buffer <- spatial$buffer
 
@@ -57,7 +57,6 @@ SPDE_from_voxel <- function(spatial){
 
   # Edit `spatial`?
   # [TO DO]
-  # browser()
 
   list(
     spde = spde,
