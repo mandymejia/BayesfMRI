@@ -49,7 +49,7 @@ BayesGLM_format_design <- function(
 
   # Make `design` a sessions-length list of matrices or arrays.
   if (inherits(design, "BfMRI_design")) { design <- design$design }
-  if (!is.list(design)) { design <- list(design) }
+  if (!is.list(design) || is.data.frame(design)) { design <- list(design) }
   if (all(vapply(design, inherits, FALSE, "BfMRI_design"))) { design <- lapply(design, '[[', "design") }
   nS <- length(design)
   if (!is.null(nS_expect)) {
@@ -251,7 +251,7 @@ BayesGLM_format_nuisance <- function(
   ){
 
   # Make `nuisance` a sessions-length list of matrices or arrays.
-  if (!is.list(nuisance)) { nuisance <- list(nuisance) }
+  if (!is.list(nuisance) || is.data.frame(nuisance)) { nuisance <- list(nuisance) }
   nS <- length(nuisance)
   if (!is.null(nS_expect)) {
     stopifnot(fMRItools::is_1(nS_expect, "numeric") && nS_expect==round(nS_expect))

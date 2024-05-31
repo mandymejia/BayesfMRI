@@ -99,6 +99,7 @@ des <- make_design(events[1], TR=.72, nTime=nTime,dHRF=0)
 # dev.off()
 
 des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=2, onset="win", offset=c("loss", "neut"))
+des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=0)
 
 # From `onsets`.
 des <- lapply(
