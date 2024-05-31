@@ -6,16 +6,16 @@
 \usage{
 BayesGLM_cifti(
   BOLD,
-  design,
   brainstructures = c("left", "right"),
+  design,
+  nuisance = NULL,
+  hpf = NULL,
   TR = NULL,
   surfL = NULL,
   surfR = NULL,
   resamp_res = 10000,
   nbhd_order = 1,
   buffer = c(1, 1, 3, 4, 4),
-  nuisance = NULL,
-  hpf = NULL,
   session_names = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
@@ -40,15 +40,37 @@ If \code{BOLD} is a \code{"xifti"} object(s), the surfaces, if any, will be
 used for the spatial model. However, if \code{surfL} and \code{surfR} are
 provided, they will override any surfaces in \code{BOLD}.}
 
+\item{brainstructures}{Character vector indicating which brain structure(s)
+of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
+and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
+(cortex only).}
+
 \item{design}{A numeric matrix or \code{data.frame}, or a
 \code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
 be an array where the third dimension is the same length as the number of
 data locations, to model each location with its own design.}
 
-\item{brainstructures}{Character vector indicating which brain structure(s)
-of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
-and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
-(cortex only).}
+\item{nuisance}{(Optional) A \eqn{T \times N} matrix of nuisance signals,
+where \eqn{T} is the number of timepoints and \eqn{N} is the number of
+nuisance signals, or a list of these for multi-session analysis. Nuisance
+signals are regressed from the fMRI data and design matrix prior to GLM
+computation. Nuisance signals can include motion regressors, HRF derivatives
+not being modeled as tasks, and other sources of noise.
+
+Detrending/high-pass filtering is accomplished by adding DCT bases to the
+nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
+
+\item{hpf}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
+filter to the data, for detrending? \code{hpf} is the filter frequency.
+Use \code{NULL} to skip detrending. Detrending is strongly recommended for
+fMRI data, to help reduce the autocorrelation in the residuals, so
+\code{NULL} will induce a warning. Use \code{"already"} to disable the
+warning while skipping highpass filtering.
+
+Using at least two DCT bases is as sufficient for detrending as using linear
+and quadratic drift terms in the nuisance matrix. So if DCT detrending is
+being used here, there is no need to add linear and quadratic drift terms to
+\code{nuisance}.}
 
 \item{TR}{Temporal resolution of the data, in seconds.}
 
@@ -79,28 +101,6 @@ around the edge of the data.}
 the bounding box. Set to \code{NULL} for no buffer. (We recommend not
 changing \code{buffer} unless you know what you're doing. Instead, to reduce
 the number of boundary voxels, adjust \code{nbhd_order}).}
-
-\item{nuisance}{(Optional) A \eqn{T \times N} matrix of nuisance signals,
-where \eqn{T} is the number of timepoints and \eqn{N} is the number of
-nuisance signals, or a list of these for multi-session analysis. Nuisance
-signals are regressed from the fMRI data and design matrix prior to GLM
-computation. Nuisance signals can include motion regressors, HRF derivatives
-not being modeled as tasks, and other sources of noise.
-
-Detrending/high-pass filtering is accomplished by adding DCT bases to the
-nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
-
-\item{hpf}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
-filter to the data, for detrending? \code{hpf} is the filter frequency.
-Use \code{NULL} to skip detrending. Detrending is strongly recommended for
-fMRI data, to help reduce the autocorrelation in the residuals, so
-\code{NULL} will induce a warning. Use \code{"already"} to disable the
-warning while skipping highpass filtering.
-
-Using at least two DCT bases is as sufficient for detrending as using linear
-and quadratic drift terms in the nuisance matrix. So if DCT detrending is
-being used here, there is no need to add linear and quadratic drift terms to
-\code{nuisance}.}
 
 \item{session_names}{The names of the task-fMRI \code{BOLD} sessions, for
 multi-session analysis. If not provided here, will be inferred from
