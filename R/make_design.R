@@ -76,6 +76,12 @@ make_design <- function(
   # Check inputs. --------------------------------------------------------------
   stopifnot(is.list(EVs))
   EVs <- lapply(EVs, format_EV)
+  EVs_NA <- vapply(EVs, function(q){identical(q, NA)}, FALSE)
+  if (any(EVs_NA)) {
+    if (all(EVs_NA)) { stop("Not a single event has an onset.") }
+    warning("Removing ", sum(EVs_NA), " events with missing data (no onsets).")
+    EVs <- EVs[!EVs_NA]
+  }
   stopifnot(!any(vapply(EVs, isFALSE, FALSE)))
   stopifnot(fMRItools::is_1(nTime, "numeric"))
   stopifnot(all(nTime > 0))
@@ -219,15 +225,16 @@ make_design <- function(
       )
     }
 
-    # Skip if no stimulus for this task.
-    if (length(EVs[[jj]])==1 && is.na(EVs[[jj]])) { #NA is placeholder for missing tasks
-      warning(
-        "For task '", task_names[jj],
-        "': inputting constant-zero column in design matrix for lack of stimulus. ",
-        "Proceed with caution."
-      )
-      next()
-    }
+    # [NOTE] Instead of inputting a zero column, we now delete the column.
+    # # Skip if no stimulus for this task.
+    # if (length(EVs[[jj]])==1 && is.na(EVs[[jj]])) { #NA is placeholder for missing tasks
+    #   warning(
+    #     "For task '", task_names[jj],
+    #     "': inputting constant-zero column in design matrix for lack of stimulus. ",
+    #     "Proceed with caution."
+    #   )
+    #   next()
+    # }
 
     # Define `ots` (onset times) and `dur` (durations) for this task.
     ots_jj <- EVs[[jj]][,1]
@@ -405,7 +412,7 @@ make_design <- function(
 format_EV <- function(EV){
   # First check if EVs is NA, which can be the case in multi-session analysis
   #   where not all fields are present in all sessions.
-  if(length(EV)==1 && is.na(EV)) { return(EV) }
+  if(length(EV)==1 && is.na(EV)) { return(NA) }
 
   # Otherwise: For each task, expect a two-column numeric matrix; second >= 0.
   #   Except missing tasks, which should just be the value `NA`.
