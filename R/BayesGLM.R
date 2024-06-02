@@ -195,9 +195,9 @@ BayesGLM <- function(
   mesh_spatial_names <- c("surf", "mask")
   is_mesh <- length(names(spatial))==2 && all(names(spatial)==mesh_spatial_names)
   voxel_spatial_names <- c(
-    "label", "trans_mat", "trans_units", "nbhd_order", "buffer"
+    "label", "trans_mat", "trans_units", "nbhd_order", "buffer", "buffer_mask"
   )
-  is_voxel <- length(names(spatial))==5 && all(names(spatial)==voxel_spatial_names)
+  is_voxel <- length(names(spatial))==6 && all(names(spatial)==voxel_spatial_names)
   if (!is_mesh && !is_voxel) { stop("`spatial` is not correctly formatted. Please fix.") }
   spatial_type <- if (is_mesh) { "mesh" } else { "voxel" }
   rm(is_mesh, is_voxel, mesh_spatial_names, voxel_spatial_names)
@@ -240,7 +240,7 @@ BayesGLM <- function(
   # Adjust design for per-location modeling.
 
   # Update and display the number of data locations. ---------------------------
-  nV <- get_nV(spatial, spatial_type, spde)
+  nV <- get_nV(spatial, spatial_type)
   if (verbose>0) {
     cat('\tNumber of data locations:', nV$D, '\n')
     if (spatial_type == "voxel") {

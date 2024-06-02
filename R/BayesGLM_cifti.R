@@ -265,7 +265,8 @@ BayesGLM_cifti <- function(
     subcort = list(
       label=NULL,
       trans_mat=NULL, trans_units=NULL,
-      nbhd_order=nbhd_order, buffer=buffer
+      nbhd_order=nbhd_order, buffer=buffer,
+      buffer_mask=NULL # created in `SPDE_from_voxel`
     )
   )
   if (!do$left) { spatial$cortexL <- NULL }

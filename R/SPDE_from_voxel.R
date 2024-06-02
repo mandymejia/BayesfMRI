@@ -55,8 +55,8 @@ SPDE_from_voxel <- function(spatial){
     }
   }
 
-  # Edit `spatial`?
-  # [TO DO]
+  # Add `buffer_mask` to `spatial`.
+  spatial$buffer_mask <- seq(spde$n.spde) %in% data_loc
 
   list(
     spde = spde,

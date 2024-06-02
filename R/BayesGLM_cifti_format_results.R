@@ -41,7 +41,7 @@ BayesGLM_cifti_format_results <- function(
     if (do$sub) {
       datSub <- switch(method,
         classical = BayesGLM_results$subcort$result_classical[[ss]]$estimates,
-        Bayesian = BayesGLM_results$subcortical$field_estimates[[ss]]
+        Bayesian = BayesGLM_results$subcort$field_estimates[[ss]]
       )
       colnames(datSub) <- NULL
     }

@@ -144,7 +144,7 @@ extract_estimates <- function(
   nV_DB <- if (spatial_type=="mesh") {
     sum(mask)
   } else {
-    get_nV(spatial, "voxel", spde)$DB
+    get_nV(spatial, "voxel")$DB
   }
   stopifnot(nV_DB*nS == length(res.beta[[1]]$mean))
 
@@ -155,12 +155,16 @@ extract_estimates <- function(
   if(! (stat %in% stat_names) ) stop(paste0('stat must be one of following: ', paste(stat_names, collapse = ', ')))
   stat_ind <- which(stat_names==stat)
 
-  browser()
   for (ss in seq(nS)) {
-    inds_ss <- seq(nV_DB) + (ss-1)*nV_T # [TO DO] FIX for subcortical. indices of beta vector corresponding to session v
-    betas[[ss]] <- do.call(cbind, lapply(setNames(seq(nK), field_names), function(kk){
-      res.beta[[kk]][[stat_ind]][inds_ss]
-    }))
+    inds_ss <- seq(nV_DB) + (ss-1)*nV_T
+    betas[[ss]] <- do.call(cbind,
+      lapply(setNames(seq(nK), field_names), function(kk){
+        res.beta[[kk]][[stat_ind]][inds_ss]
+      })
+    )
+    if (spatial_type=="voxel") {
+      betas[[ss]] <- betas[[ss]][spatial$buffer_mask,,drop=FALSE]
+    }
   }
 
   attr(betas, "GLM_type") <- "Bayesian"
