@@ -48,6 +48,7 @@ GLM_classical <- function(
     estimates = beta_hat,
     SE_estimates = SE_beta_hat,
     resids = resids,
+    RSS = rowSums(resids^2),
     DOF = DOF_true,
     valid_fields = setNames(vcols_ss, field_names)
   )

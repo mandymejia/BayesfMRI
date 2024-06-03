@@ -597,38 +597,21 @@ BayesGLM <- function(
   ## Construct beta estimates as `xifti` objects. ------------------------------
   if (verbose>0) cat("Formatting results.\n")
 
-  NULL
-
-  # if (design_type != "multi") {
-    estimate_xii <- list(Bayes=NULL, classical=NULL)
-    for (method in c("classical", "Bayes")[seq(1+do$Bayesian)]) {
-      estimate_xii[[method]] <- BayesGLM_format_cifti(
-        BGLMs = BGLMs,
-        do = do,
-        spatial = spatial,
-        submeta = submeta,
-        session_names = session_names,
-        field_names = field_names,
-        method = method
-      )
-    }
-  #   bestmodel_xii <- sigma2_xii <- NULL
-
-  # } else {
-  #   x <- BayesGLM_format_cifti_multi(
-  #     BGLMs = BGLMs,
-  #     session_names = session_names
-  #   )
-  #   estimate_xii <- x$estimate_xii
-  #   bestmodel_xii <- x$bestmodel_xii
-  #   sigma2_xii <- x$sigma2_xii
-  #   rm(x)
-
-  #   # [TO DO] get rid
-  #   # #stuff we don't have when fitting multiple models
-  #   # HRFs <- FIR <- design_FIR <- stimulus <- NULL
-  #   # field_names <- field_names
-  # }
+  estimate_xii <- RSS_xii <- list(Bayes=NULL, classical=NULL)
+  for (method in c("classical", "Bayes")[seq(1+do$Bayes)]) {
+    x <- BayesGLM_format_cifti(
+      BGLMs = BGLMs,
+      do = do,
+      spatial = spatial,
+      submeta = submeta,
+      session_names = session_names,
+      field_names = field_names,
+      method = method # it's 'Bayesian' here not 'Bayes', but still matches.
+    )
+    estimate_xii[[method]] <- x$estimates
+    RSS_xii[[method]] <- x$RSS
+    rm(x)
+  }
 
   # [TO DO] HRF_info
 
@@ -639,11 +622,8 @@ BayesGLM <- function(
 
   result <- list(
     estimate_xii = estimate_xii,
-    #bestmodel_xii = bestmodel_xii,
-    #sigma2_xii = sigma2_xii,
+    RSS_xii = RSS_xii,
     nuisance = nuisance,
-    #FIR = FIR,
-    #design_FIR = design_FIR,
     field_names = field_names,
     session_names = session_names,
     dim = result_dim,

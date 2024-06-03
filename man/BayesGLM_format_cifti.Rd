@@ -25,7 +25,7 @@ BayesGLM_format_cifti(
 The list of \code{"xifti"} objects
 }
 \description{
-Format beta estimates of the BayesGLM_fun results into list of \code{"xifti"}
-objects for each session.
+Format beta estimates or RSS of the \code{BayesGLM_fun} results into list of
+\code{"xifti"} objects for each session.
 }
 \keyword{internal}

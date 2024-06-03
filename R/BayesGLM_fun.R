@@ -95,7 +95,7 @@ BayesGLM_fun <- function(
 
   # Initialize return values that may or may not be computed. ------------------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
-  field_estimates <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
+  field_estimates <- RSS <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
   theta_estimates <- Sig_inv <- mesh <- mesh_orig <- NULL
 
   # Argument checks. -----------------------------------------------------------
@@ -459,6 +459,16 @@ BayesGLM_fun <- function(
       spatial=spatial, spatial_type=spatial_type, spde=spde
     ) #posterior means of latent field
     theta_estimates <- INLA_model_obj$summary.hyperpar$mean
+    RSS <- vector("list", nS)
+    for (ss in seq(nS)) {
+      RSS[[ss]] <- rowSums(t(matrix(
+        as.matrix(c(BOLD[[ss]])) - (
+          do.call(cbind, design[[ss]][valid_cols[ss,]]) %*% as.matrix(c(field_estimates[[ss]]))
+        ),
+        nrow = nT[ss]
+      ))^2)
+    }
+    # resids <- t(matrix(as.matrix(y) - (X %*% coefs), nrow = nT_ss))
     hyperpar_posteriors <- get_posterior_densities2(
       INLA_model_obj=INLA_model_obj, #spde,
       field_names
@@ -481,6 +491,7 @@ BayesGLM_fun <- function(
     INLA_model_obj = INLA_model_obj,
     hyperpar_posteriors = hyperpar_posteriors,
     theta_estimates = theta_estimates,
+    RSS = RSS,
     result_classical = result_classical,
     #result_FIR = result_FIR,
     spatial = spatial,
