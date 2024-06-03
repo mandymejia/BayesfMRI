@@ -97,7 +97,7 @@ BayesGLM <- function(
   stopifnot(is.null(TR) || (fMRItools::is_1(TR, "numeric") && TR>0))
   stopifnot(is.numeric(nbhd_order))
   stopifnot(fMRItools::is_1(nbhd_order, "numeric"))
-  stopifnot(nbhd_order>0 && nbhd_order==round(nbhd_order))
+  stopifnot(nbhd_order>=0 && nbhd_order==round(nbhd_order))
   stopifnot(is.numeric(buffer) || is.null(buffer))
 
   do <- vector("list")

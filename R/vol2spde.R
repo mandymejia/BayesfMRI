@@ -122,8 +122,10 @@ vol2spde <- function(mask,
     # locations with any dependence with in-mask locations
     # 1252 locations for 257 original ROI locations
     idx2 <- unique(M2$j)
+    rm(M2)
+  } else {
+    idx2 <- idx
   }
-  rm(M2)
   mask_box2 <- mask_box; mask_box2[idx2] <- mask_box[idx2] + 1 #for visualization
 
   #recreate the SPDE after removing locations
