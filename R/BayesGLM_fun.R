@@ -221,11 +221,11 @@ BayesGLM_fun <- function(
   if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
   if (any(!mask_qc$mask)) {
     if (spatial_type == "mesh") {
-      spatial$mask[spatial$mask] <- mask_qc
+      spatial$mask[spatial$mask] <- mask_qc$mask
     } else if (spatial_type == "voxel") {
-      spatial$labels[spatial$labels!=0][!mask_qc] <- 0 # [TO DO] check
+      spatial$label[spatial$label!=0][!mask_qc$mask] <- 0
     } else { stop() }
-    BOLD <- lapply(BOLD, function(q){ q[,mask_qc,drop=FALSE] })
+    BOLD <- lapply(BOLD, function(q){ q[,mask_qc$mask,drop=FALSE] })
   }
 
   # Get SPDE and mask based on it (additional vertices may be excluded).
@@ -240,6 +240,7 @@ BayesGLM_fun <- function(
   # Adjust design for per-location modeling.
 
   # Update and display the number of data locations. ---------------------------
+  # (Need to update after QC mask and SPDE)
   nV <- get_nV(spatial, spatial_type)
   if (verbose>0) {
     cat('\tNumber of data locations:', nV$D, '\n')
