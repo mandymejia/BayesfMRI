@@ -4,14 +4,10 @@
 \alias{pw_smooth}
 \title{Smooth AR coefficients and white noise variance}
 \usage{
-pw_smooth(surf, mask = NULL, AR, var, FWHM = 5)
+pw_smooth(spatial, spatial_type, AR, var, FWHM = 5)
 }
 \arguments{
-\item{surf}{A \code{"surf"} object with vertices and triangular faces.}
-
-\item{mask}{A logical vector indicating, for each vertex, whether to include
-it in smoothing. \code{NULL} (default) will use a vector of all \code{TRUE},
-meaning that no vertex is masked out; all are used for smoothing.}
+\item{spatial, spatial_type}{See \code{BayesGLM_fun} internal code.}
 
 \item{AR}{A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order}
 

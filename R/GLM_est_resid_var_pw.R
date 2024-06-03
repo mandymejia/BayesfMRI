@@ -68,9 +68,9 @@ GLM_est_resid_var_pw <- function(
   # Smooth prewhitening parameters.
   if (do_pw && ar_smooth > 0) {
     x <- pw_smooth(
-      surf=spatial$surf,
-      mask=spatial$mask,
-      AR=AR_coefs_avg, var=var_avg, FWHM=ar_smooth
+      spatial=spatial, spatial_type=spatial_type,
+      AR=AR_coefs_avg, var=var_avg, 
+      FWHM=ar_smooth
     )
     AR_coefs_avg <- x$AR
     var_avg <- x$var

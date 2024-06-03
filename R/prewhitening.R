@@ -5,7 +5,7 @@
 #'  If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
 #'  the order will be between zero and \code{ar_order}, as determined by the AIC.
 #' @importFrom stats ar.yw
-#' 
+#'
 #' @keywords internal
 #'
 #' @return Estimated AR coefficients and residual variance at every vertex
@@ -32,16 +32,16 @@ pw_estimate <- function(resids, ar_order, aic=FALSE){
 }
 
 #' Corrected AIC
-#' 
+#'
 #' Computes corrected AIC (AICc).
-#' 
+#'
 #' @param y The autocorrelated data
 #' @param demean Demean \code{y}? Default: \code{FALSE}.
 #' @param order.max The model order limit. Default: \code{10}.
-#' 
+#'
 #' @return The cAIC
 #' @keywords internal
-#' 
+#'
 #' @importFrom fMRItools is_posNum
 AICc <- function(y, demean=FALSE, order.max = 10) {
   N <- length(y)
@@ -63,10 +63,7 @@ AICc <- function(y, demean=FALSE, order.max = 10) {
 
 #' Smooth AR coefficients and white noise variance
 #'
-#' @param surf A \code{"surf"} object with vertices and triangular faces.
-#' @param mask A logical vector indicating, for each vertex, whether to include
-#'  it in smoothing. \code{NULL} (default) will use a vector of all \code{TRUE},
-#'  meaning that no vertex is masked out; all are used for smoothing.
+#' @param spatial,spatial_type See \code{BayesGLM_fun} internal code.
 #' @param AR A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order
 #' @param var A vector length V containing the white noise variance estimates from the AR model
 #' @param FWHM FWHM parameter for smoothing. Remember that
@@ -76,34 +73,58 @@ AICc <- function(y, demean=FALSE, order.max = 10) {
 #' @importFrom ciftiTools smooth_cifti make_surf as_xifti
 #'
 #' @keywords internal
-#' 
+#'
 #' @return Smoothed AR coefficients and residual variance at every vertex
-pw_smooth <- function(surf, mask=NULL, AR, var, FWHM=5){
+pw_smooth <- function(spatial, spatial_type, AR, var, FWHM=5){
 
-  if (is.null(mask)) { mask <- rep(TRUE, nrow(surf$vertices)) }
-  V <- sum(mask)
-  V1 <- nrow(AR)
-  V2 <- length(var)
-  if(V != V1) stop('Number of rows in AR must match number of vertices')
-  if(V != V2) stop('Length of var must match number of vertices')
+  nV <- get_nV(spatial, spatial_type)
+  if (nV$D != nrow(AR)) { stop('Number of rows in `AR` must match number of locations.') }
+  if (nV$D != length(var)) { stop('Length of `var` must match number of locations.') }
 
-  AR_xif <- ciftiTools::as_xifti(
-    cortexL = AR,
-    surfL = surf,
-    cortexL_mwall = mask
-  )
-  #AR_xif$meta$cifti$brainstructures <- "left"
-  AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
-  AR_smoothed <- AR_smoothed$data$cortex_left
+  if (spatial_type == "mesh") {
+    if (is.null(spatial$mask)) {
+      spatial$mask <- rep(TRUE, nrow(spatial$surf$vertices))
+    }
 
-  var_xif <- ciftiTools::as_xifti(
-    cortexL = var,
-    surfL = surf,
-    cortexL_mwall = mask
-  )
-  #var_xif$meta$cifti$brainstructures <- "left"
-  var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
-  var_smoothed <- var_smoothed$data$cortex_left
+    AR_xif <- ciftiTools::as_xifti(
+      cortexL = AR,
+      surfL = spatial$surf,
+      cortexL_mwall = spatial$mask
+    )
+    #AR_xif$meta$cifti$brainstructures <- "left"
+    AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
+    AR_smoothed <- AR_smoothed$data$cortex_left
 
-  return(list(AR = AR_smoothed, var = var_smoothed))
+    var_xif <- ciftiTools::as_xifti(
+      cortexL = var,
+      surfL = spatial$surf,
+      cortexL_mwall = spatial$mask
+    )
+    #var_xif$meta$cifti$brainstructures <- "left"
+    var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
+    var_smoothed <- var_smoothed$data$cortex_left
+
+  } else if (spatial_type == "voxel") {
+    subMask <- spatial$labels != 0
+    subLabs <- spatial$labels[subMask]
+
+    AR_xif <- ciftiTools::as_xifti(
+      subcortVol = AR,
+      subcortLabs = subLabs,
+      subcortMask = subMask
+    )
+    AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, vol_FWHM = FWHM))
+    AR_smoothed <- AR_smoothed$data$subcort
+
+    var_xif <- ciftiTools::as_xifti(
+      subcortVol = as.matrix(var),
+      subcortLabs = subLabs,
+      subcortMask = subMask
+    )
+    var_smoothed <- suppressWarnings(smooth_cifti(var_xif, vol_FWHM = FWHM))
+    var_smoothed <- var_smoothed$data$subcort
+
+  } else { stop() }
+
+  list(AR = AR_smoothed, var = var_smoothed)
 }

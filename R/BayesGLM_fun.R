@@ -339,12 +339,6 @@ BayesGLM_fun <- function(
   }
   rm(des_has_intercept, nuis_has_intercept, vcols_ss, nuisance)
 
-  # [TO DO] Question: mesh vs surf? same?
-  if (spatial_type=="voxel" && do$pw && ar_smooth > 0) {
-    stop("[TO DO] How to support this?")
-  }
-  # mesh$loc,mesh$graph$tv,mesh$n
-
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
   if (do$pw && verbose>0) { cat("\tEstimating prewhitening parameters.\n") }
   x <- GLM_est_resid_var_pw(

@@ -7,6 +7,7 @@
 #' @param do,spatial,submeta,session_names,field_names See \code{BayesGLM}.
 #' @param method \code{"classical"} or \code{"Bayesian"}
 #' @return The list of \code{"xifti"} objects
+#' @importFrom ciftiTools as_xifti
 #' @keywords internal
 #'
 BayesGLM_format_cifti <- function(
@@ -47,7 +48,7 @@ BayesGLM_format_cifti <- function(
       subLabs <- BGLMs$subcort$spatial$labels[subMask]
       colnames(datSub) <- NULL
     }
-    result_xii[[ss]] <- as.xifti(
+    result_xii[[ss]] <- ciftiTools::as_xifti(
       cortexL = datL,
       cortexL_mwall = if (do$left) { mwallL } else { NULL },
       cortexR = datR,
