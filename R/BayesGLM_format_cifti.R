@@ -43,6 +43,8 @@ BayesGLM_format_cifti <- function(
         classical = BGLMs$subcort$result_classical[[ss]]$estimates,
         Bayesian = BGLMs$subcort$field_estimates[[ss]]
       )
+      subMask <- BGLMs$subcort$spatial$labels != 0
+      subLabs <- BGLMs$subcort$spatial$labels[subMask]
       colnames(datSub) <- NULL
     }
     result_xii[[ss]] <- as.xifti(
@@ -51,8 +53,8 @@ BayesGLM_format_cifti <- function(
       cortexR = datR,
       cortexR_mwall = if (do$right) { mwallR } else { NULL },
       subcortVol = datSub,
-      subcortLabs = submeta$labels,
-      subcortMask = submeta$mask
+      subcortLabs = if (do$sub) { subLabs } else { NULL },
+      subcortMask = if (do$sub) { subMask } else { NULL },
     )
     result_xii[[ss]]$meta$subcort$trans_mat <- submeta$trans_mat
     result_xii[[ss]]$meta$subcort$trans_units <- submeta$trans_units

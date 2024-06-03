@@ -160,8 +160,8 @@ get_nV <- function(spatial, type=c("mesh", "voxel")){
       D=sum(spatial$mask)
     ),
     voxel = list(
-      T=prod(dim(spatial$label)), # [TO DO] redefine?
-      D=sum(spatial$label!=0)
+      T=prod(dim(spatial$labels)), # [TO DO] redefine?
+      D=sum(spatial$labels!=0)
     )
   )
 

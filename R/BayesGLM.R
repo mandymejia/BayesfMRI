@@ -263,7 +263,7 @@ BayesGLM <- function(
     cortexL = list(surf=NULL, mask=NULL),
     cortexR = list(surf=NULL, mask=NULL),
     subcort = list(
-      label=NULL,
+      labels=NULL,
       trans_mat=NULL, trans_units=NULL,
       nbhd_order=nbhd_order, buffer=buffer,
       buffer_mask=NULL # created in `SPDE_from_voxel`
@@ -472,7 +472,7 @@ BayesGLM <- function(
 
    ### Collect `spatial` metadata. ---------------------------------------------
    # Cortex: ROI `mask`. Use the intersection.
-   # Subcortex: `label`, `trans_mat`, `trans_units`. Require same across sessions.
+   # Subcortex: `labels`, `trans_mat`, `trans_units`. Require same across sessions.
   if (do$left) {
     maskL <- lapply(BOLD, function(q){
       mask_ss <- q$meta$cortex$medial_wall_mask$left
@@ -521,14 +521,14 @@ BayesGLM <- function(
     for (ss in seq(nS)) {
       if (ss == 1) {
         submeta <- BOLD[[ss]]$meta$subcort
-        spatial$subcort["label"] <- list(submeta$mask*0)
-        spatial$subcort$label[submeta$mask==TRUE] <- submeta$labels
+        spatial$subcort["labels"] <- list(submeta$mask*0)
+        spatial$subcort$labels[submeta$mask==TRUE] <- submeta$labels
         spatial$subcort["trans_mat"] <- list(submeta$trans_mat)
         spatial$subcort["trans_units"] <- list(submeta$trans_units)
       } else {
-        stopifnot(length(dim(spatial$subcort$label)) == length(dim(BOLD[[ss]]$subcort$mask)))
-        stopifnot(all(dim(spatial$subcort$label)) == dim(BOLD[[ss]]$subcort$mask))
-        stopifnot(all((spatial$subcort$label!=0) == BOLD[[ss]]$subcort$mask))
+        stopifnot(length(dim(spatial$subcort$labels)) == length(dim(BOLD[[ss]]$subcort$mask)))
+        stopifnot(all(dim(spatial$subcort$labels)) == dim(BOLD[[ss]]$subcort$mask))
+        stopifnot(all((spatial$subcort$labels!=0) == BOLD[[ss]]$subcort$mask))
       }
     }
   } else {

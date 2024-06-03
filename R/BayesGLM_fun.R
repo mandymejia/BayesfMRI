@@ -195,7 +195,7 @@ BayesGLM_fun <- function(
   mesh_spatial_names <- c("surf", "mask")
   is_mesh <- length(names(spatial))==2 && all(names(spatial)==mesh_spatial_names)
   voxel_spatial_names <- c(
-    "label", "trans_mat", "trans_units", "nbhd_order", "buffer", "buffer_mask"
+    "labels", "trans_mat", "trans_units", "nbhd_order", "buffer", "buffer_mask"
   )
   is_voxel <- length(names(spatial))==6 && all(names(spatial)==voxel_spatial_names)
   if (!is_mesh && !is_voxel) { stop("`spatial` is not correctly formatted. Please fix.") }
@@ -223,7 +223,7 @@ BayesGLM_fun <- function(
     if (spatial_type == "mesh") {
       spatial$mask[spatial$mask] <- mask_qc$mask
     } else if (spatial_type == "voxel") {
-      spatial$label[spatial$label!=0][!mask_qc$mask] <- 0
+      spatial$labels[spatial$labels!=0][!mask_qc$mask] <- 0
     } else { stop() }
     BOLD <- lapply(BOLD, function(q){ q[,mask_qc$mask,drop=FALSE] })
   }

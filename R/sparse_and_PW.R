@@ -36,7 +36,7 @@ sparse_and_PW <- function(
   valid_inds <- if (spatial_type=="mesh") {
     which(spatial$mask)
   } else if (spatial_type=="voxel") {
-    which(spatial$label!=0)
+    which(spatial$labels!=0)
   } else { stop() }
 
 	y <- as.vector(BOLD) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v

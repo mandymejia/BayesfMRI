@@ -133,7 +133,7 @@ extract_estimates <- function(
   mask <- if (spatial_type=="mesh") {
     spatial$mask
   } else {
-    spatial$label != 0
+    spatial$labels != 0
   }
 
   #determine number of locations
