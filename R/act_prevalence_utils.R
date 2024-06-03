@@ -1,71 +1,71 @@
-#' Summarize a \code{"prev_BayesGLM"} object
+#' Summarize a \code{"prev_BGLM0"} object
 #'
-#' Summary method for class \code{"prev_BayesGLM"}
+#' Summary method for class \code{"prev_BGLM0"}
 #'
-#' @param object Object of class \code{"prev_BayesGLM"}.
+#' @param object Object of class \code{"prev_BGLM0"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.prev_BayesGLM"} object, a list summarizing the
+#' @return A \code{"summary.prev_BGLM0"} object, a list summarizing the
 #'  properties of \code{object}.
-#' @method summary prev_BayesGLM
-summary.prev_BayesGLM <- function(object, ...) {
-  class(x) <- "summary.prev_BayesGLM"
+#' @method summary prev_BGLM0
+summary.prev_BGLM0 <- function(object, ...) {
+  class(x) <- "summary.prev_BGLM0"
   x
 }
 
-#' @rdname summary.prev_BayesGLM
+#' @rdname summary.prev_BGLM0
 #' @export
 #'
-#' @param x Object of class \code{"summary.prev_BayesGLM"}.
+#' @param x Object of class \code{"summary.prev_BGLM0"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.prev_BayesGLM
-print.summary.prev_BayesGLM <- function(x, ...) {
+#' @method print summary.prev_BGLM0
+print.summary.prev_BGLM0 <- function(x, ...) {
   cat("====BayesGLM Prevalences====================\n")
   cat("Summary for prevalences is not implemented yet.\n")
   invisible(NULL)
 }
 
-#' @rdname summary.prev_BayesGLM
+#' @rdname summary.prev_BGLM0
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print prev_BayesGLM
-print.prev_BayesGLM <- function(x, ...) {
-  print.summary.prev_BayesGLM(summary(x))
+#' @method print prev_BGLM0
+print.prev_BGLM0 <- function(x, ...) {
+  print.summary.prev_BGLM0(summary(x))
 }
 
-#' Summarize a \code{"prev_BayesGLM_cifti"} object
+#' Summarize a \code{"prev_BGLM"} object
 #'
-#' Summary method for class \code{"prev_BayesGLM_cifti"}
+#' Summary method for class \code{"prev_BGLM"}
 #'
-#' @param object Object of class \code{"prev_BayesGLM_cifti"}.
+#' @param object Object of class \code{"prev_BGLM"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.prev_BayesGLM_cifti"} object, a list summarizing the
+#' @return A \code{"summary.prev_BGLM"} object, a list summarizing the
 #'  properties of \code{object}.
-#' @method summary prev_BayesGLM_cifti
-summary.prev_BayesGLM_cifti <- function(object, ...) {
-  class(x) <- "summary.prev_BayesGLM_cifti"
+#' @method summary prev_BGLM
+summary.prev_BGLM <- function(object, ...) {
+  class(x) <- "summary.prev_BGLM"
   x
 }
 
-#' @rdname summary.prev_BayesGLM_cifti
+#' @rdname summary.prev_BGLM
 #' @export
 #'
-#' @param x Object of class \code{"summary.prev_BayesGLM_cifti"}.
+#' @param x Object of class \code{"summary.prev_BGLM"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.prev_BayesGLM_cifti
-print.summary.prev_BayesGLM_cifti <- function(x, ...) {
-  cat("====BayesGLM_cifti Prevalences==============\n")
+#' @method print summary.prev_BGLM
+print.summary.prev_BGLM <- function(x, ...) {
+  cat("====BayesGLM Prevalences==============\n")
   cat("Summary for prevalences is not implemented yet.\n")
   invisible(NULL)
 }
 
-#' @rdname summary.prev_BayesGLM_cifti
+#' @rdname summary.prev_BGLM
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print prev_BayesGLM_cifti
-print.prev_BayesGLM_cifti <- function(x, ...) {
-  print.summary.prev_BayesGLM_cifti(summary(x))
+#' @method print prev_BGLM
+print.prev_BGLM <- function(x, ...) {
+  print.summary.prev_BGLM(summary(x))
 }

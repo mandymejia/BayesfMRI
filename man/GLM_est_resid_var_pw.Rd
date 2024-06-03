@@ -23,11 +23,11 @@ GLM_est_resid_var_pw(
 )
 }
 \arguments{
-\item{BOLD, design, spatial, spatial_type}{See \code{BayesGLM}.}
+\item{BOLD, design, spatial, spatial_type}{See \code{BayesGLM_fun}.}
 
-\item{session_names, field_names, design_type}{See \code{BayesGLM}.}
+\item{session_names, field_names, design_type}{See \code{BayesGLM_fun}.}
 
-\item{valid_cols, nT, nD, do_pw}{See \code{BayesGLM}.}
+\item{valid_cols, nT, nD, do_pw}{See \code{BayesGLM_fun}.}
 }
 \value{
 List of results

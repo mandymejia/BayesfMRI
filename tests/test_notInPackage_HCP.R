@@ -114,7 +114,7 @@ for (ss in seq(2)) {
 
 # BayesGLM ---------------------------------------------------------------------
 ### Classical vs Bayes; Single- vs Multi-session -----
-BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
+BGLM_cii_args <- function(n_sess, resamp_factor=1){
   list(
     BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
     design = switch(n_sess, des[[1]], des[seq(n_sess)]),
@@ -134,17 +134,17 @@ BayesGLM_cifti_args <- function(n_sess, resamp_factor=1){
 }
 
 # ##### First pass to detect errors
-bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, resamp_factor=.1)))
-bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, resamp_factor=.1)))
-bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1, resamp_factor=.1)))
-bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2, resamp_factor=.1)))
+bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
+bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
+bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=.1)))
+bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
 
 # Misc
 BOLD <- as.matrix(read_cifti(fnames$cifti_1))
 design <- abind::abind(des[[1]], des[[2]], along=3)
 nuisance <- nuis$rp_1
 
-### MultiGLM
+### multiGLM
 multiGLM(
   BOLD = BOLD,
   design = design,
@@ -153,13 +153,13 @@ multiGLM(
 )
 
 ### Per-location design
-bglmA <- BayesGLM_cifti(
+bglmA <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
   design = cbind(des[[1]], 1),
   nuisance=cbind(nuis$rp_1, dct_bases(253, 5), 1), Bayes=FALSE,
   verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
 )
-bglmB <- BayesGLM_cifti(
+bglmB <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
   design = des[[2]],
   nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
@@ -171,7 +171,7 @@ desX <- array(
   c(rep(c(desX), floor(169/2)), desX[,seq(3)]),
   dim=c(253, 3, 169)
 )
-bglmX <- BayesGLM_cifti(
+bglmX <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
   design = desX,
   #nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
@@ -182,7 +182,7 @@ bglmX <- BayesGLM_cifti(
 
 ### Subcortex
 BOLD <- read_cifti(fnames$cifti_1, brainstructures="sub")
-bglmA <- BayesGLM_cifti(
+bglmA <- BayesGLM(
   BOLD = BOLD,
   design = cbind(des[[1]], 1),
   nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
@@ -190,12 +190,12 @@ bglmA <- BayesGLM_cifti(
 )
 
 ##### Second pass to get results of decent resolution
-bglm_c1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1)))
-bglm_b1 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(1)))
-#bglm_m1 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(1, dtype="multi")))
-bglm_c2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2)))
-bglm_b2 <- do.call(BayesGLM_cifti, c(list(Bayes=TRUE), BayesGLM_cifti_args(2)))
-#bglm_m2 <- do.call(BayesGLM_cifti, c(list(Bayes=FALSE), BayesGLM_cifti_args(2, dtype="multi")))
+bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1)))
+bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1)))
+#bglm_m1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, dtype="multi")))
+bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2)))
+bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2)))
+#bglm_m2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, dtype="multi")))
 
 act_c1 <- id_activations(bglm_c1, sessions=1)
 act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)

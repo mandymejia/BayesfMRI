@@ -143,7 +143,7 @@ NULL
 #'
 #' @param mesh An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
 #'  surface data)
-#  or \code{"BayesfMRI.spde"} object (see \code{\link{make_spde_vol3D}} for subcortical data).
+#  or \code{"BayesfMRI.spde"} object (see \code{\link{make_spde_vol}} for subcortical data).
 #'
 #' @name mesh_Param_either
 NULL

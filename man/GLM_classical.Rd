@@ -21,9 +21,9 @@ GLM_classical(
 )
 }
 \arguments{
-\item{BOLD, design, nK2, nV_D, field_names, design_type}{See \code{BayesGLM}.}
+\item{BOLD, design, nK2, nV_D, field_names, design_type}{See \code{BayesGLM_fun}.}
 
-\item{vcols_ss, nT_ss, nD, var_resid, sqrtInv_all, do_pw}{See \code{BayesGLM}.}
+\item{vcols_ss, nT_ss, nD, var_resid, sqrtInv_all, do_pw}{See \code{BayesGLM_fun}.}
 
 \item{compute_SE}{compute SE?}
 }
@@ -31,6 +31,6 @@ GLM_classical(
 A list of results
 }
 \description{
-Classical GLM for BayesGLM
+Classical GLM for BayesGLM_fun
 }
 \keyword{internal}

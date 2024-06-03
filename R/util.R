@@ -1,6 +1,6 @@
 # #' Plot BayesfMRI.spde objects
 # #'
-# #' @param object Object of class BayesfMRI.spde (see \code{help(make_spde_vol3D)})
+# #' @param object Object of class BayesfMRI.spde (see \code{help(make_spde_vol)})
 # #' @param colors (Optional) Vector of colors to represent each region.
 # #' @param alpha Transparency level.
 # #'
@@ -11,7 +11,7 @@
 # #' @importFrom viridis viridis_pal
 #
 # plot.BayesfMRI.spde <- function(object, colors=NULL, alpha=0.5){
-#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(make_spde_vol3D).')
+#   if(class(object) != 'BayesfMRI.spde') stop('object argument must be a BayesfMRI.spde object. See help(make_spde_vol).')
 #   num_regions <- length(object$vertices)
 #   if(is.null(colors)) colors <- viridis_pal()(num_regions)
 #   if(length(colors) < num_regions) {
@@ -25,23 +25,23 @@
 #   }
 # }
 
-# #' Plot BayesGLM objects
+# #' Plot BayesGLM0 objects
 # #'
-# #' Summary method for class "BayesGLM"
+# #' Summary method for class "BayesGLM0"
 # #'
-# #' @param object an object of class "BayesGLM"
-# #' @param session_name NULL if BayesGLM object contains a single session; otherwise, the name of the session whose estimates to plot
+# #' @param object an object of class "BayesGLM0"
+# #' @param session_name NULL if BayesGLM0 object contains a single session; otherwise, the name of the session whose estimates to plot
 # #' @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
 # #' @param ... further arguments passed to or from other methods.
 # #' @export
 # #' @import viridis
-# #' @method plot BayesGLM
-# plot.BayesGLM <- function(object, session_name=NULL, pal=NULL, ...)
+# #' @method plot BayesGLM0
+# plot.BayesGLM0 <- function(object, session_name=NULL, pal=NULL, ...)
 # {
 #   session_names <- names(object$field_estimates)
 #
-#   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM object includes multiple sessions, you must specify which session to plot.')
-#   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM object, but it is not.')
+#   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM0 object includes multiple sessions, you must specify which session to plot.')
+#   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM0 object, but it is not.')
 #
 #   if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
 #

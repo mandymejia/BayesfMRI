@@ -11,10 +11,9 @@ coverage](https://codecov.io/gh/mandymejia/BayesfMRI/branch/master/graph/badge.s
 <!-- badges: end -->
 
 The `BayesfMRI` R package includes the main function `BayesGLM`, which
-implements a spatial Bayesian GLM for task fMRI. It also contains a
-wrapper function `BayesGLM_cifti`, for CIFTI cortical surface fMRI data.
+implements a spatial Bayesian GLM for task fMRI in CIFTI file format. 
 
-<!-- * `BayesGLM_vol3D` - implements `BayesGLM` on NIFTI subcortical voxel fMRI data -->
+<!-- * `BayesGLM_vol` - implements `BayesGLM` on NIFTI subcortical voxel fMRI data -->
 
 ## Citation
 
@@ -30,6 +29,11 @@ You can also obtain citation information from within R like so:
 ``` r
 citation("BayesfMRI")
 ```
+
+## Function names change
+
+In version 0.8.0 (June 2024), the function `BayesGLM_cifti` was renamed to
+`BayesGLM`, and the function `BayesGLM` was renamed to `BayesGLM0`.
 
 ## Important Note on Dependencies:
 

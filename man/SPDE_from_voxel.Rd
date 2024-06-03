@@ -7,7 +7,7 @@
 SPDE_from_voxel(spatial)
 }
 \arguments{
-\item{spatial}{See \code{BayesGLM}.}
+\item{spatial}{See \code{BayesGLM0}.}
 }
 \value{
 List

@@ -1,4 +1,4 @@
-#' Fixed point function for the joint BayesGLMEM update algorithm
+#' Fixed point function for the joint BayesGLM EM update algorithm
 #'
 #' @param theta a list containing kappa2, phi, and sigma2, in that order
 #' @param spde the spde object

@@ -1,9 +1,9 @@
 #' Classical GLM
 #'
-#' Classical GLM for BayesGLM
+#' Classical GLM for BayesGLM_fun
 #'
-#' @param BOLD,design,nK2,nV_D,field_names,design_type See \code{BayesGLM}.
-#' @param vcols_ss,nT_ss,nD,var_resid,sqrtInv_all,do_pw See \code{BayesGLM}.
+#' @param BOLD,design,nK2,nV_D,field_names,design_type See \code{BayesGLM_fun}.
+#' @param vcols_ss,nT_ss,nD,var_resid,sqrtInv_all,do_pw See \code{BayesGLM_fun}.
 #' @param compute_SE compute SE?
 #' @return A list of results
 #' @keywords internal

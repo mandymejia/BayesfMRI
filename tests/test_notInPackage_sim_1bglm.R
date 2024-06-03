@@ -55,7 +55,7 @@ for (ii in seq(nrow(params))) {
   if (file.exists(outf_ii)) { next }
 
   # Do BayesGLM_cifti
-  exec_time <- system.time(bfmri_ii <- BayesGLM_cifti(
+  exec_time <- system.time(bfmri_ii <- BayesGLM(
     cifti_fname = bsim$simulated_cifti[seq(params$sess[ii])],
     surfL_fname=ciftiTools.files()$surf["left"],
     surfR_fname=ciftiTools.files()$surf["right"],

@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_design.R
 \name{plot.BfMRI_design}
 \alias{plot.BfMRI_design}
-\title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object}
+\title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM"} object}
 \usage{
 \method{plot}{BfMRI_design}(x, ...)
 }
@@ -15,5 +15,5 @@
 Result of the call to \code{\link{plot_design}}
 }
 \description{
-S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object
+S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM"} object
 }

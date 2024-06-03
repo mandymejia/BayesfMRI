@@ -2,13 +2,21 @@
 % Please edit documentation in R/BayesGLM.R
 \name{BayesGLM}
 \alias{BayesGLM}
-\title{BayesGLM}
+\title{BayesGLM for CIFTI}
 \usage{
 BayesGLM(
   BOLD,
+  brainstructures = c("left", "right"),
   design,
   nuisance = NULL,
-  spatial,
+  hpf = NULL,
+  TR = NULL,
+  surfL = NULL,
+  surfR = NULL,
+  resamp_res = 10000,
+  nbhd_order = 1,
+  buffer = c(1, 1, 3, 4, 4),
+  session_names = NULL,
   scale_BOLD = c("auto", "mean", "sd", "none"),
   Bayes = TRUE,
   ar_order = 6,
@@ -22,22 +30,82 @@ BayesGLM(
 )
 }
 \arguments{
-\item{BOLD, design, nuisance}{Session-length list of numeric matrices/arrays,
-each with volumes along the first dimension.}
+\item{BOLD}{fMRI timeseries data in CIFTI format ("*.dtseries.nii").
+For single-session analysis this can be a file path to a CIFTI file or a
+\code{"xifti"} object from the \code{ciftiTools} package. For multi-session
+analysis this can be a vector of file paths or a list of \code{"xifti"}
+objects.
 
-\item{spatial}{Gives the spatial information. For surface data, a list of two:
-\describe{
-\item{surf}{A list of two: \code{vertices} \eqn{V \times 3} numeric matrix of vertex locations in XYZ coordinate space, and \code{faces}, \eqn{F \times 3} matrix of positive integers defining the triangular faces.}
-\item{mask}{Mask of locations with valid data.}
-}
-For voxel data, a list of six:
-\describe{
-\item{label}{3D array of labeled locations to include in the model.}
-\item{trans_mat}{Projection matrix to convert voxel indices to XYZ position. Can be \code{NULL}.}
-\item{trans_units}{XYZ units. Can be \code{NULL}.}
-\item{nbhd_order}{See documentation for \code{\link{BayesGLM_cifti}}.}
-\item{buffer}{See documentation for \code{\link{BayesGLM_cifti}}.}
-}}
+If \code{BOLD} is a \code{"xifti"} object(s), the surfaces, if any, will be
+used for the spatial model. However, if \code{surfL} and \code{surfR} are
+provided, they will override any surfaces in \code{BOLD}.}
+
+\item{brainstructures}{Character vector indicating which brain structure(s)
+of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
+and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
+(cortex only).}
+
+\item{design}{A numeric matrix or \code{data.frame}, or a
+\code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
+be an array where the third dimension is the same length as the number of
+data locations, to model each location with its own design.}
+
+\item{nuisance}{(Optional) A \eqn{T \times N} matrix of nuisance signals,
+where \eqn{T} is the number of timepoints and \eqn{N} is the number of
+nuisance signals, or a list of these for multi-session analysis. Nuisance
+signals are regressed from the fMRI data and design matrix prior to GLM
+computation. Nuisance signals can include motion regressors, HRF derivatives
+not being modeled as tasks, and other sources of noise.
+
+Detrending/high-pass filtering is accomplished by adding DCT bases to the
+nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
+
+\item{hpf}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
+filter to the data, for detrending? \code{hpf} is the filter frequency.
+Use \code{NULL} to skip detrending. Detrending is strongly recommended for
+fMRI data, to help reduce the autocorrelation in the residuals, so
+\code{NULL} will induce a warning. Use \code{"already"} to disable the
+warning while skipping highpass filtering.
+
+Using at least two DCT bases is as sufficient for detrending as using linear
+and quadratic drift terms in the nuisance matrix. So if DCT detrending is
+being used here, there is no need to add linear and quadratic drift terms to
+\code{nuisance}.}
+
+\item{TR}{Temporal resolution of the data, in seconds.}
+
+\item{surfL, surfR}{For cortex spatial model. Left and right cortex surface
+geometry in GIFTI format ("*.surf.gii"). These can be a file path to
+a GIFTI file or a \code{"surf"} object from \code{ciftiTools}.
+
+Surfaces can alternatively be provided through the \code{$surf} metadata in
+\code{BOLD} if it is \code{"xifti"} data. If neither are provided, the
+HCP group-average inflated surface included in \code{ciftiTools} will be
+used for the cortex spatial model.}
+
+\item{resamp_res}{For cortex spatial model. The number of vertices to which
+each cortical surface should be resampled, or \code{NULL} to not resample.
+
+For computational feasibility, a value of \code{10000} (default) or lower is
+recommended for Bayesian spatial modeling. If \code{Bayes=FALSE},
+\code{resamp_res} can be set to \code{NULL} for full-resolution classical
+modeling.}
+
+\item{nbhd_order}{For volumetric model. What order neighborhood around data
+locations to keep? \code{0} for no neighbors, \code{1} for 1st-order
+neighbors, \code{2} for 1st- and 2nd-order neighbors, etc. Smaller values
+will provide greater computational efficiency at the cost of higher variance
+around the edge of the data.}
+
+\item{buffer}{For volumetric model. The number of extra voxel layers around
+the bounding box. Set to \code{NULL} for no buffer. (We recommend not
+changing \code{buffer} unless you know what you're doing. Instead, to reduce
+the number of boundary voxels, adjust \code{nbhd_order}).}
+
+\item{session_names}{The names of the task-fMRI \code{BOLD} sessions, for
+multi-session analysis. If not provided here, will be inferred from
+\code{names(BOLD)}, inferred from \code{names(design)}, or generated
+automatically, in that order.}
 
 \item{scale_BOLD}{Controls scaling the BOLD response at each location.
 \describe{
@@ -85,39 +153,55 @@ output.}
 computation; \code{2} for occasional updates as well as running INLA in
 verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 
-\item{meanTol, varTol}{Tolerance for mean, variance and SNR of each data location.
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
-Default: \code{1e-6} for mean and variance, \code{50} for SNR.}
+Default: \code{1e-6} for both.}
 }
 \value{
-A \code{"BayesGLM"} object: a list with elements
+An object of class \code{"BayesGLM"}: a list with elements
 \describe{
-\item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
-\item{field_estimates}{The estimated coefficients for the Bayesian model.}
-\item{result_classical}{Results from the classical model: field estimates, field standard error estimates, residuals, degrees of freedom, and the mask.}
-\item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
-\item{mesh_orig}{The original mesh provided.}
-\item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
-\item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
-\item{field_names}{The names of the fields.}
-\item{session_names}{The names of the sessions.}
-\item{hyperpar_posteriors}{Hyperparameter posterior densities.}
-\item{theta_estimates}{Theta estimates from the Bayesian model.}
-\item{posterior_Sig_inv}{For joint group modeling.}
-\item{mu_theta}{For joint group modeling.}
-\item{Q_theta}{For joint group modeling.}
-\item{y}{For joint group modeling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
-\item{X}{For joint group modeling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
-\item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
-\item{call}{match.call() for this function call.}
+\item{betas_Bayesian}{The field coefficients for the Bayesian model.}
+\item{betas_classical}{The field coefficients for the classical model.}
+\item{GLMs_Bayesian}{The entire list of GLM results, except for parameters estimated for the classical model.}
+\item{GLMs_classical}{Parameters estimated for the classical model from the GLM.}
+\item{brainstructures}{\code{data.frame} summarizing the spatial features of each brain structure modeled.}
+\item{sessions}{\code{data.frame} with the \code{name} and \code{nTime} of each BOLD session.}
+\item{fields}{\code{data.frame} with the \code{name}, related \code{task}, and \code{HRF_order} of each field.}
 }
 }
 \description{
-Performs spatial Bayesian GLM for task fMRI activation
+Performs spatial Bayesian GLM for task fMRI activation with CIFTI-format
+data. The cortex is modeled as a surface mesh, and subcortical structures
+are modeled as distinct volumetric regions. Includes the pre-processing
+steps of nuisance regression, prewhitening, scaling, and variance
+normalization. Supports both single- and multi-session analysis. Can also
+compute just the classical (spatially-independent)
 }
+\details{
+To use \code{BayesGLM}, the design matrix must first be constructed
+with \code{\link{make_design}}.
+}
+\section{Connectome Workbench Requirement}{
+
+
+This function uses a system wrapper for the 'wb_command' executable. The
+user must first download and install the Connectome Workbench, available
+from https://www.humanconnectome.org/software/get-connectome-workbench .
+}
+
 \section{INLA Requirement}{
 
 This function requires the \code{INLA} package, which is not a CRAN package.
 See \url{https://www.r-inla.org/download-install} for easy installation instructions.
+}
+
+\section{INLA Latent Fields Limit}{
+
+INLA computation times increase greatly when the number of columns in the
+design matrix exceeds five: when there are more than five tasks, or more
+than three tasks each with a temporal derivative modeled as a field. In
+cases like the latter, we recommend modeling the temporal derivatives as
+nuisance signals using the option \code{dHRF_as="nuisance"}, rather than
+modeling the temporal derivatives as fields.
 }
 

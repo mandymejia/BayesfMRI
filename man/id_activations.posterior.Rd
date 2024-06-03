@@ -7,7 +7,7 @@
 id_activations.posterior(model_obj, fields, session, alpha = 0.05, gamma)
 }
 \arguments{
-\item{model_obj}{Result of \code{BayesGLM}, of class \code{"BayesGLM"}.}
+\item{model_obj}{Result of \code{BayesGLM}, of class \code{"BayesGLM0"}.}
 
 \item{fields, session, alpha, gamma}{See \code{\link{id_activations}}.}
 }

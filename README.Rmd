@@ -13,7 +13,7 @@ output: github_document
 
 The `BayesfMRI` R package includes the main function `BayesGLM`, which implements a spatial Bayesian GLM for task fMRI. It also contains a wrapper function `BayesGLM_cifti`, for CIFTI cortical surface fMRI data.
 
-<!-- * `BayesGLM_vol3D` - implements `BayesGLM` on NIFTI subcortical voxel fMRI data -->
+<!-- * `BayesGLM_vol` - implements `BayesGLM` on NIFTI subcortical voxel fMRI data -->
 
 ## Citation
 

@@ -1,4 +1,4 @@
-#' multiGLM
+#' multiGLM0
 #'
 #' Performs classical GLM for task fMRI activation, comparing multiple designs
 #'
@@ -48,7 +48,7 @@
 #'
 #' @importFrom methods as
 #' @export
-multiGLM <- function(
+multiGLM_fun <- function(
   BOLD,
   design,
   # Below arguments shared with `mutliGLM_cifti`.
@@ -77,7 +77,7 @@ multiGLM <- function(
   scale_BOLD <- x$scale_BOLD
   rm(x)
 
-  # Modeled after `BayesGLM_cifti` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Modeled after `BayesGLM` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #   But note that `BOLD`, `design`, and `nuisance` will be
   #   matrix/array rather than lists.
   ### Check `BOLD`. ------------------------------------------------------------

@@ -18,12 +18,6 @@
 ^tests/test_notInPackage_HCP_sub\.R$
 # below: was going to add to pkg, but didn't
 ^tests/data
-# Volumetric -------------------
-^R/BayesGLM_vol3D\.R$
-#^R/make_spde_vol3D\.R$
-^R/vol2mesh\.R$
-^R/make_slice_mesh\.R$
-^R/plot_slice\.R$
 # EM ---------------------------
 # ^R/EM_utils\.R$
 # Vignettes (TO-DO) ------------

@@ -1,21 +1,21 @@
-#' Summarize a \code{"act_BayesGLM"} object
+#' Summarize a \code{"act_BGLM0"} object
 #'
-#' Summary method for class \code{"act_BayesGLM"}
+#' Summary method for class \code{"act_BGLM0"}
 #'
-#' @param object Object of class \code{"act_BayesGLM"}.
+#' @param object Object of class \code{"act_BGLM0"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.act_BayesGLM"} object, a list summarizing the
+#' @return A \code{"summary.act_BGLM0"} object, a list summarizing the
 #'  properties of \code{object}.
-#' @method summary act_BayesGLM
-summary.act_BayesGLM <- function(object, ...) {
+#' @method summary act_BGLM0
+summary.act_BGLM0 <- function(object, ...) {
   # This is the possible structure of `object`:
   # object$activations$cortex_left$(session1)$`gamma=g`$active # CIFTI BayesGLM
   # object$activations$(session1)$`gamma=g`$active # BayesGLM
 
   # Try to make one consistent structure...
   act <- object$activations[!vapply(object$activations, is.null, FALSE)]
-  if (inherits(object, "act_BayesGLM")) { act <- list(model=act) } # See line near end of function
+  if (inherits(object, "act_BGLM0")) { act <- list(model=act) } # See line near end of function
   if ("p_values" %in% names(act[[1]][[1]])) { act <- list(single_session=act) }
   act <- act[!vapply(act, function(q){is.null(q[[1]])}, FALSE)]
 
@@ -39,25 +39,25 @@ summary.act_BayesGLM <- function(object, ...) {
     #excur_method
   )
 
-  if (inherits(object, "act_BayesGLM")) { x$activations_g1 <- x$activations_g1$model } # See line near top of function
+  if (inherits(object, "act_BGLM0")) { x$activations_g1 <- x$activations_g1$model } # See line near top of function
 
-  class(x) <- "summary.act_BayesGLM"
+  class(x) <- "summary.act_BGLM0"
   x
 }
 
-#' @rdname summary.act_BayesGLM
+#' @rdname summary.act_BGLM0
 #' @export
 #'
-#' @param x Object of class \code{"summary.act_BayesGLM"}.
+#' @param x Object of class \code{"summary.act_BGLM0"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.act_BayesGLM
-print.summary.act_BayesGLM <- function(x, ...) {
+#' @method print summary.act_BGLM0
+print.summary.act_BGLM0 <- function(x, ...) {
   gamma_msg <- if (length(x$gamma)>1) {
     paste0(" (lowest threshold, gamma=", x$gamma[1], ")")
   } else {
     ""
   }
-  cat("====BayesGLM Activations====================\n")
+  cat("====BayesGLM0 Activations===================\n")
   cat(paste0(
     "Activated locations (",
     sum(x$activations_g1[[1]][,1]), " modeled locations)",
@@ -86,44 +86,44 @@ print.summary.act_BayesGLM <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.act_BayesGLM
+#' @rdname summary.act_BGLM0
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print act_BayesGLM
-print.act_BayesGLM <- function(x, ...) {
-  print.summary.act_BayesGLM(summary(x))
+#' @method print act_BGLM0
+print.act_BGLM0 <- function(x, ...) {
+  print.summary.act_BGLM0(summary(x))
 }
 
-#' Summarize a \code{"act_BayesGLM_cifti"} object
+#' Summarize a \code{"act_BGLM"} object
 #'
-#' Summary method for class \code{"act_BayesGLM_cifti"}
+#' Summary method for class \code{"act_BGLM"}
 #'
-#' @param object Object of class \code{"act_BayesGLM_cifti"}.
+#' @param object Object of class \code{"act_BGLM"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.act_BayesGLM_cifti"} object, a list summarizing the
+#' @return A \code{"summary.act_BGLM"} object, a list summarizing the
 #'  properties of \code{object}.
-#' @method summary act_BayesGLM_cifti
-summary.act_BayesGLM_cifti <- function(object, ...) {
-  x <- summary.act_BayesGLM(object, ...)
-  class(x) <- "summary.act_BayesGLM_cifti"
+#' @method summary act_BGLM
+summary.act_BGLM <- function(object, ...) {
+  x <- summary.act_BGLM(object, ...)
+  class(x) <- "summary.act_BGLM"
   x
 }
 
-#' @rdname summary.act_BayesGLM_cifti
+#' @rdname summary.act_BGLM
 #' @export
 #'
-#' @param x Object of class \code{"summary.act_BayesGLM_cifti"}.
+#' @param x Object of class \code{"summary.act_BGLM"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.act_BayesGLM_cifti
-print.summary.act_BayesGLM_cifti <- function(x, ...) {
+#' @method print summary.act_BGLM
+print.summary.act_BGLM <- function(x, ...) {
   gamma_msg <- if (length(x$gamma)>1) {
     paste0(" (lowest threshold, gamma=", x$gamma[1], ")")
   } else {
     ""
   }
-  cat("====BayesGLM_cifti Activations==============\n")
+  cat("====BayesGLM Activations====================\n")
   cat(paste0("Activated locations", gamma_msg, ":\n"))
   if (!("active" %in% names(x$activations_g1[[1]]))) {
     # for (ii in seq(length(x$activations_g1))) {
@@ -156,11 +156,11 @@ print.summary.act_BayesGLM_cifti <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.act_BayesGLM_cifti
+#' @rdname summary.act_BGLM
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print act_BayesGLM_cifti
-print.act_BayesGLM_cifti <- function(x, ...) {
-  print.summary.act_BayesGLM_cifti(summary(x))
+#' @method print act_BGLM
+print.act_BGLM <- function(x, ...) {
+  print.summary.act_BGLM(summary(x))
 }

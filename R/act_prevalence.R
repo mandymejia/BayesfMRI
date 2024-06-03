@@ -14,11 +14,11 @@
 #' @export 
 act_prevalance <- function(act_list, gamma_idx=1){
 
-  # Determine if `act_BayesGLM_cifti` or `act_BayesGLM`.
-  is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BayesGLM_cifti") }, FALSE))
+  # Determine if `act_BGLM` or `act_BGLM0`.
+  is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BGLM") }, FALSE))
   if (!is_cifti) {
-    if (!all(vapply(act_list, function(q){ inherits(q, "act_BayesGLM") }, FALSE))) {
-      stop("All objects in `act_list` must be the same type of result from `id_activations`: either `act_BayesGLM_cifti` or `act_BayesGLM`.")
+    if (!all(vapply(act_list, function(q){ inherits(q, "act_BGLM0") }, FALSE))) {
+      stop("All objects in `act_list` must be the same type of result from `id_activations`: either `act_BGLM` or `act_BGLM0`.")
     }
   }
 
@@ -81,13 +81,13 @@ act_prevalance <- function(act_list, gamma_idx=1){
     session_names = session_names
   )
 
-  # If BayesGLM, return.
+  # If BGLM0, return.
   if (!is_cifti) {
-    class(result) <- "prev_BayesGLM"
+    class(result) <- "prev_BGLM0"
     return(result)
   }
 
-  # If BayesGLM_cifti, create 'xifti' with activations.
+  # If BGLM, create 'xifti' with activations.
   prev_xii <- vector("list", nS)
   names(prev_xii) <- session_names
   for (session in session_names) {
@@ -104,6 +104,6 @@ act_prevalance <- function(act_list, gamma_idx=1){
   }
 
   result <- c(list(prev_xii=prev_xii), result)
-  class(result) <- "prev_BayesGLM_cifti"
+  class(result) <- "prev_BGLM"
   result
 }

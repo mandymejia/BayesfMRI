@@ -7,7 +7,7 @@
 SPDE_from_mesh(spatial)
 }
 \arguments{
-\item{spatial}{See \code{BayesGLM}.}
+\item{spatial}{See \code{BayesGLM0}.}
 }
 \value{
 List

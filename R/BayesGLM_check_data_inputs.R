@@ -22,8 +22,8 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 
 #' Format design
 #'
-#' Format design for \code{BayesGLM_cifti}, \code{BayesGLM},
-#'  \code{MultiGLM_cifti}, and \code{MultiGLM}.
+#' Format design for \code{BayesGLM}, \code{BayesGLM_fun},
+#'  \code{multiGLM}, and \code{multiGLM_fun}.
 #' @param design The \code{design} argument input. Will be formatted to a
 #'  \code{nS}-length list.
 #' @param scale_design Scale the design matrix by dividing each column by its
@@ -36,7 +36,7 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 #'  modeling this is equal to \code{nVd0}, the initial number of data locations.
 #'  For multi-session data this is a session-length vector.
 #' @param per_location_design \code{FALSE} if per-location modeling is not
-#'  being performed (i.e. for MultiGLM); \code{TRUE} if it is; or, \code{NULL}
+#'  being performed (i.e. for multiGLM); \code{TRUE} if it is; or, \code{NULL}
 #'  to infer based on the dimensions of \code{design} (\code{TRUE} if the
 #'  design has three dimensions.)
 #' @keywords internal
@@ -143,12 +143,12 @@ BayesGLM_format_design <- function(
         }
       }
     } else {
-      # for MultiGLM
+      # for multiGLM
       if (length(unique(design_names)) > 1) {
         stop("Design names (third dim. of the design) should not differ across sessions.")
       }
       design_names <- design_names[[1]]
-      # Set `design_names` for MultiGLM, if not provided.
+      # Set `design_names` for multiGLM, if not provided.
       if (is.null(design_names)) {
         cat("Setting design names to 'design_1'")
         if (nK>1) { cat(", 'design_2'") }
@@ -237,8 +237,8 @@ BayesGLM_format_design <- function(
 
 #' Format nuisance
 #'
-#' Format nuisance for \code{BayesGLM_cifti}, \code{BayesGLM},
-#'  \code{MultiGLM_cifti}, and \code{MultiGLM}.
+#' Format nuisance for \code{BayesGLM}, \code{BayesGLM_fun},
+#'  \code{multiGLM}, and \code{multiGLM_fun}.
 #' @param nuisance The \code{nuisance} argument input. Will be formatted to a
 #'  \code{nS}-length list.
 #' @param nS_expect The expected number of sessions, if known.

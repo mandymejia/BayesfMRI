@@ -6,19 +6,19 @@
 #'
 #' @inheritSection Connectome_Workbench_Description Connectome Workbench Requirement
 #'
-#' @inheritParams BOLD_Param_BayesGLM_cifti
+#' @inheritParams BOLD_Param_BayesGLM
 #' @param design A 3D numeric array that is locations by fields by designs.
-#' @inheritParams TR_Param_BayesGLM_cifti
-#' @inheritParams brainstructures_Param_BayesGLM_cifti
-#' @inheritParams resamp_res_Param_BayesGLM_cifti
-#' @inheritParams nuisance_Param_BayesGLM_cifti
-#' @inheritParams hpf_Param_BayesGLM_cifti
+#' @inheritParams TR_Param_BayesGLM
+#' @inheritParams brainstructures_Param_BayesGLM
+#' @inheritParams resamp_res_Param_BayesGLM
+#' @inheritParams nuisance_Param_BayesGLM
+#' @inheritParams hpf_Param_BayesGLM
 #' @inheritParams scale_BOLD_Param
 #' @param design_canonical TO DO
 #' @inheritParams verbose_Param
 #' @inheritParams mean_var_Tol_Param
 #'
-#' @return An object of class \code{"BayesGLM_cifti"}: a list with elements
+#' @return An object of class \code{"mGLM"}: a list with elements
 #'  \describe{
 #'    \item{brainstructures}{\code{data.frame} summarizing the spatial features of each brain structure modeled.}
 #'    \item{fields}{\code{data.frame} with the \code{name}, related \code{task}, and \code{HRF_order} of each field.}
@@ -30,7 +30,7 @@
 #'
 #' @export
 #'
-multiGLM_cifti <- function(
+multiGLM <- function(
   BOLD,
   design,
   brainstructures=c('left','right'),
@@ -57,7 +57,7 @@ multiGLM_cifti <- function(
 
   do <- vector("list")
 
-  # In a separate function because these checks are shared with `BayesGLM`.
+  # In a separate function because these checks are shared with `BayesGLM0`.
   x <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
     Bayes=FALSE,
@@ -185,7 +185,7 @@ multiGLM_cifti <- function(
     out <- paste0(out, ".\n")
   }
 
-  # Above code based on `BayesGLM_cifti` which allows `nS>1`. Simplify now.
+  # Above code based on `BayesGLM` which allows `nS>1`. Simplify now.
   BOLD <- BOLD[[1]]
   design <- design[[1]]
   nuisance <- nuisance[[1]]
@@ -268,7 +268,7 @@ multiGLM_cifti <- function(
   if (!do$sub) { BOLD$subcort <- NULL }
 
   # Do GLM. --------------------------------------------------------------------
-  multiGLM_results <- setNames(vector("list", length(BOLD)), names(BOLD))
+  mGLM0s <- setNames(vector("list", length(BOLD)), names(BOLD))
 
   ## Loop through brainstructures. ---------------------------------------------
   bs_names <- data.frame(
@@ -281,8 +281,8 @@ multiGLM_cifti <- function(
     dname_bb <- bs_names$d[bb]
     if (verbose>0) { cat(bs_names$v[bb], "analysis:\n") }
 
-    ## `BayesGLM` call. --------------------------------------------------------
-    multiGLM_results[[dname_bb]] <- multiGLM(
+    ## `multiGLM_fun` call. ----------------------------------------------------
+    mGLM0s[[dname_bb]] <- multiGLM_fun(
       BOLD = BOLD[[dname_bb]],
       design = design,
       nuisance = nuisance,
@@ -303,17 +303,17 @@ multiGLM_cifti <- function(
     Fstat_xii = NULL,
     nuisance = nuisance,
     field_names = field_names,
-    multiGLM_results = multiGLM_results
+    mGLM0s = mGLM0s
   )
 
   #format as xii: (1) index of best model and (2) locations of no signal
   for(meas in c('bestmodel', 'Fstat', 'pvalF')){
     xii_meas <- as.xifti(
-      cortexL = multiGLM_results$cortexL[[meas]],
+      cortexL = mGLM0s$cortexL[[meas]],
       cortexL_mwall = maskL,
-      cortexR = multiGLM_results$cortexR[[meas]],
+      cortexR = mGLM0s$cortexR[[meas]],
       cortexR_mwall = maskR,
-      subcortVol = multiGLM_results$subcortical[[meas]],
+      subcortVol = mGLM0s$subcortical[[meas]],
       subcortLabs = submeta$labels,
       subcortMask = submeta$mask
     )
@@ -331,6 +331,6 @@ multiGLM_cifti <- function(
     labels=design_names, add_white=FALSE
   )
 
-  class(result) <- "multiGLM_cifti"
+  class(result) <- "mGLM"
   result
 }

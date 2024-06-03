@@ -1,7 +1,7 @@
 Package: BayesfMRI
 Type: Package
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.7.5
+Version: 0.8.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -48,7 +48,7 @@ Imports:
     ciftiTools (>= 0.14.0),
     excursions,
     foreach,
-    fMRItools (>= 0.3.0),
+    fMRItools (>= 0.4.7),
     MASS,
     Matrix,
     matrixStats,

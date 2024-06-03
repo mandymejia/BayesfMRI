@@ -1,4 +1,4 @@
-#' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BayesGLM_cifti"} object
+#' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM"} object
 #'
 #' @param x An object of class "BfMRI_design".
 #' @param ... Additional arguments to \code{\link{plot_design}}.

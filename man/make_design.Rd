@@ -51,7 +51,7 @@ matrix columns may exceed five, which may require large computation times
 with INLA. The analysis can be adjusted by modeling the derivatives as
 nuisance signals rather than as fields. To do so, move the corresponding
 columns from the design matrix to the \code{nuisance} argument for
-\code{BayesGLM_cifti}.}
+\code{BayesGLM}.}
 
 \item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}

@@ -8,9 +8,9 @@
 #' 	and \code{X_k} (a sparse TVxV matrix corresponding to the kth field regressor) for each field k.
 #' 	The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 #'
-#' @param BOLD,design,spatial,spatial_type See \code{BayesGLM}.
-#' @param field_names,design_type See \code{BayesGLM}.
-#' @param valid_cols,nT,nD,sqrtInv_all See \code{BayesGLM}.
+#' @param BOLD,design,spatial,spatial_type See \code{BayesGLM0}.
+#' @param field_names,design_type See \code{BayesGLM0}.
+#' @param valid_cols,nT,nD,sqrtInv_all See \code{BayesGLM0}.
 #'
 #' @return A list containing fields \code{y} and \code{A} (see Details)
 #'
@@ -59,7 +59,7 @@ sparse_and_PW <- function(
 	      X[,kk] <- rep(NA, length(X[,kk]))
 	    }
 	    # Expand the kth column of X into a VT x V.
-	    # Then in `BayesGLM`: will post-multiply by A to get a VT x V2 matrix
+	    # Then in `BayesGLM0`: will post-multiply by A to get a VT x V2 matrix
 	    #   (a V x V2 matrix for each time point).
 	    X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV$D))
 	    # #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().

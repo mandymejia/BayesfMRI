@@ -1,6 +1,6 @@
 #' SPDE from voxel model
 #'
-#' @param spatial See \code{BayesGLM}.
+#' @param spatial See \code{BayesGLM0}.
 #' @return List
 #' @keywords internal
 SPDE_from_voxel <- function(spatial){

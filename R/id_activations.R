@@ -1,10 +1,10 @@
 #' Identify field activations
 #'
 #' Identify areas of activation for each field from the result of \code{BayesGLM}
-#'  or \code{BayesGLM_cifti}.
+#'  or \code{BayesGLM_fun}.
 #'
-#' @param model_obj Result of \code{BayesGLM} or \code{BayesGLM_cifti} model
-#'  call, of class \code{"BayesGLM"} or \code{"BayesGLM_cifti"}.
+#' @param model_obj Result of \code{BayesGLM} or \code{BayesGLM_fun} model
+#'  call, of class \code{"BGLM"} or \code{"BGLM"}.
 # @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
 #' @param fields The field(s) to identify activations for. Give either the name(s)
 #'  as a character vector, or the numerical indices. If \code{NULL} (default),
@@ -49,7 +49,7 @@
 #' @importFrom utils packageVersion
 #' @importFrom viridisLite plasma
 #'
-#' @return An \code{"act_BayesGLM"} or \code{"act_BayesGLM_cifti"} object, a
+#' @return An \code{"act_BGLM"} or \code{"act_BGLM0"} object, a
 #'  list which indicates the activated locations along with related information.
 #' @export
 #'
@@ -77,14 +77,14 @@ id_activations <- function(
     }
   }
 
-  # If 'BayesGLM_cifti', we will loop over the brain structures.
-  is_cifti <- inherits(model_obj, "BayesGLM_cifti")
+  # If 'BGLM', we will loop over the brain structures.
+  is_cifti <- inherits(model_obj, "BGLM")
   if (is_cifti) {
     cifti_obj <- model_obj
     model_obj <- cifti_obj$BayesGLM_results
   } else {
-    if (!inherits(model_obj, "BayesGLM")) {
-      stop("`model_obj` is not a `'BayesGLM'` or 'BayesGLM_cifti' object.")
+    if (!inherits(model_obj, "BGLM0")) {
+      stop("`model_obj` is not a `'BGLM'` or 'BGLM0' object.")
     }
     model_obj <- list(bglm=model_obj)
   }
@@ -157,7 +157,7 @@ id_activations <- function(
   for (bb in seq(nB)) {
     if (is.null(model_obj[[bb]])) { next }
     if (method=="Bayesian" && identical(attr(model_obj[[bb]]$INLA_model_obj, "format"), "minimal")) {
-      stop("Bayesian activations are not available because `return_INLA` was set to `'minimal'` in the `BayesGLM` call. Request the classical activations, or re-run `BayesGLM`.")
+      stop("Bayesian activations are not available because `return_INLA` was set to `'minimal'` in the `BayesGLM0` call. Request the classical activations, or re-run `BayesGLM0`.")
     }
     if (method=="Bayesian" && models[bb]!="bglm") {
       if (verbose>0) cat(paste0("Identifying Bayesian GLM activations in ",models[bb],'\n'))
@@ -189,14 +189,14 @@ id_activations <- function(
     #excur_method = c("EB", "QC")
   )
 
-  # If BayesGLM, return.
+  # If BayesGLM0, return.
   if (!is_cifti) {
     result$activations <- result$activations[[1]]
-    class(result) <- "act_BayesGLM"
+    class(result) <- "act_BGLM0"
     return(result)
   }
 
-  # If BayesGLM_cifti, create 'xifti' with activations.
+  # If BGLM, create 'xifti' with activations.
   act_xii <- vector("list", length(sessions))
   names(act_xii) <- sessions
   for (session in sessions) {
@@ -255,7 +255,7 @@ id_activations <- function(
   }
 
   result <- c(list(activations_xii=act_xii), result)
-  class(result) <- "act_BayesGLM_cifti"
+  class(result) <- "act_BGLM"
   result
 }
 
@@ -268,7 +268,7 @@ id_activations <- function(
 #'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
 #'  posterior distribution of the latent field.
 #'
-#' @param model_obj Result of \code{BayesGLM}, of class \code{"BayesGLM"}.
+#' @param model_obj Result of \code{BayesGLM}, of class \code{"BayesGLM0"}.
 #' @param fields,session,alpha,gamma See \code{\link{id_activations}}.
 # @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
 # depending on the method that should be used to find the excursions set. Note that to ID
@@ -290,7 +290,7 @@ id_activations.posterior <- function(
   #area.limit=NULL,
   #excur_method = c("EB","QC")
 
-  stopifnot(inherits(model_obj, "BayesGLM"))
+  stopifnot(inherits(model_obj, "BGLM0"))
   #excur_method <- match.arg(excur_method, c("EB","QC"))
 
   sess_ind <- which(model_obj$session_names == session)
@@ -356,11 +356,11 @@ id_activations.classical <- function(model_obj,
                                      mesh = NULL) {
 
   # Argument checks ------------------------------------------------------------
-  if (!inherits(model_obj, "BayesGLM")) {
+  if (!inherits(model_obj, "BGLM0")) {
     stop(paste0(
       "The model object is of class ",
       paste0(class(model_obj), collapse=", "),
-      " but should be of class 'BayesGLM'."
+      " but should be of class 'BGLM0'."
     ))
   }
   # fields, session, alpha, gamma checked in `id_activations`
@@ -433,7 +433,7 @@ id_activations.classical <- function(model_obj,
 # #'  threshold (e.g. 1 percent signal change) at a given significance level, based on the joint
 # #'  posterior distribution of the latent field.
 # #'
-# #' @param model_obj An object of class \code{"BayesGLM"}, a result of a call
+# #' @param model_obj An object of class \code{"BayesGLM0"}, a result of a call
 # #'  to \code{BayesGLMEM}.
 # #' @param fields Name of latent field or vector of names on which to identify activations.  By default, analyze all fields.
 # #' @param sessions (character) The name of the session that should be examined.
@@ -459,11 +459,11 @@ id_activations.classical <- function(model_obj,
 #            alpha = 0.05,
 #            gamma,
 #            area.limit = NULL) {
-#     if (!inherits(model_obj, "BayesGLM"))
+#     if (!inherits(model_obj, "BayesGLM0"))
 #       stop(paste0(
 #         "The model object is of class ",
 #         class(model_obj),
-#         " but should be of class 'BayesGLM'."
+#         " but should be of class 'BayesGLM0'."
 #       ))
 #     #check sessions argument
 
@@ -493,7 +493,7 @@ id_activations.classical <- function(model_obj,
 #     }
 
 #     # Make an indicator for subcortical data
-#     is_subcort <- "BayesGLMEM_vol3D" %in% as.character(model_obj$call)
+#     is_subcort <- "BayesGLMEM_vol" %in% as.character(model_obj$call)
 
 #     #if sessions is still NULL, use average and check excur_method argument
 #     # if(is.null(sessions)){

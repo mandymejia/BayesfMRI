@@ -16,11 +16,11 @@ scale_design_mat <- function(design_mat) {
 }
 
 #' Make DCT bases
-#' @param hpf,nT,TR See \code{BayesGLM_cifti}
+#' @param hpf,nT,TR See \code{BayesGLM}
 #' @return The matrix of DCT bases, or \code{NULL} if none
 #' @importFrom fMRItools dct_bases is_posNum dct_convert
 #' @keywords internal
-BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
+BayesGLM_make_DCT <- function(hpf, nT, TR){
   DCT <- NULL # used to be an argument.
 
   if (!is.null(DCT)) {
@@ -51,9 +51,9 @@ BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
 
 #' Bayes GLM arg checks
 #'
-#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
+#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_fun}
 #'
-#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
+#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_fun}
 #'
 #' @param scale_BOLD See \code{\link{BayesGLM}}.
 #' @param Bayes,EM See \code{\link{BayesGLM}}.

@@ -2,8 +2,8 @@
 #' 
 #' Classical GLM for multiple models 
 #' 
-# @param data,spatial,spatial_type,session_names,field_names,design_type See \code{BayesGLM}.
-# @param valid_cols,nT,nD,var_resid,sqrtInv_all See \code{BayesGLM}.
+# @param data,spatial,spatial_type,session_names,field_names,design_type See \code{BayesGLM_fun}.
+# @param valid_cols,nT,nD,var_resid,sqrtInv_all See \code{BayesGLM_fun}.
 # @return A list of results
 #' @keywords internal
 GLM_compare <- function(...){NULL}
