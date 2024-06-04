@@ -4,15 +4,17 @@
 \alias{scale_BOLD}
 \title{Scale the BOLD timeseries}
 \usage{
-scale_BOLD(BOLD, scale = c("auto", "mean", "sd", "none"))
+scale_BOLD(BOLD, scale = c("mean", "sd", "none"), v_means = NULL)
 }
 \arguments{
 \item{BOLD}{fMRI data as a locations by time (\eqn{V \times T}) numeric
 matrix.}
 
-\item{scale}{Option for scaling the BOLD response.
+\item{scale}{Option for scaling the BOLD response.}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned 
+\item{v_means}{User-specified means of the BOLD data. Useful is data has previously been centered.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
 }\if{html}{\out{</div>}}
 
 data is detected (if any mean is less than one), in which case \code{"sd"}

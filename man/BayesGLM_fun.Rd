@@ -9,7 +9,7 @@ BayesGLM_fun(
   design,
   nuisance = NULL,
   spatial,
-  scale_BOLD = c("auto", "mean", "sd", "none"),
+  scale_BOLD = c("mean", "sd", "none"),
   Bayes = TRUE,
   ar_order = 6,
   ar_smooth = 5,
@@ -41,9 +41,6 @@ For voxel data, a list of six:
 
 \item{scale_BOLD}{Controls scaling the BOLD response at each location.
 \describe{
-\item{"auto":}{   (default) Use \code{"mean"} scaling, except if
-demeaned data is detected (any location's mean < 1), use \code{"sd"}
-scaling.}
 \item{"mean":}{   Scale the data to percent local signal change.}
 \item{"sd":}{   Scale the data by local standard deviation.}
 \item{"none":}{   Center the data but do not scale it.}

@@ -73,9 +73,9 @@ BayesGLM <- function(
   nbhd_order=1,
   buffer=c(1,1,3,4,4),
 
-  # Below arguments shared with `BayesGLM`.
+  # Below arguments shared with `bayesglm_fun`.
   session_names=NULL,
-  scale_BOLD = c("auto", "mean", "sd", "none"),
+  scale_BOLD = c("mean", "sd", "none"),
   Bayes = TRUE,
   #EM = FALSE,
   ar_order = 6,
@@ -90,11 +90,12 @@ BayesGLM <- function(
 
   EM <- FALSE
   emTol <- 1e-3
-  scale_design <- FALSE
+  scale_design <- FALSE # this function no longer does any design matrix construction/alteration besides centering
 
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
   stopifnot(is.null(TR) || (fMRItools::is_1(TR, "numeric") && TR>0))
+  if(Bayes==FALSE) nbhd_order <- 0 #no need for boundary layers with classical GLM
   stopifnot(is.numeric(nbhd_order))
   stopifnot(fMRItools::is_1(nbhd_order, "numeric"))
   stopifnot(nbhd_order>=0 && nbhd_order==round(nbhd_order))
@@ -213,7 +214,7 @@ BayesGLM <- function(
     message(
       "The number of regressors to be modeled spatially exceeds five. ",
       "INLA computation may be slow. Consider reducing the number of design ",
-      "matrix columns, e.g. by modeling HRF derivatives as nuisance."
+      "matrix columns, e.g. by moving HRF derivative columns to nuisance."
     )
     Sys.sleep(5)
   }
@@ -550,6 +551,7 @@ BayesGLM <- function(
   BOLD <- lapply(BOLD, function(q){lapply(q, t)})
 
   # Do GLM. --------------------------------------------------------------------
+
   BGLMs <- setNames(vector("list", length(spatial)), names(spatial))
 
   ## Loop through brainstructures. ---------------------------------------------

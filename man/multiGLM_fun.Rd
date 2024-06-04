@@ -21,9 +21,6 @@ each with volumes along the first dimension.}
 
 \item{scale_BOLD}{Controls scaling the BOLD response at each location.
 \describe{
-\item{"auto":}{   (default) Use \code{"mean"} scaling, except if
-demeaned data is detected (any location's mean < 1), use \code{"sd"}
-scaling.}
 \item{"mean":}{   Scale the data to percent local signal change.}
 \item{"sd":}{   Scale the data by local standard deviation.}
 \item{"none":}{   Center the data but do not scale it.}
