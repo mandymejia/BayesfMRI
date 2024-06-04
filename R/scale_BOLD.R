@@ -3,11 +3,8 @@
 #' @param BOLD fMRI data as a locations by time (\eqn{V \times T}) numeric
 #' 	matrix.
 #' @param scale Option for scaling the BOLD response.
-#' @param v_means Original means of the BOLD data. ONLY provide if data has already been centered.
-#'
-#' 	\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
-#'  data is detected (if any mean is less than one), in which case \code{"sd"}
-#'  scaling will be used instead.
+#' @param v_means Original means of the BOLD data. ONLY provide if data has 
+#' 	already been centered.
 #'
 #' 	\code{"mean"} scaling will scale the data to percent local signal change.
 #'

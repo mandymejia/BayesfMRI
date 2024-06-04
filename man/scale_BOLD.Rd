@@ -12,13 +12,8 @@ matrix.}
 
 \item{scale}{Option for scaling the BOLD response.}
 
-\item{v_means}{Original means of the BOLD data. ONLY provide if data has already been centered.
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
-}\if{html}{\out{</div>}}
-
-data is detected (if any mean is less than one), in which case \code{"sd"}
-scaling will be used instead.
+\item{v_means}{Original means of the BOLD data. ONLY provide if data has
+already been centered.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{\code{"mean"} scaling will scale the data to percent local signal change.
 

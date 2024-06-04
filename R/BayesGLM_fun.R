@@ -249,10 +249,11 @@ BayesGLM_fun <- function(
     }
   }
 
-  # Scale, nuisance regress, and/or concatenate session data. ------------------
+  # Nuisance regression and scaling. -------------------------------------------
 
-  # Check for intercepts and flat columns in design and nuisance matrices.
-  des_has_intercept <- nuis_has_intercept <- vector("logical", nS)
+  ### Check for intercepts and flat columns in design and nuisance. ------------
+  # (Design should have neither; nuisance matrix should have at least one.)
+  des_has_intercept <- vector("logical", nS)
   for (ss in seq(nS)) {
     # Stop if any zero-var, zero-mean column exists.
     des_ss_is_flat <- apply(abs(design[[ss]]) < 1e-8, 2, all)
@@ -267,33 +268,40 @@ BayesGLM_fun <- function(
     } else {
       des_ss_is_intercept <- matrixStats::colVars(design[[ss]]) < 1e-8
     }
-    if (sum(des_ss_is_intercept) > 1) {
-      stop("Design matrix for session ", ss, " has more than one intercept-like ",
-        "column, which will cause problems during model fitting. Please fix.")
+    # THIS PART HAS BEEN MODIFIED BECAUSE DESIGN NO LONGER ALLOWED TO HAVE INTERCEPT
+    # if (sum(des_ss_is_intercept) > 1) {
+    #   stop("Design matrix for session ", ss, " has more than one intercept-like ",
+    #     "column, which will cause problems during model fitting. Please fix.")
+    # }
+    if(any(des_ss_is_intercept)) {
+      stop('Design matrix must not have an intercept, since data and design will ',
+        'be centered prior to model fitting. Please fix.')
     }
-    des_has_intercept[ss] <- any(des_ss_is_intercept)
 
     # For nuisance: detect zero-var, nonzero-mean columns.
     if (!is.null(nuisance[[ss]])) {
       nuis_ss_is_intercept <- matrixStats::colVars(nuisance[[ss]]) < 1e-8
-      nuis_has_intercept[ss] <- any(nuis_ss_is_intercept)
     } else {
-      nuis_has_intercept[ss] <- FALSE
+      nuis_ss_is_intercept <- FALSE
+    }
+
+    # If no intercept in nuisance, add one.
+    if (!any(nuis_ss_is_intercept)) {
+      nuisance[[ss]] <- cbind2(nuisance[[ss]], as.matrix(rep(1, nT[ss])))
     }
   }
-  if(any(des_has_intercept)) stop('Design matrix must not have an intercept, since data and design will be centered prior to model fitting. Please fix.')
 
-  #collect data and design matrices
+  ### Do nuisance regression of BOLD and design, and BOLD scaling. -------------
   nK2 <- vector("numeric", nS)
   for (ss in seq(nS)) {
     # Remove any missing fields from design matrix for classical GLM
     vcols_ss <- valid_cols[ss,]
+
+    # THIS PART HAS BEEN MODIFIED BECAUSE DESIGN NO LONGER ALLOWED TO HAVE INTERCEPT
     # if (!all(vcols_ss)) { warning(
     #   'For session ',ss,', ignoring ',sum(!vcols_ss),
     #   ' design matrix columns of zeros for classical GLM.'
     # )}
-
-    # THIS PART HAS BEEN MODIFIED BECAUSE DESIGN NO LONGER ALLOWED TO HAVE INTERCEPT
     # If the design matrix has an intercept, ensure the nuisance matrix does not.
     # If neither have an intercept, add one to the nuisance for centering
     #   `BOLD` and `design`.
@@ -306,52 +314,35 @@ BayesGLM_fun <- function(
       #   cat(paste0("\t\tSession ", ss, ": modeling BOLD means using the intercept field in the provided `design`.\n"))
       # }
     #} else
-    if (!nuis_has_intercept[ss]) {
-      nuisance[[ss]] <- cbind2(nuisance[[ss]], as.matrix(rep(1, nT[ss])))
-      nuis_has_intercept[ss] <- TRUE
-    }
-    if (verbose > 0) { if(ss==1) cat("\tDemeaning BOLD and design during nuisance regression.\n") }
 
-    # NOTE: At this point, it is not possible for nuisance[[ss]] to be NULL.
-
+    if (verbose > 0) { if(ss==1) cat("\tBOLD and design nuisance regression.\n") }
     # Regress nuisance parameters from BOLD data and design matrix.
-    nK2[ss] <- if (is.null(nuisance[[ss]])) { 0 } else { ncol(nuisance[[ss]]) }
-    if (!is.null(nuisance[[ss]])) {
-      nuis_ss <- nuisance[[ss]]
-      stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
-      if (!nuis_has_intercept[ss]) {
-        stop('nuisance matrix has no intercept, something is wrong. Contact developer.')
-        #nuis_ss <- scale(nuis_ss, scale=FALSE)
-      }
+    nuis_ss <- nuisance[[ss]]
+    nK2[ss] <- ncol(nuis_ss)
+    stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
 
-      #center, filter/detrend, and nuisance regress the BOLD
-      BOLD_mean_ss <- apply(BOLD[[ss]], MARGIN = 2, FUN = median) # [TO DO] instead, save the intercept from nuisance regression
-      BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], nuis_ss)
-      #center, filter/detrend, and nuisance regress the BOLD
-      if (!do$perLocDesign) {
-        design[[ss]][,vcols_ss] <- fMRItools::nuisance_regression(
-          design[[ss]][,vcols_ss], nuis_ss
-        )
-      } else {
-        design[[ss]][,,vcols_ss][] <- fMRItools::nuisance_regression(
-          matrix(design[[ss]][,,vcols_ss], nrow=dim(design[[ss]])[1]),
-          nuis_ss
-        )
-      }
-      nuisance[ss] <- list(NULL)
-      rm(nuis_ss)
+    #center, filter/detrend, and nuisance regress the BOLD
+    BOLD_mean_ss <- apply(BOLD[[ss]], MARGIN = 2, FUN = median) # [TO DO] instead, save the intercept from nuisance regression
+    BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], nuis_ss)
+    #center, filter/detrend, and nuisance regress the design
+    if (!do$perLocDesign) {
+      design[[ss]][,vcols_ss] <- fMRItools::nuisance_regression(
+        design[[ss]][,vcols_ss], nuis_ss
+      )
     } else {
-      stop('nuisance matrix is NULL, something is wrong. Contact developer.')
+      design[[ss]][,,vcols_ss][] <- fMRItools::nuisance_regression(
+        matrix(design[[ss]][,,vcols_ss], nrow=dim(design[[ss]])[1]),
+        nuis_ss
+      )
     }
+    nuisance[ss] <- list(NULL)
+    rm(nuis_ss)
 
     # Scale data.
     # (`scale_BOLD` expects VxT data, so transpose before and after.)
     BOLD[[ss]] <- t(scale_BOLD(t(BOLD[[ss]]), scale=scale_BOLD, v_means = BOLD_mean_ss))
-
-    #save(BOLD, design, file = '~/Desktop/stuff.RData')
-    #stop()
   }
-  rm(des_has_intercept, nuis_has_intercept, vcols_ss, nuisance)
+  rm(vcols_ss, nuisance)
 
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
   if (do$pw && verbose>0) { cat("\tEstimating prewhitening parameters.\n") }
