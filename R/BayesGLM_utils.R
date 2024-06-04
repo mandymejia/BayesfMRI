@@ -90,7 +90,7 @@ BayesGLM_argChecks <- function(
   if (isFALSE(scale_BOLD)) {
     message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
   }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
+  scale_BOLD <- match.arg(scale_BOLD, c("mean", "sd", "none"))
 
   stopifnot(fMRItools::is_1(Bayes, "logical"))
   stopifnot(fMRItools::is_1(EM, "logical"))
