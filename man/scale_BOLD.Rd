@@ -12,7 +12,7 @@ matrix.}
 
 \item{scale}{Option for scaling the BOLD response.}
 
-\item{v_means}{User-specified means of the BOLD data. Useful is data has previously been centered.
+\item{v_means}{Original means of the BOLD data. ONLY provide if data has already been centered.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{\code{"auto"} (default) will use \code{"mean"} scaling except if demeaned
 }\if{html}{\out{</div>}}

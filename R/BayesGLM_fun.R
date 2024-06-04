@@ -348,6 +348,8 @@ BayesGLM_fun <- function(
     # (`scale_BOLD` expects VxT data, so transpose before and after.)
     BOLD[[ss]] <- t(scale_BOLD(t(BOLD[[ss]]), scale=scale_BOLD, v_means = BOLD_mean_ss))
 
+    #save(BOLD, design, file = '~/Desktop/stuff.RData')
+    #stop()
   }
   rm(des_has_intercept, nuis_has_intercept, vcols_ss, nuisance)
 
