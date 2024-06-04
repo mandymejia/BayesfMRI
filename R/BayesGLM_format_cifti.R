@@ -61,7 +61,7 @@ BayesGLM_format_cifti <- function(
         cortexL_mwall = if (do$left) { mwallL } else { NULL },
         cortexR = datR,
         cortexR_mwall = if (do$right) { mwallR } else { NULL },
-        subcortVol = as.matrix(datSub),
+        subcortVol = if (do$sub) { as.matrix(datSub) } else { NULL },
         subcortLabs = if (do$sub) { subLabs } else { NULL },
         subcortMask = if (do$sub) { subMask } else { NULL },
       )
