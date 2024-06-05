@@ -69,7 +69,7 @@ for (ii in seq(nrow(params))) {
     return_INLA = "trimmed"
   ))
 
-  act_ii <- id_activations(
+  act_ii <- activations(
     bfmri_ii,
     gamma=.1,
     method=ifelse(params$Bayes[ii], "Bayesian", "classical"),

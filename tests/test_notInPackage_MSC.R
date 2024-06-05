@@ -82,10 +82,10 @@ bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1)))
 bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2)))
 
-act_c1 <- id_activations(bglm_c1, gamma=.01, sessions=1)
-act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
-act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
-act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
+act_c1 <- activations(bglm_c1, gamma=.01, sessions=1)
+act_b1 <- activations(bglm_b1, gamma=.01, sessions=1)
+act_c2 <- activations(bglm_c2, gamma=.01, sessions=seq(2))
+act_b2 <- activations(bglm_b2, gamma=.01, sessions=seq(2))
 
 ### Misc. cases; not checking these results, but checking for errors
 ### Last updated: 5.1
@@ -100,7 +100,7 @@ bglm_m1 <- BayesGLM(
   ar_order = 0,
   verbose = 0
 )
-act_m1 <- id_activations(bglm_m1, alpha=.1, gamma=.05, fields=1)
+act_m1 <- activations(bglm_m1, alpha=.1, gamma=.05, fields=1)
 
 bglm_m2 <- BayesGLM(
   cifti_fname = c(fnames$cifti_1, fnames$cifti_2),
@@ -115,7 +115,7 @@ bglm_m2 <- BayesGLM(
   ar_smooth = 0,
   verbose = 2
 )
-act_m2 <- id_activations(bglm_m2)
+act_m2 <- activations(bglm_m2)
 
 # Save ---
 save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_MSC.rda"))

@@ -1,6 +1,6 @@
 #' Activations prevalence.
 #' 
-#' @param act_list List of activations from \code{\link{id_activations}}. All
+#' @param act_list List of activations from \code{\link{activations}}. All
 #'  should have the same sessions, fields, and brainstructures.
 #' @param gamma_idx If activtions at multiple thresholds were computed, which 
 #'  threshold should be used for prevalence? Default: the first (lowest).
@@ -18,7 +18,7 @@ act_prevalance <- function(act_list, gamma_idx=1){
   is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BGLM") }, FALSE))
   if (!is_cifti) {
     if (!all(vapply(act_list, function(q){ inherits(q, "act_BGLM0") }, FALSE))) {
-      stop("All objects in `act_list` must be the same type of result from `id_activations`: either `act_BGLM` or `act_BGLM0`.")
+      stop("All objects in `act_list` must be the same type of result from `activations`: either `act_BGLM` or `act_BGLM0`.")
     }
   }
 

@@ -197,12 +197,12 @@ bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2)))
 #bglm_m2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, dtype="multi")))
 
-act_c1 <- id_activations(bglm_c1, sessions=1)
-act_b1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
-#act_m1 <- id_activations(bglm_b1, gamma=.01, sessions=1)
-act_c2 <- id_activations(bglm_c2, gamma=.01, sessions=seq(2))
-act_b2 <- id_activations(bglm_b2, gamma=.01, sessions=seq(2))
-#act_m2 <- id_activations(bglm_b1, gamma=.01, sessions=1)
+act_c1 <- activations(bglm_c1, sessions=1)
+act_b1 <- activations(bglm_b1, gamma=.01, sessions=1)
+#act_m1 <- activations(bglm_b1, gamma=.01, sessions=1)
+act_c2 <- activations(bglm_c2, gamma=.01, sessions=seq(2))
+act_b2 <- activations(bglm_b2, gamma=.01, sessions=seq(2))
+#act_m2 <- activations(bglm_b1, gamma=.01, sessions=1)
 
 # Save ---
 save(list=ls(), file=file.path(dir_resultThis, "test_notInPackage_HCP.rda"))

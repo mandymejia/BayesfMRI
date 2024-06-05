@@ -255,12 +255,12 @@ get_posterior_densities2 <- function(INLA_model_obj, field_names){
 #' Trim INLA object
 #'
 #' Trim an INLA object to only include what is necessary for
-#'  \code{id_activations} or \code{BayesGLM2}.
+#'  \code{activations} or \code{BayesGLM2}.
 #'
 #' @param INLA_model_obj An object of class \code{"inla"}.
 #' @param minimal Just keep the two parameters needed for \code{BayesGLM2}?
 #'  Default: \code{FALSE}. \code{!minimal} is required for
-#'  \code{id_activations}, but \code{minimal} is sufficient for
+#'  \code{activations}, but \code{minimal} is sufficient for
 #'  \code{BayesGLM2}.
 #'
 #' @return A trimmed \code{"inla"} object.

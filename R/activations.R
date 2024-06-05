@@ -53,7 +53,7 @@
 #'  list which indicates the activated locations along with related information.
 #' @export
 #'
-id_activations <- function(
+activations <- function(
   model_obj,
   fields=NULL,
   sessions=NULL,
@@ -135,8 +135,8 @@ id_activations <- function(
 
   # Get activation function arguments that won't change.
   actFUN <- switch(method,
-    Bayesian = id_activations.posterior,
-    classical = id_activations.classical
+    Bayesian = activations.posterior,
+    classical = activations.classical
   )
   actArgs <- list(fields=fields, alpha=alpha)
   if (method == "classical") {
@@ -274,7 +274,7 @@ id_activations <- function(
 #'  posterior distribution of the latent field.
 #'
 #' @param model_obj Result of \code{BayesGLM}, of class \code{"BayesGLM0"}.
-#' @param fields,session,alpha,gamma See \code{\link{id_activations}}.
+#' @param fields,session,alpha,gamma See \code{\link{activations}}.
 # @param excur_method Either \code{"EB"} (empirical Bayes) or \code{"QC"} (Quantile Correction),
 # depending on the method that should be used to find the excursions set. Note that to ID
 # activations for averages across sessions, the method chosen must be \code{EB}. The difference
@@ -288,7 +288,7 @@ id_activations <- function(
 #' @importFrom excursions excursions.inla
 #'
 #' @keywords internal
-id_activations.posterior <- function(
+activations.posterior <- function(
   model_obj,
   fields, session,
   alpha=0.05, gamma){
@@ -338,7 +338,7 @@ id_activations.posterior <- function(
 #' Identification of areas of activation in a General Linear Model using classical methods
 #'
 #' @param model_obj A \code{BayesGLM} object
-#' @param fields,session,alpha,gamma See \code{\link{id_activations}}.
+#' @param fields,session,alpha,gamma See \code{\link{activations}}.
 #' @param correction (character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
 #'   family-wise error rate with Bonferroni correction, and 'FDR' refers to the
 #'   false discovery rate using Benjamini-Hochberg.
@@ -352,7 +352,7 @@ id_activations.posterior <- function(
 #' @importFrom matrixStats colVars
 #'
 #' @keywords internal
-id_activations.classical <- function(model_obj,
+activations.classical <- function(model_obj,
                                      fields,
                                      session,
                                      alpha = 0.05,
@@ -368,7 +368,7 @@ id_activations.classical <- function(model_obj,
       " but should be of class 'BGLM0'."
     ))
   }
-  # fields, session, alpha, gamma checked in `id_activations`
+  # fields, session, alpha, gamma checked in `activations`
   correction <- match.arg(correction, c("FWER","FDR","none"))
 
   fields_idx <- model_obj$field_names %in% fields
@@ -457,7 +457,7 @@ id_activations.classical <- function(model_obj,
 # #' @importFrom stats na.omit
 # #'
 # #' @keywords internal
-# id_activations.em <-
+# activations.em <-
 #   function(model_obj,
 #            fields = NULL,
 #            sessions = NULL,
@@ -606,3 +606,33 @@ id_activations.classical <- function(model_obj,
 
 #     return(result)
 #   }
+
+#' @rdname activations
+#' @export 
+id_activations <- function(
+  model_obj,
+  fields=NULL,
+  sessions=NULL,
+  method=c("Bayesian", "classical"),
+  alpha=0.05,
+  gamma=NULL,
+  #area.limit=NULL,
+  correction = c("FWER", "FDR", "none"),
+  #excur_method = c("EB", "QC"),
+  verbose = 1,
+  threshold = NULL){
+
+  activations(
+    model_obj=model_obj,
+    fields=fields,
+    sessions=sessions,
+    method=method,
+    alpha=alpha,
+    gamma=gamma,
+    #area.limit=NULL,
+    correction = correction,
+    #excur_method = c("EB", "QC"),
+    verbose = verbose,
+    threshold = threshold
+  )
+}

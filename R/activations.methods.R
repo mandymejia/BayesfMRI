@@ -106,7 +106,7 @@ print.act_BGLM0 <- function(x, ...) {
 #'  properties of \code{object}.
 #' @method summary act_BGLM
 summary.act_BGLM <- function(object, ...) {
-  x <- summary.act_BGLM(object, ...)
+  x <- summary.act_BGLM0(object, ...)
   class(x) <- "summary.act_BGLM"
   x
 }

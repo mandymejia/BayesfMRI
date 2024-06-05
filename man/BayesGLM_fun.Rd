@@ -73,9 +73,9 @@ estimation. Default: \code{4}. Note that parallel prewhitening requires the
 
 \item{return_INLA}{Return the INLA model object? (It can be large.) Use
 \code{"trimmed"} (default) returns the results sufficient for
-\code{\link{id_activations}} and \code{\link{BayesGLM2}}; \code{"minimal"}
+\code{\link{activations}} and \code{\link{BayesGLM2}}; \code{"minimal"}
 returns enough for \code{\link{BayesGLM2}} but not
-\code{\link{id_activations}}; \code{"full"} returns the full \code{inla}
+\code{\link{activations}}; \code{"full"} returns the full \code{inla}
 output.}
 
 \item{verbose}{\code{1} (default) to print occasional updates during model

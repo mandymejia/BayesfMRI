@@ -7,7 +7,7 @@
 act_prevalance(act_list, gamma_idx = 1)
 }
 \arguments{
-\item{act_list}{List of activations from \code{\link{id_activations}}. All
+\item{act_list}{List of activations from \code{\link{activations}}. All
 should have the same sessions, fields, and brainstructures.}
 
 \item{gamma_idx}{If activtions at multiple thresholds were computed, which
