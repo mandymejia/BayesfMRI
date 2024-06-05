@@ -70,7 +70,7 @@ BayesGLM_make_DCT <- function(hpf, nT, TR){
 #' @importFrom fMRItools is_1
 #' @keywords internal
 BayesGLM_argChecks <- function(
-    scale_BOLD,
+    scale_BOLD=c("mean", "sd", "none"),
     Bayes=TRUE,
     EM=FALSE,
     ar_order=6,
@@ -85,7 +85,7 @@ BayesGLM_argChecks <- function(
 ){
 
   if (isTRUE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+    message("Setting `scale_BOLD` to 'mean'"); scale_BOLD <- "mean"
   }
   if (isFALSE(scale_BOLD)) {
     message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"

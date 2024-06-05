@@ -5,7 +5,7 @@
 \title{Bayes GLM arg checks}
 \usage{
 BayesGLM_argChecks(
-  scale_BOLD,
+  scale_BOLD = c("mean", "sd", "none"),
   Bayes = TRUE,
   EM = FALSE,
   ar_order = 6,

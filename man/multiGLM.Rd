@@ -12,7 +12,6 @@ multiGLM(
   resamp_res = 10000,
   hpf = NULL,
   nuisance = NULL,
-  scale_BOLD = c("mean", "sd", "none"),
   design_canonical = NULL,
   verbose = 1,
   meanTol = 1e-06,
@@ -68,13 +67,6 @@ not being modeled as tasks, and other sources of noise.
 
 Detrending/high-pass filtering is accomplished by adding DCT bases to the
 nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
-
-\item{scale_BOLD}{Controls scaling the BOLD response at each location.
-\describe{
-\item{"mean":}{   Scale the data to percent local signal change.}
-\item{"sd":}{   Scale the data by local standard deviation.}
-\item{"none":}{   Center the data but do not scale it.}
-}}
 
 \item{design_canonical}{TO DO}
 

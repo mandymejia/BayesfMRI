@@ -8,7 +8,6 @@ multiGLM_fun(
   BOLD,
   design,
   nuisance = NULL,
-  scale_BOLD = c("mean", "sd", "none"),
   design_canonical = NULL,
   verbose = 1,
   meanTol = 1e-06,
@@ -18,13 +17,6 @@ multiGLM_fun(
 \arguments{
 \item{BOLD, design, nuisance}{Session-length list of numeric matrices/arrays,
 each with volumes along the first dimension.}
-
-\item{scale_BOLD}{Controls scaling the BOLD response at each location.
-\describe{
-\item{"mean":}{   Scale the data to percent local signal change.}
-\item{"sd":}{   Scale the data by local standard deviation.}
-\item{"none":}{   Center the data but do not scale it.}
-}}
 
 \item{design_canonical}{TO DO}
 

@@ -7,7 +7,6 @@
 #' @param BOLD,design,nuisance Session-length list of numeric matrices/arrays,
 #'  each with volumes along the first dimension.
 #' @inheritParams session_names_Param
-#' @inheritParams scale_BOLD_Param
 # @inheritParams EM_Param
 #' @inheritParams n_threads_Param
 #' @inheritParams return_INLA_Param
@@ -53,7 +52,6 @@ multiGLM_fun <- function(
   design,
   # Below arguments shared with `mutliGLM_cifti`.
   nuisance=NULL,
-  scale_BOLD = c("mean", "sd", "none"),
   design_canonical=NULL,
   verbose = 1,
   meanTol = 1e-6,
@@ -67,15 +65,12 @@ multiGLM_fun <- function(
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
   # In a separate function because these checks are shared with `BayesGLM`.
-  x <- BayesGLM_argChecks(
-    scale_BOLD = scale_BOLD,
+  BayesGLM_argChecks(
     Bayes=FALSE,
     verbose = verbose,
     meanTol = meanTol,
     varTol = varTol
   )
-  scale_BOLD <- x$scale_BOLD
-  rm(x)
 
   # Modeled after `BayesGLM` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #   But note that `BOLD`, `design`, and `nuisance` will be

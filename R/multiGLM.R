@@ -13,7 +13,6 @@
 #' @inheritParams resamp_res_Param_BayesGLM
 #' @inheritParams nuisance_Param_BayesGLM
 #' @inheritParams hpf_Param_BayesGLM
-#' @inheritParams scale_BOLD_Param
 #' @param design_canonical TO DO
 #' @inheritParams verbose_Param
 #' @inheritParams mean_var_Tol_Param
@@ -41,7 +40,6 @@ multiGLM <- function(
   hpf=NULL,
   # Below arguments shared with `multiGLM`.
   nuisance=NULL,
-  scale_BOLD = c("mean", "sd", "none"),
   design_canonical=NULL,
   verbose = 1,
   meanTol = 1e-6,
@@ -58,15 +56,12 @@ multiGLM <- function(
   do <- vector("list")
 
   # In a separate function because these checks are shared with `BayesGLM0`.
-  x <- BayesGLM_argChecks(
-    scale_BOLD = scale_BOLD,
+  BayesGLM_argChecks(
     Bayes=FALSE,
     verbose = verbose,
     meanTol = meanTol,
     varTol = varTol
   )
-  scale_BOLD <- x$scale_BOLD
-  rm(x)
 
   # `hpf` and `TR`.
   if (is.null(hpf)) {
@@ -286,7 +281,6 @@ multiGLM <- function(
       BOLD = BOLD[[dname_bb]],
       design = design,
       nuisance = nuisance,
-      scale_BOLD = scale_BOLD,
       design_canonical = design_canonical,
       verbose = verbose,
       meanTol = meanTol,
