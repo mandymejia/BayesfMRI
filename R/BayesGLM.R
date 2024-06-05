@@ -256,7 +256,9 @@ BayesGLM <- function(
         if (length(unique(nDCTs))==1) { nDCTs[1] } else { cat(min(nDCTs), "-", max(nDCTs)) },
         "DCT bases in `nuisance` for highpass filtering.\n")
     }
-    for (ss in seq(nS)) { nuisance[[ss]] <- cbind2(nuisance[[ss]], DCTs[[ss]] ) }
+    for (ss in seq(nS)) {
+      colnames(DCTs[[ss]]) <- paste0('DCT', 1:ncol(DCTs[[ss]]))
+      nuisance[[ss]] <- cbind2(nuisance[[ss]], DCTs[[ss]] ) }
   }
 
   # Initialize `spatial` to store all spatial information. ---------------------

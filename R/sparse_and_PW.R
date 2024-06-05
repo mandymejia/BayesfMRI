@@ -10,7 +10,7 @@
 #'
 #' @param BOLD,design,spatial,spatial_type See \code{BayesGLM0}.
 #' @param field_names,design_type See \code{BayesGLM0}.
-#' @param valid_cols,nT,nD,sqrtInv_all See \code{BayesGLM0}.
+#' @param valid_cols,nT,sqrtInv_all See \code{BayesGLM0}.
 #'
 #' @return A list containing fields \code{y} and \code{A} (see Details)
 #'
@@ -25,7 +25,7 @@ sparse_and_PW <- function(
   BOLD, design,
   spatial, spatial_type,
   field_names, design_type,
-  valid_cols, nT, nD,
+  valid_cols, nT,
   sqrtInv_all
   ){
   nV <- get_nV(spatial, spatial_type)

@@ -345,7 +345,8 @@ BayesGLM_fun <- function(
   rm(vcols_ss, nuisance)
 
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
-  if (do$pw && verbose>0) { cat("\tEstimating prewhitening parameters.\n") }
+  if (do$pw && verbose>0 && ar_smooth==0) { cat("\tEstimating prewhitening parameters.\n") }
+  if (do$pw && verbose>0 && ar_smooth > 0) { cat("\tEstimating and smoothing prewhitening parameters.\n") }
   x <- GLM_est_resid_var_pw(
     BOLD, design, spatial, spatial_type,
     session_names, field_names, design_type,
@@ -355,7 +356,7 @@ BayesGLM_fun <- function(
   )
   var_resid <- x$var_resid
   sqrtInv_all <- x$sqrtInv_all # `NULL` if `!do$pw`
-  prewhiten_info <- x[c("AR_coefs_avg", "var_avg", "max_AIC")]
+  prewhiten_info <- x[c("AR_coefs_avg", "var_avg", "max_AIC", "sqrtInv_all")]
   rm(x)
 
   # Classical GLM. -------------------------------------------------------------
@@ -378,7 +379,7 @@ BayesGLM_fun <- function(
       BOLD[[ss]], design[[ss]],
       spatial, spatial_type,
       field_names, design_type,
-      vcols_ss, nT[ss], nD,
+      vcols_ss, nT[ss],
       sqrtInv_all[[ss]]
     )
     BOLD[[ss]] <- x$BOLD
@@ -390,8 +391,7 @@ BayesGLM_fun <- function(
     result_classical[[ss]] <- GLM_classical(
       BOLD[[ss]], design[[ss]], nK2[ss], nV$D,
       field_names, design_type,
-      vcols_ss, nT[ss], nD,
-      var_resid, sqrtInv_all[[ss]],
+      vcols_ss, nT[ss],
       do$pw, compute_SE=TRUE
     )
 

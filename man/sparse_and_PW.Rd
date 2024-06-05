@@ -13,7 +13,6 @@ sparse_and_PW(
   design_type,
   valid_cols,
   nT,
-  nD,
   sqrtInv_all
 )
 }
@@ -22,7 +21,7 @@ sparse_and_PW(
 
 \item{field_names, design_type}{See \code{BayesGLM0}.}
 
-\item{valid_cols, nT, nD, sqrtInv_all}{See \code{BayesGLM0}.}
+\item{valid_cols, nT, sqrtInv_all}{See \code{BayesGLM0}.}
 }
 \value{
 A list containing fields \code{y} and \code{A} (see Details)

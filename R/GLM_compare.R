@@ -1,7 +1,7 @@
 #' Classical GLM for multiple models
-#' 
-#' Classical GLM for multiple models 
-#' 
+#'
+#' Classical GLM for multiple models
+#'
 # @param data,spatial,spatial_type,session_names,field_names,design_type See \code{BayesGLM_fun}.
 # @param valid_cols,nT,nD,var_resid,sqrtInv_all See \code{BayesGLM_fun}.
 # @return A list of results
@@ -21,7 +21,7 @@ GLM_compare <- function(...){NULL}
 #   for (ss in seq(nS)) {
 
 #     beta_hat_ss <- array(
-#       NA, 
+#       NA,
 #       dim=c(nV$T, nK, nD),
 #       dimnames = list(loc = 1:nV$T, field = field_names, model = seq(nD))
 #     )
@@ -34,8 +34,7 @@ GLM_compare <- function(...){NULL}
 #       x <- GLM_classical(
 #         data, spatial, spatial_type,
 #         session_names, field_names, design_type,
-#         valid_cols[ss,], nT[ss], nD,
-#         var_resid, sqrtInv_all,
+#         valid_cols[ss,], nT[ss],
 #         do_pw=FALSE, compute_SE=FALSE
 #       )
 #       beta_hat_ss[,,dd] <- x$estimates

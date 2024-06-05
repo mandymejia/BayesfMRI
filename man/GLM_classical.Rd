@@ -11,26 +11,29 @@ GLM_classical(
   nV_D,
   field_names,
   design_type,
-  vcols_ss,
-  nT_ss,
-  nD,
-  var_resid,
-  sqrtInv_all,
+  valid_cols,
+  nT,
   do_pw,
   compute_SE = TRUE
 )
 }
 \arguments{
-\item{BOLD, design, nK2, nV_D, field_names, design_type}{See \code{BayesGLM_fun}.}
+\item{BOLD}{BOLD timeseries in vector form (TVx1), result of \code{sparse_and_PW()}}
 
-\item{vcols_ss, nT_ss, nD, var_resid, sqrtInv_all, do_pw}{See \code{BayesGLM_fun}.}
+\item{design}{List of large sparse design matrices (each TVxV), one per regressor, result of \code{sparse_and_PW()}}
 
-\item{compute_SE}{compute SE?}
+\item{nK2, nV_D, field_names, design_type}{See \code{BayesGLM_fun}.}
+
+\item{valid_cols, nT}{See \code{BayesGLM_fun}.}
+
+\item{do_pw}{Has prewhitening been performed on the data and design?}
+
+\item{compute_SE}{Compute SE of model coefficients?}
 }
 \value{
 A list of results
 }
 \description{
-Classical GLM for BayesGLM_fun
+Classical GLM for BayesGLM_fun (internal function)
 }
 \keyword{internal}
