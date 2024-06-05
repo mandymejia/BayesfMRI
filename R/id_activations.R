@@ -81,7 +81,7 @@ id_activations <- function(
   is_cifti <- inherits(model_obj, "BGLM")
   if (is_cifti) {
     cifti_obj <- model_obj
-    model_obj <- cifti_obj$BayesGLM_results
+    model_obj <- cifti_obj$BGLMs
   } else {
     if (!inherits(model_obj, "BGLM0")) {
       stop("`model_obj` is not a `'BGLM'` or 'BGLM0' object.")
@@ -211,6 +211,9 @@ id_activations <- function(
       if (!is.null(the_xii$data[[bs]])) {
         dat <- Reduce("+", lapply(activations[[bs2]][[session]], function(q){1*q$active}))
         if (method=="classical") { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
+        if (!is.null(model_obj[[bb]]$spatial$buffer_mask)) {
+          dat <- dat[model_obj[[bb]]$spatial$buffer_mask,,drop=FALSE]
+        }
         act_xii_ss$data[[bs]] <- dat
       }
     }
@@ -230,6 +233,8 @@ id_activations <- function(
     #   act_xii_ss$data$subcort <- matrix(datS, ncol=length(fields))
     # }
     act_labs <- if (is.null(gamma)) { "Active" } else { paste0("Active, gamma=", gamma) }
+
+    stopifnot(is.xifti(act_xii_ss))
 
     viridis_params <- list(
       n = nG,
