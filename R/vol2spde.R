@@ -112,27 +112,33 @@ vol2spde <- function(mask,
         M2 <- M2 %*% M2 #encode the next order of neighbors
       }
     }
+    if(any(diag(M2) == 0)) stop('The diagonals of M2 should all be non-zero.  Contact developer or set nbhd_order = 0.')
   }
 
   #identify locations to remove (no dependence on any in-mask locations)
-  idx <- which(mask_box==1) #indices of in-mask locations
+  # idx <- which(mask_box==1) #indices of in-mask locations
+  # if(nbhd_order > 0){
+  #   M2 <- M2[idx,,drop=FALSE] != 0
+  #   M2 <- Matrix::mat2triplet(M2)
+  #   # locations with any dependence with in-mask locations
+  #   # 1252 locations for 257 original ROI locations
+  #   idx2 <- unique(M2$j)
+  #   rm(M2)
+  # } else {
+  #   idx2 <- idx
+  # }
+  idx <- idx2 <- which(mask_box==1) #indices of in-mask locations
   if(nbhd_order > 0){
     M2 <- M2[idx,,drop=FALSE] != 0
-    M2 <- Matrix::mat2triplet(M2)
-    # locations with any dependence with in-mask locations
-    # 1252 locations for 257 original ROI locations
-    idx2 <- unique(M2$j)
-    rm(M2)
-  } else {
-    idx2 <- idx
+    idx2 <- which(colSums(M2) > 0)
+    #idx2 <- apply(M2[idx,], 1, function(x) which(x != 0)) #locations with any dependence with in-mask locations
+    #idx2 <- unique(as.vector(idx2)) #1252 locations for 257 original ROI locations
   }
   mask_box2 <- mask_box; mask_box2[idx2] <- mask_box[idx2] + 1 #for visualization
 
   #recreate the SPDE after removing locations
   C3d <- C3d[idx2,idx2]
   G3d <- G3d[idx2,idx2]
-
-  #[TO DO] Construct SPDE outside of this function, block diagonalizing over regions
 
   # spde <- INLA::inla.spde2.generic(M0 = C3d,
   #                            M1 = G3d,
@@ -160,12 +166,12 @@ vol2spde <- function(mask,
                  buffer = buffer)
 
   list(mats = list(C = C3d, G = G3d),
-       idx = idx, #original data indices
+       idx = idx, #original data indices in expanded box
        idx2 = idx2, #idx of included locations in expanded box
        xyz0 = list(x0=x0, y0=y0, z0=z0), #bounding box
        xyz = list(x=x, y=y, z=z), #expanded bounding box
        mask_orig = mask, #original mask within original volume
        mask_box = mask_box, #original mask within expanded bounding box
-       mask_box2 = mask_box2, #original mask + boundary layers
+       mask_box2 = mask_box2, #original mask + boundary layers (values = 0, 1, 2)
        params = params)
 }

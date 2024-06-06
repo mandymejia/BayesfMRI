@@ -223,9 +223,9 @@ BayesGLM_fun <- function(
     if (spatial_type == "mesh") {
       spatial$mask[spatial$mask] <- mask_qc$mask
     } else if (spatial_type == "voxel") {
-      spatial$labels[spatial$labels!=0][!mask_qc$mask] <- 0
+      spatial$labels[spatial$labels!=0][!mask_qc$mask] <- 0 #remove bad locations from subcortical labels
     } else { stop() }
-    BOLD <- lapply(BOLD, function(q){ q[,mask_qc$mask,drop=FALSE] })
+    BOLD <- lapply(BOLD, function(q){ q[,mask_qc$mask,drop=FALSE] }) #remove bad locations from BOLD
   }
 
   # Get SPDE and mask based on it (additional vertices may be excluded).
@@ -235,6 +235,7 @@ BayesGLM_fun <- function(
   }
   spde <- x$spde
   spatial <- x$spatial
+  spatial$data_loc <- x$data_loc
   rm(x)
 
   # Adjust design for per-location modeling.
@@ -355,7 +356,7 @@ BayesGLM_fun <- function(
     do$pw
   )
   var_resid <- x$var_resid
-  sqrtInv_all <- x$sqrtInv_all # `NULL` if `!do$pw`
+  sqrtInv_all <- x$sqrtInv_all # diagonal if !do$pw
   prewhiten_info <- x[c("AR_coefs_avg", "var_avg", "max_AIC", "sqrtInv_all")]
   rm(x)
 
@@ -377,7 +378,7 @@ BayesGLM_fun <- function(
     # Apply prewhitening, if applicable.
     x <- sparse_and_PW(
       BOLD[[ss]], design[[ss]],
-      spatial, spatial_type,
+      spatial, spatial_type, spde,
       field_names, design_type,
       vcols_ss, nT[ss],
       sqrtInv_all[[ss]]
@@ -394,6 +395,10 @@ BayesGLM_fun <- function(
       vcols_ss, nT[ss],
       do$pw, compute_SE=TRUE
     )
+
+    # #disabled this because it is very close to 1 after prewhitening
+    # s2_init <- mean(apply(result_classical[[ss]]$resids, 1, var), na.rm=TRUE)
+    # print(paste0('initial value for precision: 1 / ', s2_init))
 
     # Set up for Bayesian GLM.
     if (ss==1) {
@@ -413,14 +418,12 @@ BayesGLM_fun <- function(
     }
   }
 
-  # [NOTE] Moved to `GLM_FIR.R`: FIR Model.
-
   # Bayesian GLM. --------------------------------------------------------------
   if (do$Bayesian) {
 
     # Construct betas and repls objects.
     x <- make_replicates(
-      nSess=nS, field_names=field_names, nMesh=nV$D
+      nSess=nS, field_names=field_names, spatial, spatial_type
       #, data_loc=data_loc) #indices of original data locations
     )
     betas <- x$betas
@@ -437,11 +440,12 @@ BayesGLM_fun <- function(
     #estimate model using INLA
     if (verbose>0) cat('\tEstimating Bayesian model with INLA...')
     #organize the formula and data objects
-    hyper_initial <- c(-2,2)
-    hyper_initial <- rep(list(hyper_initial), nK)
-    hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
+    #hyper_initial <- c(-2,2)
+    #hyper_initial <- rep(list(hyper_initial), nK)
+    #hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
-    formula <- paste0('f(',field_names, ', model = spde, replicate = ', names(repls), hyper_vec, ')')
+    #formula <- paste0('f(',field_names, ', model = spde, replicate = ', names(repls), hyper_vec, ')')
+    formula <- paste0('f(',field_names, ', model = spde, replicate = ', names(repls), ')')
     formula <- paste(c('y ~ -1', formula), collapse=' + ')
     formula <- as.formula(formula)
 
@@ -456,6 +460,8 @@ BayesGLM_fun <- function(
       control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
     )
     if (verbose>0) cat("\tDone!\n")
+
+    save(INLA_model_obj, file = '~/Desktop/tmp.RData')
 
     #extract useful stuff from INLA model result
     field_estimates <- extract_estimates(

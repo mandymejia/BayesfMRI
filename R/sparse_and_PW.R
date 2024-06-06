@@ -8,7 +8,7 @@
 #' 	and \code{X_k} (a sparse TVxV matrix corresponding to the kth field regressor) for each field k.
 #' 	The design matrices are combined as \code{A=cbind(X_1,...,X_K)}.
 #'
-#' @param BOLD,design,spatial,spatial_type See \code{BayesGLM0}.
+#' @param BOLD,design,spatial,spatial_type,spde See \code{BayesGLM0}.
 #' @param field_names,design_type See \code{BayesGLM0}.
 #' @param valid_cols,nT,sqrtInv_all See \code{BayesGLM0}.
 #'
@@ -23,7 +23,7 @@
 #' @keywords internal
 sparse_and_PW <- function(
   BOLD, design,
-  spatial, spatial_type,
+  spatial, spatial_type, spde,
   field_names, design_type,
   valid_cols, nT,
   sqrtInv_all
@@ -36,7 +36,8 @@ sparse_and_PW <- function(
   valid_inds <- if (spatial_type=="mesh") {
     which(spatial$mask)
   } else if (spatial_type=="voxel") {
-    which(spatial$labels!=0)
+    spatial$data_loc #subset of "mesh" locations that are data locations, see `SPDE_from_voxel`
+    #which(spatial$labels!=0)
   } else { stop() }
 
 	y <- as.vector(BOLD) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
@@ -48,7 +49,13 @@ sparse_and_PW <- function(
   #   spatial$surf,
   #   ciftiTools::mask_surf(spatial$surf, spatial$mask)
   # )
-	A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,valid_inds]
+  if (spatial_type=="mesh"){
+    A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,valid_inds]
+  } else if (spatial_type=="voxel") {
+    A_sparse <- Matrix::Diagonal(nV$DB)[valid_inds,] # n_data x n_mesh matrix
+  } else {
+    stop()
+  }
 
   ### Make `X_all` (design) and `bigX`. -----
 	X_all <- vector('list', length=nK)

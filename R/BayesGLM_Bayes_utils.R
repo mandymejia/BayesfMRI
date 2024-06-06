@@ -6,16 +6,26 @@
 #'
 #' @param nSess The number of sessions sharing hyperparameters (can be different fields)
 #' @param field_names Vector of names for each field
-#' @param nMesh Number of mesh locations
-# @param data_loc Indices of original data locations
+#' @param spatial,spatial_type Spatial info
 #'
 #' @return replicates vector and betas for sessions
 #'
 #' @keywords internal
 #'
-make_replicates <- function(nSess, field_names, nMesh){ #data_loc){
+make_replicates <- function(nSess, field_names, spatial, spatial_type){
 
-  seq_nMesh <- seq(nMesh) #data_loc
+  nV <- get_nV(spatial, spatial_type) #total number of locations, number of data locations
+  if(spatial_type=='mesh') {
+    nMesh <- nV$D
+  } else if(spatial_type=='voxel') {
+    nMesh <- nV$DB
+    #data_loc <- spatial$data_loc
+  } else {
+    stop()
+  }
+  seq_nMesh <- 1:nMesh # [TO DO] allow for non-data locations in cortical mesh
+
+  #seq_nMesh <- seq(nMesh) #data_loc
 	nK <- length(field_names)
 
 	grps <- ((1:(nSess*nK) + (nK-1)) %% nK) + 1 # 1, 2, .. nK, 1, 2, .. nK, ...
@@ -76,7 +86,7 @@ check_INLA <- function(require_PARDISO=FALSE){
 #' Make data list to be passed to \code{estimate_model}
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
-#' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `sparse_and_PW()`
+#' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{sparse_and_PW}
 #' @param betas List (length = number of fields) of bbeta objects from make_replicates
 #' @param repls List (length = number of fields) of repl objects from make_replicates
 #'

@@ -18,9 +18,9 @@ GLM_classical(
 )
 }
 \arguments{
-\item{BOLD}{BOLD timeseries in vector form (TVx1), result of \code{sparse_and_PW()}}
+\item{BOLD}{BOLD timeseries in vector form (TVx1), result of \code{sparse_and_PW}}
 
-\item{design}{List of large sparse design matrices (each TVxV), one per regressor, result of \code{sparse_and_PW()}}
+\item{design}{List of large sparse design matrices (each TVxV), one per regressor, result of \code{sparse_and_PW}}
 
 \item{nK2, nV_D, field_names, design_type}{See \code{BayesGLM_fun}.}
 

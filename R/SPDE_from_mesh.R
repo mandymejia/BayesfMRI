@@ -27,6 +27,7 @@ SPDE_from_mesh <- function(spatial){
     mesh = mesh,
     mask_new_diff = mask_new_diff,
     spde = INLA::inla.spde2.matern(mesh),
-    spatial = list(surf=surf, mask=mask)
+    spatial = list(surf=surf, mask=mask),
+    data_loc = NULL # [TO DO] implement this so we can have boundary vertices, i.e. the medial wall
   )
 }

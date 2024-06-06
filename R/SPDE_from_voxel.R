@@ -60,6 +60,7 @@ SPDE_from_voxel <- function(spatial){
 
   list(
     spde = spde,
-    spatial = spatial
+    spatial = spatial,
+    data_loc = data_loc
   )
 }
