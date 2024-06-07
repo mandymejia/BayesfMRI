@@ -30,7 +30,7 @@ id_activations(
 )
 }
 \arguments{
-\item{model_obj}{Result of \code{BayesGLM} or \code{BayesGLM_fun} model
+\item{model_obj}{Result of \code{BayesGLM} or \code{fit_bayesglm} model
 call, of class \code{"BGLM"} or \code{"BGLM"}.}
 
 \item{fields}{The field(s) to identify activations for. Give either the name(s)
@@ -69,10 +69,10 @@ Please use \code{gamma} instead of \code{threshold}. \code{threshold} will
 be removed in a later version.}
 }
 \value{
-An \code{"act_BGLM"} or \code{"act_BGLM0"} object, a
+An \code{"act_BGLM"} or \code{"act_fit_bglm"} object, a
 list which indicates the activated locations along with related information.
 }
 \description{
 Identify areas of activation for each field from the result of \code{BayesGLM}
-or \code{BayesGLM_fun}.
+or \code{fit_bayesglm}.
 }

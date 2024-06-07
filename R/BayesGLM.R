@@ -578,7 +578,7 @@ BayesGLM <- function(
     }
 
     ## `BayesGLM0` call. --------------------------------------------------------
-    BGLMs[[dname_bb]] <- BayesGLM_fun(
+    BGLMs[[dname_bb]] <- fit_bayesglm(
       BOLD = BOLD[[dname_bb]],
       design = design_bb,
       nuisance = nuisance,

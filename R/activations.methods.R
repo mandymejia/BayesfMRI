@@ -1,21 +1,21 @@
-#' Summarize a \code{"act_BGLM0"} object
+#' Summarize a \code{"act_fit_bglm"} object
 #'
-#' Summary method for class \code{"act_BGLM0"}
+#' Summary method for class \code{"act_fit_bglm"}
 #'
-#' @param object Object of class \code{"act_BGLM0"}.
+#' @param object Object of class \code{"act_fit_bglm"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.act_BGLM0"} object, a list summarizing the
+#' @return A \code{"summary.act_fit_bglm"} object, a list summarizing the
 #'  properties of \code{object}.
-#' @method summary act_BGLM0
-summary.act_BGLM0 <- function(object, ...) {
+#' @method summary act_fit_bglm
+summary.act_fit_bglm <- function(object, ...) {
   # This is the possible structure of `object`:
   # object$activations$cortex_left$(session1)$`gamma=g`$active # CIFTI BayesGLM
   # object$activations$(session1)$`gamma=g`$active # BayesGLM
 
   # Try to make one consistent structure...
   act <- object$activations[!vapply(object$activations, is.null, FALSE)]
-  if (inherits(object, "act_BGLM0")) { act <- list(model=act) } # See line near end of function
+  if (inherits(object, "act_fit_bglm")) { act <- list(model=act) } # See line near end of function
   if ("p_values" %in% names(act[[1]][[1]])) { act <- list(single_session=act) }
   act <- act[!vapply(act, function(q){is.null(q[[1]])}, FALSE)]
 
@@ -39,19 +39,19 @@ summary.act_BGLM0 <- function(object, ...) {
     #excur_method
   )
 
-  if (inherits(object, "act_BGLM0")) { x$activations_g1 <- x$activations_g1$model } # See line near top of function
+  if (inherits(object, "act_fit_bglm")) { x$activations_g1 <- x$activations_g1$model } # See line near top of function
 
-  class(x) <- "summary.act_BGLM0"
+  class(x) <- "summary.act_fit_bglm"
   x
 }
 
-#' @rdname summary.act_BGLM0
+#' @rdname summary.act_fit_bglm
 #' @export
 #'
-#' @param x Object of class \code{"summary.act_BGLM0"}.
+#' @param x Object of class \code{"summary.act_fit_bglm"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.act_BGLM0
-print.summary.act_BGLM0 <- function(x, ...) {
+#' @method print summary.act_fit_bglm
+print.summary.act_fit_bglm <- function(x, ...) {
   gamma_msg <- if (length(x$gamma)>1) {
     paste0(" (lowest threshold, gamma=", x$gamma[1], ")")
   } else {
@@ -86,13 +86,13 @@ print.summary.act_BGLM0 <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.act_BGLM0
+#' @rdname summary.act_fit_bglm
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print act_BGLM0
-print.act_BGLM0 <- function(x, ...) {
-  print.summary.act_BGLM0(summary(x))
+#' @method print act_fit_bglm
+print.act_fit_bglm <- function(x, ...) {
+  print.summary.act_fit_bglm(summary(x))
 }
 
 #' Summarize a \code{"act_BGLM"} object
@@ -106,7 +106,7 @@ print.act_BGLM0 <- function(x, ...) {
 #'  properties of \code{object}.
 #' @method summary act_BGLM
 summary.act_BGLM <- function(object, ...) {
-  x <- summary.act_BGLM0(object, ...)
+  x <- summary.act_fit_bglm(object, ...)
   class(x) <- "summary.act_BGLM"
   x
 }

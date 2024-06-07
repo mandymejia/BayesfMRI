@@ -1,9 +1,9 @@
 #' Standardize data variance, and prewhiten if applicable
 #'
 #' Standardize data variance and prewhiten if applicable, for the GLM.
-#' @param BOLD,design,spatial,spatial_type See \code{BayesGLM_fun}.
-#' @param session_names,field_names,design_type See \code{BayesGLM_fun}.
-#' @param valid_cols,nT,nD,do_pw See \code{BayesGLM_fun}.
+#' @param BOLD,design,spatial,spatial_type See \code{fit_bayesglm}.
+#' @param session_names,field_names,design_type See \code{fit_bayesglm}.
+#' @param valid_cols,nT,nD,do_pw See \code{fit_bayesglm}.
 #' @return List of results
 #' @keywords internal
 GLM_est_resid_var_pw <- function(

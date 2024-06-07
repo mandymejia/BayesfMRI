@@ -2,7 +2,7 @@
 % Please edit documentation in R/BayesGLM_format_cifti.R
 \name{BayesGLM_format_cifti}
 \alias{BayesGLM_format_cifti}
-\title{Format BayesGLM_fun results into \code{"xifti"} objects}
+\title{Format fit_bayesglm results into \code{"xifti"} objects}
 \usage{
 BayesGLM_format_cifti(
   BGLMs,
@@ -15,7 +15,7 @@ BayesGLM_format_cifti(
 )
 }
 \arguments{
-\item{BGLMs}{The list of \code{"BGLM"} objects, from \code{BayesGLM_fun}.}
+\item{BGLMs}{The list of \code{"BGLM"} objects, from \code{fit_bayesglm}.}
 
 \item{do, spatial, submeta, session_names, field_names}{See \code{BayesGLM}.}
 
@@ -25,7 +25,7 @@ BayesGLM_format_cifti(
 The list of \code{"xifti"} objects
 }
 \description{
-Format beta estimates or RSS of the \code{BayesGLM_fun} results into list of
+Format beta estimates or RSS of the \code{fit_bayesglm} results into list of
 \code{"xifti"} objects for each session.
 }
 \keyword{internal}

@@ -1,15 +1,15 @@
-#' Retroactively mask locations from BGLM0 result.
+#' Retroactively mask locations from fit_bglm result.
 #'
 #' Work in progress.
 #'
-#' @param x The \code{"BGLM0"} result
+#' @param x The \code{"fit_bglm"} result
 #' @param mask The mask to be applied to \code{x} (on top of any masks already
 #'  applied to it.)
 #' @return The masked result
 #'
 #' @keywords internal
 retro_mask_BGLM <- function(x, mask){
-  stopifnot(inherits(x, "BGLM0"))
+  stopifnot(inherits(x, "fit_bglm"))
   nS <- length(x$session_names)
   nK <- length(x$field_names)
   nV <- sum(x$mask)

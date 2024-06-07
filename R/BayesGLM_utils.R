@@ -51,9 +51,9 @@ BayesGLM_make_DCT <- function(hpf, nT, TR){
 
 #' Bayes GLM arg checks
 #'
-#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_fun}
+#' Checks arguments for \code{BayesGLM} and \code{fit_bayesglm}
 #'
-#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_fun}
+#' Avoids duplicated code between \code{BayesGLM} and \code{fit_bayesglm}
 #'
 #' @param scale_BOLD See \code{\link{BayesGLM}}.
 #' @param Bayes,EM See \code{\link{BayesGLM}}.

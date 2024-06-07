@@ -1,14 +1,14 @@
-#' Summarize a \code{"BGLM02"} object
+#' Summarize a \code{"fit_bglm2"} object
 #'
-#' Summary method for class \code{"BGLM02"}
+#' Summary method for class \code{"fit_bglm2"}
 #'
-#' @param object Object of class \code{"BGLM02"}.
+#' @param object Object of class \code{"fit_bglm2"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.BGLM02"} object, a list summarizing the
+#' @return A \code{"summary.fit_bglm2"} object, a list summarizing the
 #'  properties of \code{object}.
-#' @method summary BGLM02
-summary.BGLM02 <- function(object, ...) {
+#' @method summary fit_bglm2
+summary.fit_bglm2 <- function(object, ...) {
 
   x <- list(
     n_contrasts = length(object$contrasts),
@@ -18,18 +18,18 @@ summary.BGLM02 <- function(object, ...) {
     n_loc_modeled = vapply(lapply(object$model_results, '[[', "mask"), sum, 0),
     excursion_type = object$excursion_type
   )
-  class(x) <- "summary.BGLM02"
+  class(x) <- "summary.fit_bglm2"
   return(x)
 }
 
-#' @rdname summary.BGLM02
+#' @rdname summary.fit_bglm2
 #' @export
 #'
-#' @param x Object of class \code{"summary.BGLM02"}.
+#' @param x Object of class \code{"summary.fit_bglm2"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.BGLM02
-print.summary.BGLM02 <- function(x, ...) {
-  cat("====BGLM02 result===================\n")
+#' @method print summary.fit_bglm2
+print.summary.fit_bglm2 <- function(x, ...) {
+  cat("====fit_bglm2 result===================\n")
   cat("Fields:   ", paste0("(", length(x$fields), ") ", paste(x$fields, collapse=", ")), "\n")
   if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
@@ -48,13 +48,13 @@ print.summary.BGLM02 <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.BGLM02
+#' @rdname summary.fit_bglm2
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print BGLM02
-print.BGLM02 <- function(x, ...) {
-  print.summary.BGLM02(summary(x))
+#' @method print fit_bglm2
+print.fit_bglm2 <- function(x, ...) {
+  print.summary.fit_bglm2(summary(x))
 }
 
 #' Summarize a \code{"BGLM2"} object
@@ -68,7 +68,7 @@ print.BGLM02 <- function(x, ...) {
 #'  properties of \code{object}.
 #' @method summary BGLM2
 summary.BGLM2 <- function(object, ...) {
-  x <- summary.BGLM02(object$BGLM02_results)
+  x <- summary.fit_bglm2(object$fit_bglm2_results)
   class(x) <- "summary.BGLM2"
   x
 }
@@ -80,7 +80,7 @@ summary.BGLM2 <- function(object, ...) {
 #' @return \code{NULL}, invisibly.
 #' @method print summary.BGLM2
 print.summary.BGLM2 <- function(x, ...) {
-  print.summary.BGLM02(x, ...)
+  print.summary.fit_bglm2(x, ...)
 }
 
 #' @rdname summary.BGLM2

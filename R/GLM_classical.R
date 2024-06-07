@@ -1,11 +1,11 @@
 #' Classical GLM
 #'
-#' Classical GLM for BayesGLM_fun (internal function)
+#' Classical GLM for fit_bayesglm (internal function)
 #'
 #' @param BOLD BOLD timeseries in vector form (TVx1), result of \code{sparse_and_PW}
 #' @param design List of large sparse design matrices (each TVxV), one per regressor, result of \code{sparse_and_PW}
-#' @param nK2,nV_D,field_names,design_type See \code{BayesGLM_fun}.
-#' @param valid_cols,nT See \code{BayesGLM_fun}.
+#' @param nK2,nV_D,field_names,design_type See \code{fit_bayesglm}.
+#' @param valid_cols,nT See \code{fit_bayesglm}.
 #' @param do_pw Has prewhitening been performed on the data and design?
 #' @param compute_SE Compute SE of model coefficients?
 #' @return A list of results

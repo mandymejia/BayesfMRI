@@ -1,14 +1,14 @@
-#' Summarize a \code{"BGLM0"} object
+#' Summarize a \code{"fit_bglm"} object
 #'
-#' Summary method for class \code{"BGLM0"}
+#' Summary method for class \code{"fit_bglm"}
 #'
-#' @param object Object of class \code{"BGLM0"}.
+#' @param object Object of class \code{"fit_bglm"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @return A \code{"summary.BGLM0"} object, a list summarizing the properties
+#' @return A \code{"summary.fit_bglm"} object, a list summarizing the properties
 #'  of \code{object}.
-#' @method summary BGLM0
-summary.BGLM0 <- function(object, ...) {
+#' @method summary fit_bglm
+summary.fit_bglm <- function(object, ...) {
 
   x <- list(
     fields = object$field_names,
@@ -18,19 +18,19 @@ summary.BGLM0 <- function(object, ...) {
     GLM_type = attr(object$field_estimates, "GLM_type")
   )
 
-  class(x) <- "summary.BGLM0"
+  class(x) <- "summary.fit_bglm"
 
   return(x)
 }
 
-#' @rdname summary.BGLM0
+#' @rdname summary.fit_bglm
 #' @export
 #'
-#' @param x Object of class \code{"summary.BGLM0"}.
+#' @param x Object of class \code{"summary.fit_bglm"}.
 #' @return \code{NULL}, invisibly.
-#' @method print summary.BGLM0
-print.summary.BGLM0 <- function(x, ...) {
-  cat("====BGLM0 result====================\n")
+#' @method print summary.fit_bglm
+print.summary.fit_bglm <- function(x, ...) {
+  cat("====fit_bglm result====================\n")
   cat("Fields:   ", paste0("(", length(x$fields), ") ", paste(x$fields, collapse=", ")), "\n")
   if (length(x$sessions)==1 && x$sessions == "session_combined") {
     cat("Sessions: ", paste0("(", x$n_sess_orig, ", combined) \n"))
@@ -43,11 +43,11 @@ print.summary.BGLM0 <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.BGLM0
+#' @rdname summary.fit_bglm
 #' @export
 #'
 #' @return \code{NULL}, invisibly.
-#' @method print BGLM0
-print.BGLM0 <- function(x, ...) {
-  print.summary.BGLM0(summary(x))
+#' @method print fit_bglm
+print.fit_bglm <- function(x, ...) {
+  print.summary.fit_bglm(summary(x))
 }

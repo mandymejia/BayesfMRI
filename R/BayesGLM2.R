@@ -7,7 +7,7 @@
 #'
 #' @param results Either (1) a length \eqn{N} list of \code{"BGLM"} objects,
 #'  or (2) a length \eqn{N} character vector of files storing \code{"BGLM"}
-#'  objects saved with \code{\link{saveRDS}}. \code{"BGLM0"} objects
+#'  objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
 #'  also are accepted.
 #' @param contrasts (Optional) A list of contrast vectors that specify the
 #'  group-level summaries of interest. If \code{NULL}, use contrasts that compute
@@ -94,12 +94,12 @@ BayesGLM2 <- function(
     results <- lapply(results, readRDS) # [TO DO]: delete w/ each read-in, stuff not needed
   }
   if (!is.list(results)) {
-    stop("`results` must be a list of all `'BGLM'` or all `'BGLM0'` objects, or a character vector of files with `'BGLM(0)'` results.")
+    stop("`results` must be a list of all `'BGLM'` or all `'fit_bglm'` objects, or a character vector of files with `'BGLM(0)'` results.")
   }
-  is_BGLM <- all(vapply(results, inherits, FALSE, "BGLM0"))
+  is_BGLM <- all(vapply(results, inherits, FALSE, "fit_bglm"))
   is_cifti <- all(vapply(results, inherits, FALSE, "BGLM"))
   if (!is_BGLM && !is_cifti) {
-    stop("`results` must be a list of all `'BGLM'` or all `'BGLM0'` objects, or a character vector of files with `'BGLM(0)'` results.")
+    stop("`results` must be a list of all `'BGLM'` or all `'fit_bglm'` objects, or a character vector of files with `'BGLM(0)'` results.")
   }
   rm(is_BGLM) # use `is_cifti`
 
@@ -389,7 +389,7 @@ BayesGLM2 <- function(
     nsamp_theta = nsamp_theta,
     nsamp_beta = nsamp_beta
   )
-  class(out) <- "BGLM02"
+  class(out) <- "fit_bglm2"
 
   if (is_cifti) {
     out <- list(

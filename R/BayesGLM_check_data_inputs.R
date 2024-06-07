@@ -22,7 +22,7 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 
 #' Format design
 #'
-#' Format design for \code{BayesGLM}, \code{BayesGLM_fun},
+#' Format design for \code{BayesGLM}, \code{fit_bayesglm},
 #'  \code{multiGLM}, and \code{multiGLM_fun}.
 #' @param design The \code{design} argument input. Will be formatted to a
 #'  \code{nS}-length list.
@@ -237,7 +237,7 @@ BayesGLM_format_design <- function(
 
 #' Format nuisance
 #'
-#' Format nuisance for \code{BayesGLM}, \code{BayesGLM_fun},
+#' Format nuisance for \code{BayesGLM}, \code{fit_bayesglm},
 #'  \code{multiGLM}, and \code{multiGLM_fun}.
 #' @param nuisance The \code{nuisance} argument input. Will be formatted to a
 #'  \code{nS}-length list.

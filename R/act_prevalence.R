@@ -14,11 +14,11 @@
 #' @export 
 act_prevalance <- function(act_list, gamma_idx=1){
 
-  # Determine if `act_BGLM` or `act_BGLM0`.
+  # Determine if `act_BGLM` or `act_fit_bglm`.
   is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BGLM") }, FALSE))
   if (!is_cifti) {
-    if (!all(vapply(act_list, function(q){ inherits(q, "act_BGLM0") }, FALSE))) {
-      stop("All objects in `act_list` must be the same type of result from `activations`: either `act_BGLM` or `act_BGLM0`.")
+    if (!all(vapply(act_list, function(q){ inherits(q, "act_fit_bglm") }, FALSE))) {
+      stop("All objects in `act_list` must be the same type of result from `activations`: either `act_BGLM` or `act_fit_bglm`.")
     }
   }
 
@@ -81,9 +81,9 @@ act_prevalance <- function(act_list, gamma_idx=1){
     session_names = session_names
   )
 
-  # If BGLM0, return.
+  # If fit_bglm, return.
   if (!is_cifti) {
-    class(result) <- "prev_BGLM0"
+    class(result) <- "prev_fit_bglm"
     return(result)
   }
 

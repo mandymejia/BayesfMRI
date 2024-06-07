@@ -1,4 +1,4 @@
-#' BayesGLM_fun
+#' fit_bayesglm
 #'
 #' Performs spatial Bayesian GLM for task fMRI activation
 #'
@@ -68,7 +68,7 @@
 #'
 #' @importFrom methods as
 #' @export
-BayesGLM_fun <- function(
+fit_bayesglm <- function(
   BOLD,
   design,
   nuisance=NULL,
@@ -516,7 +516,7 @@ BayesGLM_fun <- function(
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     call = match.call()
   )
-  class(result) <- "BGLM0"
+  class(result) <- "fit_bglm"
 
   result
 }

@@ -63,7 +63,7 @@ AICc <- function(y, demean=FALSE, order.max = 10) {
 
 #' Smooth AR coefficients and white noise variance
 #'
-#' @param spatial,spatial_type See \code{BayesGLM_fun} internal code.
+#' @param spatial,spatial_type See \code{fit_bayesglm} internal code.
 #' @param AR A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order
 #' @param var A vector length V containing the white noise variance estimates from the AR model
 #' @param FWHM FWHM parameter for smoothing. Remember that

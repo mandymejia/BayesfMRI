@@ -22,9 +22,9 @@ GLM_classical(
 
 \item{design}{List of large sparse design matrices (each TVxV), one per regressor, result of \code{sparse_and_PW}}
 
-\item{nK2, nV_D, field_names, design_type}{See \code{BayesGLM_fun}.}
+\item{nK2, nV_D, field_names, design_type}{See \code{fit_bayesglm}.}
 
-\item{valid_cols, nT}{See \code{BayesGLM_fun}.}
+\item{valid_cols, nT}{See \code{fit_bayesglm}.}
 
 \item{do_pw}{Has prewhitening been performed on the data and design?}
 
@@ -34,6 +34,6 @@ GLM_classical(
 A list of results
 }
 \description{
-Classical GLM for BayesGLM_fun (internal function)
+Classical GLM for fit_bayesglm (internal function)
 }
 \keyword{internal}

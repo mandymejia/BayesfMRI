@@ -1,9 +1,9 @@
-#' Format BayesGLM_fun results into \code{"xifti"} objects
+#' Format fit_bayesglm results into \code{"xifti"} objects
 #'
-#' Format beta estimates or RSS of the \code{BayesGLM_fun} results into list of
+#' Format beta estimates or RSS of the \code{fit_bayesglm} results into list of
 #'  \code{"xifti"} objects for each session.
 #'
-#' @param BGLMs The list of \code{"BGLM"} objects, from \code{BayesGLM_fun}.
+#' @param BGLMs The list of \code{"BGLM"} objects, from \code{fit_bayesglm}.
 #' @param do,spatial,submeta,session_names,field_names See \code{BayesGLM}.
 #' @param method \code{"classical"} or \code{"Bayesian"}
 #' @return The list of \code{"xifti"} objects
@@ -31,7 +31,7 @@ BayesGLM_format_cifti <- function(
           classical_RSS = BGLMs$cortexL$result_classical[[ss]]$RSS,
           Bayesian_RSS = BGLMs$cortexL$RSS[[ss]],
         )
-        # Update mwall b/c `mask2` in `BayesGLM_fun` can change the medial wall.
+        # Update mwall b/c `mask2` in `fit_bayesglm` can change the medial wall.
         mwallL <- BGLMs$cortexL$spatial$mask
         colnames(datL) <- NULL
       }

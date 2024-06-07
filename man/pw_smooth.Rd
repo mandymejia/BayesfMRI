@@ -7,7 +7,7 @@
 pw_smooth(spatial, spatial_type, AR, var, FWHM = 5)
 }
 \arguments{
-\item{spatial, spatial_type}{See \code{BayesGLM_fun} internal code.}
+\item{spatial, spatial_type}{See \code{fit_bayesglm} internal code.}
 
 \item{AR}{A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order}
 

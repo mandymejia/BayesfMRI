@@ -1,9 +1,9 @@
 #' Identify field activations
 #'
 #' Identify areas of activation for each field from the result of \code{BayesGLM}
-#'  or \code{BayesGLM_fun}.
+#'  or \code{fit_bayesglm}.
 #'
-#' @param model_obj Result of \code{BayesGLM} or \code{BayesGLM_fun} model
+#' @param model_obj Result of \code{BayesGLM} or \code{fit_bayesglm} model
 #'  call, of class \code{"BGLM"} or \code{"BGLM"}.
 # @param method The method to be used for identifying activations, either 'posterior' (Default) or '2means'
 #' @param fields The field(s) to identify activations for. Give either the name(s)
@@ -49,7 +49,7 @@
 #' @importFrom utils packageVersion
 #' @importFrom viridisLite plasma
 #'
-#' @return An \code{"act_BGLM"} or \code{"act_BGLM0"} object, a
+#' @return An \code{"act_BGLM"} or \code{"act_fit_bglm"} object, a
 #'  list which indicates the activated locations along with related information.
 #' @export
 #'
@@ -83,8 +83,8 @@ activations <- function(
     cifti_obj <- model_obj
     model_obj <- cifti_obj$BGLMs
   } else {
-    if (!inherits(model_obj, "BGLM0")) {
-      stop("`model_obj` is not a `'BGLM'` or 'BGLM0' object.")
+    if (!inherits(model_obj, "fit_bglm")) {
+      stop("`model_obj` is not a `'BGLM'` or 'fit_bglm' object.")
     }
     model_obj <- list(bglm=model_obj)
   }
@@ -192,7 +192,7 @@ activations <- function(
   # If BayesGLM0, return.
   if (!is_cifti) {
     result$activations <- result$activations[[1]]
-    class(result) <- "act_BGLM0"
+    class(result) <- "act_fit_bglm"
     return(result)
   }
 
@@ -295,7 +295,7 @@ activations.posterior <- function(
   #area.limit=NULL,
   #excur_method = c("EB","QC")
 
-  stopifnot(inherits(model_obj, "BGLM0"))
+  stopifnot(inherits(model_obj, "fit_bglm"))
   #excur_method <- match.arg(excur_method, c("EB","QC"))
 
   sess_ind <- which(model_obj$session_names == session)
@@ -361,11 +361,11 @@ activations.classical <- function(model_obj,
                                      mesh = NULL) {
 
   # Argument checks ------------------------------------------------------------
-  if (!inherits(model_obj, "BGLM0")) {
+  if (!inherits(model_obj, "fit_bglm")) {
     stop(paste0(
       "The model object is of class ",
       paste0(class(model_obj), collapse=", "),
-      " but should be of class 'BGLM0'."
+      " but should be of class 'fit_bglm'."
     ))
   }
   # fields, session, alpha, gamma checked in `activations`

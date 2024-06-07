@@ -39,7 +39,7 @@ design has three dimensions.)}
 \code{design}
 }
 \description{
-Format design for \code{BayesGLM}, \code{BayesGLM_fun},
+Format design for \code{BayesGLM}, \code{fit_bayesglm},
 \code{multiGLM}, and \code{multiGLM_fun}.
 }
 \keyword{internal}
