@@ -461,8 +461,6 @@ BayesGLM_fun <- function(
     )
     if (verbose>0) cat("\tDone!\n")
 
-    save(INLA_model_obj, file = '~/Desktop/tmp.RData')
-
     #extract useful stuff from INLA model result
     field_estimates <- extract_estimates(
       INLA_model_obj=INLA_model_obj,
