@@ -3,7 +3,6 @@
 ^README\.Rmd$
 ^\.github$
 ^appveyor\.yml$
-^vignettes
 ^LICENSE\.md$
 ^CRAN-RELEASE$
 ^cran-comments\.md
@@ -21,10 +20,7 @@
 # EM ---------------------------
 # ^R/EM_utils\.R$
 # Vignettes (TO-DO) ------------
-^vignettes/BayesfMRI_simulation\.Rmd$
-^vignettes/BayesfMRI_simulation\.html$
-^vignettes/BayesfMRI_simulation_files$
-^vignettes/BayesfMRI_HCP\.Rmd$
+^vignettes
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$

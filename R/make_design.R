@@ -18,8 +18,8 @@
 #' @param TR the temporal resolution of the data, in seconds.
 #' @param dHRF Controls the extent of HRF derivatives modeling.
 #'
-#'  Set to \code{0} to only model the main HRF regressor, and not include its
-#'  derivatives; set to \code{1} (default) to model the temporal derivative too;
+#'  Set to \code{0} to only model the main HRF regressor (default), and not include its
+#'  derivatives; set to \code{1} to model the temporal derivative too;
 #'  or, set to \code{2} to model both the temporal and dispersion derivatives.
 #'  If \code{dHRF==0}, there is one design column (field) per task. If
 #'  \code{dHRF==1}, there are two fields per task. And if \code{dHRF==2}, there
@@ -64,7 +64,7 @@
 #' }
 #' @export
 make_design <- function(
-  EVs, nTime, TR, dHRF=c(1, 0, 2), upsample=100,
+  EVs, nTime, TR, dHRF=c(0, 1, 2), upsample=100,
   onset=NULL, offset=NULL,
   scale_design=TRUE,
   onsets_sep=FALSE, offsets_sep=FALSE,
