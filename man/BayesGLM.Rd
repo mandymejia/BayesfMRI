@@ -19,6 +19,7 @@ BayesGLM(
   session_names = NULL,
   scale_BOLD = c("mean", "sd", "none"),
   Bayes = TRUE,
+  hyperpriors = c("informative", "default"),
   ar_order = 6,
   ar_smooth = 5,
   aic = FALSE,
@@ -117,6 +118,8 @@ automatically, in that order.}
 \item{Bayes}{Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
 \code{FALSE}, only fit the classical GLM. (The classical GLM is always
 returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)}
+
+\item{hyperpriors}{Should informative or default non-informative hyperpriors be assumed on SPDE hyperparameters?}
 
 \item{ar_order}{(For prewhitening) The order of the autoregressive (AR) model
 to use for prewhitening. If \code{0}, do not prewhiten. Default: \code{6}.

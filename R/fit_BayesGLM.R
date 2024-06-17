@@ -22,6 +22,7 @@
 #' @inheritParams session_names_Param
 #' @inheritParams scale_BOLD_Param
 #' @inheritParams Bayes_Param
+#' @param hyperpriors Should informative or default non-informative hyperpriors be assumed on SPDE hyperparameters?
 # @inheritParams EM_Param
 #' @inheritParams ar_order_Param
 #' @inheritParams ar_smooth_Param
@@ -76,6 +77,7 @@ fit_bayesglm <- function(
   # Below arguments shared with `BayesGLM`.
   scale_BOLD = c("mean", "sd", "none"),
   Bayes = TRUE,
+  hyperpriors = c("informative","default"),
   #EM = FALSE,
   ar_order = 6,
   ar_smooth = 5,
@@ -91,6 +93,8 @@ fit_bayesglm <- function(
 
   EM <- FALSE
   emTol <- 1e-3
+  hyperpriors <- hyperpriors[1]
+  if(!hyperpriors %in% c("informative","default")) stop('`hyperpriors` must be "informative" or "default"')
 
   # Initialize return values that may or may not be computed. ------------------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
@@ -241,36 +245,25 @@ fit_bayesglm <- function(
     BOLD <- lapply(BOLD, function(q){ q[,mask_qc$mask,drop=FALSE] }) #remove bad locations from BOLD
   }
 
-  # Get SPDE and mask based on it (additional vertices may be excluded).
-  x <- switch(spatial_type, mesh=SPDE_from_mesh, voxel=SPDE_from_voxel)(spatial)
-  if (spatial_type=="mesh") {
-    BOLD <- lapply(BOLD, function(q){ q[,x$mask_new_diff,drop=FALSE] })
-  }
-  spde <- x$spde
-  spatial <- x$spatial #unchanged for mesh data
-  spatial$data_loc <- x$data_loc
-  spatial$ROIs <- x$ROIs
-  rm(x)
+  # Initialize and construct informative priors for SPDE hyperparameters --------------------
 
-  # CONSTRUCT INFORMATIVE PRIOR FOR KAPPA --------------------------------------
-
+  logkappa_vec <- logtau_vec <- NULL #for default priors
   if (do$Bayesian) {
+
+    d <- if(spatial_type == "mesh"){ 2 } else { 3 }
+    nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
+
+    ### LOG KAPPA
+
+    #determine reasonable values for spatial range
     if(spatial_type == "mesh"){
-
-      #MAX distance within the mesh (Euclidean, a bad proxy for geodesic)
-      max_dist <- apply(spatial$surf$vertices, 2, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
+      max_dist <- apply(spatial$surf$vertices, 2, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE)) #MAX distance within the mesh (Euclidean, a bad proxy for geodesic)
       range2 <- max(max_dist)/2 #this is our upper limit for the spatial correlation range
-
-      #MIN distance within the mesh
-      tri_dist <- apply(matrix(1:nrow(spatial$surf$faces), ncol=1), 1, #for each face/triangle
-                        function(x) {
-                          mean(dist(spatial$surf$vertices[spatial$surf$faces[x,],])) #compute the avg distance among vertices in the triangle
-                        })
+      tri_dist <- apply(matrix(1:nrow(spatial$surf$faces), ncol=1), 1, #for each face/triangle #MIN distance within the mesh
+                        function(x) { mean(dist(spatial$surf$vertices[spatial$surf$faces[x,],])) }) #compute the avg distance among vertices in the triangle
       min_dist <- min(tri_dist) #distance between vertices in the smallest triangle
       range1 <- min_dist*2
-
-      #translate to log kappa values
-      d <- 2
+      range0 <- range1*5
 
     } else {
 
@@ -286,19 +279,65 @@ fit_bayesglm <- function(
       }
       #this is our upper limit for the spatial correlation range. Since volumetric structures are smaller, we allow a larger range
       range2 <- max(range2)*2 #max over ROIs, doubled (in case we don't observe the full range)
-      #smallest voxel dimension
-      range1 <- min(res)*2
+      range1 <- min(res)*2 #smallest voxel dimension
       #reasonable starting value
       range0 <- range1*5
-      d <- 3
     }
 
-    nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
-    logkappa1 <- log(sqrt(8*nu)/range1) #r = sqrt(8*nu)/kappa
-    logkappa2 <- log(sqrt(8*nu)/range2)
-    logkappa0 <- log(sqrt(8*nu)/range0) #starting value
+    range_vec <- c(range1, range2, range0)
 
+    if(hyperpriors == "informative") logkappa_vec <- log(sqrt(8*nu)/range_vec) #r = sqrt(8*nu)/kappa
+    logkappa0 <- log(sqrt(8*nu)/range0) #we will use a good starting value even with the default prior
+
+    # logkappa1 <-
+    # logkappa2 <- log(sqrt(8*nu)/range2)
+    # logkappa0 <- log(sqrt(8*nu)/range0) #starting value
+
+
+    ### LOG TAU
+
+    # Get initial value for tau
+    var2logtau <- function(var, d, kappa){
+      nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
+      tausq <- gamma(nu)/(var * (4*pi)^(d/2) * kappa^(2*nu))
+      log(sqrt(tausq))
+    }
+
+    # # Get initial value for tau based on variance of classical GLM
+    # var0 <- apply(result_classical[[ss]]$estimates, 2, var, na.rm=TRUE)
+
+    var0 <- 1 #we usually expect most of the activation amplitudes to be between (-2 and 2) --> SD = 1, Var = 1
+    var_vec <- c(0.01, 2, var0) #reasonable range for variance
+    if(hyperpriors == "informative") logtau_vec <- var2logtau(var_vec, d, exp(logkappa0))
+    logtau0 <- var2logtau(var0, d, exp(logkappa0)) #we will use a good starting value even with the default prior
+
+    ### SUMMARY
+
+    if(verbose > 0 & hyperpriors == 'informative'){
+      cat(paste0('\tPutting an informative prior on kappa so that the spatial range is between ',
+        round(range1, 2), ' and ', round(range2, 2), ' mm.\n',
+        '\t\t Log kappa prior range (95% density): ', round(logkappa_vec[2], 2), ' to ', round(logkappa_vec[1], 2), '\n'))
+      cat(paste0('\tPutting an informative prior on tau so variance of the spatial field is between ',
+      (var_vec[1]), ' and ', (var_vec[2]), '.\n',
+      '\t\tLog tau prior range (95% density): ',round(logtau_vec[2], 2), ' to ', round(logtau_vec[1], 2), '\n'))
+    }
   }
+
+
+  # Get SPDE and mask based on it (additional vertices may be excluded).
+  x <- switch(spatial_type, mesh=SPDE_from_mesh, voxel=SPDE_from_voxel)(
+    spatial,
+    logkappa = logkappa_vec,
+    logtau = logtau_vec)
+
+  if (spatial_type=="mesh") {
+    BOLD <- lapply(BOLD, function(q){ q[,x$mask_new_diff,drop=FALSE] })
+  }
+  spde <- x$spde
+  spatial <- x$spatial #unchanged for mesh data
+  spatial$data_loc <- x$data_loc
+  rm(x)
+
 
   # Adjust design for per-location modeling.
 
@@ -505,11 +544,6 @@ fit_bayesglm <- function(
       do$pw, compute_SE=TRUE
     )
 
-
-
-
-
-
     # #disabled this because it is very close to 1 after prewhitening
     # s2_init <- mean(apply(result_classical[[ss]]$resids, 1, var), na.rm=TRUE)
     # print(paste0('initial value for precision: 1 / ', s2_init))
@@ -535,46 +569,6 @@ fit_bayesglm <- function(
   # Bayesian GLM. --------------------------------------------------------------
   if (do$Bayesian) {
 
-    if(verbose > 0) cat(paste0('\tPutting an informative prior on kappa so that the spatial range is between ',
-                               round(range1, 2), ' and ', round(range2, 2), ' mm.\n',
-                               '\t\t Log kappa prior range: ', round(logkappa2, 2), ' to ', round(logkappa1, 2)))
-
-
-    # CONSTRUCT INFORMATIVE PRIOR FOR TAU
-
-    # Get initial value for tau
-    #d <- if(spatial_type == "mesh"){ 2 } else { 3 } #already defined above
-    var2logtau <- function(var, d, kappa){
-      nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
-      tausq <- gamma(nu)/(var * (4*pi)^(d/2) * kappa^(2*nu))
-      log(sqrt(tausq))
-    }
-
-    # Get initial value for tau based on variance of classical GLM
-    var0 <- apply(result_classical[[ss]]$estimates, 2, var, na.rm=TRUE)
-    #reasonable range for variance
-    var1 <- min(var0/3) #for priors, need to summmarize over tasks
-    var2 <- max(var0*3)
-    kappa0 <- exp(logkappa0)
-    logtau0 <- var2logtau(var0, d, kappa0) #initial value (by field)
-    logtau1 <- var2logtau(var1, d, kappa0) #upper reasonable value
-    logtau2 <- var2logtau(var2, d, kappa0) #lower reasonable value
-
-    if(verbose > 0) cat(paste0('\tPutting an informative prior on tau so that the spatial variance is between ',
-                               round(var1, 1), ' and ', round(var2, 1), '.\n',
-                               '\t\tLog tau prior range: ',round(logtau2, 2), ' to ', round(logtau1, 2)))
-
-
-    # Modify the SPDE with informative priors
-    logkappa_SD <- abs(logkappa2 - logkappa1)/4 #so that 95% of the prior is within the range
-    logtau_SD <- abs(logtau2 - logtau1)/4 #so that 95% of the prior is within the range
-    logkappa_prec <- 1/(logkappa_SD^2)
-    logtau_prec <- 1/(logtau_SD^2)
-    spde$param.inla$theta.mu <- spde$param.inla$theta.initial <- c(logkappa0, mean(logtau0))
-    spde$param.inla$theta.Q <- diag(c(logkappa_prec, logtau_prec))
-    spde$param.inla$fixed = rep(TRUE, 2)
-    spde$param.inla$theta.fixed <- spde$param.inla$theta.initial
-
     # Construct betas and repls objects.
     x <- make_replicates(
       nSess=nS, field_names=field_names, spatial, spatial_type
@@ -596,7 +590,8 @@ fit_bayesglm <- function(
     #organize the formula and data objects
     #hyper_initial <- c(-2,2)
     #hyper_initial <- rep(list(hyper_initial), nK)
-    hyper_initial <- lapply(round(logtau0,2), function(x) c(round(logkappa0,2), x))
+    hyper_initial <- round(c(logkappa0, logtau0),2)
+    hyper_initial <- rep(list(hyper_initial), nK)
     hyper_vec <- paste0(', hyper=list(theta=list(initial=', hyper_initial, '))')
 
     formula <- paste0('f(',field_names, ', model = spde, replicate = ', names(repls), hyper_vec, ')')
@@ -611,7 +606,8 @@ fit_bayesglm <- function(
       control.predictor=list(A=Amat, compute = TRUE),
       verbose = verbose>1, keep = FALSE, num.threads = n_threads,
       control.inla = list(strategy = "gaussian", int.strategy = "eb"),
-      control.family=list(hyper=list(prec=list(initial=1))),
+      control.family=list(hyper=list(prec=list(initial=1,
+                                               param=c(1, 1)))), #put a more informative prior on the residual precision
       control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
     )
     if (verbose>0) cat("\tDone!\n")
