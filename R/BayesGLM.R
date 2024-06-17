@@ -16,6 +16,7 @@
 #'
 #' @inheritParams BOLD_Param_BayesGLM
 #' @inheritParams brainstructures_Param_BayesGLM
+#' @param subROI Which subcortical ROIs should be analyzed?
 #' @inheritParams design_Param_BayesGLM
 #' @inheritParams nuisance_Param_BayesGLM
 #' @inheritParams hpf_Param_BayesGLM
@@ -61,6 +62,7 @@
 BayesGLM <- function(
   BOLD,
   brainstructures=c("left", "right"),
+  subROI=c('Amygdala-L','Amygdala-R','Caudate-L','Caudate-R','Hippocampus-L','Hippocampus-R','Thalamus-L','Thalamus-R'),
   design,
   # Nuisance
   nuisance=NULL,
@@ -73,7 +75,6 @@ BayesGLM <- function(
   # For volume model
   nbhd_order=1,
   buffer=c(1,1,3,4,4),
-
   # Below arguments shared with `bayesglm_fun`.
   session_names=NULL,
   scale_BOLD = c("mean", "sd", "none"),
@@ -507,6 +508,18 @@ BayesGLM <- function(
     if(!all(brainstructures %in% has_bs)){
       if(nS == 1) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
       if(nS > 1) stop(paste0("Session ", ss, " BOLD data does not contain all of the structures indicated in `brainstructures`"))
+    }
+
+    #Remove extra subcortical ROIs
+    if(do$sub){
+      for (ss in seq(nS)) {
+        label_names <- as.character(unique(BOLD[[ss]]$meta$subcort$labels))
+        if(!all(subROI %in% label_names)) stop('All elements of subROI must be valid subcortical labels and present in BOLD')
+        mask_new <- BOLD[[ss]]$meta$subcort$labels %in% subROI
+        BOLD[[ss]]$data$subcort <- BOLD[[ss]]$data$subcort[mask_new,]
+        BOLD[[ss]]$meta$subcort$mask[BOLD[[ss]]$meta$subcort$mask] <- mask_new
+        BOLD[[ss]]$meta$subcort$labels <- BOLD[[ss]]$meta$subcort$labels[mask_new]
+      }
     }
 
     #Check that nT matches design matrix

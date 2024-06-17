@@ -7,6 +7,8 @@
 BayesGLM(
   BOLD,
   brainstructures = c("left", "right"),
+  subROI = c("Amygdala-L", "Amygdala-R", "Caudate-L", "Caudate-R", "Hippocampus-L",
+    "Hippocampus-R", "Thalamus-L", "Thalamus-R"),
   design,
   nuisance = NULL,
   hpf = NULL,
@@ -45,6 +47,8 @@ provided, they will override any surfaces in \code{BOLD}.}
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
 and/or \code{"sub"} structures. Or \code{"all"} to model all three.
 Default: \code{c("left","right")} (cortex only).}
+
+\item{subROI}{Which subcortical ROIs should be analyzed?}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
 \code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also

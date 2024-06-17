@@ -66,7 +66,7 @@ First, we read in the BOLD data.  We can glimpse its structure, and grab the TR 
 
 ```{r}
 setwd(dir_data)
-(BOLD_xii <- read_cifti(fname_BOLD, resamp_res = 10000, brainstructures = "all"))
+(BOLD_xii <- read_cifti(fname_BOLD, brainstructures = "all")) #use resamp_res to resample to a lower cortical resolution
 (TR <- BOLD_xii$meta$cifti$time_step)
 (nT <- ncol(BOLD_xii))
 ```
@@ -152,6 +152,7 @@ system.time(
   bglm <- BayesGLM(BOLD=BOLD_xii,
         design=design$design,
         brainstructures="sub",
+        subROI=c('Amygdala-L','Amygdala-R','Caudate-L','Caudate-R','Hippocampus-L','Hippocampus-R'),
         TR=TR,
         nuisance=motion,
         scale_BOLD='mean',

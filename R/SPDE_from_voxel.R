@@ -62,7 +62,7 @@ SPDE_from_voxel <- function(spatial, logkappa = NULL, logtau = NULL){
   if (nR > 1) {
     before <- 0 # Cumulative sum of previous regions.
     for (r in seq(2,nR)) {
-      before <- 0 + nrow(spde_list[[r-1]]$mats$C)
+      before <- before + nrow(spde_list[[r-1]]$mats$C)
       data_loc_r <- data_loc_list[[r]]
       data_loc_r <- data_loc_r + before
       data_loc <- c(data_loc, data_loc_r)
