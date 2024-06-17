@@ -240,8 +240,8 @@ get_posterior_densities2 <- function(INLA_model_obj, field_names){
   for(b in 1:numbeta){
     name_b <- field_names[b]
     which_b <- grep(name_b, names_hyper)
-    which_kappa_b <- which_b[2] #Theta2
-    which_tau_b <- which_b[1] #Theta1
+    which_kappa_b <- which_b[2] #Theta2 = log(kappa)
+    which_tau_b <- which_b[1] #Theta1 = log(tau)
     log_kappa.b <- as.data.frame(hyper[[which_kappa_b]])
     log_tau.b <- as.data.frame(hyper[[which_tau_b]])
     names(log_kappa.b) <- names(log_tau.b) <- c('value','density')

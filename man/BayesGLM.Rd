@@ -42,8 +42,8 @@ provided, they will override any surfaces in \code{BOLD}.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
-and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
-(cortex only).}
+and/or \code{"sub"} structures. Or \code{"all"} to model all three.
+Default: \code{c("left","right")} (cortex only).}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
 \code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
@@ -79,8 +79,8 @@ geometry in GIFTI format ("*.surf.gii"). These can be a file path to
 a GIFTI file or a \code{"surf"} object from \code{ciftiTools}.
 
 Surfaces can alternatively be provided through the \code{$surf} metadata in
-\code{BOLD} if it is \code{"xifti"} data. If neither are provided, the
-HCP group-average inflated surface included in \code{ciftiTools} will be
+\code{BOLD} if it is \code{"xifti"} data. If neither are provided, by default the
+HCP group-average fs_LR inflated surfaces included in \code{ciftiTools} will be
 used for the cortex spatial model.}
 
 \item{resamp_res}{For cortex spatial model. The number of vertices to which

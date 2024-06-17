@@ -59,8 +59,8 @@ BayesGLM_format_design <- function(
     }
   }
 
-  if (is.null(per_location_design)) { 
-    per_location_design <- !is.matrix(design[[1]]) && !is.data.frame(design[[1]]) 
+  if (is.null(per_location_design)) {
+    per_location_design <- !is.matrix(design[[1]]) && !is.data.frame(design[[1]])
   }
 
   for (ss in seq(nS)) {
@@ -126,6 +126,7 @@ BayesGLM_format_design <- function(
   # Third dimension, nD
   if (des_is_array) {
     des_nD <- vapply(des_dims, '[', 0, 3)
+    if(!all(des_nD == des_nD[1])) stop('Location-specific design matrix should have the same number of design matrices across all sessions.')
     lapply(design, function(q){dimnames(q)[[3]]})
     #`nD` can differ across sessions only for per-location modeling.
     if (per_location_design) {
@@ -164,7 +165,7 @@ BayesGLM_format_design <- function(
     des_nD <- 1
     design_names <- NULL
   }
-  nD <- des_nD; rm(des_nD)
+  nD <- des_nD[1]; rm(des_nD)
 
   # Replace the `dimnames` of all the designs.
   des_dimnames <- list(vol=NULL, field=field_names)

@@ -8,7 +8,7 @@ make_design(
   EVs,
   nTime,
   TR,
-  dHRF = c(1, 0, 2),
+  dHRF = 0,
   upsample = 100,
   onset = NULL,
   offset = NULL,
@@ -39,8 +39,8 @@ with \code{on_s2} formatted similarly to \code{on_s1}.}
 
 \item{dHRF}{Controls the extent of HRF derivatives modeling.
 
-Set to \code{0} to only model the main HRF regressor, and not include its
-derivatives; set to \code{1} (default) to model the temporal derivative too;
+Set to \code{0} to only model the main HRF regressor (default), and not include its
+derivatives; set to \code{1} to model the temporal derivative too;
 or, set to \code{2} to model both the temporal and dispersion derivatives.
 If \code{dHRF==0}, there is one design column (field) per task. If
 \code{dHRF==1}, there are two fields per task. And if \code{dHRF==2}, there

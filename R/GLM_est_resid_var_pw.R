@@ -3,19 +3,16 @@
 #' Standardize data variance and prewhiten if applicable, for the GLM.
 #' @param BOLD,design,spatial,spatial_type See \code{fit_bayesglm}.
 #' @param session_names,field_names,design_type See \code{fit_bayesglm}.
-#' @param valid_cols,nT,nD,do_pw See \code{fit_bayesglm}.
+#' @param valid_cols,nT,do_pw See \code{fit_bayesglm}.
 #' @return List of results
 #' @keywords internal
 GLM_est_resid_var_pw <- function(
   BOLD, design, spatial, spatial_type,
   session_names, field_names, design_type,
-  valid_cols, nT, nD,
+  valid_cols, nT,
   ar_order, ar_smooth, aic, n_threads,
   do_pw
 ){
-
-  # [NOTE] could remove `nD` argument since multiGLM does not use this;
-  #   so it's always `1` (regular) or `nV_D` (per-location modeling).
 
   nS <- length(session_names)
   nK <- length(field_names)
@@ -69,7 +66,7 @@ GLM_est_resid_var_pw <- function(
   if (do_pw && ar_smooth > 0) {
     x <- pw_smooth(
       spatial=spatial, spatial_type=spatial_type,
-      AR=AR_coefs_avg, var=var_avg, 
+      AR=AR_coefs_avg, var=var_avg,
       FWHM=ar_smooth
     )
     AR_coefs_avg <- x$AR

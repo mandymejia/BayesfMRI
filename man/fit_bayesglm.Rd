@@ -25,7 +25,7 @@ fit_bayesglm(
 \item{BOLD, design, nuisance}{Session-length list of numeric matrices/arrays,
 each with volumes along the first dimension.}
 
-\item{spatial}{Gives the spatial information. For surface data, a list of two:
+\item{spatial}{Gives the spatial information:
 \describe{
 \item{surf}{A list of two: \code{vertices} \eqn{V \times 3} numeric matrix of vertex locations in XYZ coordinate space, and \code{faces}, \eqn{F \times 3} matrix of positive integers defining the triangular faces.}
 \item{mask}{Mask of locations with valid data.}

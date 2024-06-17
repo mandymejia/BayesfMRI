@@ -9,8 +9,8 @@ geometry in GIFTI format ("*.surf.gii"). These can be a file path to
 a GIFTI file or a \code{"surf"} object from \code{ciftiTools}.
 
 Surfaces can alternatively be provided through the \code{$surf} metadata in
-\code{BOLD} if it is \code{"xifti"} data. If neither are provided, the
-HCP group-average inflated surface included in \code{ciftiTools} will be
+\code{BOLD} if it is \code{"xifti"} data. If neither are provided, by default the
+HCP group-average fs_LR inflated surfaces included in \code{ciftiTools} will be
 used for the cortex spatial model.}
 }
 \description{

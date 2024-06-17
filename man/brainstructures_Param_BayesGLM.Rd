@@ -6,8 +6,8 @@
 \arguments{
 \item{brainstructures}{Character vector indicating which brain structure(s)
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
-and/or \code{"subcortical"} structures. Default: \code{c("left","right")}
-(cortex only).}
+and/or \code{"sub"} structures. Or \code{"all"} to model all three.
+Default: \code{c("left","right")} (cortex only).}
 }
 \description{
 brainstructures

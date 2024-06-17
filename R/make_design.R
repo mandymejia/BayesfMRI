@@ -64,7 +64,7 @@
 #' }
 #' @export
 make_design <- function(
-  EVs, nTime, TR, dHRF=c(0, 1, 2), upsample=100,
+  EVs, nTime, TR, dHRF=0, upsample=100,
   onset=NULL, offset=NULL,
   scale_design=TRUE,
   onsets_sep=FALSE, offsets_sep=FALSE,

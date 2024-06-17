@@ -8,6 +8,7 @@ SPDE_from_voxel <- function(spatial){
   mask <- labels!=0
   nbhd_order <- spatial$nbhd_order
   buffer <- spatial$buffer
+  res <- abs(diag(spatial$trans_mat)[1:3])
 
   #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
   #Simply remove those locations (in addition to bad data locations, as below) from the labels array before creating SPDE
@@ -20,7 +21,7 @@ SPDE_from_voxel <- function(spatial){
   for (rr in seq(nR)) {
     mask_rr <- (labels == ROIs[rr])
     # [stop] this breaks [TO DO]
-    spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer)
+    spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer, res=res)
     C_list[[rr]] <- spde_list[[rr]]$mats$C
     G_list[[rr]] <- spde_list[[rr]]$mats$G
   }

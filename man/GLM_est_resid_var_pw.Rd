@@ -14,7 +14,6 @@ GLM_est_resid_var_pw(
   design_type,
   valid_cols,
   nT,
-  nD,
   ar_order,
   ar_smooth,
   aic,
@@ -27,7 +26,7 @@ GLM_est_resid_var_pw(
 
 \item{session_names, field_names, design_type}{See \code{fit_bayesglm}.}
 
-\item{valid_cols, nT, nD, do_pw}{See \code{fit_bayesglm}.}
+\item{valid_cols, nT, do_pw}{See \code{fit_bayesglm}.}
 }
 \value{
 List of results

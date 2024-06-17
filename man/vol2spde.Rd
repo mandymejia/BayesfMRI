@@ -4,7 +4,7 @@
 \alias{vol2spde}
 \title{Construct a triangular mesh from a 3D volumetric mask}
 \usage{
-vol2spde(mask, res = c(2, 2, 2), nbhd_order = 1, buffer = c(1, 1, 3, 4, 4))
+vol2spde(mask, res, nbhd_order = 1, buffer = c(1, 1, 3, 4, 4))
 }
 \arguments{
 \item{mask}{An array of 0s and 1s representing a volumetric mask}

@@ -59,7 +59,7 @@
 #'
 BayesGLM <- function(
   BOLD,
-  brainstructures=c('left','right'),
+  brainstructures=c("left", "right"),
   design,
   # Nuisance
   nuisance=NULL,
@@ -173,21 +173,28 @@ BayesGLM <- function(
   }
 
   ### Brain structures. --------------------------------------------------------
-  if (is_xifti) {
-    brainstructures <- c("left", "right", "subcortical")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
-  } else {
-    if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
-    if ("all" %in% brainstructures) {
-      brainstructures <- c("left","right","subcortical")
-    }
-    brainstructures <- fMRItools::match_input(
-      brainstructures, c("left","right","subcortical"),
-      user_value_label="brainstructures"
-    )
+  if (!all(brainstructures %in% c("left","right","sub","all"))){
+    stop('`brainstructures` contains values other than "left","right","sub", or "all"')
   }
+  if ("all" %in% brainstructures) brainstructures <- c("left","right","sub")
+  if (is_xifti) {
+    has_bs <- c("left", "right", "sub")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
+    if(!all(brainstructures %in% has_bs)) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
+  }
+  if (verbose>0) {
+    cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
+  }
+
+  # } else {
+  #
+  #   brainstructures <- fMRItools::match_input(
+  #     brainstructures, c("left","right","subcortical"),
+  #     user_value_label="brainstructures"
+  #   )
+  # }
   do$left <- ('left' %in% brainstructures)
   do$right <- ('right' %in% brainstructures)
-  do$sub <- ('subcortical' %in% brainstructures)
+  do$sub <- ('sub' %in% brainstructures)
   do$cortex <- do$left || do$right
   if (!do$cortex) { resamp_res <- NULL }
 
@@ -197,18 +204,13 @@ BayesGLM <- function(
   #   across sessions.
   x <- BayesGLM_format_design(design, scale_design=FALSE, nS_expect=nS)
   design <- x$design
-  nT <- x$nT
-  nK <- x$nK
-  nD <- x$nD
+  nT <- x$nT #number of BOLD time points (can vary by session)
+  nK <- x$nK #number of regressors in design matrix (fixed across sessions)
+  nD <- x$nD #number of design matrices: either 1 or # of BOLD locations
   field_names <- x$field_names
   design_names <- x$design_names
   do$perLocDesign <- x$per_location_design
   rm(x)
-  if (verbose>0) {
-    cat("Number of timepoints:    ",
-      if (length(unique(nT))==1) { nT[1] } else { paste0(min(nT), "-", max(nT)) }, "\n")
-    cat("Number of fields:        ", nK, "\n")
-  }
 
   if (do$Bayesian && nK > 5) {
     message(
@@ -227,9 +229,10 @@ BayesGLM <- function(
   names(design) <- session_names
 
   if (verbose>0) {
-    cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
     cat("Session names:           ", paste0(session_names, collapse=", "), "\n")
-    cat("Field names:             ", paste0(field_names, collapse=", "), "\n")
+    cat("Number of fields:        ", paste0(nK, " (", paste0(field_names, collapse=", "), ")\n"))
+    cat("Number of timepoints:    ",
+        if (length(unique(nT))==1) { nT[1] } else { paste0(min(nT), "-", max(nT)) }, "\n")
   }
 
   ### Check `nuisance`. --------------------------------------------------------
@@ -244,11 +247,11 @@ BayesGLM <- function(
   }
   names(nuisance) <- session_names
 
-  ### Make DCT bases in `design` for the high-pass filter. ---------------------
+  ### Make DCT bases for the high-pass filter ----------------------------------
   if (!is.null(hpf)) {
     stopifnot(fMRItools::is_1(hpf, "numeric") && hpf>0)
     DCTs <- lapply(nT, function(nT_ss){
-      fMRItools::dct_bases(nT_ss, round(dct_convert(T_=nT_ss, TR=TR, f=hpf)))
+      fMRItools::dct_bases(nT_ss, round(fMRItools::dct_convert(T_=nT_ss, TR=TR, f=hpf)))
     })
     nDCTs <- vapply(DCTs, ncol, 0)
     if (verbose > 0) {
@@ -260,6 +263,122 @@ BayesGLM <- function(
       colnames(DCTs[[ss]]) <- paste0('DCT', 1:ncol(DCTs[[ss]]))
       nuisance[[ss]] <- cbind2(nuisance[[ss]], DCTs[[ss]] ) }
   }
+
+  ### Identify missing tasks in design -----------------------------------------
+
+  design_type <- if (do$perLocDesign) { "per_location" } else { "regular" }
+  valid_cols <- do.call(rbind, lapply(design, function(q) {
+    apply(q, 2, function(r){!all(is.na(r))})
+  }))
+  if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing (NA) from every session. Please fix.") }
+  for (ss in seq(nS)) {
+    vcols_ss <- valid_cols[ss,]
+    any_bad_design_cols <- if (nD == 1) {
+      any(is.na(c(design[[ss]][,vcols_ss])))
+    } else {
+      any(is.na(c(design[[ss]][,vcols_ss,])))
+    }
+    if (any_bad_design_cols) {
+      stop("`design` has some sessions & tasks for which some data values ",
+        "are `NA`. Partially missing data is not allowed. (Missing tasks ",
+        "should have all `NA`.)")
+    }
+  }
+
+  ### Check for intercept (must only be in nuisance) ---------------------------
+
+  des_has_intercept <- vector("logical", nS)
+  for (ss in seq(nS)) {
+    # Stop if any zero-var, zero-mean column exists.
+    des_ss_is_flat <- apply(abs(design[[ss]]) < 1e-8, 2, all)
+    if (any(des_ss_is_flat)) {
+      stop("Design matrix for session ", ss, " has at least one column that is ",
+           "flat (all values are near-zero).")
+    }
+
+    # Detect zero-var, nonzero-mean columns.
+    if (design_type=="per_location") {
+      des_ss_is_intercept <- apply(design[[ss]], c(2,3), var) < 1e-8
+    } else {
+      des_ss_is_intercept <- matrixStats::colVars(design[[ss]]) < 1e-8
+    }
+
+    if(any(des_ss_is_intercept)) {
+      stop('Design matrix must not have an intercept, since data and design will ',
+           'be centered prior to model fitting. Please fix.')
+    }
+
+    # For nuisance: detect zero-var, nonzero-mean columns.
+    if (!is.null(nuisance[[ss]])) {
+      nuis_ss_is_intercept <- matrixStats::colVars(nuisance[[ss]]) < 1e-8
+    } else {
+      nuis_ss_is_intercept <- FALSE
+    }
+
+    # If no intercept in nuisance, add one.
+    if (!any(nuis_ss_is_intercept)) {
+      nuisance[[ss]] <- cbind2(nuisance[[ss]], as.matrix(rep(1, nT[ss])))
+    }
+
+    ### CHECK FOR COLLINEARITY AMONG ALL REGRESSORS (DESIGN + NUISANCE + DCT)
+
+    #Check for collinearity among columns of design and nuisance
+    nuis_ss <- nuisance[[ss]]
+    checkCorr <- function(design){
+      X <- cbind(nuis_ss, design)
+      suppressWarnings(corX <- cor(X)); diag(corX) <- NA
+      corX
+    }
+    checkVIF <- function(design){
+      int <- (apply(nuis_ss, 2, var) == 0) #exclude intercept column of nuisance
+      X <- cbind(nuis_ss[,!int], design)
+      y <- rnorm(nT) #add fake y variable, has no influence
+      Xnames <- paste0("X",1:ncol(X))
+      df <- as.data.frame(cbind(X, y)); names(df) <- c(Xnames,"y")
+      f <- as.formula(paste0('y ~ ',paste(Xnames, collapse = " + ")))
+      suppressWarnings(car::vif(lm(f, data = df)))
+    }
+
+
+    # Single Design Matrix
+    vcols_ss <- valid_cols[ss,]
+    if (!do$perLocDesign) {
+      cor_x <- checkCorr(design[[ss]][,vcols_ss])
+      x1 <- max(abs(cor_x), na.rm=TRUE) #max correlation between any two columns of design & nuisance
+      x2 <- checkVIF(design[[ss]][,vcols_ss])
+      x2a <- x2[1:(ncol(nuis_ss) - 1)]
+      x2b <- x2[ncol(nuis_ss):length(x2)]
+      if(verbose > 0) {
+        cat('\tChecking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
+        cat(paste0('\t\tVIF for columns of nuisance matrix : ', paste(round(x2a), collapse=', '),'\n'))
+        cat(paste0('\t\tVIF for columns of design matrix: ', paste(round(x2b), collapse=', '),'\n'))
+        cat(paste0('\t\tMaximum correlation among all regressors: ', round(x1,2),'\n'))
+      }
+#
+#       if(verbose > 0) {
+#         if(x1 > 0.95) {
+#           inds <- which(abs(cor_x) > 0.95, arr.ind = TRUE)
+#           rows <- unique(inds[,1])
+#           cols <- unique(inds[,2])
+#           print(round(cor_x[rows,cols],2))
+#         }
+#       }
+
+      if(x1 > 0.99) {
+        stop('I detected high collinearity (cor > 0.99) between regressors in the design and nuisance matrices. Please fix.')
+      }
+    } else {
+      # Multiple Design Matrices (one per location)
+      x1 <- apply(design[[ss]][,,vcols_ss], 1, function(x)  max(abs(checkCorr(x)), na.rm=TRUE) )
+      if(verbose > 0) {
+        cat('\tChecking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
+        cat(paste0('\t\tMaximum correlation among regressors, max over locations: ', round(max(x1),2),'\n'))
+      }
+      if(max(x1) > 0.95) stop('I detected high collinearity (cor > 0.95) between regressors in the design and nuisance matrices for at least one location. Please fix.')
+    }
+
+  }
+
 
   # Initialize `spatial` to store all spatial information. ---------------------
   spatial <- list(
@@ -296,6 +415,7 @@ BayesGLM <- function(
         surfL <- BOLD[[1]]$surf$cortex_left
       } else {
         surfL <- ciftiTools.files()$surf["left"]
+        cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
       }
     }
     # Read and resample, if necessary.
@@ -322,6 +442,7 @@ BayesGLM <- function(
         surfR <- BOLD[[1]]$surf$cortex_right
       } else {
         surfR <- ciftiTools.files()$surf["right"]
+        cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
       }
     }
     # Read and resample, if necessary.
@@ -372,6 +493,14 @@ BayesGLM <- function(
       )
     }
 
+    #Check that all brainstructures are present
+    has_bs <- c("left", "right", "sub")[!vapply(BOLD[[ss]]$data, is.null, FALSE)]
+    if(!all(brainstructures %in% has_bs)){
+      if(nS == 1) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
+      if(nS > 1) stop(paste0("Session ", ss, " BOLD data does not contain all of the structures indicated in `brainstructures`"))
+    }
+
+    #Check that nT matches design matrix
     if (ncol(BOLD[[ss]]) != nT[ss]) { stop(
       "The design for session '", session_names[ss], "' indicates ", nT[ss],
       " volumes, but the `xifti` data for this session has ", ncol(BOLD[[ss]]),
@@ -379,14 +508,15 @@ BayesGLM <- function(
     )}
 
     if (do$perLocDesign) {
-      if (nrow(BOLD[[ss]]) != nD[ss]) { stop(
-        "The design for session ", session_names[ss], " indicates ", nD[ss],
+      if (nrow(BOLD[[ss]]) != nD) { stop(
+        "The design matrix array indicates ", nD,
         " total locations, each being modeled with its own design matrix. ",
         "However, the `xifti` data for this session has ", nrow(BOLD[[ss]]),
         " total locations. These must match. Correct either `design` or `BOLD`."
       )}
     }
 
+    #should be redundant with above
     if (do$left && is.null(BOLD[[ss]]$data$cortex_left)) { stop("Left cortex data is missing from this BOLD session.") }
     if (do$right && is.null(BOLD[[ss]]$data$cortex_right)) { stop("Right cortex data is missing from this BOLD session.") }
     if (do$sub && is.null(BOLD[[ss]]$data$subcort)) { stop("Subcortex data is missing from this BOLD session.") }
@@ -534,6 +664,13 @@ BayesGLM <- function(
         stopifnot(all((spatial$subcort$labels!=0) == BOLD[[ss]]$subcort$mask))
       }
     }
+    #check and report trans_mat
+    res <- abs(diag(spatial$subcort$trans_mat)[1:3])
+    if(!is.numeric(res)) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
+    if(any(is.na(res)) | any(is.nan(res))) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
+    if(min(res) < 1 | max(res > 4)) stop('Voxel resolution appears to be implausible (less than 1 or greater than 4).  Check trans_mat in CIFTI header or contact developer.')
+    if(verbose > 0) cat(paste0('Subcortical voxel resolution: ', paste(res, collapse = ' x '),'\n'))
+
   } else {
     submeta <- NULL
   }
@@ -563,7 +700,9 @@ BayesGLM <- function(
   )
 
   # number of data locations (vs. `nV_T` includes masked locations on the mesh.)
+
   nV_D <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
+
 
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }

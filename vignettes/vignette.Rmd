@@ -66,9 +66,9 @@ First, we read in the BOLD data.  We can glimpse its structure, and grab the TR 
 
 ```{r}
 setwd(dir_data)
-(BOLD <- read_cifti(fname_BOLD, resamp_res = 10000, brainstructures = "all"))
-(TR <- BOLD$meta$cifti$time_step)
-(nT <- ncol(BOLD))
+(BOLD_xii <- read_cifti(fname_BOLD, resamp_res = 10000, brainstructures = "all"))
+(TR <- BOLD_xii$meta$cifti$time_step)
+(nT <- ncol(BOLD_xii))
 ```
 
 Now read in and glimpse the motion regressors and task timing information.
@@ -149,9 +149,9 @@ The `BayesGLM` function provides a few additional options:
 
 ```{r}
 system.time(
-  bglm <- BayesGLM(BOLD=BOLD, # analyze full brainstem to capture spatial range
-        design=design1,
-        brainstructures=c("subcortical"), # [TO DO] grab voxel dims from header and pass through
+  bglm <- BayesGLM(BOLD=BOLD_xii,
+        design=design$design,
+        brainstructures="sub",
         TR=TR,
         nuisance=motion,
         scale_BOLD='mean',

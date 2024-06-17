@@ -16,7 +16,7 @@
 #' @export
 #'
 vol2spde <- function(mask,
-                     res = c(2,2,2),
+                     res,
                      nbhd_order = 1,
                      buffer=c(1,1,3,4,4)){
 
