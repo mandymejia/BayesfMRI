@@ -243,6 +243,12 @@ plot(act00, idx="fear", title = "Classical GLM (FDR)", slices = slices)
 
 ## Section on BayesGLM2 and Prevalence Maps
 
+## TO DO:
+
+1. Multi-session modeling
+
+2. Spatially varying design
+
 
 
 
