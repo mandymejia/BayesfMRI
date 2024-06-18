@@ -6,32 +6,48 @@
 \title{Identify field activations}
 \usage{
 activations(
-  model_obj,
+  x,
+  Bayes = TRUE,
+  gamma = NULL,
+  alpha = 0.05,
+  correction = c("FWER", "FDR", "none"),
   fields = NULL,
   sessions = NULL,
-  method = c("Bayesian", "classical"),
-  alpha = 0.05,
-  gamma = NULL,
-  correction = c("FWER", "FDR", "none"),
-  verbose = 1,
-  threshold = NULL
+  verbose = 1
 )
 
 id_activations(
-  model_obj,
+  x,
+  Bayes = TRUE,
+  gamma = NULL,
+  alpha = 0.05,
+  correction = c("FWER", "FDR", "none"),
   fields = NULL,
   sessions = NULL,
-  method = c("Bayesian", "classical"),
-  alpha = 0.05,
-  gamma = NULL,
-  correction = c("FWER", "FDR", "none"),
-  verbose = 1,
-  threshold = NULL
+  verbose = 1
 )
 }
 \arguments{
-\item{model_obj}{Result of \code{BayesGLM} or \code{fit_bayesglm} model
-call, of class \code{"BGLM"} or \code{"BGLM"}.}
+\item{x}{Result of \code{BayesGLM} or \code{fit_bayesglm} model
+call, of class \code{"BGLM"} or \code{"fit_bglm"}.}
+
+\item{Bayes}{Use spatial Bayesian modeling to identify activations based on
+the joint posterior distribution? Default: \code{TRUE}. If \code{FALSE},
+activations will be based on classical (massive univariate) GLM model, with
+multiple comparisons correction (see \code{correction}). Note that \code{TRUE}
+is only applicable if \code{x} includes Bayesian results (i.e.
+\code{x <- BayesGLM(..., Bayes = TRUE)} was run.)}
+
+\item{gamma}{Activation threshold, for example \code{1} for 1 percent
+signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
+a \code{gamma} is required for the Bayesian method; \code{NULL}
+(default) will use a \code{gamma} of zero for the classical method.}
+
+\item{alpha}{Significance level. Default: \code{0.05}.}
+
+\item{correction}{For the classical method only: Type of multiple comparisons
+correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
+(Benjamini Hochberg), or \code{"none"}.}
 
 \item{fields}{The field(s) to identify activations for. Give either the name(s)
 as a character vector, or the numerical indices. If \code{NULL} (default),
@@ -39,34 +55,11 @@ analyze all fields.}
 
 \item{sessions}{The session(s) to identify activations for. Give either the
 name(s) as a character vector, or the numerical indices. If \code{NULL}
-(default), analyze the first session.
-
-Currently, if multiple sessions are provided, activations are identified
-separately for each session. (Information is not combined between the
-different sessions.)}
-
-\item{method}{\code{"Bayesian"} (default) or \code{"classical"}. If
-\code{model_obj} does not have Bayesian results because \code{Bayes} was set
-to \code{FALSE}, only the \code{"classical"} method can be used.}
-
-\item{alpha}{Significance level. Default: \code{0.05}.}
-
-\item{gamma}{Activation threshold, for example \code{1} for 1 percent
-signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
-a \code{gamma} is required for the Bayesian method; \code{NULL}
-(default) will use a \code{gamma} of zero for the classical method.}
-
-\item{correction}{For the classical method only: Type of multiple comparisons
-correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
-(Benjamini Hochberg), or \code{"none"}.}
+(default), analyze the first session.}
 
 \item{verbose}{\code{1} (default) to print occasional updates during model
 computation; \code{2} for occasional updates as well as running INLA in
 verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
-
-\item{threshold}{DEPRECATED. This argument has been renamed to \code{gamma}.
-Please use \code{gamma} instead of \code{threshold}. \code{threshold} will
-be removed in a later version.}
 }
 \value{
 An \code{"act_BGLM"} or \code{"act_fit_bglm"} object, a

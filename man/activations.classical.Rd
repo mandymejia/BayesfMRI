@@ -5,23 +5,19 @@
 \title{Identification of areas of activation in a General Linear Model using classical methods}
 \usage{
 activations.classical(
-  model_obj,
+  x,
+  gamma = 0,
+  alpha = 0.05,
+  correction = c("FWER", "FDR", "none"),
   fields,
   session,
-  alpha = 0.05,
-  gamma = 0,
-  correction = c("FWER", "FDR", "none"),
   mesh = NULL
 )
 }
 \arguments{
-\item{model_obj}{A \code{BayesGLM} object}
+\item{x}{A \code{BayesGLM} object}
 
-\item{fields, session, alpha, gamma}{See \code{\link{activations}}.}
-
-\item{correction}{(character) Either 'FWER' or 'FDR'. 'FWER' corresponds to the
-family-wise error rate with Bonferroni correction, and 'FDR' refers to the
-false discovery rate using Benjamini-Hochberg.}
+\item{gamma, alpha, correction, fields, session}{See \code{\link{activations}}.}
 
 \item{mesh}{(Optional) An \code{"inla.mesh"} object (see \code{\link{make_mesh}} for
 surface data). Only necessary for computing surface areas of identified activations.}

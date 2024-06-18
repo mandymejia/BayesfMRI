@@ -4,7 +4,7 @@
 \alias{plot.act_BGLM}
 \title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"act_BGLM"} object}
 \usage{
-\method{plot}{act_BGLM}(x, idx = NULL, session = NULL, ...)
+\method{plot}{act_BGLM}(x, idx = NULL, title = NULL, session = NULL, ...)
 }
 \arguments{
 \item{x}{An object of class "act_BGLM"}
@@ -12,6 +12,8 @@
 \item{idx}{Which field should be plotted? Give the numeric indices or the
 names. \code{NULL} (default) will show all fields. This argument overrides
 the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
+
+\item{title}{If NULL, the field names associated with idx will be used.}
 
 \item{session}{Which session should be plotted? \code{NULL} (default) will
 use the first.}

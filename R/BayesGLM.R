@@ -184,9 +184,6 @@ BayesGLM <- function(
     has_bs <- c("left", "right", "sub")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
     if(!all(brainstructures %in% has_bs)) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
   }
-  if (verbose>0) {
-    cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
-  }
 
   # } else {
   #
@@ -520,6 +517,10 @@ BayesGLM <- function(
         BOLD[[ss]]$meta$subcort$mask[BOLD[[ss]]$meta$subcort$mask] <- mask_new
         BOLD[[ss]]$meta$subcort$labels <- BOLD[[ss]]$meta$subcort$labels[mask_new]
       }
+      if (verbose>0) {
+        cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
+        cat("Subcortical ROIs:        ", paste0(subROI, collapse=", "), "\n")
+      }
     }
 
     #Check that nT matches design matrix
@@ -647,6 +648,7 @@ BayesGLM <- function(
         BOLD[[ss]]$data$cortex_left[!new_mask_ss,] <- NA
       }
     }
+    #if(verbose > 0) cat('Left cortex resolution: ', paste0(nrow(BOLD[[1]]$data$cortex_left),' vertices\n'))
     rm(maskL, maskL_has_diffs)
   }
 
@@ -669,8 +671,10 @@ BayesGLM <- function(
         BOLD[[ss]]$data$cortex_right[!new_mask_ss,] <- NA
       }
     }
+    #if(verbose > 0) cat('Right cortex resolution: ', paste0(nrow(BOLD[[1]]$data$cortex_right),' vertices\n'))
     rm(maskR, maskR_has_diffs)
   }
+
 
   if (do$sub) {
     for (ss in seq(nS)) {
@@ -691,7 +695,7 @@ BayesGLM <- function(
     if(!is.numeric(res)) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
     if(any(is.na(res)) | any(is.nan(res))) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
     if(min(res) < 1 | max(res > 4)) stop('Voxel resolution appears to be implausible (less than 1 or greater than 4).  Check trans_mat in CIFTI header or contact developer.')
-    if(verbose > 0) cat(paste0('Subcortical voxel resolution: ', paste(res, collapse = ' x '),'\n'))
+    if(verbose > 0) cat('Subcortical voxel size: ', paste0(paste(res, collapse = ' x '),' mm \n'))
 
   } else {
     submeta <- NULL

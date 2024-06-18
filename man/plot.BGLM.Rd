@@ -4,20 +4,31 @@
 \alias{plot.BGLM}
 \title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM"} object}
 \usage{
-\method{plot}{BGLM}(x, idx = NULL, session = NULL, method = NULL, zlim = c(-1, 1), ...)
+\method{plot}{BGLM}(
+  x,
+  Bayes = NULL,
+  idx = NULL,
+  title = NULL,
+  session = NULL,
+  zlim = c(-1, 1),
+  ...
+)
 }
 \arguments{
 \item{x}{An object of class "BGLM"}
+
+\item{Bayes}{\code{TRUE} for plotting Bayesian results, \code{FALSE} for plotting
+classical GLM results. Default: \code{NULL}, which will use the Bayesian results
+if available and the classical results if not.}
 
 \item{idx}{Which field should be plotted? Give the numeric indices or the
 names. \code{NULL} (default) will show all fields. This argument overrides
 the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
 
+\item{title}{If NULL, the field names associated with idx will be used.}
+
 \item{session}{Which session should be plotted? \code{NULL} (default) will
 use the first.}
-
-\item{method}{"Bayes" or "classical". \code{NULL} (default) will use
-the Bayesian results if available, and the classical results if not.}
 
 \item{zlim}{Overrides the \code{zlim} argument for
 \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.}

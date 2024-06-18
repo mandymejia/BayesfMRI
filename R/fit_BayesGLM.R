@@ -306,8 +306,8 @@ fit_bayesglm <- function(
     # # Get initial value for tau based on variance of classical GLM
     # var0 <- apply(result_classical[[ss]]$estimates, 2, var, na.rm=TRUE)
 
-    var0 <- 1 #we usually expect most of the activation amplitudes to be between (-2 and 2) --> SD = 1, Var = 1
-    var_vec <- c(0.01, 2, var0) #reasonable range for variance
+    var0 <- 0.1 #we usually expect most of the activation amplitudes to be between (-2 and 2) --> SD ~= 0.33, Var ~= 0.1
+    var_vec <- c(0.01, 1, var0) #reasonable range for variance
     if(hyperpriors == "informative") logtau_vec <- var2logtau(var_vec, d, exp(logkappa0))
     logtau0 <- var2logtau(var0, d, exp(logkappa0)) #we will use a good starting value even with the default prior
 
@@ -606,7 +606,7 @@ fit_bayesglm <- function(
       control.predictor=list(A=Amat, compute = TRUE),
       verbose = verbose>1, keep = FALSE, num.threads = n_threads,
       control.inla = list(strategy = "gaussian", int.strategy = "eb"),
-      control.family=list(hyper=list(prec=list(initial=1,
+      control.family=list(hyper=list(prec=list(initial=0, #log(1) = 0
                                                param=c(1, 1)))), #put a more informative prior on the residual precision
       control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
     )

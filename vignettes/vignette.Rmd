@@ -9,6 +9,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
 ```
 
+Needed for rendering surface images in RMarkdown.
+
+```{r}
+library(rgl)
+rgl::setupKnitr()
+
+# Sometimes the first OpenGL window does not render properly.
+rgl::open3d(); rgl::close3d()
+```
+
 This demo will introduce you to the `BayesfMRI` package and its main function, `BayesGLM`.  This function performs spatial Bayesian modeling on task fMRI data. 
 
 The spatial modeling used in `BayesfMRI` is grayordinate-based, meaning that the spatial priors underlying the models are surface-based and subcortical parcel constrained. This is designed to respect neuroanatomy and is analogous to smoothing along the cortical surface or within specified subcortical volumetric parcels, and avoid mixing of distinct signals.
@@ -152,7 +162,7 @@ system.time(
   bglm <- BayesGLM(BOLD=BOLD_xii,
         design=design$design,
         brainstructures="sub",
-        subROI=c('Amygdala-L','Amygdala-R','Caudate-L','Caudate-R','Hippocampus-L','Hippocampus-R'),
+        subROI=c('Amygdala-L','Amygdala-R','Hippocampus-L','Hippocampus-R'),
         TR=TR,
         nuisance=motion,
         scale_BOLD='mean',
@@ -161,15 +171,77 @@ system.time(
         ar_order=3,
         ar_smooth=0,
         Bayes=TRUE,
-        verbose=1,
+        verbose=0 ,
         meanTol=1))
 ```
 
-```{r}
-save(bglm, file = '~/Desktop/tmp.RData')
+```{r, fig.width=4, fig.show='hold'}
+slices <- 24:32 
+plot(bglm, Bayes=TRUE, idx="fear", slices = slices)
+plot(bglm, Bayes=FALSE, idx="fear", slices = slices)
 ```
 
+```{r, fig.width=4, fig.show='hold'}
+act <- activations(bglm, Bayes = TRUE, gamma = 0, alpha = 0.05) 
+act0 <- activations(bglm, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FWER")
+act00 <- activations(bglm, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FDR")
+plot(act, idx="fear", title = "Bayesian GLM", slices = slices)
+plot(act0, idx="fear", title = "Classical GLM (FWER)", slices = slices)
+plot(act00, idx="fear", title = "Classical GLM (FDR)", slices = slices)
+```
 
+```{r}
+system.time(
+  bglm1 <- BayesGLM(BOLD=BOLD_xii,
+        design=design$design,
+        brainstructures="all",
+        subROI=c('Amygdala-L','Amygdala-R','Hippocampus-L','Hippocampus-R'),
+        TR=TR,
+        nuisance=motion,
+        scale_BOLD='mean',
+        hpf=.01,
+        nbhd_order=1,
+        ar_order=3,
+        ar_smooth=0,
+        Bayes=TRUE,
+        verbose=0 ,
+        meanTol=1))
+```
+
+Visualize the cortical surface estimates
+
+```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
+plot(bglm1, Bayes=TRUE, idx="fear", title = "Bayesian GLM", what = 'surface') 
+```
+
+```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
+plot(bglm1, Bayes=FALSE, idx="fear", title = "Classical GLM", what = 'surface')
+```
+
+Visualize the subcortical estimates
+
+```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
+plot(bglm1, Bayes=TRUE, idx="fear", title = "Bayesian GLM", what = 'volume', slices = slices) 
+```
+
+```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
+plot(bglm1, Bayes=FALSE, idx="fear", title = "Classical GLM", what = 'volume', slices = slices)
+```
+
+```{r}
+act <- activations(bglm1, Bayes = TRUE, gamma = 0, alpha = 0.05, verbose = 0) 
+act0 <- activations(bglm1, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FWER", verbose = 0)
+act00 <- activations(bglm1, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FDR", verbose = 0)
+```
+ 
+
+```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold'} 
+plot(act, idx="fear", title = "Bayesian GLM", slices = slices) 
+plot(act0, idx="fear", title = "Classical GLM (FWER)", slices = slices)
+plot(act00, idx="fear", title = "Classical GLM (FDR)", slices = slices)
+```
+
+## Section on BayesGLM2 and Prevalence Maps
 
 
 

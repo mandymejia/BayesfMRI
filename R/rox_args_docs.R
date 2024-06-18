@@ -65,9 +65,9 @@ NULL
 
 #'  Bayes
 #'
-#' @param Bayes Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
-#'  \code{FALSE}, only fit the classical GLM. (The classical GLM is always
-#'  returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)
+#' @param Bayes Perform spatial Bayesian modeling? Default: \code{TRUE}. If
+#'  \code{FALSE}, only perform classical (massive univariate) modeling. (The classical GLM
+#'  result is always returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)
 #'
 #' @name Bayes_Param
 NULL

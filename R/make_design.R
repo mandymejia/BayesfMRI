@@ -74,7 +74,11 @@ make_design <- function(
   ortho_block <- FALSE
 
   # Check inputs. --------------------------------------------------------------
+  if(!is.list(EVs)) {
+    if(is.data.frame(EVs) | is.matrix(EVs)) EVs <- list(task = EVs)
+  }
   stopifnot(is.list(EVs))
+
   EVs <- lapply(EVs, format_EV)
   EVs_NA <- vapply(EVs, function(q){identical(q, NA)}, FALSE)
   if (any(EVs_NA)) {

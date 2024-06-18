@@ -119,9 +119,9 @@ automatically, in that order.}
 \item{"none":}{   Center the data but do not scale it.}
 }}
 
-\item{Bayes}{Fir the spatial Bayesian GLM? Default: \code{TRUE}. If
-\code{FALSE}, only fit the classical GLM. (The classical GLM is always
-returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)}
+\item{Bayes}{Perform spatial Bayesian modeling? Default: \code{TRUE}. If
+\code{FALSE}, only perform classical (massive univariate) modeling. (The classical GLM
+result is always returned, whether \code{Bayes} is \code{TRUE} or \code{FALSE}.)}
 
 \item{hyperpriors}{Should informative or default non-informative hyperpriors be assumed on SPDE hyperparameters?}
 

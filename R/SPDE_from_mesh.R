@@ -39,8 +39,8 @@ SPDE_from_mesh <- function(spatial, logkappa = NULL, logtau = NULL){
 
   #construct SPDE
   spde <- INLA::inla.spde2.matern(mesh,
-                                  prior.tau = Elog.tau,
-                                  prior.kappa = Elog.kappa,
+                                  prior.tau = exp(Elog.tau),
+                                  prior.kappa = exp(Elog.kappa),
                                   theta.prior.prec = diag(c(Qlog.tau, Qlog.kappa)))
 
   list(

@@ -1,13 +1,15 @@
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM"} object
 #'
 #' @param x An object of class "BGLM"
+#' @param Bayes \code{TRUE} for plotting Bayesian results, \code{FALSE} for plotting
+#' classical GLM results. Default: \code{NULL}, which will use the Bayesian results
+#' if available and the classical results if not.
 #' @param idx Which field should be plotted? Give the numeric indices or the
 #'  names. \code{NULL} (default) will show all fields. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
+#' @param title If NULL, the field names associated with idx will be used.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
-#' @param method "Bayes" or "classical". \code{NULL} (default) will use
-#'  the Bayesian results if available, and the classical results if not.
 #' @param zlim Overrides the \code{zlim} argument for
 #'  \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
@@ -19,19 +21,20 @@
 #'
 #' @return Result of the call to \code{ciftiTools::view_cifti}.
 #'
-plot.BGLM <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-1, 1), ...){
+plot.BGLM <- function(x, Bayes=NULL, idx=NULL, title=NULL, session=NULL, zlim=c(-1, 1), ...){
 
   # Method
-  if (is.null(method)) {
+  if (is.null(Bayes)) {
     method <- ifelse(
       is.null(x$estimate_xii$Bayes[[1]]),
-      "classical", "Bayes"
+      FALSE, TRUE
     )
   }
-  method <- match.arg(method, c("classical", "Bayes"))
-  if (is.null(x$estimate_xii[[method]])) {
-    stop(paste("Method", gsub("betas_", "", method, fixed=TRUE), "does not exist."))
-  }
+  if(length(Bayes) != 1 | !Bayes %in% c(TRUE, FALSE)) stop('`Bayes` must be TRUE, FALSE or NULL')
+  if(Bayes==TRUE) method <- "Bayes" else method <- "classical"
+  # if (is.null(x$estimate_xii[[method]])) {
+  #   stop(paste("Method", gsub("betas_", "", method, fixed=TRUE), "does not exist."))
+  # }
 
   # Session
   if (is.null(session)) {
@@ -51,8 +54,16 @@ plot.BGLM <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-1, 1), ...
     idx <- match(idx, the_xii$meta$cifti$names)
   }
 
+  # Names
+  idx_names <- the_xii$meta$cifti$names[idx]
+
+  # Title(s)
+  if(is.null(title)){
+    title <- idx_names
+  }
+
   # Plot
-  ciftiTools::view_xifti(the_xii, idx=idx, zlim=zlim, ...)
+  ciftiTools::view_xifti(the_xii, idx=idx, title=title, zlim=zlim, fname_suffix = idx_names, ...)
 }
 
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"act_BGLM"} object
@@ -61,6 +72,7 @@ plot.BGLM <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-1, 1), ...
 #' @param idx Which field should be plotted? Give the numeric indices or the
 #'  names. \code{NULL} (default) will show all fields. This argument overrides
 #'  the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
+#' @param title If NULL, the field names associated with idx will be used.
 #' @param session Which session should be plotted? \code{NULL} (default) will
 #'  use the first.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
@@ -72,7 +84,7 @@ plot.BGLM <- function(x, idx=NULL, session=NULL, method=NULL, zlim=c(-1, 1), ...
 #'
 #' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
 #'
-plot.act_BGLM <- function(x, idx=NULL, session=NULL, ...){
+plot.act_BGLM <- function(x, idx=NULL, title=NULL, session=NULL, ...){
 
   # Session
   if (is.null(session)) {
@@ -92,8 +104,16 @@ plot.act_BGLM <- function(x, idx=NULL, session=NULL, ...){
     idx <- match(idx, the_xii$meta$cifti$names)
   }
 
+  # Names
+  idx_names <- the_xii$meta$cifti$names[idx]
+
+  # Title(s)
+  if(is.null(title)){
+    title <- idx_names
+  }
+
   # Plot
-  ciftiTools::view_xifti(the_xii, idx=idx, ...)
+  ciftiTools::view_xifti(the_xii, idx=idx, title=title, fname_suffix = idx_names, ...)
 }
 
 #' S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM2"} object
@@ -165,8 +185,8 @@ plot.BGLM2 <- function(x, idx=NULL, what=c("contrasts", "activations"), zlim=c(-
 #' @return Result of the call to \code{ciftiTools::view_cifti_surface}.
 #'
 plot.prev_BGLM <- function(
-  x, idx=NULL, session=NULL, 
-  drop_zeros=NULL, colors="plasma", 
+  x, idx=NULL, session=NULL,
+  drop_zeros=NULL, colors="plasma",
   zlim=c(round(1/x$n_results-.005, 2), 1), ...){
 
   # Session
