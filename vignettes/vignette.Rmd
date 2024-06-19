@@ -62,7 +62,7 @@ We will start by reading in each of these.
 
 ```{r}
 getwd()
-dir_data <- '../vignette_data/session1'
+dir_data <- '../vignette_data/subject1/session1'
 setwd(dir_data)
 fname_BOLD <- 'BOLD_10k.dtseries.nii'
 fname_motion <- 'Movement_Regressors.txt'
