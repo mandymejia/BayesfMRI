@@ -112,6 +112,15 @@ plot.act_BGLM <- function(x, idx=NULL, title=NULL, session=NULL, ...){
     title <- idx_names
   }
 
+  # Values and colors
+  vals <- unique(c(as.matrix(the_xii)))
+  vals <- setdiff(vals, 0)
+  #for a single level (e.g., only a single gamma value was given to activations()), use red to color activations
+  if(length(vals) == 1){
+    the_xii <- convert_to_dlabel(the_xii, colors = "red",
+                                 labels = rownames(the_xii$meta$cifti$labels[[1]]))
+  }
+
   # Plot
   ciftiTools::view_xifti(the_xii, idx=idx, title=title, fname_suffix = idx_names, ...)
 }
