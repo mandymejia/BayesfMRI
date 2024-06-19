@@ -14,12 +14,6 @@ tests/results_notInPackage
 tests/test_notInPackage_HCP_sub.R
 tests/temp*
 vignette_data/original/*
-vignette_data/session2/tfMRI_EMOTION_RL_Atlas_MSMAll.dtseries.nii
-vignette_data/session1/Archive.zip
-vignette_data/session1/EVs/EMOTION_Stats.csv
-vignette_data/session1/EVs/Sync.txt
-vignette_data/session1/tfMRI_EMOTION_LR_Atlas_MSMAll.dtseries.nii
-vignette_data/session2/EVs/EMOTION_Stats.csv
-vignette_data/session2/EVs/Sync.txt
+vignette_data/bglms_full/*
 vignette_data/vignette_data.R
 /vignettes/vignette_cache
