@@ -14,6 +14,10 @@ tests/results_notInPackage
 tests/test_notInPackage_HCP_sub.R
 tests/temp*
 vignette_data/100307/*
+vignette_data/100206/*
+vignette_data/100408/*
+vignette_data/100610/*
+vignette_data/101006/*
 vignettes/100307/*
 vignette_data/session2/tfMRI_EMOTION_RL_Atlas_MSMAll.dtseries.nii
 vignette_data/session1/Archive.zip
