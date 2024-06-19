@@ -360,7 +360,7 @@ BayesGLM <- function(
         cat(paste0('\tVIF for design regressors: ', paste0(round(x2b), collapse=', '),'\n'))
         cat(paste0('\tMaximum VIF among all nuisance regressors: ', round(max(x2a)),'\n'))
         inds <- which(abs(cor_x) == x1, arr.ind = TRUE)
-        cat(paste0('\tMaximum correlation among all regressors: ', round(x1,2), ' (',
+        cat(paste0('\tMaximum correlation among all regressors: ', round(x1,4), ' (',
             rownames(cor_x)[inds[1,1]], ' and ', rownames(cor_x)[inds[1,2]], ')\n'))
       }
 #
@@ -373,8 +373,8 @@ BayesGLM <- function(
 #         }
 #       }
 
-      if(x1 > 0.99) {
-        stop('I detected high collinearity (cor > 0.99) between regressors in the design and nuisance matrices. Please fix.')
+      if(x1 > 0.999) {
+        stop('I detected high collinearity (cor > 0.999) between regressors in the design and nuisance matrices. Please fix.')
       }
     } else {
       # Multiple Design Matrices (one per location)
