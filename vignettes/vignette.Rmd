@@ -13,6 +13,7 @@ Needed for rendering surface images in RMarkdown.
 
 ```{r}
 library(rgl)
+library(webshot2)
 rgl::setupKnitr()
 
 # Sometimes the first OpenGL window does not render properly.
@@ -171,23 +172,23 @@ system.time(
         ar_order=3,
         ar_smooth=0,
         Bayes=TRUE,
-        verbose=0 ,
+        verbose=1,
         meanTol=1))
 ```
 
 ```{r, fig.width=4, fig.show='hold'}
-slices <- 24:32 
-plot(bglm, Bayes=TRUE, idx="fear", slices = slices)
-plot(bglm, Bayes=FALSE, idx="fear", slices = slices)
+slices <- 27:30 
+plot(bglm, Bayes=TRUE, idx="fear", title = "spatial GLM", slices = slices)
+plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM", slices = slices)
 ```
 
 ```{r, fig.width=4, fig.show='hold'}
-act <- activations(bglm, Bayes = TRUE, gamma = 0, alpha = 0.05) 
+act <- activations(bglm, Bayes = TRUE, gamma = 0, alpha = 0.05, verbose = 0) 
 act0 <- activations(bglm, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FWER")
 act00 <- activations(bglm, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FDR")
-plot(act, idx="fear", title = "Bayesian GLM", slices = slices)
-plot(act0, idx="fear", title = "Classical GLM (FWER)", slices = slices)
-plot(act00, idx="fear", title = "Classical GLM (FDR)", slices = slices)
+plot(act, idx="fear", title = "spatial GLM", slices = slices)
+plot(act0, idx="fear", title = "naive GLM (FWER)", slices = slices)
+plot(act00, idx="fear", title = "naive GLM (FDR)", slices = slices)
 ```
 
 ```{r}
@@ -208,47 +209,55 @@ system.time(
         meanTol=1))
 ```
 
-Visualize the cortical surface estimates
+Visualize the cortical surface estimates for the "fear" condition
 
-```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
-plot(bglm1, Bayes=TRUE, idx="fear", title = "Bayesian GLM", what = 'surface') 
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm1, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'surface') 
 ```
 
-```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
-plot(bglm1, Bayes=FALSE, idx="fear", title = "Classical GLM", what = 'surface')
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm1, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'surface')
 ```
 
-Visualize the subcortical estimates
+Visualize the subcortical estimates for the "fear" condition
 
-```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
-plot(bglm1, Bayes=TRUE, idx="fear", title = "Bayesian GLM", what = 'volume', slices = slices) 
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+plot(bglm1, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'volume', slices = slices, n_slices=4) 
+plot(bglm1, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'volume', slices = slices, n_slices=4)
 ```
 
-```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold', format = "png"}
-plot(bglm1, Bayes=FALSE, idx="fear", title = "Classical GLM", what = 'volume', slices = slices)
-```
 
 ```{r}
 act <- activations(bglm1, Bayes = TRUE, gamma = 0, alpha = 0.05, verbose = 0) 
 act0 <- activations(bglm1, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FWER", verbose = 0)
 act00 <- activations(bglm1, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FDR", verbose = 0)
 ```
- 
 
-```{r, rgl=TRUE, fig.height=3, fig.width=4, fig.show='hold'} 
-plot(act, idx="fear", title = "Bayesian GLM", slices = slices) 
-plot(act0, idx="fear", title = "Classical GLM (FWER)", slices = slices)
-plot(act00, idx="fear", title = "Classical GLM (FDR)", slices = slices)
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(act, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'surface') 
 ```
 
-## Section on BayesGLM2 and Prevalence Maps
+```{r, rgl=TRUE, format = "jpg"}
+plot(act0, Bayes=FALSE, idx="fear", title = "naive GLM (FWER)", what = 'surface')
+```
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(act00, Bayes=FALSE, idx="fear", title = "naive GLM (FDR)", what = 'surface')
+```
+
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+plot(act, idx="fear", title = "spatial GLM", what = 'volume', slices = slices, n_slices=4) 
+plot(act0, idx="fear", title = "naive GLM (FWER)", what = 'volume', slices = slices, n_slices=4) 
+plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = slices, n_slices=4) 
+```
+
 
 ## TO DO:
 
-1. Multi-session modeling
+1. Multi-session modeling (BayesGLM2 and Prevalence Maps)
 
 2. Spatially varying design
-
 
 
 

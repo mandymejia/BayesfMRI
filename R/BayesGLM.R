@@ -422,7 +422,7 @@ BayesGLM <- function(
         surfL <- BOLD[[1]]$surf$cortex_left
       } else {
         surfL <- ciftiTools.files()$surf["left"]
-        cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
+        if(verbose>0) cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
       }
     }
     # Read and resample, if necessary.
@@ -449,7 +449,7 @@ BayesGLM <- function(
         surfR <- BOLD[[1]]$surf$cortex_right
       } else {
         surfR <- ciftiTools.files()$surf["right"]
-        cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
+        if(verbose>0) cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
       }
     }
     # Read and resample, if necessary.
