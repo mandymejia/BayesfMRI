@@ -378,7 +378,10 @@ BayesGLM <- function(
       }
     } else {
       # Multiple Design Matrices (one per location)
-      x1 <- apply(design[[ss]][,,vcols_ss], 1, function(x)  max(abs(checkCorr(x)), na.rm=TRUE) )
+      x1 <- apply(
+        design[[ss]][,vcols_ss,,drop=FALSE], 3, function(x)
+        max(abs(checkCorr(x)), na.rm=TRUE)
+      )
       if(verbose > 0) {
         cat('Checking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
         cat(paste0('\tMaximum correlation among regressors, max over locations: ', round(max(x1),2),'\n'))
