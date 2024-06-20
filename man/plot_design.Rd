@@ -8,7 +8,13 @@
 \usage{
 plot_design(design, method = c("lineplot", "imageplot"), ...)
 
-plot_design_line(design, colors = "Set1", linewidth = 0.7, alpha = 0.8)
+plot_design_line(
+  design,
+  colors = "Set1",
+  linetype = "solid",
+  linewidth = 0.7,
+  alpha = 0.8
+)
 
 plot_design_image(design)
 }
@@ -25,8 +31,9 @@ RColorBrewer::brewer.pal.info and colorbrewer2.org), the name of a
 viridisLite palette, or a character vector of colors. Default:
 \code{"Set1"}.}
 
-\item{linewidth, alpha}{Parameters for \code{ggplot2::geom_line}. Defaults:
-\code{0.7} linewidth and \code{0.8} alpha.}
+\item{linetype, linewidth, alpha}{Parameters for \code{ggplot2::geom_line}.
+Defaults: \code{"solid"} linetype, \code{0.7} linewidth and \code{0.8}
+alpha.}
 }
 \value{
 A ggplot
