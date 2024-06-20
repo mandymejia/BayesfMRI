@@ -1,18 +1,18 @@
 #' Activations prevalence.
-#' 
+#'
 #' @param act_list List of activations from \code{\link{activations}}. All
 #'  should have the same sessions, fields, and brainstructures.
-#' @param gamma_idx If activtions at multiple thresholds were computed, which 
+#' @param gamma_idx If activtions at multiple thresholds were computed, which
 #'  threshold should be used for prevalence? Default: the first (lowest).
-#'  
-#' @return A list containing the prevalances of activation, as a proportion of
+#'
+#' @return A list containing the prevalences of activation, as a proportion of
 #'  the results from \code{act_list}.
-#' 
+#'
 #' @importFrom stats setNames
 #' @importFrom ciftiTools convert_xifti
-#' 
-#' @export 
-act_prevalance <- function(act_list, gamma_idx=1){
+#'
+#' @export
+prevalence <- function(act_list, gamma_idx=1){
 
   # Determine if `act_BGLM` or `act_fit_bglm`.
   is_cifti <- all(vapply(act_list, function(q){ inherits(q, "act_BGLM") }, FALSE))
@@ -60,7 +60,7 @@ act_prevalance <- function(act_list, gamma_idx=1){
     }
   }
 
-  # Compute prevalance, for every session and every field.
+  # Compute prevalence, for every session and every field.
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
   for (bb in seq(nB)) {
     for (ss in seq(nS)) {
@@ -94,8 +94,13 @@ act_prevalance <- function(act_list, gamma_idx=1){
     prev_xii_ss <- 0*convert_xifti(act_list[[1]]$activations_xii[[session]], "dscalar")
     prev_xii_ss$meta$cifti$names <- field_names
     for (bs in names(prev_xii_ss$data)) {
+      bs2 <- switch(bs,
+        cortex_left="cortexL",
+        cortex_right="cortexR",
+        subcort="subcort"
+      )
       if (!is.null(prev_xii_ss$data[[bs]])) {
-        dat <- prev[[bs]][[session]]
+        dat <- prev[[bs2]][[session]]
         colnames(dat) <- NULL
         prev_xii_ss$data[[bs]] <- dat
       }
