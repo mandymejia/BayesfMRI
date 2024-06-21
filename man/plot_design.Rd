@@ -33,7 +33,8 @@ viridisLite palette, or a character vector of colors. Default:
 
 \item{linetype, linewidth, alpha}{Parameters for \code{ggplot2::geom_line}.
 Defaults: \code{"solid"} linetype, \code{0.7} linewidth and \code{0.8}
-alpha.}
+alpha. \code{linetype} can also be a vector of options with length matching
+the number of fields in \code{design}.}
 }
 \value{
 A ggplot
