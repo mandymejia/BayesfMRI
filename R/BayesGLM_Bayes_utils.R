@@ -87,7 +87,7 @@ check_INLA <- function(require_PARDISO=FALSE){
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
 #' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{sparse_and_PW}
-#' @param betas List (length = number of fields) of bbeta objects from make_replicates
+#' @param betas List (length = number of fields) of beta objects from make_replicates
 #' @param repls List (length = number of fields) of repl objects from make_replicates
 #'
 #' @return List

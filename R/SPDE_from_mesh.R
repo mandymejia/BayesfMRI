@@ -1,7 +1,7 @@
 #' SPDE from mesh model
 #'
 #' @param spatial See \code{BayesGLM0}.
-#' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constrants.
+#' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
 #' @return List
 #' @keywords internal
 SPDE_from_mesh <- function(spatial, logkappa = NULL, logtau = NULL){

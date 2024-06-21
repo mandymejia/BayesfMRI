@@ -10,7 +10,7 @@ prevalence(act_list, gamma_idx = 1)
 \item{act_list}{List of activations from \code{\link{activations}}. All
 should have the same sessions, fields, and brainstructures.}
 
-\item{gamma_idx}{If activtions at multiple thresholds were computed, which
+\item{gamma_idx}{If activations at multiple thresholds were computed, which
 threshold should be used for prevalence? Default: the first (lowest).}
 }
 \value{

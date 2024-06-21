@@ -62,7 +62,7 @@ onsets (or offsets) across the specified tasks will be represented by one
 additional column in the design matrix. The task names must match the names
 of \code{EVs}. Can also be \code{"all"} to use all tasks.
 
-Onsets/offset modeling is only compatible with a block deisgn experiment.
+Onsets/offset modeling is only compatible with a block design experiment.
 An error will be raised if the events in \code{EVs} do not have duration
 greater than one second.}
 
