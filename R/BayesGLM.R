@@ -339,7 +339,7 @@ BayesGLM <- function(
     checkVIF <- function(design){
       int <- (apply(nuis_ss, 2, var) == 0) #exclude intercept column of nuisance
       X <- cbind(nuis_ss[,!int], design)
-      y <- rnorm(nT) #add fake y variable, has no influence
+      y <- rnorm(nT[ss]) #add fake y variable, has no influence
       Xnames <- paste0("X",1:ncol(X))
       df <- as.data.frame(cbind(X, y)); names(df) <- c(Xnames,"y")
       f <- as.formula(paste0('y ~ ',paste(Xnames, collapse = " + ")))
@@ -512,17 +512,18 @@ BayesGLM <- function(
 
     #Remove extra subcortical ROIs
     if(do$sub){
-      for (ss in seq(nS)) {
-        label_names <- as.character(unique(BOLD[[ss]]$meta$subcort$labels))
-        if(!all(subROI %in% label_names)) stop('All elements of subROI must be valid subcortical labels and present in BOLD')
-        mask_new <- BOLD[[ss]]$meta$subcort$labels %in% subROI
-        BOLD[[ss]]$data$subcort <- BOLD[[ss]]$data$subcort[mask_new,]
-        BOLD[[ss]]$meta$subcort$mask[BOLD[[ss]]$meta$subcort$mask] <- mask_new
-        BOLD[[ss]]$meta$subcort$labels <- BOLD[[ss]]$meta$subcort$labels[mask_new]
-      }
-      if (verbose>0) {
-        cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
-        cat("Subcortical ROIs:        ", paste0(subROI, collapse=", "), "\n")
+      label_names <- as.character(unique(BOLD[[ss]]$meta$subcort$labels))
+      if(!all(subROI %in% label_names)) stop('All elements of subROI must be valid subcortical labels and present in BOLD')
+      mask_new <- BOLD[[ss]]$meta$subcort$labels %in% subROI
+      BOLD[[ss]]$data$subcort <- BOLD[[ss]]$data$subcort[mask_new,]
+      BOLD[[ss]]$meta$subcort$mask[BOLD[[ss]]$meta$subcort$mask] <- mask_new
+      BOLD[[ss]]$meta$subcort$labels <- BOLD[[ss]]$meta$subcort$labels[mask_new]
+    }
+
+    if (ss == 1 && verbose>0) {
+      cat("Brain structures:   ", paste0(brainstructures, collapse=", "), "\n")
+      if (do$sub) {
+        cat("Subcortical ROIs: ", paste0(subROI, collapse=", "), "\n")
       }
     }
 
@@ -688,11 +689,12 @@ BayesGLM <- function(
         spatial$subcort["trans_mat"] <- list(submeta$trans_mat)
         spatial$subcort["trans_units"] <- list(submeta$trans_units)
       } else {
-        stopifnot(length(dim(spatial$subcort$labels)) == length(dim(BOLD[[ss]]$subcort$mask)))
-        stopifnot(all(dim(spatial$subcort$labels)) == dim(BOLD[[ss]]$subcort$mask))
-        stopifnot(all((spatial$subcort$labels!=0) == BOLD[[ss]]$subcort$mask))
+        stopifnot(length(dim(spatial$subcort$labels)) == length(dim(BOLD[[ss]]$meta$subcort$mask)))
+        stopifnot(all(dim(spatial$subcort$labels) == dim(BOLD[[ss]]$meta$subcort$mask)))
+        stopifnot(all((spatial$subcort$labels!=0) == BOLD[[ss]]$meta$subcort$mask))
       }
     }
+
     #check and report trans_mat
     res <- abs(diag(spatial$subcort$trans_mat)[1:3])
     if(!is.numeric(res)) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
