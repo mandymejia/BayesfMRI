@@ -99,7 +99,7 @@ fit_bayesglm <- function(
   # Initialize return values that may or may not be computed. ------------------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
   field_estimates <- RSS <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
-  theta_estimates <- Sig_inv <- mesh <- mesh_orig <- NULL
+  theta_estimates <- theta_estimates2 <- Sig_inv <- mesh <- mesh_orig <- NULL
 
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------

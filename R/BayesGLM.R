@@ -250,7 +250,7 @@ BayesGLM <- function(
   if(is.null(nK2)) nK2 <- 0
 
   if (verbose>0) {
-    cat("Number of nuisance regressors:        ", nK2, "\n")
+    cat("Num. nuisance regressors:", nK2, "\n")
   }
 
 

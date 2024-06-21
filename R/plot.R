@@ -25,7 +25,7 @@ plot.BGLM <- function(x, Bayes=NULL, idx=NULL, title=NULL, session=NULL, zlim=c(
 
   # Method
   if (is.null(Bayes)) {
-    method <- if (is.null(x$estimate_xii$Bayes[[1]])) { FALSE } else { TRUE }
+    method <- if (!is.null(x$estimate_xii$Bayes[[1]])) { "Bayes" } else { "classical" }
   } else if (isTRUE(Bayes) || isFALSE(Bayes)) {
     method <- if (isTRUE(Bayes)) { "Bayes" } else { "classical" }
   } else {

@@ -98,8 +98,8 @@ des <- make_design(events[1], TR=.72, nTime=nTime,dHRF=0)
 # }
 # dev.off()
 
-#des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=2, onset="win", offset=c("loss", "neut"))
-#des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=0)
+des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=2, onset="win", offset=c("loss", "neut"))
+des <- make_design(events[seq(3)], TR=.72, nTime=nTime, dHRF=0)
 
 # From `onsets`.
 des <- lapply(
@@ -119,7 +119,7 @@ BGLM_cii_args <- function(n_sess, resamp_factor=1){
     BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
     design = switch(n_sess, des[[1]], des[seq(n_sess)]),
     TR = 0.72,
-    brainstructures = "both",
+    brainstructures = c("sub"),
     surfL=ciftiTools.files()$surf["left"],
     surfR=ciftiTools.files()$surf["right"],
     resamp_res = resamp_res * resamp_factor,
@@ -134,8 +134,8 @@ BGLM_cii_args <- function(n_sess, resamp_factor=1){
 }
 
 # ##### First pass to detect errors
-#bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
-#bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
+bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
+bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
 
