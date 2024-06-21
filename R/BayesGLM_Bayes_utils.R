@@ -6,16 +6,26 @@
 #'
 #' @param nSess The number of sessions sharing hyperparameters (can be different fields)
 #' @param field_names Vector of names for each field
-#' @param nMesh Number of mesh locations
-# @param data_loc Indices of original data locations
+#' @param spatial,spatial_type Spatial info
 #'
 #' @return replicates vector and betas for sessions
 #'
 #' @keywords internal
 #'
-make_replicates <- function(nSess, field_names, nMesh){ #data_loc){
+make_replicates <- function(nSess, field_names, spatial, spatial_type){
 
-  seq_nMesh <- seq(nMesh) #data_loc
+  nV <- get_nV(spatial, spatial_type) #total number of locations, number of data locations
+  if(spatial_type=='mesh') {
+    nMesh <- nV$D
+  } else if(spatial_type=='voxel') {
+    nMesh <- nV$DB
+    #data_loc <- spatial$data_loc
+  } else {
+    stop()
+  }
+  seq_nMesh <- 1:nMesh # [TO DO] allow for non-data locations in cortical mesh
+
+  #seq_nMesh <- seq(nMesh) #data_loc
 	nK <- length(field_names)
 
 	grps <- ((1:(nSess*nK) + (nK-1)) %% nK) + 1 # 1, 2, .. nK, 1, 2, .. nK, ...
@@ -76,8 +86,8 @@ check_INLA <- function(require_PARDISO=FALSE){
 #' Make data list to be passed to \code{estimate_model}
 #'
 #' @param y Vectorized BOLD data (all voxels, sessions, etc.)
-#' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using `sparse_and_PW()`
-#' @param betas List (length = number of fields) of bbeta objects from make_replicates
+#' @param X List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{sparse_and_PW}
+#' @param betas List (length = number of fields) of beta objects from make_replicates
 #' @param repls List (length = number of fields) of repl objects from make_replicates
 #'
 #' @return List
@@ -121,7 +131,7 @@ make_data_list <- function(y, X, betas, repls){
 #' @keywords internal
 extract_estimates <- function(
   INLA_model_obj, session_names,
-  spatial, spatial_type, stat='mean'){
+  spatial, spatial_type, spde, stat='mean'){
 
   if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
@@ -133,7 +143,7 @@ extract_estimates <- function(
   mask <- if (spatial_type=="mesh") {
     spatial$mask
   } else {
-    stop("[TO DO]")
+    spatial$labels != 0
   }
 
   #determine number of locations
@@ -141,8 +151,12 @@ extract_estimates <- function(
   # nV2 or nMesh = the number of mesh locations, which may be a superset
   # nV0 = the number of data locations prior to applying a mask
   nV_T <- length(mask) #number of data locations prior to applying a mask pre-model fitting
-  nV_D <- sum(mask) #number of data locations included in the model -- should match sum(mask)
-  stopifnot(nV_D*nS == length(res.beta[[1]]$mean))
+  nV_DB <- if (spatial_type=="mesh") {
+    sum(mask)
+  } else {
+    get_nV(spatial, "voxel")$DB
+  }
+  stopifnot(nV_DB*nS == length(res.beta[[1]]$mean))
 
   betas <- vector('list', nS)
   names(betas) <- session_names
@@ -152,10 +166,15 @@ extract_estimates <- function(
   stat_ind <- which(stat_names==stat)
 
   for (ss in seq(nS)) {
-    inds_ss <- seq(nV_D) + (ss-1)*nV_T # [TO DO] FIX for subcortical. indices of beta vector corresponding to session v
-    betas[[ss]] <- do.call(cbind, lapply(setNames(seq(nK), field_names), function(kk){
-      res.beta[[kk]][[stat_ind]][inds_ss]
-    }))
+    inds_ss <- seq(nV_DB) + (ss-1)*nV_T
+    betas[[ss]] <- do.call(cbind,
+      lapply(setNames(seq(nK), field_names), function(kk){
+        res.beta[[kk]][[stat_ind]][inds_ss]
+      })
+    )
+    if (spatial_type=="voxel") {
+      betas[[ss]] <- betas[[ss]][spatial$buffer_mask,,drop=FALSE]
+    }
   }
 
   attr(betas, "GLM_type") <- "Bayesian"
@@ -221,8 +240,8 @@ get_posterior_densities2 <- function(INLA_model_obj, field_names){
   for(b in 1:numbeta){
     name_b <- field_names[b]
     which_b <- grep(name_b, names_hyper)
-    which_kappa_b <- which_b[2] #Theta2
-    which_tau_b <- which_b[1] #Theta1
+    which_kappa_b <- which_b[2] #Theta2 = log(kappa)
+    which_tau_b <- which_b[1] #Theta1 = log(tau)
     log_kappa.b <- as.data.frame(hyper[[which_kappa_b]])
     log_tau.b <- as.data.frame(hyper[[which_tau_b]])
     names(log_kappa.b) <- names(log_tau.b) <- c('value','density')
@@ -246,12 +265,12 @@ get_posterior_densities2 <- function(INLA_model_obj, field_names){
 #' Trim INLA object
 #'
 #' Trim an INLA object to only include what is necessary for
-#'  \code{id_activations} or \code{BayesGLM2}.
+#'  \code{activations} or \code{BayesGLM2}.
 #'
 #' @param INLA_model_obj An object of class \code{"inla"}.
 #' @param minimal Just keep the two parameters needed for \code{BayesGLM2}?
 #'  Default: \code{FALSE}. \code{!minimal} is required for
-#'  \code{id_activations}, but \code{minimal} is sufficient for
+#'  \code{activations}, but \code{minimal} is sufficient for
 #'  \code{BayesGLM2}.
 #'
 #' @return A trimmed \code{"inla"} object.

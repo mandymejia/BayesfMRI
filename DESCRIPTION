@@ -1,7 +1,7 @@
 Package: BayesfMRI
 Type: Package
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.7.2
+Version: 0.8.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -44,10 +44,11 @@ License: GPL-3
 Additional_repositories: https://inla.r-inla-download.org/R/testing
 Encoding: UTF-8
 Imports: 
-    ciftiTools (>= 0.8.0),
+    car,
+    ciftiTools (>= 0.14.0),
     excursions,
     foreach,
-    fMRItools (>= 0.3.0),
+    fMRItools (>= 0.4.2),
     MASS,
     Matrix,
     matrixStats,
@@ -70,7 +71,9 @@ Suggests:
     purrr,
     rmarkdown,
     SQUAREM,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    tidyr,
+    spelling
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
 URL: https://github.com/mandymejia/BayesfMRI
@@ -78,3 +81,4 @@ BugReports: https://github.com/mandymejia/BayesfMRI/issues
 LinkingTo:
     RcppEigen,
     Rcpp
+Language: en-US

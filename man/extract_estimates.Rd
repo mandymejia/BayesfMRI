@@ -9,6 +9,7 @@ extract_estimates(
   session_names,
   spatial,
   spatial_type,
+  spde,
   stat = "mean"
 )
 }

@@ -1,40 +1,55 @@
 #' SPDE from voxel model
-#' 
-#' @param spatial See \code{BayesGLM}.
+#'
+#' @param spatial See \code{BayesGLM0}.
+#' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
 #' @return List
 #' @keywords internal
-SPDE_from_voxel <- function(spatial){
-  label <- spatial$label
-  mask <- label[label!=0]
+SPDE_from_voxel <- function(spatial, logkappa = NULL, logtau = NULL){
+  labels <- spatial$labels
+  mask <- labels!=0
   nbhd_order <- spatial$nbhd_order
   buffer <- spatial$buffer
+  res <- abs(diag(spatial$trans_mat)[1:3])
 
   #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
   #Simply remove those locations (in addition to bad data locations, as below) from the labels array before creating SPDE
 
-  ROIs <- unique(label[mask])
+  ROIs <- unique(labels[mask])
   nR <- length(ROIs)
 
   #construct the C and G for the SPDE by block-diagonalizing over ROIs
   C_list <- G_list <- spde_list <- vector('list', length=nR)
   for (rr in seq(nR)) {
-    mask_rr <- (label == ROIs[rr])
-    spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer)
+    mask_rr <- (labels == ROIs[rr])
+    # [stop] this breaks [TO DO]
+    spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer, res=res)
     C_list[[rr]] <- spde_list[[rr]]$mats$C
     G_list[[rr]] <- spde_list[[rr]]$mats$G
   }
   C_sub <- Matrix::bdiag(C_list)
   G_sub <- Matrix::bdiag(G_list)
 
-  #construct the SPDE
+  #construct hyperpriors
   Elog.kappa <- Elog.tau <- 0 #prior means for log(kappa) and log(tau)
   Qlog.kappa <- Qlog.tau <- 0.1 #prior precisions for log(kappa) and log(tau)
+  if(!is.null(logtau)){
+    Elog.tau <- logtau[3]
+    prior_sd <- abs(diff(logtau[1:2]))/4 #so that 95% of the prior density is within the range
+    Qlog.tau <- 1/(prior_sd^2)
+  }
+  if(!is.null(logkappa)){
+    Elog.kappa <- logkappa[3]
+    prior_sd <- abs(diff(logkappa[1:2]))/4 #so that 95% of the prior density is within the range
+    Qlog.kappa <- 1/(prior_sd^2)
+  }
+
+  #construct the SPDE
   spde <- INLA::inla.spde2.generic(
     M0 = C_sub,
     M1 = G_sub,
     M2 = G_sub%*%solve(C_sub, G_sub),
-    theta.mu = c(Elog.kappa, Elog.tau),
-    theta.Q = diag(c(Qlog.kappa, Qlog.tau)),
+    theta.mu = c(Elog.tau, Elog.kappa),
+    theta.Q = diag(c(Qlog.tau, Qlog.kappa)),
     B0 = matrix(c(0, 1, 0), 1, 3),
     B1 = 2*matrix(c(0, 0, 1), 1, 3),
     B2 = 1
@@ -47,19 +62,19 @@ SPDE_from_voxel <- function(spatial){
   if (nR > 1) {
     before <- 0 # Cumulative sum of previous regions.
     for (r in seq(2,nR)) {
-      before <- 0 + nrow(spde_list[[r-1]]$mats$C)
+      before <- before + nrow(spde_list[[r-1]]$mats$C)
       data_loc_r <- data_loc_list[[r]]
       data_loc_r <- data_loc_r + before
       data_loc <- c(data_loc, data_loc_r)
     }
   }
 
-  # Edit `spatial`.
-  # [TO DO]
-  browser()
-  
+  # Add `buffer_mask` to `spatial`.
+  spatial$buffer_mask <- seq(spde$n.spde) %in% data_loc
+
   list(
     spde = spde,
-    spatial = spatial
+    spatial = spatial,
+    data_loc = data_loc
   )
 }

@@ -19,7 +19,7 @@ multi-session data this is a session-length vector.}
 \code{nuisance}
 }
 \description{
-Format nuisance for \code{BayesGLM_cifti}, \code{BayesGLM},
-\code{MultiGLM_cifti}, and \code{MultiGLM}.
+Format nuisance for \code{BayesGLM}, \code{fit_bayesglm},
+\code{multiGLM}, and \code{multiGLM_fun}.
 }
 \keyword{internal}

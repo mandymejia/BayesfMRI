@@ -5,18 +5,18 @@
 \title{Bayes GLM arg checks}
 \usage{
 BayesGLM_argChecks(
-  scale_BOLD,
-  Bayes,
-  EM,
-  ar_order,
-  ar_smooth,
-  aic,
-  n_threads,
-  return_INLA,
-  verbose,
-  meanTol,
-  varTol,
-  emTol
+  scale_BOLD = c("mean", "sd", "none"),
+  Bayes = TRUE,
+  EM = FALSE,
+  ar_order = 6,
+  ar_smooth = 5,
+  aic = FALSE,
+  n_threads = 4,
+  return_INLA = c("trimmed", "full", "minimal"),
+  verbose = 1,
+  meanTol = 1e-06,
+  varTol = 1e-06,
+  emTol = 0.001
 )
 }
 \arguments{
@@ -39,9 +39,9 @@ The arguments that may have changed, in a list: \code{scale_BOLD},
 \code{do_Bayesian}, \code{do_EM}, and \code{do_pw}.
 }
 \description{
-Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
+Checks arguments for \code{BayesGLM} and \code{fit_bayesglm}
 }
 \details{
-Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
+Avoids duplicated code between \code{BayesGLM} and \code{fit_bayesglm}
 }
 \keyword{internal}

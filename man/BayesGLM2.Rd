@@ -33,9 +33,10 @@ BayesGLM_group(
 )
 }
 \arguments{
-\item{results}{Either (1) a length \eqn{N} list of \code{"BayesGLM"} objects,
-or (2) a length \eqn{N} character vector of files storing \code{"BayesGLM"}
-objects saved with \code{\link{saveRDS}}.}
+\item{results}{Either (1) a length \eqn{N} list of \code{"BGLM"} objects,
+or (2) a length \eqn{N} character vector of files storing \code{"BGLM"}
+objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
+also are accepted.}
 
 \item{contrasts}{(Optional) A list of contrast vectors that specify the
 group-level summaries of interest. If \code{NULL}, use contrasts that compute

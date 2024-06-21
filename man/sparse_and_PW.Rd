@@ -9,20 +9,20 @@ sparse_and_PW(
   design,
   spatial,
   spatial_type,
+  spde,
   field_names,
   design_type,
   valid_cols,
   nT,
-  nD,
   sqrtInv_all
 )
 }
 \arguments{
-\item{BOLD, design, spatial, spatial_type}{See \code{BayesGLM}.}
+\item{BOLD, design, spatial, spatial_type, spde}{See \code{BayesGLM0}.}
 
-\item{field_names, design_type}{See \code{BayesGLM}.}
+\item{field_names, design_type}{See \code{BayesGLM0}.}
 
-\item{valid_cols, nT, nD, sqrtInv_all}{See \code{BayesGLM}.}
+\item{valid_cols, nT, sqrtInv_all}{See \code{BayesGLM0}.}
 }
 \value{
 A list containing fields \code{y} and \code{A} (see Details)

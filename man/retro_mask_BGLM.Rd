@@ -2,12 +2,12 @@
 % Please edit documentation in R/retro_mask.R
 \name{retro_mask_BGLM}
 \alias{retro_mask_BGLM}
-\title{Retroactively mask locations from BayesGLM result.}
+\title{Retroactively mask locations from fit_bglm result.}
 \usage{
 retro_mask_BGLM(x, mask)
 }
 \arguments{
-\item{x}{The BayesGLM result}
+\item{x}{The \code{"fit_bglm"} result}
 
 \item{mask}{The mask to be applied to \code{x} (on top of any masks already
 applied to it.)}

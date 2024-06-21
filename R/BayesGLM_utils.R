@@ -16,11 +16,11 @@ scale_design_mat <- function(design_mat) {
 }
 
 #' Make DCT bases
-#' @param hpf,nT,TR See \code{BayesGLM_cifti}
+#' @param hpf,nT,TR See \code{BayesGLM}
 #' @return The matrix of DCT bases, or \code{NULL} if none
 #' @importFrom fMRItools dct_bases is_posNum dct_convert
 #' @keywords internal
-BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
+BayesGLM_make_DCT <- function(hpf, nT, TR){
   DCT <- NULL # used to be an argument.
 
   if (!is.null(DCT)) {
@@ -51,9 +51,9 @@ BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
 
 #' Bayes GLM arg checks
 #'
-#' Checks arguments for \code{BayesGLM} and \code{BayesGLM_cifti}
+#' Checks arguments for \code{BayesGLM} and \code{fit_bayesglm}
 #'
-#' Avoids duplicated code between \code{BayesGLM} and \code{BayesGLM_cifti}
+#' Avoids duplicated code between \code{BayesGLM} and \code{fit_bayesglm}
 #'
 #' @param scale_BOLD See \code{\link{BayesGLM}}.
 #' @param Bayes,EM See \code{\link{BayesGLM}}.
@@ -70,27 +70,27 @@ BayesGLM_cifti_make_DCT <- function(hpf, nT, TR){
 #' @importFrom fMRItools is_1
 #' @keywords internal
 BayesGLM_argChecks <- function(
-    scale_BOLD,
-    Bayes,
-    EM,
-    ar_order,
-    ar_smooth,
-    aic,
-    n_threads,
-    return_INLA,
-    verbose,
-    meanTol,
-    varTol,
-    emTol
+    scale_BOLD=c("mean", "sd", "none"),
+    Bayes=TRUE,
+    EM=FALSE,
+    ar_order=6,
+    ar_smooth=5,
+    aic=FALSE,
+    n_threads=4,
+    return_INLA=c("trimmed", "full", "minimal"),
+    verbose=1,
+    meanTol=1e-6,
+    varTol=1e-6,
+    emTol=1e-3
 ){
 
   if (isTRUE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
+    message("Setting `scale_BOLD` to 'mean'"); scale_BOLD <- "mean"
   }
   if (isFALSE(scale_BOLD)) {
     message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
   }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
+  scale_BOLD <- match.arg(scale_BOLD, c("mean", "sd", "none"))
 
   stopifnot(fMRItools::is_1(Bayes, "logical"))
   stopifnot(fMRItools::is_1(EM, "logical"))
@@ -146,13 +146,12 @@ BayesGLM_argChecks <- function(
 #'
 #' @param spatial \code{spatial}
 #' @param type \code{"mesh"}, or \code{"voxel"}.
-#' @param spde \code{NULL} or the SPDE.
 #' @keywords internal
 #' @return A list of two: \code{T} for the total number of locations, and
 #'  \code{D} for the number of data locations. If \code{spatial} is provided for
 #'  voxel data, there is also \code{DB} for the number of data locations plus
 #'  the number of boundary locations.
-get_nV <- function(spatial, type=c("mesh", "voxel"), spde=NULL){
+get_nV <- function(spatial, type=c("mesh", "voxel")){
   type <- match.arg(type, c("mesh", "voxel"))
 
   out <- switch(type,
@@ -161,13 +160,14 @@ get_nV <- function(spatial, type=c("mesh", "voxel"), spde=NULL){
       D=sum(spatial$mask)
     ),
     voxel = list(
-      T=prod(dim(spatial$label)), # [TO DO] redefine?
-      D=sum(spatial$label!=0)
+      T=prod(dim(spatial$labels)), # [TO DO] redefine?
+      D=sum(spatial$labels!=0)
     )
   )
 
-  if (type=="voxel" && !is.null(spde)) {
-    out <- c(out, list(DB=spde$n.spde))
+  if (type=="voxel" && !is.null(spatial$buffer_mask)) {
+    stopifnot(out$D == sum(spatial$buffer_mask))
+    out <- c(out, list(DB=length(spatial$buffer_mask)))
   }
 
   out

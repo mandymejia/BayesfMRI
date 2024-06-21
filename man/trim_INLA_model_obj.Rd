@@ -11,7 +11,7 @@ trim_INLA_model_obj(INLA_model_obj, minimal = FALSE)
 
 \item{minimal}{Just keep the two parameters needed for \code{BayesGLM2}?
 Default: \code{FALSE}. \code{!minimal} is required for
-\code{id_activations}, but \code{minimal} is sufficient for
+\code{activations}, but \code{minimal} is sufficient for
 \code{BayesGLM2}.}
 }
 \value{
@@ -19,6 +19,6 @@ A trimmed \code{"inla"} object.
 }
 \description{
 Trim an INLA object to only include what is necessary for
-\code{id_activations} or \code{BayesGLM2}.
+\code{activations} or \code{BayesGLM2}.
 }
 \keyword{internal}

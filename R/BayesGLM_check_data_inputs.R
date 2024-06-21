@@ -22,8 +22,8 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 
 #' Format design
 #'
-#' Format design for \code{BayesGLM_cifti}, \code{BayesGLM},
-#'  \code{MultiGLM_cifti}, and \code{MultiGLM}.
+#' Format design for \code{BayesGLM}, \code{fit_bayesglm},
+#'  \code{multiGLM}, and \code{multiGLM_fun}.
 #' @param design The \code{design} argument input. Will be formatted to a
 #'  \code{nS}-length list.
 #' @param scale_design Scale the design matrix by dividing each column by its
@@ -36,7 +36,7 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 #'  modeling this is equal to \code{nVd0}, the initial number of data locations.
 #'  For multi-session data this is a session-length vector.
 #' @param per_location_design \code{FALSE} if per-location modeling is not
-#'  being performed (i.e. for MultiGLM); \code{TRUE} if it is; or, \code{NULL}
+#'  being performed (i.e. for multiGLM); \code{TRUE} if it is; or, \code{NULL}
 #'  to infer based on the dimensions of \code{design} (\code{TRUE} if the
 #'  design has three dimensions.)
 #' @keywords internal
@@ -44,12 +44,12 @@ BayesGLM_is_valid_one_nuisance <- function(nuisance) {
 BayesGLM_format_design <- function(
   design, scale_design=TRUE,
   nS_expect=NULL, nT_expect=NULL, nD_expect=NULL,
-  per_location_design=FALSE
+  per_location_design=NULL
   ){
 
   # Make `design` a sessions-length list of matrices or arrays.
   if (inherits(design, "BfMRI_design")) { design <- design$design }
-  if (!is.list(design)) { design <- list(design) }
+  if (!is.list(design) || is.data.frame(design)) { design <- list(design) }
   if (all(vapply(design, inherits, FALSE, "BfMRI_design"))) { design <- lapply(design, '[[', "design") }
   nS <- length(design)
   if (!is.null(nS_expect)) {
@@ -59,7 +59,9 @@ BayesGLM_format_design <- function(
     }
   }
 
-  if (is.null(per_location_design)) { per_location_design <- is.array(design[[1]]) }
+  if (is.null(per_location_design)) {
+    per_location_design <- !is.matrix(design[[1]]) && !is.data.frame(design[[1]])
+  }
 
   for (ss in seq(nS)) {
     stopifnot(BayesGLM_is_valid_one_design(design[[ss]]))
@@ -116,7 +118,7 @@ BayesGLM_format_design <- function(
     if (nK>1) { cat(", 'field_2'") }
     if (nK>2) { cat(", and so on") }
     cat(".\n")
-    field_names <- paste0("field_", nK)
+    field_names <- paste0("field_", seq(nK))
   }
   if (any(duplicated(field_names))) { stop("All field names should be unique.") }
 
@@ -124,34 +126,36 @@ BayesGLM_format_design <- function(
   # Third dimension, nD
   if (des_is_array) {
     des_nD <- vapply(des_dims, '[', 0, 3)
+    if(!all(des_nD == des_nD[1])) stop('Location-specific design matrix should have the same number of design matrices across all sessions.')
+    lapply(design, function(q){dimnames(q)[[3]]})
     #`nD` can differ across sessions only for per-location modeling.
     if (per_location_design) {
+      design_names <- NULL
       if (!is.null(nD_expect)) {
         stopifnot(is.numeric(nD_expect))
         if (length(nD_expect)==1) { nD_expect <- rep(nD_expect, nS) }
         stopifnot(length(nD_expect)==1)
-      }
-      for (ss in seq(nS)) {
-        if (des_nD[ss] != nD_expect[ss]) {
-          stop("The design array's third dimension is size ", des_nD[ss],
-            ", but for per-location modeling it should match",
-            "the number of locations, ", nD_expect[ss], ".")
+        for (ss in seq(nS)) {
+          if (des_nD[ss] != nD_expect[ss]) {
+            stop("The design array's third dimension is size ", des_nD[ss],
+                 ", but for per-location modeling it should match",
+                 "the number of locations, ", nD_expect[ss], ".")
+          }
         }
       }
     } else {
-      # for MultiGLM
-      design_names <- lapply(design, function(q){dimnames(q)[[3]]})
+      # for multiGLM
       if (length(unique(design_names)) > 1) {
         stop("Design names (third dim. of the design) should not differ across sessions.")
       }
       design_names <- design_names[[1]]
-      # Set `design_names` for MultiGLM, if not provided.
+      # Set `design_names` for multiGLM, if not provided.
       if (is.null(design_names)) {
         cat("Setting design names to 'design_1'")
         if (nK>1) { cat(", 'design_2'") }
         if (nK>2) { cat(", and so on") }
         cat(".\n")
-        design_names <- paste0("design_", nD)
+        design_names <- paste0("design_", seq(des_nD))
       }
     }
   } else {
@@ -161,7 +165,7 @@ BayesGLM_format_design <- function(
     des_nD <- 1
     design_names <- NULL
   }
-  nD <- des_nD; rm(des_nD)
+  nD <- des_nD[1]; rm(des_nD)
 
   # Replace the `dimnames` of all the designs.
   des_dimnames <- list(vol=NULL, field=field_names)
@@ -234,8 +238,8 @@ BayesGLM_format_design <- function(
 
 #' Format nuisance
 #'
-#' Format nuisance for \code{BayesGLM_cifti}, \code{BayesGLM},
-#'  \code{MultiGLM_cifti}, and \code{MultiGLM}.
+#' Format nuisance for \code{BayesGLM}, \code{fit_bayesglm},
+#'  \code{multiGLM}, and \code{multiGLM_fun}.
 #' @param nuisance The \code{nuisance} argument input. Will be formatted to a
 #'  \code{nS}-length list.
 #' @param nS_expect The expected number of sessions, if known.
@@ -248,7 +252,7 @@ BayesGLM_format_nuisance <- function(
   ){
 
   # Make `nuisance` a sessions-length list of matrices or arrays.
-  if (!is.list(nuisance)) { nuisance <- list(nuisance) }
+  if (!is.list(nuisance) || is.data.frame(nuisance)) { nuisance <- list(nuisance) }
   nS <- length(nuisance)
   if (!is.null(nS_expect)) {
     stopifnot(fMRItools::is_1(nS_expect, "numeric") && nS_expect==round(nS_expect))

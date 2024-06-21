@@ -1,6 +1,6 @@
 # Computes Bayesian GLM posterior means, quantiles and excursions sets (areas of activation) for summaries or contrasts across sessions within a single multi-session model
 #
-# @param result An object of class BayesGLM containing the results of a multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM)`.)
+# @param result An object of class BayesGLM0 containing the results of a multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM0)`.)
 # @param contrasts (Optional) A list of vectors, each length J*K, specifying the contrast(s) of interest across sessions, where J is the number of sessions analyzed and K is the number of tasks.  See Details for more information. Default is to compute the average for each task across sessions.
 # @param quantiles (Optional) Vector of posterior quantiles to return in addition to the posterior mean
 # @param excursion_type (For inference only) The type of excursion function for the contrast (">", "<", "!="), or a vector thereof (each element corresponding to one contrast).  If none provided, no inference performed.
@@ -158,8 +158,8 @@
 #' 
 #' @inheritSection INLA_Description INLA Requirement
 #' 
-#' @param result An object of class BayesGLM containing the results of a 
-#'  multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM)`.)
+#' @param result An object of class BayesGLM0 containing the results of a 
+#'  multi-session analysis. Must contain INLA_result!  (See `help(BayesGLM0)`.)
 #' @param contrasts (Optional) A list of vectors, each length J*K, specifying 
 #'  the contrast(s) of interest across sessions, where J is the number of 
 #'  sessions analyzed and K is the number of tasks.  See Details for more 
@@ -203,7 +203,7 @@ summarize_sessions <- function(result,
   #inla.setOption(smtp='pardiso')
 
   # Find the numnber of sessions and tasks
-  session_names <- result$session_names # TO DO: have BayesGLM_surface return the design matrix.
+  session_names <- result$session_names # TO DO: have BayesGLM return the design matrix.
   J <- length(session_names)
   K <- length(result$beta_names)
 

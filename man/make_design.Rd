@@ -5,23 +5,28 @@
 \title{Make design matrix}
 \usage{
 make_design(
-  onsets,
+  EVs,
   nTime,
   TR,
-  dHRF = c(1, 0, 2),
+  dHRF = 0,
   upsample = 100,
+  onset = NULL,
+  offset = NULL,
   scale_design = TRUE,
+  onsets_sep = FALSE,
+  offsets_sep = FALSE,
+  verbose = TRUE,
   ...
 )
 }
 \arguments{
-\item{onsets}{Task stimulus information, from which a design matrix will be
-constructed. This is a list where each entry represents a task as a matrix
-of onsets (first column) and durations (second column) for each stimuli
-(each row) of the task, in seconds. List names should be the task names.
-\code{nTime} and \code{TR} are required with \code{onsets}.
+\item{EVs}{The explanatory variables i.e. the task stimulus information,
+from which a design matrix will be constructed. This is a list where each
+entry represents a task as a matrix of onsets (first column) and durations
+(second column) for each stimuli (each row) of the task, in seconds. List
+names should be the task names. \code{nTime} and \code{TR} are required.
 
-An example of a properly-formatted \code{onsets} is:
+An example of a properly-formatted \code{EVs} is:
 \code{on_s1 <- list(taskA=cbind(on=c(1,9,17), dr=rep(1,3)),
  taskB=cbind(on=c(3,27), dr=rep(5,2)))}.
 In this example, there are two tasks: the first has three 1s-long stimuli,
@@ -34,8 +39,8 @@ with \code{on_s2} formatted similarly to \code{on_s1}.}
 
 \item{dHRF}{Controls the extent of HRF derivatives modeling.
 
-Set to \code{0} to only model the main HRF regressor, and not include its
-derivatives; set to \code{1} (default) to model the temporal derivative too;
+Set to \code{0} to only model the main HRF regressor (default), and not include its
+derivatives; set to \code{1} to model the temporal derivative too;
 or, set to \code{2} to model both the temporal and dispersion derivatives.
 If \code{dHRF==0}, there is one design column (field) per task. If
 \code{dHRF==1}, there are two fields per task. And if \code{dHRF==2}, there
@@ -46,12 +51,30 @@ matrix columns may exceed five, which may require large computation times
 with INLA. The analysis can be adjusted by modeling the derivatives as
 nuisance signals rather than as fields. To do so, move the corresponding
 columns from the design matrix to the \code{nuisance} argument for
-\code{BayesGLM_cifti}.}
+\code{BayesGLM}.}
 
 \item{upsample}{Upsample factor for convolving stimulus boxcar or stick
 function with canonical HRF. Default: \code{100}.}
 
-\item{scale_design}{Scale the columns of the design matrix? Default: \code{TRUE}.}
+\item{onset, offset}{Add task regressors indicating the onset and/or offset of
+each event block? Provide the names of the tasks as a character vector. All
+onsets (or offsets) across the specified tasks will be represented by one
+additional column in the design matrix. The task names must match the names
+of \code{EVs}. Can also be \code{"all"} to use all tasks.
+
+Onsets/offset modeling is only compatible with a block design experiment.
+An error will be raised if the events in \code{EVs} do not have duration
+greater than one second.}
+
+\item{scale_design}{Scale the columns of the design matrix? Default:
+\code{TRUE}.}
+
+\item{onsets_sep, offsets_sep}{Model the onsets (\code{onsets_sep}) or offsets
+(\code{offsets_sep}) separately for each task? Default: \code{FALSE}, to
+model all onsets together, or all offsets together, as a single field in the
+design.}
+
+\item{verbose}{Print diagnostic messages? Default: \code{TRUE}.}
 
 \item{...}{Additional arguments to \code{\link{HRF_calc}}.}
 }

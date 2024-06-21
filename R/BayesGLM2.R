@@ -5,9 +5,10 @@
 #'
 #' @inheritSection INLA_Description INLA Requirement
 #'
-#' @param results Either (1) a length \eqn{N} list of \code{"BayesGLM"} objects,
-#'  or (2) a length \eqn{N} character vector of files storing \code{"BayesGLM"}
-#'  objects saved with \code{\link{saveRDS}}.
+#' @param results Either (1) a length \eqn{N} list of \code{"BGLM"} objects,
+#'  or (2) a length \eqn{N} character vector of files storing \code{"BGLM"}
+#'  objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
+#'  also are accepted.
 #' @param contrasts (Optional) A list of contrast vectors that specify the
 #'  group-level summaries of interest. If \code{NULL}, use contrasts that compute
 #'  the average of each field (field HRF) across subjects and sessions.
@@ -93,17 +94,17 @@ BayesGLM2 <- function(
     results <- lapply(results, readRDS) # [TO DO]: delete w/ each read-in, stuff not needed
   }
   if (!is.list(results)) {
-    stop("`results` must be a list of `'BayesGLM'` objects, or a character vector of files with `'BayesGLM'` results saved.")
+    stop("`results` must be a list of all `'BGLM'` or all `'fit_bglm'` objects, or a character vector of files with `'BGLM(0)'` results.")
   }
-  is_BayesGLM <- all(vapply(results, inherits, FALSE, "BayesGLM"))
-  is_cifti <- all(vapply(results, inherits, FALSE, "BayesGLM_cifti"))
-  if (!is_BayesGLM && !is_cifti) {
-    stop("`results` must be a list of all `'BayesGLM'` or all `'BayesGLM_cifti'` objects, or a character vector of files with `'BayesGLM(_cifti)'` results.")
+  is_BGLM <- all(vapply(results, inherits, FALSE, "fit_bglm"))
+  is_cifti <- all(vapply(results, inherits, FALSE, "BGLM"))
+  if (!is_BGLM && !is_cifti) {
+    stop("`results` must be a list of all `'BGLM'` or all `'fit_bglm'` objects, or a character vector of files with `'BGLM(0)'` results.")
   }
-  rm(is_BayesGLM) # use `is_cifti`
+  rm(is_BGLM) # use `is_cifti`
 
   model_names <- if (is_cifti) {
-    names(results[[1]]$BayesGLM_results)[!vapply(results[[1]]$BayesGLM_results, is.null, FALSE)]
+    names(results[[1]]$BGLMs)[!vapply(results[[1]]$BGLMs, is.null, FALSE)]
   } else {
     "BayesGLM"
   }
@@ -121,7 +122,7 @@ BayesGLM2 <- function(
     sub_nn <- results[[nn]]
     stopifnot(identical(
       model_names,
-      names(sub_nn$BayesGLM_results)[!vapply(sub_nn$BayesGLM_results, is.null, FALSE)]
+      names(sub_nn$BGLMs)[!vapply(sub_nn$BGLMs, is.null, FALSE)]
     ))
     stopifnot(identical(session_names, sub_nn$session_names))
     stopifnot(identical(field_names, sub_nn$field_names))
@@ -187,12 +188,12 @@ BayesGLM2 <- function(
   for (mm in seq(nM)) {
 
     if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
-    results_mm <- lapply(results, function(x){ x$BayesGLM_results[[mm]] })
+    results_mm <- lapply(results, function(x){ x$BGLMs[[mm]] })
 
     # `Mask`
-    Mask <- lapply(results_mm, function(x){ x$mask })
-    if (length(unique(vapply(Mask, length, 0))) != 1) { 
-      stop("Unequal mask lengths--check that the input files are in the same resolution.") 
+    Mask <- lapply(results_mm, function(x){ x$spatial$mask })
+    if (length(unique(vapply(Mask, length, 0))) != 1) {
+      stop("Unequal mask lengths--check that the input files are in the same resolution.")
     }
     Mask <- do.call(rbind, Mask)
     Mask_sums <- colSums(Mask)
@@ -200,7 +201,7 @@ BayesGLM2 <- function(
     Mask <- apply(Mask, 2, all)
 
     # `mesh`, `spde`, `Amat`
-    mesh <- results_mm[[1]]$mesh
+    mesh <- results_mm[[1]]$spde$mesh
     if (need_Mask) {
       mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
     }
@@ -388,15 +389,15 @@ BayesGLM2 <- function(
     nsamp_theta = nsamp_theta,
     nsamp_beta = nsamp_beta
   )
-  class(out) <- "BayesGLM2"
+  class(out) <- "fit_bglm2"
 
   if (is_cifti) {
     out <- list(
       contrast_estimate_xii = as.xifti(
-        out$model_results$cortex_left$estimates,
-        out$model_results$cortex_left$mask,
-        out$model_results$cortex_right$estimates,
-        out$model_results$cortex_right$mask
+        out$model_results$cortexL$estimates,
+        out$model_results$cortexL$mask,
+        out$model_results$cortexR$estimates,
+        out$model_results$cortexR$mask
       ),
       activations_xii = NULL,
       BayesGLM2_results = out
@@ -404,16 +405,16 @@ BayesGLM2 <- function(
     out$contrast_estimate_xii$meta$cifti$names <- names(contrasts)
     if (do_excur) {
       act_xii <- as.xifti(
-        out$BayesGLM2_results$model_results$cortex_left$active,
-        out$BayesGLM2_results$model_results$cortex_left$mask,
-        out$BayesGLM2_results$model_results$cortex_right$active,
-        out$BayesGLM2_results$model_results$cortex_right$mask
+        out$BayesGLM2_results$model_results$cortexL$active,
+        out$BayesGLM2_results$model_results$cortexL$mask,
+        out$BayesGLM2_results$model_results$cortexR$active,
+        out$BayesGLM2_results$model_results$cortexR$mask
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)
       names(out$activations_xii$meta$cifti$labels) <- names(contrasts)
     }
-    class(out) <- "BayesGLM2_cifti"
+    class(out) <- "BGLM2"
   }
 
   out

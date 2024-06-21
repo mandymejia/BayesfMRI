@@ -1,15 +1,15 @@
-#' Retroactively mask locations from BayesGLM result.
+#' Retroactively mask locations from fit_bglm result.
 #'
 #' Work in progress.
 #'
-#' @param x The BayesGLM result
+#' @param x The \code{"fit_bglm"} result
 #' @param mask The mask to be applied to \code{x} (on top of any masks already
 #'  applied to it.)
 #' @return The masked result
 #'
 #' @keywords internal
 retro_mask_BGLM <- function(x, mask){
-  stopifnot(inherits(x, "BayesGLM"))
+  stopifnot(inherits(x, "fit_bglm"))
   nS <- length(x$session_names)
   nK <- length(x$field_names)
   nV <- sum(x$mask)

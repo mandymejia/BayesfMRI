@@ -1,15 +1,15 @@
 #' Standardize data variance, and prewhiten if applicable
 #'
 #' Standardize data variance and prewhiten if applicable, for the GLM.
-#' @param BOLD,design,spatial,spatial_type See \code{BayesGLM}.
-#' @param session_names,field_names,design_type See \code{BayesGLM}.
-#' @param valid_cols,nT,nD,do_pw See \code{BayesGLM}.
+#' @param BOLD,design,spatial,spatial_type See \code{fit_bayesglm}.
+#' @param session_names,field_names,design_type See \code{fit_bayesglm}.
+#' @param valid_cols,nT,do_pw See \code{fit_bayesglm}.
 #' @return List of results
 #' @keywords internal
 GLM_est_resid_var_pw <- function(
   BOLD, design, spatial, spatial_type,
   session_names, field_names, design_type,
-  valid_cols, nT, nD,
+  valid_cols, nT,
   ar_order, ar_smooth, aic, n_threads,
   do_pw
 ){
@@ -29,10 +29,21 @@ GLM_est_resid_var_pw <- function(
   # Estimate parameters for each session.
   for (ss in seq(nS)) {
     vcols_ss <- valid_cols[ss,]
-    #[TO DO] if design matrix varies spatially, need to adapt this
-    resid_ss <- fMRItools::nuisance_regression(
-      BOLD[[ss]], design[[ss]][,vcols_ss]
-    )
+
+    if (design_type == "regular") {
+      resid_ss <- fMRItools::nuisance_regression(
+        BOLD[[ss]], design[[ss]][,vcols_ss]
+      )
+    } else if (design_type == "per_location") {
+      resid_ss <- BOLD[[ss]]*0
+      for (dd in seq(nV_D)) {
+        resid_ss[,dd] <- fMRItools::nuisance_regression(
+          BOLD[[ss]][,dd,drop=FALSE],
+          matrix(design[[ss]][,vcols_ss,dd,drop=FALSE], nrow=dim(design[[ss]])[1])
+        )
+      }
+    } else { stop() }
+
     if (do_pw) {
       pw_est_ss <- pw_estimate(resid_ss, ar_order, aic=aic)
       var_resid[,ss] <- pw_est_ss$sigma_sq
@@ -44,26 +55,26 @@ GLM_est_resid_var_pw <- function(
   }
 
   # Average across sessions.
-  var_avg <- apply(as.matrix(var_resid), 1, mean)
+  var_avg <- rowMeans(as.matrix(var_resid))
   if (!do_pw) { var_avg <- var_avg/mean(var_avg, na.rm=TRUE) }
   if (do_pw) {
-    AR_coefs_avg <- apply(AR_coefs, 1:2, mean)
+    AR_coefs_avg <- apply(AR_coefs, seq(2), mean)
     if (aic) { max_AIC <- apply(AR_AIC, 1, max) }
   }
 
   # Smooth prewhitening parameters.
   if (do_pw && ar_smooth > 0) {
     x <- pw_smooth(
-      surf=spatial$surf,
-      mask=spatial$mask,
-      AR=AR_coefs_avg, var=var_avg, FWHM=ar_smooth
+      spatial=spatial, spatial_type=spatial_type,
+      AR=AR_coefs_avg, var=var_avg,
+      FWHM=ar_smooth
     )
     AR_coefs_avg <- x$AR
     var_avg <- x$var
     rm(x)
   }
 
-  sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q, 
+  sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q,
     nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg
   )})
 

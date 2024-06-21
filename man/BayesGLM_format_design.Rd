@@ -10,7 +10,7 @@ BayesGLM_format_design(
   nS_expect = NULL,
   nT_expect = NULL,
   nD_expect = NULL,
-  per_location_design = FALSE
+  per_location_design = NULL
 )
 }
 \arguments{
@@ -31,7 +31,7 @@ modeling this is equal to \code{nVd0}, the initial number of data locations.
 For multi-session data this is a session-length vector.}
 
 \item{per_location_design}{\code{FALSE} if per-location modeling is not
-being performed (i.e. for MultiGLM); \code{TRUE} if it is; or, \code{NULL}
+being performed (i.e. for multiGLM); \code{TRUE} if it is; or, \code{NULL}
 to infer based on the dimensions of \code{design} (\code{TRUE} if the
 design has three dimensions.)}
 }
@@ -39,7 +39,7 @@ design has three dimensions.)}
 \code{design}
 }
 \description{
-Format design for \code{BayesGLM_cifti}, \code{BayesGLM},
-\code{MultiGLM_cifti}, and \code{MultiGLM}.
+Format design for \code{BayesGLM}, \code{fit_bayesglm},
+\code{multiGLM}, and \code{multiGLM_fun}.
 }
 \keyword{internal}

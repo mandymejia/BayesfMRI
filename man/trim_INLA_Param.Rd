@@ -5,7 +5,7 @@
 \title{trim_INLA}
 \arguments{
 \item{trim_INLA}{(logical) should the \code{INLA_model_obj} within the
-result be trimmed to only what is necessary to use \code{id_activations}?
+result be trimmed to only what is necessary to use \code{activations}?
 Default: \code{TRUE}.}
 }
 \description{

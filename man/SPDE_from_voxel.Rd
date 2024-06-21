@@ -4,10 +4,12 @@
 \alias{SPDE_from_voxel}
 \title{SPDE from voxel model}
 \usage{
-SPDE_from_voxel(spatial)
+SPDE_from_voxel(spatial, logkappa = NULL, logtau = NULL)
 }
 \arguments{
-\item{spatial}{See \code{BayesGLM}.}
+\item{spatial}{See \code{BayesGLM0}.}
+
+\item{logkappa, logtau}{vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.}
 }
 \value{
 List

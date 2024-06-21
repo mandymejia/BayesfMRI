@@ -31,7 +31,7 @@ bsim2 <- readRDS(file.path(dir_results, "simData/bsim_wSpatialVar.rds"))
 # BayesGLM ---------------------------------------------------------------------
 bfmri_fname <- file.path(dir_resultsThis, "bfmri_1sess.rds")
 if (!file.exists(bfmri_fname)) {
-  bfmri <- lapply(bsim$simulated_cifti[seq(6)], BayesGLM_cifti,
+  bfmri <- lapply(bsim$simulated_cifti[seq(6)], BayesGLM,
     brainstructures = "both",
     design = bsim$design,
     Bayes = TRUE,

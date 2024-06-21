@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_utils.R
 \name{GLMEM_fixptseparate}
 \alias{GLMEM_fixptseparate}
-\title{Fixed point function for the joint BayesGLMEM update algorithm}
+\title{Fixed point function for the joint BayesGLM EM update algorithm}
 \usage{
 GLMEM_fixptseparate(theta, spde, model_data, Psi, K, A, cl, Ns = 50)
 }
@@ -28,6 +28,6 @@ estimator. If set to 0, the exact trace is found.}
 a vector with the same length as \code{theta}, the EM updates
 }
 \description{
-Fixed point function for the joint BayesGLMEM update algorithm
+Fixed point function for the joint BayesGLM EM update algorithm
 }
 \keyword{internal}

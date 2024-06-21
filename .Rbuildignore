@@ -3,7 +3,6 @@
 ^README\.Rmd$
 ^\.github$
 ^appveyor\.yml$
-^vignettes
 ^LICENSE\.md$
 ^CRAN-RELEASE$
 ^cran-comments\.md
@@ -18,23 +17,13 @@
 ^tests/test_notInPackage_HCP_sub\.R$
 # below: was going to add to pkg, but didn't
 ^tests/data
-# Volumetric -------------------
-^R/BayesGLM_vol3D\.R$
-#^R/make_spde_vol3D\.R$
-^R/vol2mesh\.R$
-^R/make_slice_mesh\.R$
-^R/plot_slice\.R$
 # EM ---------------------------
 # ^R/EM_utils\.R$
 # Vignettes (TO-DO) ------------
-^vignettes/BayesfMRI_simulation\.Rmd$
-^vignettes/BayesfMRI_simulation\.html$
-^vignettes/BayesfMRI_simulation_files$
-^vignettes/BayesfMRI_HCP\.Rmd$
+^vignettes
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
 ^R/make_spde_surf\.R$
 ^R/summarize_sessions\.R$
-^R/GLM_multi\.R$
-^R/multiGLM\.R$
+^vignette_data$

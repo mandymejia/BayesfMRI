@@ -57,7 +57,10 @@ HRF_calc <- function(t, deriv=0, a1=6, b1=1, a2=16/6 * a1 * sqrt(b1), b2=b1, c=1
     h <- (fplus - fminus)/(2*delta)
   }
 
-  return(h)
+  # Drop first value, which equals zero.
+  h <- h[-1]
+
+  h
 }
 
 #' Canonical (double-gamma) HRF

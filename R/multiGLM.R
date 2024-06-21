@@ -1,179 +1,330 @@
-#' multiGLM
+#' multiGLM for CIFTI
 #'
-#' Performs classical GLM for task fMRI activation, comparing multiple designs
+#' Performs classical Bayesian GLM for task fMRI activation with CIFTI-format
+#'  data, evaluating multiple design matrices. Includes the pre-processing
+#'  steps of nuisance regression. Supports single-session analysis only.
 #'
-#' @inheritSection INLA_Description INLA Requirement
+#' @inheritSection Connectome_Workbench_Description Connectome Workbench Requirement
 #'
-#' @param BOLD,design,nuisance Session-length list of numeric matrices/arrays,
-#'  each with volumes along the first dimension.
-#' @param spatial Gives the spatial information. For surface data, a list of two:
-#'  \describe{
-#'    \item{surf}{A list of two: \code{vertices} \eqn{V \times 3} numeric matrix of vertex locations in XYZ coordinate space, and \code{faces}, \eqn{F \times 3} matrix of positive integers defining the triangular faces.}
-#'    \item{mask}{Mask of locations with valid data.}
-#' }
-#'  For voxel data, a list of six:
-#'  \describe{
-#'    \item{label}{3D array of labeled locations to include in the model.}
-#'    \item{trans_mat}{Projection matrix to convert voxel indices to XYZ position. Can be \code{NULL}.}
-#'    \item{trans_units}{XYZ units. Can be \code{NULL}.}
-#'    \item{nbhd_order}{See documentation for \code{\link{BayesGLM_cifti}}.}
-#'    \item{buffer}{See documentation for \code{\link{BayesGLM_cifti}}.}
-#' }
-#' @inheritParams session_names_Param
-#' @inheritParams scale_BOLD_Param
-# @inheritParams EM_Param
-#' @inheritParams n_threads_Param
-#' @inheritParams return_INLA_Param
+#' @inheritParams BOLD_Param_BayesGLM
+#' @param design A 3D numeric array that is locations by fields by designs.
+#' @inheritParams TR_Param_BayesGLM
+#' @inheritParams brainstructures_Param_BayesGLM
+#' @inheritParams resamp_res_Param_BayesGLM
+#' @inheritParams nuisance_Param_BayesGLM
+#' @inheritParams hpf_Param_BayesGLM
+#' @param design_canonical TO DO
 #' @inheritParams verbose_Param
-# @inheritParams combine_sessions_Param
-#' @param meanTol,varTol Tolerance for mean, variance and SNR of each data location.
-#'  Locations which do not meet these thresholds are masked out of the analysis.
-#'  Default: \code{1e-6} for mean and variance, \code{50} for SNR.
-# Note: \code{snrTol} currently not in use, but SNR maps are returned for visualization.
-# @inheritParams emTol_Param
+#' @inheritParams mean_var_Tol_Param
 #'
-#' @return A \code{"CompareGLM"} object: a list with elements
+#' @return An object of class \code{"mGLM"}: a list with elements
 #'  \describe{
-#'    \item{field_estimates}{The estimated coefficients for the Bayesian model.}
-#'    \item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
-#'    \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
-#'    \item{field_names}{The names of the fields.}
-#'    \item{session_names}{The names of the sessions.}
-#'    \item{hyperpar_posteriors}{Hyperparameter posterior densities.}
-#'    \item{theta_estimates}{Theta estimates from the Bayesian model.}
-#'    \item{posterior_Sig_inv}{For joint group modeling.}
-#'    \item{mu_theta}{For joint group modeling.}
-#'    \item{Q_theta}{For joint group modeling.}
-#'    \item{y}{For joint group modeling: The BOLD data after any centering, scaling, nuisance regression, or prewhitening.}
-#'    \item{X}{For joint group modeling: The design matrix after any centering, scaling, nuisance regression, or prewhitening.}
-#'    \item{prewhiten_info}{Vectors of values across locations: \code{phi} (AR coefficients averaged across sessions), \code{sigma_sq} (residual variance averaged across sessions), and AIC (the maximum across sessions).}
-#'    \item{call}{match.call() for this function call.}
+#'    \item{brainstructures}{\code{data.frame} summarizing the spatial features of each brain structure modeled.}
+#'    \item{fields}{\code{data.frame} with the \code{name}, related \code{task}, and \code{HRF_order} of each field.}
 #'  }
 #'
-#' @importFrom matrixStats colVars
-#' @importFrom Matrix bandSparse bdiag crossprod solve Diagonal
-#' @importFrom parallel detectCores makeCluster clusterMap stopCluster
-#' @importFrom stats as.formula var
-#' @importFrom fMRItools is_1 nuisance_regression scale_timeseries
+# @importFrom ciftiTools read_cifti resample_gifti as.xifti remove_xifti
+#' @import ciftiTools
+#' @importFrom fMRItools match_input is_1
 #'
-#' @importFrom utils tail
-#'
-#' @importFrom methods as
 #' @export
+#'
 multiGLM <- function(
   BOLD,
   design,
+  brainstructures=c('left','right'),
+  TR=NULL,
+  # For surface models
+  resamp_res=10000,
+  # Nuisance
+  hpf=NULL,
+  # Below arguments shared with `multiGLM`.
   nuisance=NULL,
-  # Below arguments shared with `BayesGLM_cifti`.
-  scale_BOLD = c("auto", "mean", "sd", "none"),
+  design_canonical=NULL,
   verbose = 1,
   meanTol = 1e-6,
   varTol = 1e-6#,
-  #snrTol = 50,
-  #emTol = 1e-3
-  ){
+  #snrTol = 50
+){
+
+  scale_design <- FALSE
 
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
-  if (isTRUE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'auto'"); scale_BOLD <- "auto"
-  }
-  if (isFALSE(scale_BOLD)) {
-    message("Setting `scale_BOLD` to 'none'"); scale_BOLD <- "none"
-  }
-  scale_BOLD <- match.arg(scale_BOLD, c("auto", "mean", "sd", "none"))
-  stopifnot(fMRItools::is_posNum(verbose, zero_ok=TRUE))
-  stopifnot(fMRItools::is_posNum(meanTol))
-  stopifnot(fMRItools::is_posNum(varTol))
+  stopifnot(is.null(TR) || (fMRItools::is_1(TR, "numeric") && TR>0))
 
-  # Modeled after `BayesGLM_cifti` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  #   But note that `BOLD`, `design`, and `nuisance` will be 
-  #   matrix/array rather than lists.
+  do <- vector("list")
+
+  # In a separate function because these checks are shared with `BayesGLM0`.
+  BayesGLM_argChecks(
+    Bayes=FALSE,
+    verbose = verbose,
+    meanTol = meanTol,
+    varTol = varTol
+  )
+
+  # `hpf` and `TR`.
+  if (is.null(hpf)) {
+    warn_msg <- if (is.null(TR)) { "`hpf` and `TR`" } else { "`hpf`" }
+    warning("Highpass-filtering (HPF) is recommended for computing a GLM on ",
+      "time series data, such as fMRI. Set ", warn_msg, " to enable the HPF. ",
+      "Or, set `hpf='already'` if the data, design, and nuisance inputs have ",
+      "already been high-pass filtered.")
+  } else {
+    if (fMRItools::is_1(hpf, "character") && hpf=="already") {
+      hpf <- NULL
+    } else if (is.null(TR)) {
+      stop("`hpf` requires `TR`.")
+    }
+  }
+
+  ### Brain structures. --------------------------------------------------------
+  if ("both" %in% brainstructures) { brainstructures <- c("left", "right") }
+  if ("all" %in% brainstructures) {
+    brainstructures <- c("left","right","subcortical")
+  }
+  brainstructures <- fMRItools::match_input(
+    brainstructures, c("left","right","subcortical"),
+    user_value_label="brainstructures"
+  )
+  do$left <- ('left' %in% brainstructures)
+  do$right <- ('right' %in% brainstructures)
+  do$sub <- ('subcortical' %in% brainstructures)
+  do$cortex <- do$left || do$right
+  if (!do$cortex) { resamp_res <- NULL }
+
+  # Check `BOLD` w/o reading CIFTIs in; check `design` and `nuisance`. ---------
+  #   Get all dimensions except for `nV` (because `BOLD` is not read in yet.)
+
   ### Check `BOLD`. ------------------------------------------------------------
-  nS <- 1
-  if(nS!=1) stop("Not supported: multi-session in `compareGLM`.")
+  # Make `BOLD` a sessions-length character vector, or a sessions-length list of
+  #  \code{"xifti"} objects. Get `nS`. Do not read or check dims yet.
+  is_xifti <- FALSE
+  if (is.character(BOLD)) {
+    BOLD <- as.list(BOLD)
+  } else if (is.xifti(BOLD, messages=FALSE)) {
+    is_xifti <- TRUE
+    BOLD <- list(BOLD)
+  } else if (is.list(BOLD)) {
+    if (all(vapply(BOLD, is.character, FALSE)) && all(vapply(BOLD, length, 0)==1)) {
+      BOLD <- setNames(as.character(BOLD), names(BOLD))
+    } else {
+      is_xifti_vec <- vapply(BOLD, is.xifti, messages=FALSE, FALSE)
+      if (!all(is_xifti_vec)) {
+        stop('`BOLD` should be a character vector or list of `"xifti"` objects.')
+      }
+      rm(is_xifti_vec)
+      is_xifti <- TRUE
+    }
+  } else {
+    stop('`BOLD` should be a character vector or list of `"xifti"` objects.')
+  }
+
+  nS <- length(BOLD)
+  if (nS > 1) { stop("Not supported: multi-session analysis in `multiGLM`.") }
+
   ### Check `design`. ----------------------------------------------------------
   # Make `design` a sessions-length list of design matrices.
   #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
   #   across sessions.
-  x <- BayesGLM_format_design(design, scale_design=scale_design, nS_expect=nS)
-  design <- x$design[[1]]
+  x <- BayesGLM_format_design(design, scale_design=FALSE, nS_expect=nS)
+  design <- x$design
   nT <- x$nT
   nK <- x$nK
   nD <- x$nD
   field_names <- x$field_names
   design_names <- x$design_names
-  if(x$per_location_design) stop("Not supported: per-location design in `compareGLM`.")
+  do$perLocDesign <- x$per_location_design
+  stopifnot(!do$perLocDesign)
   rm(x)
 
-  ### Get `session_names`. -----------------------------------------------------
-  session_names <- "single_sess"
-  names(BOLD) <- session_names
-  names(design) <- session_names
+  if (verbose>0) {
+    cat("Number of timepoints:    ",
+      if (length(unique(nT))==1) { nT[1] } else { paste0(min(nT), "-", max(nT)) }, "\n")
+    cat("Number of fields:        ", nK, "\n")
+    cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
+    cat("Field names:             ", paste0(field_names, collapse=", "), "\n")
+  }
 
   ### Check `nuisance`. --------------------------------------------------------
   if (!is.null(nuisance)) {
-    nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)[[1]]
+    nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)
+  } else {
+    nuisance <- list(NULL)
+  }
 
-    if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
-      #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
+  ### Make DCT bases in `design` for the high-pass filter. ---------------------
+  if (!is.null(hpf)) {
+    stopifnot(fMRItools::is_1(hpf, "numeric") && hpf>0)
+    DCTs <- lapply(nT, function(nT_ss){
+      fMRItools::dct_bases(nT_ss, round(dct_convert(T_=nT_ss, TR=TR, f=hpf)))
+    })
+    nDCTs <- vapply(DCTs, ncol, 0)
+    if (verbose > 0) {
+      cat("Including",
+        if (length(unique(nDCTs))==1) { nDCTs[1] } else { cat(min(nDCTs), "-", max(nDCTs)) },
+        "DCT bases in `nuisance` for highpass filtering.\n")
     }
+    nuisance[[1]] <- cbind2(nuisance[[1]], DCTs[[1]] )
   }
 
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  valid_cols <- apply(design, 2, function(r){!all(is.na(r))})
-  if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing from every session.") }
-  if (any(is.na(c(design[,valid_cols[ss,],])))) {
-    if (any_bad_design_cols) {
-      stop("`design` has some sessions & tasks for which some data values ",
-        "are `NA`. Partially missing data is not allowed. (Missing tasks ",
-        "should have all `NA`.)")
+  # `BOLD`: read in data and metadata, for each brain structure. ---------------
+  nV_T <- setNames(NA*vector("numeric", length(brainstructures)), names(brainstructures))
+  names(nV_T)[names(nV_T)=="cortex_left"] <- "cortexL"
+  names(nV_T)[names(nV_T)=="cortex_right"] <- "cortexR"
+
+  BOLD_input_msg <- function(do=c("read", "resample")){
+    do <- switch(do, read="Reading", resample="Resampling")
+    out <- paste0("\t", do,  " BOLD data")
+    if (do=="resample") { out <- paste0(out, " to ", resamp_res) }
+    out <- paste0(out, ".\n")
+  }
+
+  # Above code based on `BayesGLM` which allows `nS>1`. Simplify now.
+  BOLD <- BOLD[[1]]
+  design <- design[[1]]
+  nuisance <- nuisance[[1]]
+  ss <- 1
+
+  ### Read and/or resample the CIFTI data. -----------------------------------
+  if (is_xifti) {
+    if (do$cortex) {
+      if (!is.null(resamp_res)) {
+        if (any(ciftiTools::infer_resolution(BOLD)!=resamp_res)) {
+          if (verbose>0) { cat(BOLD_input_msg("resample")) }
+          BOLD <- resample_xifti(BOLD, resamp_res=resamp_res, verbose=FALSE)
+        }
+      }
     }
+  } else {
+    if (verbose>0) { cat(BOLD_input_msg("read")) }
+    BOLD <- read_cifti(
+      BOLD, brainstructures=brainstructures,
+      resamp_res=resamp_res
+    )
   }
 
-  ### Get `nV`. ----------------------------------------------------------------
-  nV <- list(T=NULL, D=nrow(BOLD))
+  if (ncol(BOLD) != nT) { stop(
+    "The design indicates ", nT,
+    " volumes, but the `xifti` data has ", ncol(BOLD),
+    " volumes. These must match. Correct either `design` or `BOLD`."
+  )}
 
-  # QC mask. -------------------------------------------------------------------
-  # Mask based on quality control metrics of the BOLD data.
-  mask_qc <- make_mask(
-    BOLD,
-    meanTol=meanTol, varTol=varTol, verbose=verbose>0
-  ) #, snrTol=snrTol)
-  if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
-  if (any(!mask_qc$mask)) {
-    if (spatial_type == "mesh") {
-      spatial$mask[spatial$mask] <- mask_qc
-    } else if (spatial_type == "voxel") {
-      spatial$labels[spatial$labels!=0][!mask_qc] <- 0 # [TO DO] check
-    } else { stop() }
-    BOLD <- BOLD[,mask_qc,drop=FALSE]
+  if (do$left && is.null(BOLD$data$cortex_left)) { stop("Left cortex data is missing from this BOLD session.") }
+  if (do$right && is.null(BOLD$data$cortex_right)) { stop("Right cortex data is missing from this BOLD session.") }
+  if (do$sub && is.null(BOLD$data$subcort)) { stop("Subcortex data is missing from this BOLD session.") }
+
+  ### Check `BOLD` data dimensions. ------------------------------------------
+  # `xii_res`: total spatial dims according to the BOLD data.
+  #   Names: 'left', 'right', 'subcort'.
+  xii_res <- vector("numeric", 0)
+  if (do$cortex) {
+    xii_res <- c(xii_res, ciftiTools::infer_resolution(BOLD))
+  }
+  if (do$sub) {
+    xii_res <- c(xii_res, c(subcort=sum(BOLD$meta$subcort$mask)))
   }
 
-  # Scale, nuisance regress, and/or concatenate session data. ------------------
+  # Set `nV_T` based on the `xii_res`.
+  if (do$left) { nV_T["cortexL"] <- xii_res["left"] }
+  if (do$right) { nV_T["cortexR"] <- xii_res["right"] }
+  if (do$sub) { nV_T["subcort"] <- sum(BOLD$meta$subcort$mask) }
 
-  #collect data and design matrices
-  nK2 <- if (is.null(nuisance)) { 0 } else { ncol(nuisance) } #number of nuisance regressors
+  rm(xii_res)
 
-  # Center design matrix.
-  des_means <- rep(colMeans(design[,vcols_ss,,drop=FALSE]), nV$D)
-  design[,vcols_ss,] <- design[,vcols_ss,,drop=FALSE] - des_means
+   ### Collect metadata. ---------------------------------------------
+   # Cortex: ROI `maskL` or `maskR`.
+   # Subcortex: `submeta`.`
+  if (do$left) {
+    maskL <- BOLD$meta$cortex$medial_wall_mask$left
+    if (is.null(maskL)) { maskL <- rep(TRUE, nV_T["cortexL"]) }
+  } else {
+    maskL <- NULL
+  }
 
-  # # Regress nuisance parameters from BOLD data and design matrix.
-  # if (!is.null(nuisance)) {
-  #   stopifnot((is.matrix(nuisance) || is.data.frame(nuisance)) && is.numeric(nuisance))
-  #   nuisance <- scale(nuisance, scale=FALSE)
-  #   # Add intercept to nuisance in case BOLD is not centered.
-  #   BOLD <- fMRItools::nuisance_regression(BOLD, cbind(1, nuisance))
-  #   # Do not add intercept, because `design` should already be centered.
-  #   design[,valid_cols] <- fMRItools::nuisance_regression(
-  #     design[,valid_cols], nuisance
-  #   ) #[TO DO] if design matrix varies spatially, need to adapt this.
-  #   # Design matrix will start as TxKxV and continue in that format after this step.
-  #   # [TO DO] Re-scale design?
-  #   nuisance[ss] <- list(NULL)
-  #   rm(nuisance)
-  # }
+  if (do$right) {
+    maskR <- BOLD$meta$cortex$medial_wall_mask$right
+    if (is.null(maskR)) { maskR <- rep(TRUE, nV_T["cortexR"]) }
+  } else {
+    maskR <- NULL
+  }
 
-  result <- GLM_multi(BOLD, design, nuisance)
+  if (do$sub) {
+    submeta <- BOLD$subcort
+  } else {
+    submeta <- NULL
+  }
+
+  # Collate `BOLD` by brainstructure.
+  BOLD <- BOLD$data
+  names(BOLD) <- c("cortexL", "cortexR", "subcort")
+  if (!do$left) { BOLD$cortexL <- NULL }
+  if (!do$right) { BOLD$cortexR <- NULL }
+  if (!do$sub) { BOLD$subcort <- NULL }
+
+  # Do GLM. --------------------------------------------------------------------
+  mGLM0s <- setNames(vector("list", length(BOLD)), names(BOLD))
+
+  ## Loop through brainstructures. ---------------------------------------------
+  bs_names <- data.frame(
+    d = c("cortexL", "cortexR", "subcort"), # Names used in this code.
+    v = c("Left cortex", "Right cortex", "Subcortex") # Verbose names to show user.
+  )
+
+  for (bb in seq(nrow(bs_names))) {
+    if (!(bs_names$d[bb] %in% names(BOLD))) { next }
+    dname_bb <- bs_names$d[bb]
+    if (verbose>0) { cat(bs_names$v[bb], "analysis:\n") }
+
+    ## `multiGLM_fun` call. ----------------------------------------------------
+    mGLM0s[[dname_bb]] <- multiGLM_fun(
+      BOLD = BOLD[[dname_bb]],
+      design = design,
+      nuisance = nuisance,
+      design_canonical = design_canonical,
+      verbose = verbose,
+      meanTol = meanTol,
+      varTol = varTol
+    )
+  }
+
+  ## Construct beta estimates as `xifti` objects. ------------------------------
+  if (verbose>0) cat("Formatting results.\n")
+
+  result <- list(
+    bestmodel_xii = NULL,
+    pvalF_xii = NULL,
+    Fstat_xii = NULL,
+    nuisance = nuisance,
+    field_names = field_names,
+    mGLM0s = mGLM0s
+  )
+
+  #format as xii: (1) index of best model and (2) locations of no signal
+  for(meas in c('bestmodel', 'Fstat', 'pvalF')){
+    xii_meas <- as.xifti(
+      cortexL = mGLM0s$cortexL[[meas]],
+      cortexL_mwall = maskL,
+      cortexR = mGLM0s$cortexR[[meas]],
+      cortexR_mwall = maskR,
+      subcortVol = mGLM0s$subcortical[[meas]],
+      subcortLabs = submeta$labels,
+      subcortMask = submeta$mask
+    )
+    xii_meas$meta$subcort$trans_mat <- submeta$trans_mat
+    xii_meas$meta$subcort$trans_units <- submeta$trans_units
+    xii_meas$meta$cifti$names <- field_names
+    result[[paste0(meas, "_xii")]] <- xii_meas
+  }
+
+  # Convert `bestmodel_xii` to `dlabel`.
+  result$bestmodel_xii$meta$cifti$names <- "multiGLM"
+  result$bestmodel_xii <- convert_xifti(
+    result$bestmodel_xii, "dlabel", 
+    levels=seq(nD), levels_old=seq(nD),
+    labels=design_names, add_white=FALSE
+  )
+
+  class(result) <- "mGLM"
+  result
 }
