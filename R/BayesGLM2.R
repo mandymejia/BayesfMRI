@@ -294,7 +294,8 @@ BayesGLM2 <- function(
 
       if (spatial_type=="voxel") {
         for (ss in seq(nS)) {
-          X_list[[ss]][,rep(Mask, times = nK)] <- 0
+          # X_list[[ss]][,rep(Mask, times = nK)] <- 0 # Too computationally intensive
+          X_list[[ss]] <- dgCMatrix_cols_to_zero(X_list[[ss]], which(rep(!Mask, times=nK)))
         }
       }
 
