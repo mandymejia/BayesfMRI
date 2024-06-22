@@ -4,12 +4,10 @@
 \alias{get_nV}
 \title{Get number of locations for various masks}
 \usage{
-get_nV(spatial, type = c("mesh", "voxel"))
+get_nV(spatial)
 }
 \arguments{
 \item{spatial}{\code{spatial}}
-
-\item{type}{\code{"mesh"}, or \code{"voxel"}.}
 }
 \value{
 A list of two: \code{T} for the total number of locations, and

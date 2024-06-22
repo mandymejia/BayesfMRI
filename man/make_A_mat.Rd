@@ -4,17 +4,15 @@
 \alias{make_A_mat}
 \title{Make A matrix}
 \usage{
-make_A_mat(surf, surf_rs)
+make_A_mat(spatial)
 }
 \arguments{
-\item{surf}{The full-resolution \code{"surf"} object.}
-
-\item{surf_rs}{The downsampled \code{"surf"} object.}
+\item{spatial}{See \code{BayesGLM}}
 }
 \value{
 The A matrix
 }
 \description{
-Make the A matrix for downsampling surface mesh data to a lower resolution.
+Make A matrix
 }
 \keyword{internal}

@@ -68,7 +68,7 @@ print.fit_bglm2 <- function(x, ...) {
 #'  properties of \code{object}.
 #' @method summary BGLM2
 summary.BGLM2 <- function(object, ...) {
-  x <- summary.fit_bglm2(object$fit_bglm2_results)
+  x <- summary.fit_bglm2(object$BayesGLM2_results)
   class(x) <- "summary.BGLM2"
   x
 }

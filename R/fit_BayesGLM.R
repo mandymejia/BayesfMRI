@@ -209,18 +209,20 @@ fit_bayesglm <- function(
   ### Check `spatial` and get `nV`. --------------------------------------------
 
   stopifnot(is.list(spatial))
-  mesh_spatial_names <- c("surf", "mask")
-  is_mesh <- length(names(spatial))==2 && all(names(spatial)==mesh_spatial_names)
-  voxel_spatial_names <- c(
-    "labels", "trans_mat", "trans_units", "nbhd_order", "buffer", "buffer_mask"
-  )
-  is_voxel <- length(names(spatial))==6 && all(names(spatial)==voxel_spatial_names)
-  if (!is_mesh && !is_voxel) { stop("`spatial` is not correctly formatted. Please fix.") }
-  spatial_type <- if (is_mesh) { "mesh" } else { "voxel" }
-  rm(is_mesh, is_voxel, mesh_spatial_names, voxel_spatial_names)
-  nV <- get_nV(spatial, spatial_type) #total number of locations, number of data locations
+  spatial_type <- spatial$spatial_type
+  if (spatial_type == "surf") {
+    stopifnot(length(spatial) == 3)
+    stopifnot(names(spatial) == c("spatial_type", "surf", "mask"))
+  } else if (spatial_type == "voxel") {
+    stopifnot(length(spatial) == 8)
+    stopifnot(names(spatial) == c(
+      "spatial_type", "labels", "trans_mat", "trans_units", 
+      "nbhd_order", "buffer", "buffer_mask", "data_loc")
+    )    
+  } else { stop("Unknown spatial$spatial_type.") }
+  nV <- get_nV(spatial) #total number of locations, number of data locations
 
-  if (spatial_type=="mesh" && (nV$T != nV$D)) {
+  if (spatial_type=="surf" && (nV$T != nV$D)) {
     if (verbose>0) {
       cat(paste0(
         "\t", (nV$T-nV$D),
@@ -237,7 +239,7 @@ fit_bayesglm <- function(
   ) #, snrTol=snrTol)
   if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
   if (any(!mask_qc$mask)) {
-    if (spatial_type == "mesh") {
+    if (spatial_type == "surf") {
       spatial$mask[spatial$mask] <- mask_qc$mask
     } else if (spatial_type == "voxel") {
       spatial$labels[spatial$labels!=0][!mask_qc$mask] <- 0 #remove bad locations from subcortical labels
@@ -250,13 +252,13 @@ fit_bayesglm <- function(
   logkappa_vec <- logtau_vec <- NULL #for default priors
   if (do$Bayesian) {
 
-    d <- if(spatial_type == "mesh"){ 2 } else { 3 }
+    d <- if(spatial_type == "surf"){ 2 } else { 3 }
     nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
 
     ### LOG KAPPA
 
     #determine reasonable values for spatial range
-    if(spatial_type == "mesh"){
+    if(spatial_type == "surf"){
       max_dist <- apply(spatial$surf$vertices, 2, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE)) #MAX distance within the mesh (Euclidean, a bad proxy for geodesic)
       range2 <- max(max_dist)/2 #this is our upper limit for the spatial correlation range
       tri_dist <- apply(matrix(1:nrow(spatial$surf$faces), ncol=1), 1, #for each face/triangle #MIN distance within the mesh
@@ -313,10 +315,10 @@ fit_bayesglm <- function(
 
     ### SUMMARY
 
-    if(verbose > 0 & hyperpriors == 'informative'){
+    if (verbose > 0 && hyperpriors == 'informative') {
       cat(paste0('\tPutting an informative prior on kappa so that the spatial range is between ',
         round(range1, 2), ' and ', round(range2, 2), ' mm.\n',
-        '\t\t Log kappa prior range (95% density): ', round(logkappa_vec[2], 2), ' to ', round(logkappa_vec[1], 2), '\n'))
+        '\t\tLog kappa prior range (95% density): ', round(logkappa_vec[2], 2), ' to ', round(logkappa_vec[1], 2), '\n'))
       cat(paste0('\tPutting an informative prior on tau so variance of the spatial field is between ',
       (var_vec[1]), ' and ', (var_vec[2]), '.\n',
       '\t\tLog tau prior range (95% density): ',round(logtau_vec[2], 2), ' to ', round(logtau_vec[1], 2), '\n'))
@@ -325,16 +327,16 @@ fit_bayesglm <- function(
 
 
   # Get SPDE and mask based on it (additional vertices may be excluded).
-  x <- switch(spatial_type, mesh=SPDE_from_mesh, voxel=SPDE_from_voxel)(
+  x <- switch(spatial_type, surf=SPDE_from_surf, voxel=SPDE_from_voxel)(
     spatial,
     logkappa = logkappa_vec,
     logtau = logtau_vec)
 
-  if (spatial_type=="mesh") {
+  if (spatial_type=="surf") {
     BOLD <- lapply(BOLD, function(q){ q[,x$mask_new_diff,drop=FALSE] })
   }
   spde <- x$spde
-  spatial <- x$spatial #unchanged for mesh data
+  spatial <- x$spatial #unchanged for surface data
   spatial$data_loc <- x$data_loc
   rm(x)
 
@@ -343,7 +345,7 @@ fit_bayesglm <- function(
 
   # Update and display the number of data locations. ---------------------------
   # (Need to update after QC mask and SPDE)
-  nV <- get_nV(spatial, spatial_type)
+  nV <- get_nV(spatial)
   if (verbose>0) {
     cat('\tNumber of data locations:', nV$D, '\n')
     if (spatial_type == "voxel") {
@@ -498,7 +500,7 @@ fit_bayesglm <- function(
   if (do$pw && verbose>0 && ar_smooth > 0) { cat("\tEstimating and smoothing prewhitening parameters.\n") }
   design_type <- if (do$perLocDesign) { "per_location" } else { "regular" }
   x <- GLM_est_resid_var_pw(
-    BOLD, design, spatial, spatial_type,
+    BOLD, design, spatial,
     session_names, field_names, design_type,
     valid_cols, nT,
     ar_order, ar_smooth, aic, n_threads, do$pw
@@ -526,7 +528,7 @@ fit_bayesglm <- function(
     # Apply prewhitening, if applicable.
     x <- sparse_and_PW(
       BOLD[[ss]], design[[ss]],
-      spatial, spatial_type, spde,
+      spatial, spde,
       field_names, design_type,
       vcols_ss, nT[ss],
       sqrtInv_all[[ss]]
@@ -571,7 +573,7 @@ fit_bayesglm <- function(
 
     # Construct betas and repls objects.
     x <- make_replicates(
-      nSess=nS, field_names=field_names, spatial, spatial_type
+      nSess=nS, field_names=field_names, spatial
       #, data_loc=data_loc) #indices of original data locations
     )
     betas <- x$betas
@@ -617,7 +619,7 @@ fit_bayesglm <- function(
     field_estimates <- extract_estimates(
       INLA_model_obj=INLA_model_obj,
       session_names=session_names,
-      spatial=spatial, spatial_type=spatial_type, spde=spde
+      spatial=spatial, spde=spde
     ) #posterior means of latent field
 
     theta_estimates <- INLA_model_obj$summary.hyperpar$mode

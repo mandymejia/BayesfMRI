@@ -73,6 +73,7 @@ beta.posterior.thetasamp <- function(
     mu_mm <- INLA::inla.qsolve(Q_mm, prec.error*Xycros[[mm]]) #mu_m in paper
     # draw samples from pi(beta_m|theta,y)
     beta_samp_mm <- INLA::inla.qsample(n = nsamp_beta, Q = Q_mm, mu = mu_mm)
+    browser()
     # # Same as above, but trying to avoid INLA.
     # mu_mm <- Matrix::solve(cholQ_mm, prec.error*Xycros[[mm]], system = "A")
     # beta_samp_mm <- cholQsample(n = nsamp_beta, cholQ = Q_mm, mu = mu_mm)
@@ -148,9 +149,9 @@ F.logwt <- function(theta, spde, mu_theta, Q_theta, nN){
   #nN - number of subjects
   a <- 1; b <- 5e-5
   n.spde <- (length(theta) - 1)/2
-  mu.tmp <- spde$f$hyper$theta1$param[1:2]
+  mu.tmp <- spde$f$hyper$theta1$param[1:2] #prior mean for (log(tau), log(kappa))
   mu <- rep(mu.tmp, n.spde)
-  Q.tmp <- matrix(spde$f$hyper$theta1$param[-(1:2)], 2, 2, byrow = TRUE)
+  Q.tmp <- matrix(spde$f$hyper$theta1$param[-(1:2)], 2, 2, byrow = TRUE) #prior precision matrix for (log(tau), log(kappa))
   Q <- kronecker(diag(1, n.spde, n.spde), Q.tmp)
 
   ## Prior density

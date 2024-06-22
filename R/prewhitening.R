@@ -63,7 +63,7 @@ AICc <- function(y, demean=FALSE, order.max = 10) {
 
 #' Smooth AR coefficients and white noise variance
 #'
-#' @param spatial,spatial_type See \code{fit_bayesglm} internal code.
+#' @param spatial See \code{fit_bayesglm} internal code.
 #' @param AR A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order
 #' @param var A vector length V containing the white noise variance estimates from the AR model
 #' @param FWHM FWHM parameter for smoothing. Remember that
@@ -75,13 +75,13 @@ AICc <- function(y, demean=FALSE, order.max = 10) {
 #' @keywords internal
 #'
 #' @return Smoothed AR coefficients and residual variance at every vertex
-pw_smooth <- function(spatial, spatial_type, AR, var, FWHM=5){
+pw_smooth <- function(spatial, AR, var, FWHM=5){
 
-  nV <- get_nV(spatial, spatial_type)
+  nV <- get_nV(spatial)
   if (nV$D != nrow(AR)) { stop('Number of rows in `AR` must match number of locations.') }
   if (nV$D != length(var)) { stop('Length of `var` must match number of locations.') }
 
-  if (spatial_type == "mesh") {
+  if (spatial$spatial_type == "surf") {
     if (is.null(spatial$mask)) {
       spatial$mask <- rep(TRUE, nrow(spatial$surf$vertices))
     }
@@ -104,7 +104,7 @@ pw_smooth <- function(spatial, spatial_type, AR, var, FWHM=5){
     var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
     var_smoothed <- var_smoothed$data$cortex_left
 
-  } else if (spatial_type == "voxel") {
+  } else if (spatial$spatial_type == "voxel") {
     subMask <- spatial$labels != 0
     subLabs <- spatial$labels[subMask]
 

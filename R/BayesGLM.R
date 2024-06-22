@@ -392,13 +392,15 @@ BayesGLM <- function(
 
   # Initialize `spatial` to store all spatial information. ---------------------
   spatial <- list(
-    cortexL = list(surf=NULL, mask=NULL),
-    cortexR = list(surf=NULL, mask=NULL),
+    cortexL = list(spatial_type="surf", surf=NULL, mask=NULL),
+    cortexR = list(spatial_type="surf", surf=NULL, mask=NULL),
     subcort = list(
+      spatial_type="voxel",
       labels=NULL,
       trans_mat=NULL, trans_units=NULL,
       nbhd_order=nbhd_order, buffer=buffer,
-      buffer_mask=NULL # created in `SPDE_from_voxel`
+      buffer_mask=NULL, # created in `SPDE_from_voxel`
+      data_loc=NULL # created in `fit_BayesGLM`
     )
   )
   if (!do$left) { spatial$cortexL <- NULL }

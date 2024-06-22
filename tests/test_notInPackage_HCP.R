@@ -114,18 +114,25 @@ for (ss in seq(2)) {
 
 # BayesGLM ---------------------------------------------------------------------
 ### Classical vs Bayes; Single- vs Multi-session -----
-BGLM_cii_args <- function(n_sess, resamp_factor=1){
+BGLM_cii_args <- function(sess, resamp_factor=1){
+  BOLD_ss <- c(fnames$cifti_1, fnames$cifti_2)[sess]
+  design_ss <- des[sess]
+  nuis_ss <- nuis[sess]
+  if (length(sess)==1) {
+    design_ss <- design_ss[[1]]
+    nuis_ss <- nuis_ss[[1]]
+  }
+
   list(
-    BOLD = c(fnames$cifti_1, fnames$cifti_2)[seq(n_sess)],
-    design = switch(n_sess, des[[1]], des[seq(n_sess)]),
+    BOLD = BOLD_ss,
+    design = design_ss,
+    nuisance = nuis_ss,
     TR = 0.72,
-    brainstructures = c("sub"),
+    brainstructures = c("left", "sub"),
     surfL=ciftiTools.files()$surf["left"],
     surfR=ciftiTools.files()$surf["right"],
     resamp_res = resamp_res * resamp_factor,
-    nuisance=switch(n_sess, nuis$rp_1, nuis),
     hpf=.01,
-    #Bayes = TRUE,
     ar_order = 1,
     ar_smooth = 3,
     return_INLA = "trim",
@@ -134,10 +141,22 @@ BGLM_cii_args <- function(n_sess, resamp_factor=1){
 }
 
 # ##### First pass to detect errors
-bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
-bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
+#bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
+#bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
+
+bglm_x1 <- bglm_b1$BGLMs$cortexL
+bglm_x2 <- bglm_b2$BGLMs$cortexL
+bglm2a <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm_x1 <- bglm_b1; bglm_x1$BGLMs$subcort <- NULL
+bglm_x2 <- bglm_b2; bglm_x2$BGLMs$subcort <- NULL
+bglm2b <- BayesGLM2(list(bglm_x1, bglm_x2))
+
+bglm_x1 <- bglm_b1$BGLMs$subcort
+bglm_x2 <- bglm_b2$BGLMs$subcort
+bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2))
+
 
 # Misc
 BOLD <- as.matrix(read_cifti(fnames$cifti_1))

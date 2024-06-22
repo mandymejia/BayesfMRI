@@ -145,17 +145,14 @@ BayesGLM_argChecks <- function(
 #' Get number of locations for various masks: total, model, data.
 #'
 #' @param spatial \code{spatial}
-#' @param type \code{"mesh"}, or \code{"voxel"}.
 #' @keywords internal
 #' @return A list of two: \code{T} for the total number of locations, and
 #'  \code{D} for the number of data locations. If \code{spatial} is provided for
 #'  voxel data, there is also \code{DB} for the number of data locations plus
 #'  the number of boundary locations.
-get_nV <- function(spatial, type=c("mesh", "voxel")){
-  type <- match.arg(type, c("mesh", "voxel"))
-
-  out <- switch(type,
-    mesh = list(
+get_nV <- function(spatial){
+  out <- switch(spatial$spatial_type,
+    surf = list(
       T=nrow(spatial$surf$vertices),
       D=sum(spatial$mask)
     ),
@@ -165,7 +162,7 @@ get_nV <- function(spatial, type=c("mesh", "voxel")){
     )
   )
 
-  if (type=="voxel" && !is.null(spatial$buffer_mask)) {
+  if (spatial$spatial_type=="voxel" && !is.null(spatial$buffer_mask)) {
     stopifnot(out$D == sum(spatial$buffer_mask))
     out <- c(out, list(DB=length(spatial$buffer_mask)))
   }
