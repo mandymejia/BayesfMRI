@@ -400,7 +400,7 @@ BayesGLM <- function(
       trans_mat=NULL, trans_units=NULL,
       nbhd_order=nbhd_order, buffer=buffer,
       buffer_mask=NULL, # created in `SPDE_from_voxel`
-      data_loc=NULL # created in `fit_BayesGLM`
+      data_loc=NULL # created in `fit_bayesglm`
     )
   )
   if (!do$left) { spatial$cortexL <- NULL }
