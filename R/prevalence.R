@@ -2,7 +2,7 @@
 #'
 #' @param act_list List of activations from \code{\link{activations}}. All
 #'  should have the same sessions, fields, and brainstructures.
-#' @param gamma_idx If activations at multiple thresholds were computed, which
+#' @param gamma_idx If activtions at multiple thresholds were computed, which
 #'  threshold should be used for prevalence? Default: the first (lowest).
 #'
 #' @return A list containing the prevalences of activation, as a proportion of
@@ -64,7 +64,6 @@ prevalence <- function(act_list, gamma_idx=1){
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
   for (bb in seq(nB)) {
     for (ss in seq(nS)) {
-      #for each subject, extract activations data
       x <- lapply(act_list, function(y){
         y <- if (is_cifti) { y$activations[[bb]] } else { y$activations }
         y[[ss]][[gamma_idx]]$active
@@ -103,11 +102,6 @@ prevalence <- function(act_list, gamma_idx=1){
       if (!is.null(prev_xii_ss$data[[bs]])) {
         dat <- prev[[bs2]][[session]]
         colnames(dat) <- NULL
-        #remove boundary locations
-        # [TO DO] need to check if Bayes?
-        if (!is.null(act_list[[1]]$spatial[[bs2]]$buffer_mask)) {
-          dat <- dat[act_list[[1]]$spatial[[bs2]]$buffer_mask,,drop=FALSE]
-        }
         prev_xii_ss$data[[bs]] <- dat
       }
     }

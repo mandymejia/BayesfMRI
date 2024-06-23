@@ -179,9 +179,9 @@ plot.BGLM2 <- function(x, idx=NULL, what=c("contrasts", "activations"), zlim=c(-
 #' @param drop_zeros Color locations without any activation across all results
 #'  (zero prevalence) the same color as the medial wall? Default: \code{NULL} to
 #'  drop the zeros if only one \code{idx} is being plotted.
-#' @param colors,zlim See \code{\link[ciftiTools]{view_xifti}}. Here, the defaults
-#'  are overrided to use the Viridis \code{"plasma"} color scale between
-#'  \code{1/nA} and 1, where \code{nA} is the number of results in \code{x}.
+#' @param colors,zlim See \code{\link[ciftiTools]{view_xifti}}.
+# Here, the defaults are overrided to use the Viridis \code{"plasma"} color scale between
+#  \code{1/nA} and 1, where \code{nA} is the number of results in \code{x}.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
 #'
 #' @method plot prev_BGLM
@@ -195,7 +195,8 @@ plot.BGLM2 <- function(x, idx=NULL, what=c("contrasts", "activations"), zlim=c(-
 plot.prev_BGLM <- function(
   x, idx=NULL, session=NULL,
   drop_zeros=NULL, colors="plasma",
-  zlim=c(round(1/x$n_results-.005, 2), 1), ...){
+  #zlim=c(round(1/x$n_results-.005, 2), 1), ...){
+  zlim=c(0, 1), ...){
 
   # Session
   if (is.null(session)) {
