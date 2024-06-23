@@ -17,3 +17,5 @@ vignette_data/original/*
 vignette_data/bglms_full/*
 vignette_data/vignette_data.R
 /vignettes/vignette_cache
+/vignette_data/glms_full
+/vignette_data/glms
