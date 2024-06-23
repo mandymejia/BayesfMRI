@@ -11,7 +11,7 @@ make_data_list(y, X, betas, repls)
 
 \item{X}{List (length = number of sessions) of sparse design matrices size TVxVK from each session, each created using \code{sparse_and_PW}}
 
-\item{betas}{List (length = number of fields) of bbeta objects from make_replicates}
+\item{betas}{List (length = number of fields) of beta objects from make_replicates}
 
 \item{repls}{List (length = number of fields) of repl objects from make_replicates}
 }

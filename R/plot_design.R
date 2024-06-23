@@ -39,13 +39,15 @@ plot_design <- function(design, method=c("lineplot", "imageplot"), ...){
 #'  RColorBrewer::brewer.pal.info and colorbrewer2.org), the name of a
 #'  viridisLite palette, or a character vector of colors. Default:
 #'  \code{"Set1"}.
-#' @param linewidth,alpha Parameters for \code{ggplot2::geom_line}. Defaults:
-#'  \code{0.7} linewidth and \code{0.8} alpha.
+#' @param linetype,linewidth,alpha Parameters for \code{ggplot2::geom_line}. 
+#'  Defaults: \code{"solid"} linetype, \code{0.7} linewidth and \code{0.8} 
+#'  alpha. \code{linetype} can also be a vector of options with length matching
+#'  the number of fields in \code{design}.
 #' @return A ggplot
 #' @export
 #' @importFrom ciftiTools make_color_pal
 #'
-plot_design_line <- function(design, colors="Set1", linewidth=.7, alpha=.8){
+plot_design_line <- function(design, colors="Set1", linetype="solid", linewidth=.7, alpha=.8){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Please download the `ggplot2` package.")
   }
@@ -54,9 +56,6 @@ plot_design_line <- function(design, colors="Set1", linewidth=.7, alpha=.8){
   }
 
   df <- as.data.frame(design)
-  nT <- nrow(df)
-  nK <- ncol(df)
-
   nT <- nrow(df)
   nK <- ncol(df)
 
@@ -69,9 +68,18 @@ plot_design_line <- function(design, colors="Set1", linewidth=.7, alpha=.8){
   colnames(df)[colnames(df)=="name"] <- "Field"
   df$Field <- factor(df$Field, levels=colnames(design))
 
-  ggplot2::ggplot(df, ggplot2::aes_string(x="idx", y="value", col="Field")) +
-    ggplot2::geom_hline(yintercept=0, color="black", linetype="dashed") +
-    ggplot2::geom_line(linewidth=linewidth, alpha=alpha) + ggplot2::theme_bw() +
+  if (length(linetype) == nK) {
+    plt <- ggplot2::ggplot(df, ggplot2::aes_string(x="idx", y="value", col="Field", linetype="Field")) +
+      ggplot2::geom_hline(yintercept=0, color="black", linetype="dashed") +
+      ggplot2::geom_line(linewidth=linewidth, alpha=alpha) +
+      ggplot2::scale_linetype_manual(values=linetype)
+  } else {
+    plt <- ggplot2::ggplot(df, ggplot2::aes_string(x="idx", y="value", col="Field")) +
+      ggplot2::geom_hline(yintercept=0, color="black", linetype="dashed") +
+      ggplot2::geom_line(linetype=linetype, linewidth=linewidth, alpha=alpha)
+  }
+
+  plt + ggplot2::theme_bw() +
     ggplot2::xlab("Volume") + ggplot2::ylab("Value") +
     ggplot2::scale_color_manual(values=colors) +
     ggplot2::scale_x_continuous(limits=c(0-1e-8, nT+1e-8), expand=c(0,0))

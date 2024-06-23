@@ -1,13 +1,13 @@
 #' Standardize data variance, and prewhiten if applicable
 #'
 #' Standardize data variance and prewhiten if applicable, for the GLM.
-#' @param BOLD,design,spatial,spatial_type See \code{fit_bayesglm}.
+#' @param BOLD,design,spatial See \code{fit_bayesglm}.
 #' @param session_names,field_names,design_type See \code{fit_bayesglm}.
 #' @param valid_cols,nT,do_pw See \code{fit_bayesglm}.
 #' @return List of results
 #' @keywords internal
 GLM_est_resid_var_pw <- function(
-  BOLD, design, spatial, spatial_type,
+  BOLD, design, spatial,
   session_names, field_names, design_type,
   valid_cols, nT,
   ar_order, ar_smooth, aic, n_threads,
@@ -16,7 +16,7 @@ GLM_est_resid_var_pw <- function(
 
   nS <- length(session_names)
   nK <- length(field_names)
-  nV_D <- get_nV(spatial, spatial_type)$D
+  nV_D <- get_nV(spatial)$D
 
   AR_coefs_avg <- var_avg <- max_AIC <- NULL
 
@@ -65,7 +65,7 @@ GLM_est_resid_var_pw <- function(
   # Smooth prewhitening parameters.
   if (do_pw && ar_smooth > 0) {
     x <- pw_smooth(
-      spatial=spatial, spatial_type=spatial_type,
+      spatial=spatial,
       AR=AR_coefs_avg, var=var_avg,
       FWHM=ar_smooth
     )

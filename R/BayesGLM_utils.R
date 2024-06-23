@@ -145,17 +145,14 @@ BayesGLM_argChecks <- function(
 #' Get number of locations for various masks: total, model, data.
 #'
 #' @param spatial \code{spatial}
-#' @param type \code{"mesh"}, or \code{"voxel"}.
 #' @keywords internal
 #' @return A list of two: \code{T} for the total number of locations, and
 #'  \code{D} for the number of data locations. If \code{spatial} is provided for
 #'  voxel data, there is also \code{DB} for the number of data locations plus
 #'  the number of boundary locations.
-get_nV <- function(spatial, type=c("mesh", "voxel")){
-  type <- match.arg(type, c("mesh", "voxel"))
-
-  out <- switch(type,
-    mesh = list(
+get_nV <- function(spatial){
+  out <- switch(spatial$spatial_type,
+    surf = list(
       T=nrow(spatial$surf$vertices),
       D=sum(spatial$mask)
     ),
@@ -165,7 +162,7 @@ get_nV <- function(spatial, type=c("mesh", "voxel")){
     )
   )
 
-  if (type=="voxel" && !is.null(spatial$buffer_mask)) {
+  if (spatial$spatial_type=="voxel" && !is.null(spatial$buffer_mask)) {
     stopifnot(out$D == sum(spatial$buffer_mask))
     out <- c(out, list(DB=length(spatial$buffer_mask)))
   }
@@ -176,4 +173,40 @@ get_nV <- function(spatial, type=c("mesh", "voxel")){
 nT_message <- function(nT) {
   if (length(nT)==1) { return(nT) }
   cat(min(nT), "-", max(nT))
+}
+
+#' Set column values to zero for sparse matrix
+#' 
+#' Set column values to zero for sparse matrix
+#' @param mat dgCMatrix 
+#' @param cols The column indices to set to zero
+#' @return The modified sparse matrix
+#' @keywords internal
+dgCMatrix_cols_to_zero <- function(mat, cols) {
+  stopifnot(inherits(mat, "dgCMatrix"))
+  stopifnot(is.numeric(cols))
+
+  # column of each nonempty value in the sparse matrix: https://stackoverflow.com/questions/21099612/extract-i-and-j-from-a-sparse-matrix
+  cols_existing <- findInterval(seq(mat@x)-1,mat@p[-1])+1
+
+  # update i and x
+  # meaning of i, x, p: https://www.r-bloggers.com/2020/03/what-is-a-dgcmatrix-object-made-of-sparse-matrix-format-in-r/
+  # delete values in the columns to drop: https://stackoverflow.com/questions/33775291/r-matrix-set-particular-elements-of-sparse-matrix-to-zero
+  sparseVals_mask <- !(cols_existing %in% cols)
+  new_i <- mat@i[sparseVals_mask]
+  new_x <- mat@x[sparseVals_mask]
+
+  # now to update p:
+  # https://stackoverflow.com/questions/20008200/r-constructing-sparse-matrix
+  # "the difference between the ith and the (i-1)th element in p is
+  # the number of x elements in (i-1) column"
+  # new_p <- mat@p
+  nv_cols <- diff(mat@p) # num elements in each column
+  nv_cols[cols] <- 0 # set to zero where needed
+  new_p <- c(0, cumsum(nv_cols)) # go back to the cumulative sum form
+
+  mat@x <- new_x
+  mat@i <- new_i
+  mat@p <- as.integer(new_p)
+  mat
 }

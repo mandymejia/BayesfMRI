@@ -15,7 +15,7 @@ GLM_compare <- function(...){NULL}
 
 #   nS <- length(session_names)
 #   nK <- length(field_names)
-#   nV <- get_nV(spatial, spatial_type)
+#   nV <- get_nV(spatial)
 
 #   out <- setNames(vector('list', length=nS), session_names)
 #   for (ss in seq(nS)) {

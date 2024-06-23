@@ -8,7 +8,6 @@ sparse_and_PW(
   BOLD,
   design,
   spatial,
-  spatial_type,
   spde,
   field_names,
   design_type,
@@ -18,7 +17,7 @@ sparse_and_PW(
 )
 }
 \arguments{
-\item{BOLD, design, spatial, spatial_type, spde}{See \code{BayesGLM0}.}
+\item{BOLD, design, spatial, spde}{See \code{BayesGLM0}.}
 
 \item{field_names, design_type}{See \code{BayesGLM0}.}
 

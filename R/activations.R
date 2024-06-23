@@ -164,6 +164,9 @@ activations <- function(
   }
 
   # If class(x) = BGLM
+  spatial <- lapply(x, '[[', "spatial" )
+  result <- c(list(spatial=spatial), result)
+
   act_xii <- vector("list", length(sessions))
   names(act_xii) <- sessions
   for (ss in 1:nS) {
@@ -181,8 +184,8 @@ activations <- function(
         #remove NA values (i.e. medial wall)
         if (!Bayes) { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
         #remove boundary locations
-        if (Bayes & !is.null(x[[bs2]]$spatial$buffer_mask)) {
-          dat <- dat[x[[bs2]]$spatial$buffer_mask,,drop=FALSE]
+        if (Bayes & !is.null(spatial[[bs2]]$buffer_mask)) {
+          dat <- dat[spatial[[bs2]]$buffer_mask,,drop=FALSE]
         }
         act_xii_ss$data[[bs]] <- dat
       }
