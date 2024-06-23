@@ -102,6 +102,11 @@ prevalence <- function(act_list, gamma_idx=1){
       if (!is.null(prev_xii_ss$data[[bs]])) {
         dat <- prev[[bs2]][[session]]
         colnames(dat) <- NULL
+        #remove boundary locations
+        # [TO DO] need to check if Bayes?
+        if (!is.null(act_list[[1]]$spatial[[bs2]]$buffer_mask)) {
+          dat <- dat[act_list[[1]]$spatial[[bs2]]$buffer_mask,,drop=FALSE]
+        }
         prev_xii_ss$data[[bs]] <- dat
       }
     }
