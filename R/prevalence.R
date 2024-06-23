@@ -64,6 +64,7 @@ prevalence <- function(act_list, gamma_idx=1){
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
   for (bb in seq(nB)) {
     for (ss in seq(nS)) {
+      #for each subject, extract activations data
       x <- lapply(act_list, function(y){
         y <- if (is_cifti) { y$activations[[bb]] } else { y$activations }
         y[[ss]][[gamma_idx]]$active
