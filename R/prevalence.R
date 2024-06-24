@@ -2,7 +2,7 @@
 #'
 #' @param act_list List of activations from \code{\link{activations}}. All
 #'  should have the same sessions, fields, and brainstructures.
-#' @param gamma_idx If activtions at multiple thresholds were computed, which
+#' @param gamma_idx If activations at multiple thresholds were computed, which
 #'  threshold should be used for prevalence? Default: the first (lowest).
 #'
 #' @return A list containing the prevalences of activation, as a proportion of

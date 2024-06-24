@@ -10,7 +10,7 @@
   session = NULL,
   drop_zeros = NULL,
   colors = "plasma",
-  zlim = c(round(1/x$n_results - 0.005, 2), 1),
+  zlim = c(0, 1),
   ...
 )
 }
@@ -28,9 +28,7 @@ use the first.}
 (zero prevalence) the same color as the medial wall? Default: \code{NULL} to
 drop the zeros if only one \code{idx} is being plotted.}
 
-\item{colors, zlim}{See \code{\link[ciftiTools]{view_xifti}}. Here, the defaults
-are overrided to use the Viridis \code{"plasma"} color scale between
-\code{1/nA} and 1, where \code{nA} is the number of results in \code{x}.}
+\item{colors, zlim}{See \code{\link[ciftiTools]{view_xifti}}.}
 
 \item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti}}}
 }
