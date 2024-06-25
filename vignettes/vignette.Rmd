@@ -47,7 +47,9 @@ library(ciftiTools)
 ciftiTools.setOption('wb_path','/Applications') #where your Connectome Workbench installation is located
 ```
 
-# Organizing the data
+# Part 1: First-Level Modeling
+
+## a) Organize the data
 
 We will be analyzing the HCP emotion task for one subject.  In this task, subjects were shown fearful and neutral visual stimuli.  We will be modeling both cortical surfaces, as well as several subcortical structures: the left and right amygdala and hippocampus, which are associated with fear. For computational efficiency (and to reduce file size for the purpose of this demo) we have resampled the cortical surfaces using `ciftiTools::resample_cifti()`.  The resampled files contain approximately 10,000 vertices per hemisphere, from the original ~32,000 resolution.  Alternatively, we could simply set `resamp_res=10000` within `BayesGLM()` and use the full-resolution CIFTI files.
 
@@ -96,7 +98,7 @@ events
 ```
 
 
-## Construct the Design Matrix
+## b) Construct the Design Matrix
 
 First, we construct the task design matrix using the `make_design` function (see `help(make_design)`). This function checks for collinearity between the predictors by returning and printing the maximum pairwise correlation and the variance inflation factor (VIF).  If the VIF exceeds five, it is important to examine the design matrix for sources of multicollinearity.
 
@@ -111,7 +113,7 @@ plot(design, colors = c('red','black'))
 ```
 
 
-## Call BayesGLM!
+## c) Call BayesGLM!
 
 Now we are ready to call the `BayesGLM` function! This function performs first-level modeling by fitting a spatial Bayesian model to subject-level task fMRI data. It will also fit a classical, "massive univariate" model, to serve as a benchmark and comparison. To skip the Bayesian modeling and only fit the classical GLM, set `Bayes = FALSE`.  
 
@@ -133,7 +135,7 @@ The `BayesGLM` function provides a few additional options:
 
 ```{r}
 system.time(
-  bglm1 <- BayesGLM(BOLD=BOLD_xii,
+  bglm <- BayesGLM(BOLD=BOLD_xii,
         design=design$design,
         brainstructures="all", #cortical surfaces and subcortex
         subROI=c('Amygdala-L','Amygdala-R','Hippocampus-L','Hippocampus-R'),
@@ -149,9 +151,9 @@ system.time(
         meanTol=1))
 ```
 
+## d) Visualize the results
 
-Let's visualize the results! To render surface images in RMarkdown, we need the `rgl` package and a couple of setup steps.  This is not usually necessary outside of RMarkdown.
-
+Let's look at the results! To render surface images in RMarkdown, we need the `rgl` package and a couple of setup steps.  This is not usually necessary outside of RMarkdown.
 
 ```{r}
 library(rgl)
@@ -165,23 +167,23 @@ rgl::open3d(); rgl::close3d()
 Visualize the cortical surface estimates for the "fear" condition. 
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm1, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'surface') 
+plot(bglm, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'surface') 
 ```
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm1, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'surface')
+plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'surface')
 ```
 
 Visualize the subcortical estimates for the "fear" condition.
 
 ```{r, fig.height=4, fig.width=4, fig.show='hold'}
 slices <- 27:30 
-plot(bglm1, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'volume', slices = slices, n_slices=4) 
+plot(bglm, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'volume', slices = slices, n_slices=4) 
 cat('\t')
-plot(bglm1, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'volume', slices = slices, n_slices=4)
+plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'volume', slices = slices, n_slices=4)
 ```
 
-## Identify areas of activation
+## e) Call `activations` to identify areas of activation
 
 We can use the `activations` function to identify areas of activation, given a 
 significance level $\alpha$ (say, 0.05) and minimum effect size $\gamma$. 
@@ -201,11 +203,22 @@ approach as controlling the FWER since the probability of a single false positiv
 
 
 ```{r}
-act <- activations(bglm1, Bayes = TRUE, gamma = 0, alpha = 0.05, verbose = 0) 
-act0 <- activations(bglm1, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FWER", verbose = 0)
-act00 <- activations(bglm1, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FDR", verbose = 0)
+act <- activations(bglm, Bayes = TRUE, gamma = 0, alpha = 0.05, verbose = 0) 
+act0 <- activations(bglm, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FWER", verbose = 0)
+act00 <- activations(bglm, Bayes = FALSE, gamma = 0, alpha = 0.05, correction = "FDR", verbose = 0)
 ```
 
+The print function for `activations` produces a summary of the results:
+
+```{r}
+act
+act0
+act00
+```
+
+## f) Visualize the activations
+
+We can visualize the areas of activation on the cortical surface and subcortical structures.
 
 ```{r, rgl=TRUE, format = "jpg"}
 plot(act, idx="fear", title = "spatial GLM", what = 'surface') 
@@ -225,12 +238,38 @@ plot(act0, idx="fear", title = "naive GLM (FWER)", what = 'volume', slices = sli
 plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = slices, n_slices=4) 
 ```
 
+# Part 2: Second-Level Modeling
 
-## TO DO:
 
-1. Multi-session modeling (BayesGLM2 and Prevalence Maps)
+# Alternative Part 2: Prevalence Maps
 
-2. Spatially varying design
+As an alternative to group averages, we can consider prevalence maps, which show the 
+proportion of subjects that exhibit significant activation in response to a particular
+task. Historically prevalence mapping has been limited by low power in first-level 
+modeling.  Spatial Bayesian modeling has much higher power to detect activations
+at the subject level, facilitating prevalence mapping.
+
+We have pre-cooked first-level results from 10 sessions of data. For each session,
+we identified areas of activation using `activations()` with `alpha = 0.05` and
+`gamma = 0` (no minimum effect size). We will read in the first-level activation 
+results, then call `prevalence()` to produce a group-level prevalence map.
+
+```{r}
+#read in the result of activations() for 10 subjects
+dir_act <- '../vignette_data/act'
+fnames_act <- list.files(dir_act)
+nN <- length(fnames_act)
+acts <- vector('list', length=nN)
+for(ii in 1:nN){
+  acts[[ii]] <- readRDS(file.path(dir_act, fnames_act[ii]))
+}
+#compute prevalence map
+prev <- prevalence(act_list = acts)
+```
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(prev, what = 'surface')
+```
 
 
 # Bonus Section
@@ -252,6 +291,7 @@ We can optionally set `dHRF = 1` to include the temporal derivative of the HRF o
 design_dHRFs <- make_design(EVs=events, nTime = nT, TR = TR, dHRF = 1)
 head(design_dHRFs$design)
 plot(design_dHRFs, colors = c('red','black','pink','grey'))
+plot(design_dHRFs, method = "image")
 ```
 
 *Note:* Because the spatial priors are optimized for modeling HRF activation amplitudes, it is recommended to include HRF derivatives as part of the `nuisance` argument of `BayesGLM`, and only include the main HRF effects in `design`.  For instance, using `design_dHRFs` above, our `BayesGLM` function call would look something like this:
