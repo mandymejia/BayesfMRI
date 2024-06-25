@@ -438,7 +438,7 @@ BayesGLM2 <- function(
       Amat = Amat # not Amat.final?
     )
 
-    if (nM>1) { cat("~~~~~~~~~~~~~~~~~~~~\n\n") }
+    if (nM>1) { cat("\n") }
   }
 
   out <- list(
