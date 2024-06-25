@@ -17,11 +17,11 @@ sparse_and_PW(
 )
 }
 \arguments{
-\item{BOLD, design, spatial, spde}{See \code{BayesGLM0}.}
+\item{BOLD, design, spatial, spde}{See \code{fit_bayesglm}.}
 
-\item{field_names, design_type}{See \code{BayesGLM0}.}
+\item{field_names, design_type}{See \code{fit_bayesglm}.}
 
-\item{valid_cols, nT, sqrtInv_all}{See \code{BayesGLM0}.}
+\item{valid_cols, nT, sqrtInv_all}{See \code{fit_bayesglm}.}
 }
 \value{
 A list containing fields \code{y} and \code{A} (see Details)

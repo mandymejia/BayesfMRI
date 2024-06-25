@@ -192,7 +192,7 @@ BayesGLM <- function(
   }
   do$left <- ('left' %in% brainstructures)
   do$right <- ('right' %in% brainstructures)
-  do$sub <- ('sub' %in% brainstructures)
+  do$sub <- ('subcortical' %in% brainstructures)
   do$cortex <- do$left || do$right
   if (!do$cortex) { resamp_res <- NULL }
 
@@ -734,7 +734,6 @@ BayesGLM <- function(
 
   nV_D <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
 
-
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }
     dname_bb <- bs_names$d[bb]
@@ -747,7 +746,7 @@ BayesGLM <- function(
       design
     }
 
-    ## `BayesGLM0` call. --------------------------------------------------------
+    ## `fit_bayesglm` call. --------------------------------------------------------
     BGLMs[[dname_bb]] <- fit_bayesglm(
       BOLD = BOLD[[dname_bb]],
       design = design_bb,
