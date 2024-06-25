@@ -151,7 +151,10 @@ BayesGLM_argChecks <- function(
 #'  voxel data, there is also \code{DB} for the number of data locations plus
 #'  the number of boundary locations.
 get_nV <- function(spatial){
-  out <- switch(spatial$spatial_type,
+
+  spatial_type <- if('surf' %in% names(spatial)) { 'surf' } else if('labels' %in% names(spatial)) { 'voxel' } else { stop() }
+
+  out <- switch(spatial_type,
     surf = list(
       T=nrow(spatial$surf$vertices),
       D=sum(spatial$mask)
@@ -162,7 +165,7 @@ get_nV <- function(spatial){
     )
   )
 
-  if (spatial$spatial_type=="voxel" && !is.null(spatial$buffer_mask)) {
+  if (spatial_type=="voxel" && !is.null(spatial$buffer_mask)) {
     stopifnot(out$D == sum(spatial$buffer_mask))
     out <- c(out, list(DB=length(spatial$buffer_mask)))
   }
@@ -176,9 +179,9 @@ nT_message <- function(nT) {
 }
 
 #' Set column values to zero for sparse matrix
-#' 
+#'
 #' Set column values to zero for sparse matrix
-#' @param mat dgCMatrix 
+#' @param mat dgCMatrix
 #' @param cols The column indices to set to zero
 #' @return The modified sparse matrix
 #' @keywords internal

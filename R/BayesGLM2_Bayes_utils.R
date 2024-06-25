@@ -98,7 +98,7 @@ beta.posterior.thetasamp <- function(
 
   for (cc in 1:nC) {
     #Construct "A" matrix from paper (linear combinations)
-    ctr.mat <- kronecker(t(contrasts[[cc]]), Diagonal(n.mesh, 1))
+    ctr.mat <- kronecker(t(contrasts[[cc]]), Matrix::Diagonal(n.mesh, 1))
 
     #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
     samples_cc <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
