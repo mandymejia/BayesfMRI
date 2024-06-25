@@ -10,36 +10,38 @@
 #'  objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
 #'  also are accepted.
 #' @param contrasts (Optional) A list of contrast vectors that specify the
-#'  group-level summaries of interest. If \code{NULL}, use contrasts that compute
-#'  the average of each field (field HRF) across subjects and sessions.
+#'  group-level summaries of interest. If \code{NULL} (DEFAULT), use contrasts that
+#'  compute the average of each field (field HRF) across all subjects/sessions.
 #'
-#'  Each contrast vector is length \eqn{K * S * N} vector specifying a
-#'  group-level summary of interest, where \eqn{K} is the number
-#'  of fields (field HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
-#'  number of subjects. For a single subject-session the contrast
-#'  for the first field would be:
+#'  Each contrast vector is length \eqn{KSN} specifying a group-level summary of
+#'  interest, where \eqn{K} is the number of fields in the first-level design
+#'  matrices, \eqn{S} is the number of sessions, and \eqn{N} is the number of
+#'  subjects. The vector is grouped by fields, then sessions, then subjects.
 #'
-#'  \code{contrast1 <- c(1, rep(0, K-1))}
+#'  For a single session/subject, the contrast vector for the first field would be:
 #'
-#'  and so the full contrast vector representing the group average across
-#'  sessions and subjects for the first field would be:
+#'  \code{c0 <- c(1, rep(0, K-1)) #indexes the first field for a single session}
 #'
-#'  \code{rep(rep(contrast1, S), N) /S /N}.
+#'  so the full contrast vector for the group *average over all sessions/subjects
+#'  for the first field* would be:
 #'
-#'  To obtain the group average for the first field, for just the first sessions
-#'  from each subject:
+#'  \code{contrasts = rep(c0, S*N) /(S*N)}.
 #'
-#'  \code{rep(c(contrast1, rep(0, K*(S-1))), N) /N}.
+#'  To obtain the group average for the first field, for *just the first session*,
+#'  input zeros for the remaining sessions:
 #'
-#'  To obtain the mean difference between the first and second sessions, for the
-#'  first field:
+#'  \code{c2 <- c(c0, rep(0, K*(S-1)))}
+#'  \code{contrasts = rep(c2, N) /N}.
 #'
-#'  \code{rep(c(contrast1, -contrast1, rep(0, K-2)), N) /N}.
+#'  To obtain the group mean *difference between two sessions* (\eqn{S=2}) for the first field:
 #'
-#'  To obtain the mean across sessions of the first field, just for the first
-#'  subject:
+#'  \code{c3 <- c(c0, -c0)}
+#'  \code{contrasts = rep(c3, N) / N}.
 #'
-#'  \code{c(rep(contrast1, S-1), rep(0, K*S*(N-1)) /S}.
+#'  To obtain the *mean over sessions* of the first field, just for the first subject:
+#'
+#'  \code{c4 <- rep(c0, S)}
+#'  \code{c(c4, rep(0, K*S*(N-1))) / S}.
 #'
 #' @param quantiles (Optional) Vector of posterior quantiles to return in
 #'  addition to the posterior mean.
