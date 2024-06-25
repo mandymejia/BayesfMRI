@@ -189,7 +189,7 @@ BayesGLM2 <- function(
   out <- vector("list", nM)
   names(out) <- model_names
 
-  for (mm in seq(nM)) {
+  for (mm in 1:nM) {
 
     if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
     results_mm <- if (is_cifti) {
@@ -199,7 +199,9 @@ BayesGLM2 <- function(
     }
 
     # We know model names match, but still check `spatial_type` match.
-    spatial_type <- unique(vapply(results_mm, function(x){ x$spatial$spatial_type }, ''))
+    spatial_type <- sapply(results_mm, function(x){
+      if('surf' %in% names(x$spatial)) { 'surf' } else if('labels' %in% names(x$spatial)) { 'voxel' } else { stop() } })
+    spatial_type <- unique(spatial_type)
     if (length(spatial_type) != 1) {
       stop("`spatial_type` is not unique across subjects for model ", model_names[mm], ".")
     }
@@ -366,6 +368,9 @@ BayesGLM2 <- function(
       max_num_cores <- min(parallel::detectCores() - 1, 25)
       num_cores <- min(max_num_cores, num_cores)
       cl <- parallel::makeCluster(num_cores)
+
+      if (verbose>0) cat(paste0('\t ... running in parallel with ',num_cores,' cores \n'))
+
       beta.posteriors <- parallel::parApply(
         cl, theta.samp,
         MARGIN=2,
