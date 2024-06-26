@@ -25,23 +25,23 @@
 #   }
 # }
 
-# #' Plot BayesGLM0 objects
+# #' Plot fit_bayesglm objects
 # #'
-# #' Summary method for class "BayesGLM0"
+# #' Summary method for class "fit_bayesglm"
 # #'
-# #' @param object an object of class "BayesGLM0"
-# #' @param session_name NULL if BayesGLM0 object contains a single session; otherwise, the name of the session whose estimates to plot
+# #' @param object an object of class "fit_bayesglm"
+# #' @param session_name NULL if fit_bayesglm object contains a single session; otherwise, the name of the session whose estimates to plot
 # #' @param pal If NULL, viridis palette with 64 colors will be used.  Otherwise, specify a vector of color names.
 # #' @param ... further arguments passed to or from other methods.
 # #' @export
 # #' @import viridis
-# #' @method plot BayesGLM0
-# plot.BayesGLM0 <- function(object, session_name=NULL, pal=NULL, ...)
+# #' @method plot fit_bayesglm
+# plot.fit_bayesglm <- function(object, session_name=NULL, pal=NULL, ...)
 # {
 #   session_names <- names(object$field_estimates)
 #
-#   if((is.null(session_name)) & (length(session_names) > 1)) stop('If BayesGLM0 object includes multiple sessions, you must specify which session to plot.')
-#   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the BayesGLM0 object, but it is not.')
+#   if((is.null(session_name)) & (length(session_names) > 1)) stop('If fit_bayesglm object includes multiple sessions, you must specify which session to plot.')
+#   if(!is.null(session_name) & !(session_name %in% session_names)) stop('I expect the session_names argument to be one of the session names of the fit_bayesglm object, but it is not.')
 #
 #   if(is.null(session_name) & (length(session_names) == 1)) session_name <- session_names
 #

@@ -34,7 +34,7 @@ NULL
 #'
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
-#'  and/or \code{"sub"} structures. Or \code{"all"} to model all three.
+#'  and/or \code{"subcortical"} structures. Or \code{"all"} to model all three.
 #'  Default: \code{c("left","right")} (cortex only).
 #'
 #' @name brainstructures_Param_BayesGLM
