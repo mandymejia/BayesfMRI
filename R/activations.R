@@ -53,6 +53,7 @@ activations <- function(
   if (is_cifti) {
     cifti_obj <- x
     x <- cifti_obj$BGLMs
+    spatial <- lapply(x, '[[', "spatial" )
   } else {
     if (!inherits(x, "fit_bglm")) {
       stop("`x` is not a `'BGLM'` or 'fit_bglm' object.")
@@ -141,6 +142,11 @@ activations <- function(
         q[[gg]] <- do.call(actFUN,
           c(actArgs, list(x=x[[bb]], session=sessions[ss], gamma=gamma[gg]))
         )
+        #remove boundary locations for subcortex
+        if (Bayes & !is.null(spatial[[bb]]$buffer_mask)) {
+          mask_ <- spatial[[bb]]$buffer_mask
+          q[[gg]]$active <- q[[gg]]$active[mask_,,drop=FALSE]
+        }
       }
       activations[[bb]][[ss]] <- q
     }
@@ -164,6 +170,8 @@ activations <- function(
   }
 
   # If class(x) = BGLM
+  result <- c(list(spatial=spatial), result)
+
   act_xii <- vector("list", length(sessions))
   names(act_xii) <- sessions
   for (ss in 1:nS) {
@@ -180,10 +188,10 @@ activations <- function(
         dat <- Reduce("+", lapply(activations[[bs2]][[sess]], function(q){1*q$active}))
         #remove NA values (i.e. medial wall)
         if (!Bayes) { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
-        #remove boundary locations
-        if (Bayes & !is.null(x[[bs2]]$spatial$buffer_mask)) {
-          dat <- dat[x[[bs2]]$spatial$buffer_mask,,drop=FALSE]
-        }
+        # #remove boundary locations -- now done above
+        # if (Bayes & !is.null(spatial[[bs2]]$buffer_mask)) {
+        #   dat <- dat[spatial[[bs2]]$buffer_mask,,drop=FALSE]
+        # }
         act_xii_ss$data[[bs]] <- dat
       }
     }

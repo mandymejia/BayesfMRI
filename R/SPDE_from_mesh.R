@@ -1,10 +1,10 @@
 #' SPDE from mesh model
 #'
-#' @param spatial See \code{BayesGLM0}.
+#' @param spatial See \code{BayesGLM}.
 #' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
 #' @return List
 #' @keywords internal
-SPDE_from_mesh <- function(spatial, logkappa = NULL, logtau = NULL){
+SPDE_from_surf <- function(spatial, logkappa = NULL, logtau = NULL){
   surf <- spatial$surf
   mask <- spatial$mask
   nV <- nrow(surf$vertices)
@@ -43,12 +43,15 @@ SPDE_from_mesh <- function(spatial, logkappa = NULL, logtau = NULL){
                                   prior.kappa = exp(Elog.kappa),
                                   theta.prior.prec = diag(c(Qlog.tau, Qlog.kappa)))
 
+  spatial$surf <- surf
+  spatial$mask <- mask
+
   list(
     mesh_full = mesh_full,
     mesh = mesh,
     mask_new_diff = mask_new_diff,
     spde = spde,
-    spatial = list(surf=surf, mask=mask),
+    spatial = spatial,
     data_loc = NULL # [TO DO] implement this so we can have boundary vertices, i.e. the medial wall
   )
 }

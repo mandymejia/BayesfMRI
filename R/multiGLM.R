@@ -55,7 +55,7 @@ multiGLM <- function(
 
   do <- vector("list")
 
-  # In a separate function because these checks are shared with `BayesGLM0`.
+  # In a separate function because these checks are shared with `fit_bayesglm`.
   BayesGLM_argChecks(
     Bayes=FALSE,
     verbose = verbose,

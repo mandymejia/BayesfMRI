@@ -6,18 +6,18 @@
 #'
 #' @param nSess The number of sessions sharing hyperparameters (can be different fields)
 #' @param field_names Vector of names for each field
-#' @param spatial,spatial_type Spatial info
+#' @param spatial Spatial info
 #'
 #' @return replicates vector and betas for sessions
 #'
 #' @keywords internal
 #'
-make_replicates <- function(nSess, field_names, spatial, spatial_type){
+make_replicates <- function(nSess, field_names, spatial){
 
-  nV <- get_nV(spatial, spatial_type) #total number of locations, number of data locations
-  if(spatial_type=='mesh') {
+  nV <- get_nV(spatial) #total number of locations, number of data locations
+  if (spatial$spatial_type=='surf') {
     nMesh <- nV$D
-  } else if(spatial_type=='voxel') {
+  } else if (spatial$spatial_type=='voxel') {
     nMesh <- nV$DB
     #data_loc <- spatial$data_loc
   } else {
@@ -131,7 +131,7 @@ make_data_list <- function(y, X, betas, repls){
 #' @keywords internal
 extract_estimates <- function(
   INLA_model_obj, session_names,
-  spatial, spatial_type, spde, stat='mean'){
+  spatial, spde, stat='mean'){
 
   if (!inherits(INLA_model_obj, "inla")) { stop("Object is not of class 'inla'") }
 
@@ -140,7 +140,7 @@ extract_estimates <- function(
   field_names <- names(res.beta)
 
   nS <- length(session_names)
-  mask <- if (spatial_type=="mesh") {
+  mask <- if (spatial$spatial_type=="surf") {
     spatial$mask
   } else {
     spatial$labels != 0
@@ -151,10 +151,10 @@ extract_estimates <- function(
   # nV2 or nMesh = the number of mesh locations, which may be a superset
   # nV0 = the number of data locations prior to applying a mask
   nV_T <- length(mask) #number of data locations prior to applying a mask pre-model fitting
-  nV_DB <- if (spatial_type=="mesh") {
+  nV_DB <- if (spatial$spatial_type=="surf") {
     sum(mask)
   } else {
-    get_nV(spatial, "voxel")$DB
+    get_nV(spatial)$DB
   }
   stopifnot(nV_DB*nS == length(res.beta[[1]]$mean))
 
@@ -172,7 +172,7 @@ extract_estimates <- function(
         res.beta[[kk]][[stat_ind]][inds_ss]
       })
     )
-    if (spatial_type=="voxel") {
+    if (spatial$spatial_type=="voxel") {
       betas[[ss]] <- betas[[ss]][spatial$buffer_mask,,drop=FALSE]
     }
   }

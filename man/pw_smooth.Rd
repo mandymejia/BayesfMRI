@@ -4,10 +4,10 @@
 \alias{pw_smooth}
 \title{Smooth AR coefficients and white noise variance}
 \usage{
-pw_smooth(spatial, spatial_type, AR, var, FWHM = 5)
+pw_smooth(spatial, AR, var, FWHM = 5)
 }
 \arguments{
-\item{spatial, spatial_type}{See \code{fit_bayesglm} internal code.}
+\item{spatial}{See \code{fit_bayesglm} internal code.}
 
 \item{AR}{A Vxp matrix of estimated AR coefficients, where V is the number of vertices and p is the AR model order}
 

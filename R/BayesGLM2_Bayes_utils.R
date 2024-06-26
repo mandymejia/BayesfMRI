@@ -98,7 +98,7 @@ beta.posterior.thetasamp <- function(
 
   for (cc in 1:nC) {
     #Construct "A" matrix from paper (linear combinations)
-    ctr.mat <- kronecker(t(contrasts[[cc]]), Diagonal(n.mesh, 1))
+    ctr.mat <- kronecker(t(contrasts[[cc]]), Matrix::Diagonal(n.mesh, 1))
 
     #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
     samples_cc <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
@@ -148,9 +148,9 @@ F.logwt <- function(theta, spde, mu_theta, Q_theta, nN){
   #nN - number of subjects
   a <- 1; b <- 5e-5
   n.spde <- (length(theta) - 1)/2
-  mu.tmp <- spde$f$hyper$theta1$param[1:2]
+  mu.tmp <- spde$f$hyper$theta1$param[1:2] #prior mean for (log(tau), log(kappa))
   mu <- rep(mu.tmp, n.spde)
-  Q.tmp <- matrix(spde$f$hyper$theta1$param[-(1:2)], 2, 2, byrow = TRUE)
+  Q.tmp <- matrix(spde$f$hyper$theta1$param[-(1:2)], 2, 2, byrow = TRUE) #prior precision matrix for (log(tau), log(kappa))
   Q <- kronecker(diag(1, n.spde, n.spde), Q.tmp)
 
   ## Prior density

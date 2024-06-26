@@ -4,14 +4,14 @@
 \alias{make_replicates}
 \title{Make replicates}
 \usage{
-make_replicates(nSess, field_names, spatial, spatial_type)
+make_replicates(nSess, field_names, spatial)
 }
 \arguments{
 \item{nSess}{The number of sessions sharing hyperparameters (can be different fields)}
 
 \item{field_names}{Vector of names for each field}
 
-\item{spatial, spatial_type}{Spatial info}
+\item{spatial}{Spatial info}
 }
 \value{
 replicates vector and betas for sessions

@@ -33,7 +33,7 @@ citation("BayesfMRI")
 ## Function names change
 
 In version 0.8.0 (June 2024), the function `BayesGLM_cifti` was renamed to
-`BayesGLM`, and the function `BayesGLM` was renamed to `BayesGLM0`.
+`BayesGLM`, and the function `BayesGLM` was renamed to `fit_bayesglm`.
 
 ## Important Note on Dependencies:
 

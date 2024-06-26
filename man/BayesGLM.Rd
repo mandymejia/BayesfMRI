@@ -45,7 +45,7 @@ provided, they will override any surfaces in \code{BOLD}.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
-and/or \code{"sub"} structures. Or \code{"all"} to model all three.
+and/or \code{"subcortical"} structures. Or \code{"all"} to model all three.
 Default: \code{c("left","right")} (cortex only).}
 
 \item{subROI}{Which subcortical ROIs should be analyzed?}

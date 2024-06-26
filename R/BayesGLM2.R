@@ -10,36 +10,38 @@
 #'  objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
 #'  also are accepted.
 #' @param contrasts (Optional) A list of contrast vectors that specify the
-#'  group-level summaries of interest. If \code{NULL}, use contrasts that compute
-#'  the average of each field (field HRF) across subjects and sessions.
+#'  group-level summaries of interest. If \code{NULL} (DEFAULT), use contrasts that
+#'  compute the average of each field (field HRF) across all subjects/sessions.
 #'
-#'  Each contrast vector is length \eqn{K * S * N} vector specifying a
-#'  group-level summary of interest, where \eqn{K} is the number
-#'  of fields (field HRFs), \eqn{S} is the number of sessions, and \eqn{N} is the
-#'  number of subjects. For a single subject-session the contrast
-#'  for the first field would be:
+#'  Each contrast vector is length \eqn{KSN} specifying a group-level summary of
+#'  interest, where \eqn{K} is the number of fields in the first-level design
+#'  matrices, \eqn{S} is the number of sessions, and \eqn{N} is the number of
+#'  subjects. The vector is grouped by fields, then sessions, then subjects.
 #'
-#'  \code{contrast1 <- c(1, rep(0, K-1))}
+#'  For a single session/subject, the contrast vector for the first field would be:
 #'
-#'  and so the full contrast vector representing the group average across
-#'  sessions and subjects for the first field would be:
+#'  \code{c0 <- c(1, rep(0, K-1)) #indexes the first field for a single session}
 #'
-#'  \code{rep(rep(contrast1, S), N) /S /N}.
+#'  so the full contrast vector for the group *average over all sessions/subjects
+#'  for the first field* would be:
 #'
-#'  To obtain the group average for the first field, for just the first sessions
-#'  from each subject:
+#'  \code{contrasts = rep(c0, S*N) /(S*N)}.
 #'
-#'  \code{rep(c(contrast1, rep(0, K*(S-1))), N) /N}.
+#'  To obtain the group average for the first field, for *just the first session*,
+#'  input zeros for the remaining sessions:
 #'
-#'  To obtain the mean difference between the first and second sessions, for the
-#'  first field:
+#'  \code{c2 <- c(c0, rep(0, K*(S-1)))}
+#'  \code{contrasts = rep(c2, N) /N}.
 #'
-#'  \code{rep(c(contrast1, -contrast1, rep(0, K-2)), N) /N}.
+#'  To obtain the group mean *difference between two sessions* (\eqn{S=2}) for the first field:
 #'
-#'  To obtain the mean across sessions of the first field, just for the first
-#'  subject:
+#'  \code{c3 <- c(c0, -c0)}
+#'  \code{contrasts = rep(c3, N) / N}.
 #'
-#'  \code{c(rep(contrast1, S-1), rep(0, K*S*(N-1)) /S}.
+#'  To obtain the *mean over sessions* of the first field, just for the first subject:
+#'
+#'  \code{c4 <- rep(c0, S)}
+#'  \code{c(c4, rep(0, K*S*(N-1))) / S}.
 #'
 #' @param quantiles (Optional) Vector of posterior quantiles to return in
 #'  addition to the posterior mean.
@@ -120,10 +122,12 @@ BayesGLM2 <- function(
   # Check that every subject has the same models, sessions, fields
   for (nn in seq(nN)) {
     sub_nn <- results[[nn]]
-    stopifnot(identical(
-      model_names,
-      names(sub_nn$BGLMs)[!vapply(sub_nn$BGLMs, is.null, FALSE)]
-    ))
+    if (is_cifti) {
+      stopifnot(identical(
+        model_names,
+        names(sub_nn$BGLMs)[!vapply(sub_nn$BGLMs, is.null, FALSE)]
+      ))
+    }
     stopifnot(identical(session_names, sub_nn$session_names))
     stopifnot(identical(field_names, sub_nn$field_names))
   }
@@ -185,29 +189,84 @@ BayesGLM2 <- function(
   out <- vector("list", nM)
   names(out) <- model_names
 
-  for (mm in seq(nM)) {
+  for (mm in 1:nM) {
 
     if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
-    results_mm <- lapply(results, function(x){ x$BGLMs[[mm]] })
-
-    # `Mask`
-    Mask <- lapply(results_mm, function(x){ x$spatial$mask })
-    if (length(unique(vapply(Mask, length, 0))) != 1) {
-      stop("Unequal mask lengths--check that the input files are in the same resolution.")
+    results_mm <- if (is_cifti) {
+      lapply(results, function(x){ x$BGLMs[[mm]] })
+    } else {
+      results
     }
-    Mask <- do.call(rbind, Mask)
-    Mask_sums <- colSums(Mask)
-    need_Mask <- !all(Mask_sums %in% c(0, nrow(Mask)))
-    Mask <- apply(Mask, 2, all)
 
-    # `mesh`, `spde`, `Amat`
-    mesh <- results_mm[[1]]$spde$mesh
-    if (need_Mask) {
-      mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
+    # We know model names match, but still check `spatial_type` match.
+    spatial_type <- sapply(results_mm, function(x){
+      if('surf' %in% names(x$spatial)) { 'surf' } else if('labels' %in% names(x$spatial)) { 'voxel' } else { stop() } })
+    spatial_type <- unique(spatial_type)
+    if (length(spatial_type) != 1) {
+      stop("`spatial_type` is not unique across subjects for model ", model_names[mm], ".")
     }
-    spde <- INLA::inla.spde2.matern(mesh)
-    Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one field and subject, a VxN matrix, V=num_vox, N=num_mesh)
-    Amat <- Amat[mesh$idx$loc,]
+
+    # `Mask`, `mesh`, `spde`, `Amat`
+    if (spatial_type == "surf") {
+      Mask <- lapply(results_mm, function(x){ x$spatial$mask })
+      if (length(unique(vapply(Mask, length, 0))) != 1) {
+        stop("Unequal mask lengths--check that the input files are in the same resolution.")
+      }
+      Mask <- do.call(rbind, Mask)
+
+      # If models have different masks.
+      Mask_is_new <- !all(colSums(Mask) %in% c(0, nrow(Mask)))
+      Mask <- apply(Mask, 2, all)
+      if (Mask_is_new) {
+        for (nn in seq(nN)) {
+          # [TO DO] test this
+          results_mm[[nn]] <- retro_mask_BGLM(
+            results_mm[[nn]], Mask[results_mm[[nn]]$mask]
+          )
+        }
+      }
+
+      mesh <- results_mm[[1]]$spde$mesh
+      if (Mask_is_new) {
+        mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
+      }
+      spde <- INLA::inla.spde2.matern(mesh)
+
+      # `Amat`
+      Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one field and subject, a VxN matrix, V=num_vox, N=num_mesh)
+      Amat <- Amat[mesh$idx$loc,]
+
+    } else if (spatial_type == "voxel") {
+      # Check features of spatial that are expected to match for all subjects.
+      spatials_expEq <- unique(lapply(results_mm, function(x){ x$spatial[c(
+        "spatial_type", "labels", "trans_mat", "trans_units,",
+        "nbhd_order", "buffer")] }))
+      if (length(unique(spatials_expEq)) != 1) {
+        stop("`spatial`s for voxel model are expected to match, differing only in the `buffer_mask`.")
+      }
+      spatials_expEq <- spatials_expEq[[1]]
+
+      Mask <- lapply(results_mm, function(x){ x$spatial$buffer_mask })
+      if (length(unique(vapply(Mask, length, 0))) != 1) {
+        stop("Unequal mask lengths--check that the input files are in the same resolution.")
+      }
+      Mask <- do.call(rbind, Mask)
+      Mask_is_new <- !all(colSums(Mask) %in% c(0, nrow(Mask)))
+      Mask <- apply(Mask, 2, all)
+      if (verbose > 0 && Mask_is_new) { cat("Number of in-mask locations: ", sum(Mask)) }
+
+      # Get `spde`
+      # SPDE_from_voxel(spatial, logkappa = NULL, logtau = NULL)
+      spde <- lapply(results_mm, function(x){ x$spde })
+      if (length(unique(spde)) != 1) {
+        stop("spde for voxel model are not the same--not supported.")
+      }
+      spde <- spde[[1]]
+
+      mesh <- results_mm[[1]]$spde$mesh
+      Amat <- make_A_mat(results_mm[[1]]$spatial) #[TO DO]?
+    }
+
     Amat.tot <- bdiag(rep(list(Amat), nK)) #Psi_m from paper (VKxNK)
 
     # Collecting theta posteriors from subject models
@@ -215,13 +274,6 @@ BayesGLM2 <- function(
     # Collecting X and y cross-products from subject models (for posterior distribution of beta)
     Xcros.all <- Xycros.all <- vector("list", nN)
     for (nn in seq(nN)) {
-      # [TO DO] test this
-      if (need_Mask) {
-        results_mm[[nn]] <- retro_mask_BGLM(
-          results_mm[[nn]], Mask[results_mm[[nn]]$mask]
-        )
-      }
-
       # Check that mesh has same neighborhood structure
       if (!all.equal(results_mm[[nn]]$mesh$faces, mesh$faces, check.attribute=FALSE)) {
         stop(paste0(
@@ -243,15 +295,23 @@ BayesGLM2 <- function(
       # (all these matrices for a specific subject mm)
       y_vec <- results_mm[[nn]]$y
       X_list <- results_mm[[nn]]$X
+
+      if (spatial_type=="voxel") {
+        for (ss in seq(nS)) {
+          # X_list[[ss]][,rep(Mask, times = nK)] <- 0 # Too computationally intensive
+          X_list[[ss]] <- dgCMatrix_cols_to_zero(X_list[[ss]], which(rep(!Mask, times=nK)))
+        }
+      }
+
       if (length(X_list) > 1) {
         n_sess <- length(X_list)
-        X_list <- Matrix::bdiag(X_list)
+        X_list <- Matrix::bdiag(X_list) #block-diagonialize over sessions
         Amat.final <- Matrix::bdiag(rep(list(Amat.tot),n_sess))
       } else {
-        X_list <- X_list[[1]]
+        X_list <- X_list[[1]] #single-session case
         Amat.final <- Amat.tot
       }
-      Xmat <- X_list %*% Amat.final
+      Xmat <- X_list #%*% Amat.final #already done within BayesGLM
       Xcros.all[[nn]] <- Matrix::crossprod(Xmat)
       Xycros.all[[nn]] <- Matrix::crossprod(Xmat, y_vec)
     }
@@ -308,6 +368,9 @@ BayesGLM2 <- function(
       max_num_cores <- min(parallel::detectCores() - 1, 25)
       num_cores <- min(max_num_cores, num_cores)
       cl <- parallel::makeCluster(num_cores)
+
+      if (verbose>0) cat(paste0('\t ... running in parallel with ',num_cores,' cores \n'))
+
       beta.posteriors <- parallel::parApply(
         cl, theta.samp,
         MARGIN=2,
@@ -375,7 +438,7 @@ BayesGLM2 <- function(
       Amat = Amat # not Amat.final?
     )
 
-    if (nM>1) { cat("~~~~~~~~~~~~~~~~~~~~\n\n") }
+    if (nM>1) { cat("\n") }
   }
 
   out <- list(

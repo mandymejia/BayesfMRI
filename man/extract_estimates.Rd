@@ -4,14 +4,7 @@
 \alias{extract_estimates}
 \title{Extract Estimates of Activation}
 \usage{
-extract_estimates(
-  INLA_model_obj,
-  session_names,
-  spatial,
-  spatial_type,
-  spde,
-  stat = "mean"
-)
+extract_estimates(INLA_model_obj, session_names, spatial, spde, stat = "mean")
 }
 \arguments{
 \item{INLA_model_obj}{An object of class \code{"inla"}, a result of a call to

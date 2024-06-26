@@ -176,25 +176,23 @@ BayesGLM <- function(
   }
 
   ### Brain structures. --------------------------------------------------------
-  if (!all(brainstructures %in% c("left","right","sub","all"))){
-    stop('`brainstructures` contains values other than "left","right","sub", or "all"')
+  if (!all(brainstructures %in% c("left","right","subcortical","all"))){
+    stop('`brainstructures` contains values other than "left","right","subcortical", or "all"')
   }
-  if ("all" %in% brainstructures) brainstructures <- c("left","right","sub")
+  if ("all" %in% brainstructures) brainstructures <- c("left","right","subcortical")
   if (is_xifti) {
-    has_bs <- c("left", "right", "sub")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
+    has_bs <- c("left", "right", "subcortical")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
     if(!all(brainstructures %in% has_bs)) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
-  }
+  } else {
 
-  # } else {
-  #
-  #   brainstructures <- fMRItools::match_input(
-  #     brainstructures, c("left","right","subcortical"),
-  #     user_value_label="brainstructures"
-  #   )
-  # }
+    brainstructures <- fMRItools::match_input(
+      brainstructures, c("left","right","subcortical"),
+      user_value_label="brainstructures"
+    )
+  }
   do$left <- ('left' %in% brainstructures)
   do$right <- ('right' %in% brainstructures)
-  do$sub <- ('sub' %in% brainstructures)
+  do$sub <- ('subcortical' %in% brainstructures)
   do$cortex <- do$left || do$right
   if (!do$cortex) { resamp_res <- NULL }
 
@@ -392,13 +390,15 @@ BayesGLM <- function(
 
   # Initialize `spatial` to store all spatial information. ---------------------
   spatial <- list(
-    cortexL = list(surf=NULL, mask=NULL),
-    cortexR = list(surf=NULL, mask=NULL),
+    cortexL = list(spatial_type="surf", surf=NULL, mask=NULL),
+    cortexR = list(spatial_type="surf", surf=NULL, mask=NULL),
     subcort = list(
+      spatial_type="voxel",
       labels=NULL,
       trans_mat=NULL, trans_units=NULL,
       nbhd_order=nbhd_order, buffer=buffer,
-      buffer_mask=NULL # created in `SPDE_from_voxel`
+      buffer_mask=NULL, # created in `SPDE_from_voxel`
+      data_loc=NULL # created in `fit_bayesglm`
     )
   )
   if (!do$left) { spatial$cortexL <- NULL }
@@ -504,7 +504,7 @@ BayesGLM <- function(
     }
 
     #Check that all brainstructures are present
-    has_bs <- c("left", "right", "sub")[!vapply(BOLD[[ss]]$data, is.null, FALSE)]
+    has_bs <- c("left", "right", "subcortical")[!vapply(BOLD[[ss]]$data, is.null, FALSE)]
     if(!all(brainstructures %in% has_bs)){
       if(nS == 1) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
       if(nS > 1) stop(paste0("Session ", ss, " BOLD data does not contain all of the structures indicated in `brainstructures`"))
@@ -734,7 +734,6 @@ BayesGLM <- function(
 
   nV_D <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
 
-
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }
     dname_bb <- bs_names$d[bb]
@@ -747,7 +746,7 @@ BayesGLM <- function(
       design
     }
 
-    ## `BayesGLM0` call. --------------------------------------------------------
+    ## `fit_bayesglm` call. --------------------------------------------------------
     BGLMs[[dname_bb]] <- fit_bayesglm(
       BOLD = BOLD[[dname_bb]],
       design = design_bb,

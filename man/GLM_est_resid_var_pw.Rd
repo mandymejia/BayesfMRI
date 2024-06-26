@@ -8,7 +8,6 @@ GLM_est_resid_var_pw(
   BOLD,
   design,
   spatial,
-  spatial_type,
   session_names,
   field_names,
   design_type,
@@ -22,7 +21,7 @@ GLM_est_resid_var_pw(
 )
 }
 \arguments{
-\item{BOLD, design, spatial, spatial_type}{See \code{fit_bayesglm}.}
+\item{BOLD, design, spatial}{See \code{fit_bayesglm}.}
 
 \item{session_names, field_names, design_type}{See \code{fit_bayesglm}.}
 
