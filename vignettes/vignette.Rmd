@@ -125,13 +125,14 @@ The `BayesGLM` function provides a few additional options:
 
 **Signal Dropout**: To exclude voxels/vertices with poor signal, set `meanTol` and/or `varTol`. Brain locations with mean/variance below these values will be excluded.
 
-**Scrubbing**: (Coming soon!) To exclude certain time points due to head motion or other reasons (e.g. drowsiness), set `scrub` to indicate any time points that should be excluded from analysis. Time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data.
-
 **Masking**: To exclude certain regions or focus on a specific anatomical area of the cortex or subcortex, you can simply mask out the voxels or vertices to be excluded.  By setting the values to zero or NA, they will be ignored by `BayesGLM`.  However, care should be taken to make regions large enough to facilitate spatial model fitting.  Regions that are very small may make it difficult for the model to estimate the spatial correlation structure.  Regions should be large enough to emcompass the areas of activation within the region, plus background areas of low activation surrounding them.
 
 **Parallelization**: If you have multiple cores available, you can set `n_cores` to use parallelization for maximal computational efficiency. By default, up to 4 cores are used.
 
-**Multi-session/Longitudinal Modeling**: 
+**Multi-session/Longitudinal Modeling**: Multiple sessions can be analyzed simultaneously, which will produce separate
+session-specific estimates, but will pool information across sessions to estimate the model parameters.  If the runs are
+short or noisy, this can be helpful to produce more accurate parameter estimates.
+
 
 ```{r}
 system.time(
@@ -266,30 +267,27 @@ bglm2 <- readRDS(file='../vignette_data/bglm2.rds')
 bglm2
 ```
 
-Let's display the group-average estimates and areas of activation.
+Let's display the group-average estimates.
 
 ```{r, rgl=TRUE, format = "jpg"}
 plot(bglm2, idx=1, title = "Group-average (fear)")
 ```
 
-```{r, rgl=TRUE, format = "jpg"}
-plot(bglm2, idx=1, title = "Group-average (fear)", what = 'activation')
-```
 
 
 # 6. Prevalence Maps
 
 As an alternative to group averages, we can consider prevalence maps, which show the 
 proportion of subjects that exhibit significant activation in response to a particular
-task. Historically prevalence mapping has been limited by low power in first-level 
-modeling.  Spatial Bayesian modeling has much higher power to detect activations
-at the subject level, facilitating prevalence mapping.
+task. Historically, the ability to generate prevalence maps has been limited by 
+low power in first-level modeling.  Spatial Bayesian modeling has much higher 
+power to detect activations at the subject level, facilitating prevalence mapping.
 
 ## 6.1 Call `prevalence()`
 
 We have pre-cooked first-level results from 10 sessions of data. For each session,
 we identified areas of activation using `activations()` with `alpha = 0.05` and
-`gamma = 0` (no minimum effect size). We will read in the first-level activation 
+`gamma = 0` (minimum effect size). We will read in the first-level activation 
 results, then call `prevalence()` to produce a group-level prevalence map.
 
 ```{r}
@@ -373,3 +371,15 @@ plot_design(design1, colors = c('red','black'))
    - for `units`, you need to install in shell: `sudo apt-get install libudunits2-dev`
    - for `sf`, you need to install in shell: `sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev`
    - for `excursions` (a dependency of `BayesfMRI`), you need to install in shell: `sudo apt-get install libgsl-dev`
+
+
+## 7.3  Future features planned
+
+`BayesfMRI` is always improving, and users are welcome to request additional functionality.  Several additional features are currently in the works, including:
+
+**Scrubbing**: To remove certain time points due to head motion or other reasons (e.g. drowsiness), the `scrub` argument will be used to indicate any time points that should be excluded from analysis. Using a simultaneous regression approach, time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data.
+
+**Adaptive HRF modeling**: Using data from multiple subjects, we can learn a better HRF shape to use for different individuals
+and across the brain.  The `BayesGLM()` function allows for a spatially-varying design, which results when the HRF is allowed
+to vary across the brain.
+
