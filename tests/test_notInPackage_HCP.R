@@ -157,7 +157,6 @@ bglm_x1 <- bglm_b1$BGLMs$subcort
 bglm_x2 <- bglm_b2$BGLMs$subcort
 bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2))
 
-
 # Misc
 BOLD <- as.matrix(read_cifti(fnames$cifti_1))
 design <- abind::abind(des[[1]], des[[2]], along=3)

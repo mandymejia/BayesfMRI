@@ -57,7 +57,7 @@ print.summary.act_fit_bglm <- function(x, ...) {
   } else {
     ""
   }
-  cat("====BayesGLM0 Activations===================\n")
+  cat("====fit_bglm Activations====================\n")
   cat(paste0(
     "Activated locations (",
     sum(x$activations_g1[[1]][,1]), " modeled locations)",

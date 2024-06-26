@@ -1,6 +1,6 @@
 ---
-title: "Spatial Bayesian fMRI Modeling with BayesfMRI"
-author: "Mandy Mejia"
+title: "Spatial Task fMRI Modeling with BayesfMRI"
+author: "Mandy Mejia and Damon Pham"
 date: "2024-06-06"
 output: html_document
 ---
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
 ```
 
-# Introduction
+# 1. Introduction
 
 This demo will introduce you to the `BayesfMRI` package and its main function, `BayesGLM`.  This function performs spatial Bayesian modeling on task fMRI data. 
 
@@ -18,7 +18,7 @@ The spatial modeling used in `BayesfMRI` is grayordinate-based. This means that 
 The `BayesfMRI` package is designed with CIFTI data in mind, since CIFTI data is in grayordinates format. It can also be used to analyze GIFTI (surface only) or NIFTI (volumetric) format data. However, those require putting the data into CIFTI format first. This can be done using the `ciftiTools` package, the Connectome Workbench, or other existing tools.  
 
 
-# Installation
+# 2. Installation
 
 First, make sure you have updated R (this demo was built on R 4.4.0) and RStudio. We will also be using a number of different R packages. To install packages from CRAN, simply use `install.packages()`. To install packages from Github, you will need to have the `devtools` package installed, and use `devtools::install_github()`. To install from a specific Github branch, use the `ref` argument in `install_github()`.
 
@@ -47,9 +47,9 @@ library(ciftiTools)
 ciftiTools.setOption('wb_path','/Applications') #where your Connectome Workbench installation is located
 ```
 
-# Part 1: First-Level Modeling
+# 3. First-Level Modeling
 
-## a) Organize the data
+## 3.1 Organize the data
 
 We will be analyzing the HCP emotion task for one subject.  In this task, subjects were shown fearful and neutral visual stimuli.  We will be modeling both cortical surfaces, as well as several subcortical structures: the left and right amygdala and hippocampus, which are associated with fear. For computational efficiency (and to reduce file size for the purpose of this demo) we have resampled the cortical surfaces using `ciftiTools::resample_cifti()`.  The resampled files contain approximately 10,000 vertices per hemisphere, from the original ~32,000 resolution.  Alternatively, we could simply set `resamp_res=10000` within `BayesGLM()` and use the full-resolution CIFTI files.
 
@@ -98,7 +98,7 @@ events
 ```
 
 
-## b) Construct the Design Matrix
+## 3.2 Construct the Design Matrix
 
 First, we construct the task design matrix using the `make_design` function (see `help(make_design)`). This function checks for collinearity between the predictors by returning and printing the maximum pairwise correlation and the variance inflation factor (VIF).  If the VIF exceeds five, it is important to examine the design matrix for sources of multicollinearity.
 
@@ -113,7 +113,7 @@ plot(design, colors = c('red','black'))
 ```
 
 
-## c) Call BayesGLM!
+## 3.3 Call BayesGLM!
 
 Now we are ready to call the `BayesGLM` function! This function performs first-level modeling by fitting a spatial Bayesian model to subject-level task fMRI data. It will also fit a classical, "massive univariate" model, to serve as a benchmark and comparison. To skip the Bayesian modeling and only fit the classical GLM, set `Bayes = FALSE`.  
 
@@ -125,13 +125,14 @@ The `BayesGLM` function provides a few additional options:
 
 **Signal Dropout**: To exclude voxels/vertices with poor signal, set `meanTol` and/or `varTol`. Brain locations with mean/variance below these values will be excluded.
 
-**Scrubbing**: (Coming soon!) To exclude certain time points due to head motion or other reasons (e.g. drowsiness), set `scrub` to indicate any time points that should be excluded from analysis. Time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data.
-
 **Masking**: To exclude certain regions or focus on a specific anatomical area of the cortex or subcortex, you can simply mask out the voxels or vertices to be excluded.  By setting the values to zero or NA, they will be ignored by `BayesGLM`.  However, care should be taken to make regions large enough to facilitate spatial model fitting.  Regions that are very small may make it difficult for the model to estimate the spatial correlation structure.  Regions should be large enough to emcompass the areas of activation within the region, plus background areas of low activation surrounding them.
 
 **Parallelization**: If you have multiple cores available, you can set `n_cores` to use parallelization for maximal computational efficiency. By default, up to 4 cores are used.
 
-**Multi-session/Longitudinal Modeling**: 
+**Multi-session/Longitudinal Modeling**: Multiple sessions can be analyzed simultaneously, which will produce separate
+session-specific estimates, but will pool information across sessions to estimate the model parameters.  If the runs are
+short or noisy, this can be helpful to produce more accurate parameter estimates.
+
 
 ```{r}
 system.time(
@@ -151,7 +152,7 @@ system.time(
         meanTol=1))
 ```
 
-## d) Visualize the results
+## 3.4 Visualize the results
 
 Let's look at the results! To render surface images in RMarkdown, we need the `rgl` package and a couple of setup steps.  This is not usually necessary outside of RMarkdown.
 
@@ -167,11 +168,11 @@ rgl::open3d(); rgl::close3d()
 Visualize the cortical surface estimates for the "fear" condition. 
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'surface') 
+plot(bglm, Bayes=TRUE, idx="fear", title = "spatial GLM (fear)", what = 'surface') 
 ```
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'surface')
+plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM (fear)", what = 'surface')
 ```
 
 Visualize the subcortical estimates for the "fear" condition.
@@ -183,7 +184,9 @@ cat('\t')
 plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM", what = 'volume', slices = slices, n_slices=4)
 ```
 
-## e) Call `activations` to identify areas of activation
+# 4. Identify areas of activation
+
+## 4.1 Call `activations()` 
 
 We can use the `activations` function to identify areas of activation, given a 
 significance level $\alpha$ (say, 0.05) and minimum effect size $\gamma$. 
@@ -216,7 +219,7 @@ act0
 act00
 ```
 
-## f) Visualize the activations
+## 4.2 Visualize the activations
 
 We can visualize the areas of activation on the cortical surface and subcortical structures.
 
@@ -238,20 +241,53 @@ plot(act0, idx="fear", title = "naive GLM (FWER)", what = 'volume', slices = sli
 plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = slices, n_slices=4) 
 ```
 
-# Part 2: Second-Level Modeling
+# 5. Second-Level Modeling
+
+## 5.1 Call `BayesGLM2()`
+
+We have "precooked" the result of `BayesGLM2()`.  First, we ran `BayesGLM` on 10
+sesssions separately, then passed those results into `BayesGLM2()`. By default, 
+that function estimates a group average activation map for each field, but it is
+also possible to estimate other contrasts through the `contrasts` argument. See
+`help(BayesGLM2)` for more details.
+
+To identify areas of activation using the joint posterior distribution of group-
+average activation amplitude, we just need to set the `gamma` (minimum effect size) 
+and `alpha` (significance level) arguments.  The inference is performed using
+excursion sets, as in the first-level models. 
+
+We can preview the results through the summary or print function associated with
+objects of class `BGLM2`, the result of `BayesGLM2()`.
+
+```{r}
+#fnames <- list.files("../vignette_data/glm_results")
+#bglm2 <- BayesGLM2(file.path("../vignette_data/glm_results", fnames), gamma = 0, alpha = 0.05)
+#saveRDS(bglm2, file='../vignette_data/bglm2.rds')
+bglm2 <- readRDS(file='../vignette_data/bglm2.rds')
+bglm2
+```
+
+Let's display the group-average estimates.
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2, idx=1, title = "Group-average (fear)")
+```
 
 
-# Alternative Part 2: Prevalence Maps
+
+# 6. Prevalence Maps
 
 As an alternative to group averages, we can consider prevalence maps, which show the 
 proportion of subjects that exhibit significant activation in response to a particular
-task. Historically prevalence mapping has been limited by low power in first-level 
-modeling.  Spatial Bayesian modeling has much higher power to detect activations
-at the subject level, facilitating prevalence mapping.
+task. Historically, the ability to generate prevalence maps has been limited by 
+low power in first-level modeling.  Spatial Bayesian modeling has much higher 
+power to detect activations at the subject level, facilitating prevalence mapping.
+
+## 6.1 Call `prevalence()`
 
 We have pre-cooked first-level results from 10 sessions of data. For each session,
 we identified areas of activation using `activations()` with `alpha = 0.05` and
-`gamma = 0` (no minimum effect size). We will read in the first-level activation 
+`gamma = 0` (minimum effect size). We will read in the first-level activation 
 results, then call `prevalence()` to produce a group-level prevalence map.
 
 ```{r}
@@ -267,14 +303,19 @@ for(ii in 1:nN){
 prev <- prevalence(act_list = acts)
 ```
 
+## 6.2 Plot the prevalence maps
+
 ```{r, rgl=TRUE, format = "jpg"}
-plot(prev, what = 'surface')
+plot(prev, idx = 1, what = 'surface', title = "Prevalence (fear)")
 ```
 
+```{r, rgl=TRUE, format = "jpg"}
+plot(prev, idx = 2, what = 'surface', title = "Prevalence (neutral)")
+```
 
-# Bonus Section
+# 7. Bonus Section
 
-## More on Design Matrix Construction
+## 7.1 More on Design Matrix Construction
 
 In addition to the design matrix itself, this function returns additonal information, including the hemodynamic response function (HRF) convolved with the stimulus response function, 
 
@@ -283,7 +324,7 @@ names(design)
 head(design$design) #the actual design matrix
 ```
 
-### Including HRF Derivatives
+#### Including HRF Derivatives
 
 We can optionally set `dHRF = 1` to include the temporal derivative of the HRF or `dHRF = 2` to include both temporal and dispersion derivatives. This allows for small shifts in the timing of the HRF. 
 
@@ -303,7 +344,7 @@ bglm <- BayesGLM(..., design = new_design, nuisance = new_nuisance, ...)
 ```
 
 
-### Constructing Contrasts 
+#### Constructing Contrasts 
 
 In the design matrix above, there is one regressor for each task.  If we are interested more in the contrast *between* tasks, we can modify the design matrix.  If $x_1$ and $x_2$ are two separate tasks that we wish to contrast, then we can construct two columns: $w_1 = x_1 + x_2$ and $w_2 = \frac{1}{2}(x_1 - x_2)$ (or $\frac{1}{2}(x_2 - x_1)$, depending on the direction of the contrast of interest).  Then our modified design matrix consists of two columns, $w_1$ and $w_2$.  The coefficient associated with $w_1$ is the *average* activation across both tasks, and the coefficient associated with $w_2$ is the *difference* in activation with task $x_1$ versus task $x_2$.
 
@@ -319,7 +360,7 @@ plot_design(design1, colors = c('red','black'))
 ```
 
 
-## Tips for Installation
+## 7.2 Tips for Installation
 
 * If you have trouble with the INLA install due to dependencies failing to install, you can run the INLA install with `dep=FALSE`.  In that case, you will also need to install some required dependencies from CRAN, including `sp`, `sf`, `Matrix`, `units`, and `fmesher`.
 
@@ -330,3 +371,15 @@ plot_design(design1, colors = c('red','black'))
    - for `units`, you need to install in shell: `sudo apt-get install libudunits2-dev`
    - for `sf`, you need to install in shell: `sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev`
    - for `excursions` (a dependency of `BayesfMRI`), you need to install in shell: `sudo apt-get install libgsl-dev`
+
+
+## 7.3  Future features planned
+
+`BayesfMRI` is always improving, and users are welcome to request additional functionality.  Several additional features are currently in the works, including:
+
+**Scrubbing**: To remove certain time points due to head motion or other reasons (e.g. drowsiness), the `scrub` argument will be used to indicate any time points that should be excluded from analysis. Using a simultaneous regression approach, time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data.
+
+**Adaptive HRF modeling**: Using data from multiple subjects, we can learn a better HRF shape to use for different individuals
+and across the brain.  The `BayesGLM()` function allows for a spatially-varying design, which results when the HRF is allowed
+to vary across the brain.
+
