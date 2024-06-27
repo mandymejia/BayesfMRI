@@ -60,6 +60,8 @@ prevalence <- function(act_list, gamma_idx=1){
     }
   }
 
+  act_list <- retro_mask_act(act_list)
+
   # Compute prevalence, for every session and every field.
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
   for (bb in seq(nB)) {

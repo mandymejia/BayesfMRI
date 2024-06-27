@@ -176,20 +176,16 @@ BayesGLM <- function(
   }
 
   ### Brain structures. --------------------------------------------------------
-  if (!all(brainstructures %in% c("left","right","subcortical","all"))){
-    stop('`brainstructures` contains values other than "left","right","subcortical", or "all"')
-  }
   if ("all" %in% brainstructures) brainstructures <- c("left","right","subcortical")
+  brainstructures <- fMRItools::match_input(
+    brainstructures, c("left","right","subcortical"),
+    user_value_label="brainstructures"
+  )
   if (is_xifti) {
     has_bs <- c("left", "right", "subcortical")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
     if(!all(brainstructures %in% has_bs)) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
-  } else {
-
-    brainstructures <- fMRItools::match_input(
-      brainstructures, c("left","right","subcortical"),
-      user_value_label="brainstructures"
-    )
   }
+  
   do$left <- ('left' %in% brainstructures)
   do$right <- ('right' %in% brainstructures)
   do$sub <- ('subcortical' %in% brainstructures)

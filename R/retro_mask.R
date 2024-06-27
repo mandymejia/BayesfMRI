@@ -70,3 +70,73 @@ retro_mask_mesh <- function(x, mask){
   # Make the new mesh.
   make_mesh(vertices=x$loc[mask,], faces=faces)
 }
+
+#' Retroactively mask activations
+#'
+#' @param x The activation list
+#' @param mask The mask to be applied to \code{x} (on top of any masks already
+#'  applied to it.)
+#' @return The masked result
+#'
+#' @keywords internal
+retro_mask_act <- function(x){
+
+  Masks <- intersect_mask_act(x)
+  # [TO DO] tell the user about `Mask`, how many /bs
+  brainstructures <- names(Masks)
+  nB <- length(Masks)
+
+  nN <- length(x)
+  nS <- length(x[[1]]$activations[[1]])
+  nG <- length(x[[1]]$activations[[1]][[1]])
+
+  for (bb in seq(nB)) {
+    bs <- brainstructures[bb]
+    # Get the mask to apply to the elements of `active`.
+    spatial_type_bb <- x[[1]]$spatial[[bb]]$spatial_type
+
+    for (nn in seq(nN)) {
+      mask_bb <- switch(spatial_type_bb,
+        surf = Masks[[bb]][x[[nn]]$spatial[[bb]]$mask],
+        voxel = Masks[[bb]][x[[nn]]$spatial[[bb]]$labels[] != 0]
+      )
+
+      if (!all(mask_bb)) {
+        message("Intersection mask: removing ", sum(!mask_bb), " locations in ", bs, " model for subject ", nn, ".")
+      }
+
+      # Apply the mask.
+      for (ss in seq(nS)) {
+        # Adjust `activations_xii`
+        if (bs=="cortexL") {
+          x[[nn]]$activations_xii[[ss]]$data$cortex_left <- x[[nn]]$activations_xii[[ss]]$data$cortex_left[mask_bb,,drop=FALSE]
+          x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left[x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left] <- mask_bb
+        } else if (bs=="cortexR") {
+          x[[nn]]$activations_xii[[ss]]$data$cortex_right <- x[[nn]]$activations_xii[[ss]]$data$cortex_right[mask_bb,,drop=FALSE]
+          x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right[x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right] <- mask_bb
+        } else if (bs=="subcort") {
+          x[[nn]]$activations_xii[[ss]]$data$subcort <- x[[nn]]$activations_xii[[ss]]$data$subcort[mask_bb,,drop=FALSE]
+          x[[nn]]$activations_xii[[ss]]$meta$subcort$labels <- x[[nn]]$activations_xii[[ss]]$meta$subcort$labels[mask_bb]
+          x[[nn]]$activations_xii[[ss]]$meta$subcort$mask[x[[nn]]$activations_xii[[ss]]$meta$subcort$mask] <- mask_bb
+        } else { stop() }
+
+        # Adjust `spatial`
+        if (spatial_type_bb=="surf") {
+          x[[nn]]$spatial[[bb]]$mask <- mask_bb
+        } else if (spatial_type_bb=="voxel") {
+          x[[nn]]$spatial[[bb]]$labels <- x[[nn]]$spatial[[bb]]$labels[mask_bb]
+          x[[nn]]$spatial[[bb]]$mask[x[[nn]]$spatial[[bb]]$mask] <- mask_bb
+        } else { stop() }
+
+        # Adjust `activations`
+        for (ss in seq(nS)) {
+          for (gg in seq(nG)) {
+            x[[nn]]$activations[[bb]][[ss]][[gg]]$active <- x[[nn]]$activations[[bb]][[ss]][[gg]]$active[mask_bb,,drop=FALSE]
+          }
+        }
+      }
+    }
+  }
+
+  x
+}
