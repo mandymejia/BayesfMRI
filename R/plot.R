@@ -130,7 +130,7 @@ plot.act_BGLM <- function(x, idx=NULL, title=NULL, session=NULL, ...){
 #' @param idx Which contrast should be plotted? Give the numeric indices or the
 #'  names. \code{NULL} (default) will show all contrasts. This argument
 #'  overrides the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.
-#' @param what Estimates of the \code{"contrasts"} (default), or their
+#' @param type Estimates of the \code{"contrasts"} (default), or their
 #'  thresholded \code{"activations"}.
 #' @param zlim Overrides the \code{zlim} argument for
 #'  \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.
@@ -143,11 +143,11 @@ plot.act_BGLM <- function(x, idx=NULL, title=NULL, session=NULL, ...){
 #'
 #' @return Result of the call to \code{ciftiTools::view_cifti}.
 #'
-plot.BGLM2 <- function(x, idx=NULL, what=c("contrasts", "activations"), zlim=c(-1, 1), ...){
-  what <- match.arg(what, c("contrasts", "activations"))
-  what <- switch(what, contrasts="contrast_estimate_xii", activations="activations_xii")
-  the_xii <- x[[what]]
-  if (what=="activations_xii") {
+plot.BGLM2 <- function(x, idx=NULL, type=c("contrasts", "activations"), zlim=c(-1, 1), ...){
+  type <- match.arg(type, c("contrasts", "activations"))
+  type <- switch(type, contrasts="contrast_estimate_xii", activations="activations_xii")
+  the_xii <- x[[type]]
+  if (type=="activations_xii") {
     if (is.null(the_xii)) {
       stop("No activations in `'BayesGLM2'` object. Specify `excursion_type` in the `BayesGLM2` call and re-run.")
     }

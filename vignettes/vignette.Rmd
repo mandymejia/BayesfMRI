@@ -246,7 +246,7 @@ plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = sli
 ## 5.1 Call `BayesGLM2()`
 
 We have "precooked" the result of `BayesGLM2()`.  First, we ran `BayesGLM` on 10
-sesssions separately, then passed those results into `BayesGLM2()`. By default, 
+sessions separately, then passed those results into `BayesGLM2()`. By default, 
 that function estimates a group average activation map for each field, but it is
 also possible to estimate other contrasts through the `contrasts` argument. See
 `help(BayesGLM2)` for more details.
@@ -270,9 +270,22 @@ bglm2
 Let's display the group-average estimates.
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm2, idx=1, title = "Group-average (fear)")
+plot(bglm2, type = 'contrasts', idx=1, title = "Group-average (fear)", what = 'surface')
 ```
 
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+slices <- 27:30 
+plot(bglm2, type = 'contrasts', idx="fear", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+cat('\t')
+plot(bglm2, type = 'contrasts', idx="neut", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+```
+
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+slices <- 27:30 
+plot(bglm2, type = 'activations', idx="fear", title = "fear", what = 'volume', slices = slices, n_slices=4)
+cat('\t')
+plot(bglm2, type = 'activations', idx="neut", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+```
 
 
 # 6. Prevalence Maps
@@ -382,4 +395,6 @@ plot_design(design1, colors = c('red','black'))
 **Adaptive HRF modeling**: Using data from multiple subjects, we can learn a better HRF shape to use for different individuals
 and across the brain.  The `BayesGLM()` function allows for a spatially-varying design, which results when the HRF is allowed
 to vary across the brain.
+
+**Prevalence Map testing**: Inference on prevalence maps to determine where a certain proportion of participants (e.g. at least 50\%) display activation, or where there are differences in the prevalence of activation between groups.
 
