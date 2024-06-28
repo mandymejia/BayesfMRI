@@ -65,6 +65,7 @@ beta.posterior.thetasamp <- function(
   for(mm in seq(M)) {
     if(nrow(Q) != nrow(Xcros[[mm]])) {
       nS <- nrow(Xcros[[mm]]) / nrow(Q)
+      if (nS != round(nS)) { stop("Internal error.") }
       Q_theta <- Matrix::bdiag(rep(list(Q),nS))
     }
     # compute posterior mean and precision of beta|theta

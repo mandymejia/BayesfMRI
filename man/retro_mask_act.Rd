@@ -4,13 +4,12 @@
 \alias{retro_mask_act}
 \title{Retroactively mask activations}
 \usage{
-retro_mask_act(x)
+retro_mask_act(x, Masks)
 }
 \arguments{
-\item{x}{The activation list}
+\item{x}{The activations object}
 
-\item{mask}{The mask to be applied to \code{x} (on top of any masks already
-applied to it.)}
+\item{Masks}{The masks to be applied to each brain structure of \code{x}.}
 }
 \value{
 The masked result

@@ -189,7 +189,28 @@ BayesGLM2 <- function(
   out <- vector("list", nM)
   names(out) <- model_names
 
-  for (mm in 1:nM) {
+  # If `BGLM` object, we will only be using the `BGLMs` list entry.
+  # Delete everything else from here on for clarity.
+  if (is_cifti) { results <- lapply(results, '[', "BGLMs") }
+
+  # Get and apply intersection mask
+  Masks <- intersect_mask(results)
+  for (nn in seq(nN)) {
+    cat(paste0("Checking data mask for subject ", nn, ".\n")) # [TO DO] option to hide?
+    if (is_cifti) {
+      for (mm in seq(nM)) {
+        results[[nn]]$BGLMs[[mm]] <- retro_mask_fit_bglm(
+           results[[nn]]$BGLMs[[mm]],
+           Masks[[mm]]
+        )
+      }
+    } else {
+      results[[nn]] <- retro_mask_fit_bglm(results[[nn]], Masks)
+    }
+  }
+
+  for (mm in seq(nM)) {
+    Mask <- Masks[[mm]]
 
     if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
     results_mm <- if (is_cifti) {
@@ -199,37 +220,15 @@ BayesGLM2 <- function(
     }
 
     # We know model names match, but still check `spatial_type` match.
-    spatial_type <- sapply(results_mm, function(x){
-      if('surf' %in% names(x$spatial)) { 'surf' } else if('labels' %in% names(x$spatial)) { 'voxel' } else { stop() } })
+    spatial_type <- vapply(results_mm, function(x){x$spatial$spatial_type}, "")
     spatial_type <- unique(spatial_type)
     if (length(spatial_type) != 1) {
       stop("`spatial_type` is not unique across subjects for model ", model_names[mm], ".")
     }
 
-    # `Mask`, `mesh`, `spde`, `Amat`
+    # `mesh`, `spde`, and `Amat`
     if (spatial_type == "surf") {
-      Mask <- lapply(results_mm, function(x){ x$spatial$mask })
-      if (length(unique(vapply(Mask, length, 0))) != 1) {
-        stop("Unequal mask lengths--check that the input files are in the same resolution.")
-      }
-      Mask <- do.call(rbind, Mask)
-
-      # If models have different masks.
-      Mask_is_new <- !all(colSums(Mask) %in% c(0, nrow(Mask)))
-      Mask <- apply(Mask, 2, all)
-      if (Mask_is_new) {
-        for (nn in seq(nN)) {
-          # [TO DO] test this
-          results_mm[[nn]] <- retro_mask_BGLM(
-            results_mm[[nn]], Mask[results_mm[[nn]]$mask]
-          )
-        }
-      }
-
       mesh <- results_mm[[1]]$spde$mesh
-      if (Mask_is_new) {
-        mesh <- retro_mask_mesh(mesh, Mask[results_mm[[1]]$mask])
-      }
       spde <- INLA::inla.spde2.matern(mesh)
 
       # `Amat`
@@ -239,32 +238,23 @@ BayesGLM2 <- function(
     } else if (spatial_type == "voxel") {
       # Check features of spatial that are expected to match for all subjects.
       spatials_expEq <- unique(lapply(results_mm, function(x){ x$spatial[c(
-        "spatial_type", "labels", "trans_mat", "trans_units,",
+        "spatial_type", "labels",
+        "trans_mat", "trans_units",
         "nbhd_order", "buffer")] }))
       if (length(unique(spatials_expEq)) != 1) {
-        stop("`spatial`s for voxel model are expected to match, differing only in the `buffer_mask`.")
+        stop("`spatial`s for voxel model are expected to match in labels, trans_mat, trans_units, nbhd_order, and buffer.")
       }
       spatials_expEq <- spatials_expEq[[1]]
 
-      Mask <- lapply(results_mm, function(x){ x$spatial$buffer_mask })
-      if (length(unique(vapply(Mask, length, 0))) != 1) {
-        stop("Unequal mask lengths--check that the input files are in the same resolution.")
-      }
-      Mask <- do.call(rbind, Mask)
-      Mask_is_new <- !all(colSums(Mask) %in% c(0, nrow(Mask)))
-      Mask <- apply(Mask, 2, all)
-      if (verbose > 0 && Mask_is_new) { cat("Number of in-mask locations: ", sum(Mask)) }
-
-      # Get `spde`
-      # SPDE_from_voxel(spatial, logkappa = NULL, logtau = NULL)
-      spde <- lapply(results_mm, function(x){ x$spde })
-      if (length(unique(spde)) != 1) {
-        stop("spde for voxel model are not the same--not supported.")
-      }
-      spde <- spde[[1]]
-
       mesh <- results_mm[[1]]$spde$mesh
-      Amat <- make_A_mat(results_mm[[1]]$spatial) #[TO DO]?
+      x <- SPDE_from_voxel(results_mm[[1]]$spatial,
+        results_mm[[1]]$logkappa_vec, results_mm[[1]]$logtau_vec
+      )
+      spde <- x$spde
+      results_mm[[1]]$spatial <- x$spatial
+      results_mm[[1]]$spatial$data_loc <- x$data_loc
+
+      Amat <- make_A_mat(results_mm[[1]]$spatial)
     }
 
     Amat.tot <- bdiag(rep(list(Amat), nK)) #Psi_m from paper (VKxNK)
@@ -460,7 +450,11 @@ BayesGLM2 <- function(
         out$model_results$cortexL$estimates,
         out$model_results$cortexL$mask,
         out$model_results$cortexR$estimates,
-        out$model_results$cortexR$mask
+        out$model_results$cortexR$mask,
+        c(NA, NaN),
+        # [TO DO] cleanup subcortex updated mask variables; don't use `x`
+        out$model_results$subcort$estimates[x$spatial$buffer_mask,],
+        x$spatial$labels
       ),
       activations_xii = NULL,
       BayesGLM2_results = out
@@ -471,7 +465,10 @@ BayesGLM2 <- function(
         out$BayesGLM2_results$model_results$cortexL$active,
         out$BayesGLM2_results$model_results$cortexL$mask,
         out$BayesGLM2_results$model_results$cortexR$active,
-        out$BayesGLM2_results$model_results$cortexR$mask
+        out$BayesGLM2_results$model_results$cortexR$mask,
+        c(NA, NaN),
+        out$BayesGLM2_results$model_results$subcort$active[x$spatial$buffer_mask,],
+        x$spatial$labels
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)

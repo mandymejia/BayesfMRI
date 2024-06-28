@@ -26,7 +26,7 @@ prevalence <- function(act_list, gamma_idx=1){
   # Ensure sessions, fields, and brainstructures match for all results.
   # [TO DO] could check that the number of locations is also the same.
   #   but maybe not here because that's more complicated for CIFTI.
-  nA <- length(act_list)
+  nN <- length(act_list)
   session_names <- act_list[[1]]$session_names
   nS <- length(session_names)
   field_names <- act_list[[1]]$field_names
@@ -37,30 +37,35 @@ prevalence <- function(act_list, gamma_idx=1){
     bs_names <- "activations"
   }
   nB <- length(bs_names)
-  for (aa in seq(2, nA)) {
-    if (length(act_list[[aa]]$session_names) != nS) {
-      stop("Result ", aa, " has a different number of sessions than the first result.")
+  for (nn in seq(2, nN)) {
+    if (length(act_list[[nn]]$session_names) != nS) {
+      stop("Result ", nn, " has a different number of sessions than the first result.")
     }
-    if (!all(act_list[[aa]]$session_names == session_names)) {
-      warning("Result ", aa, " has different session names than the first result.")
+    if (!all(act_list[[nn]]$session_names == session_names)) {
+      warning("Result ", nn, " has different session names than the first result.")
     }
-    if (length(act_list[[aa]]$field_names) != nK) {
-      stop("Result ", aa, " has a different number of fields than the first result.")
+    if (length(act_list[[nn]]$field_names) != nK) {
+      stop("Result ", nn, " has a different number of fields than the first result.")
     }
-    if (!all(act_list[[aa]]$field_names == field_names)) {
-      warning("Result ", aa, " has different field names than the first result.")
+    if (!all(act_list[[nn]]$field_names == field_names)) {
+      warning("Result ", nn, " has different field names than the first result.")
     }
     if (is_cifti) {
-      if (length(act_list[[aa]]$activations) != nB) {
-        stop("Result ", aa, " has a different number of brain structures than the first result.")
+      if (length(act_list[[nn]]$activations) != nB) {
+        stop("Result ", nn, " has a different number of brain structures than the first result.")
       }
-      if (!all(names(act_list[[aa]]$activations) == bs_names)) {
-        warning("Result ", aa, " has different brain structure names than the first result.")
+      if (!all(names(act_list[[nn]]$activations) == bs_names)) {
+        warning("Result ", nn, " has different brain structure names than the first result.")
       }
     }
   }
 
-  act_list <- retro_mask_act(act_list)
+  # Get and apply intersection mask
+  Masks <- intersect_mask(act_list)
+  for (nn in seq(nN)) {
+    cat(paste0("Checking data mask for subject ", nn, ".\n")) # [TO DO] option to hide?
+    act_list[[nn]] <- retro_mask_act(act_list[[nn]], Masks)
+  }
 
   # Compute prevalence, for every session and every field.
   prev <- setNames(rep(list(setNames(vector("list", nS), session_names)), nB), bs_names)
@@ -70,7 +75,7 @@ prevalence <- function(act_list, gamma_idx=1){
         y <- if (is_cifti) { y$activations[[bb]] } else { y$activations }
         y[[ss]][[gamma_idx]]$active
       })
-      prev[[bb]][[ss]] <- Reduce("+", x)/nA
+      prev[[bb]][[ss]] <- Reduce("+", x)/nN
     }
   }
 
@@ -78,7 +83,7 @@ prevalence <- function(act_list, gamma_idx=1){
 
   result <- list(
     prevalence = prev,
-    n_results = nA,
+    n_results = nN,
     field_names = field_names,
     session_names = session_names
   )

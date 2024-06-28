@@ -695,6 +695,8 @@ fit_bayesglm <- function(
     y = y_all,
     X = XA_all_list,
     prewhiten_info = prewhiten_info,
+    logkappa_vec = logkappa_vec,
+    logtau_vec = logtau_vec,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     call = match.call()
   )

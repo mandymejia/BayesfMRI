@@ -8,7 +8,7 @@
 make_A_mat <- function(spatial){
   nV <- get_nV(spatial)
 
-  spatial_type <- if('surf' %in% names(spatial)) { 'surf' } else if('labels' %in% names(spatial)) { 'voxel' } else { stop() }
+  spatial_type <- spatial$spatial_type
 
   valid_inds <- if (spatial_type=="surf") {
     which(spatial$mask)
@@ -25,7 +25,7 @@ make_A_mat <- function(spatial){
   # )
 
   if (spatial_type=="surf"){
-    A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,valid_inds]
+    A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,]
   } else if (spatial_type=="voxel") {
     A_sparse <- Matrix::Diagonal(nV$DB)[valid_inds,] # n_data x n_mesh matrix
   } else {

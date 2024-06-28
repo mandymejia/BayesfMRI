@@ -1,28 +1,74 @@
-intersect_mask_act <- function(act_list) {
-  brainstructures <- names(act_list[[1]]$spatial)
-  nB <- length(brainstructures)
+#' Intersection mask for BayesGLM or activations result
+#'
+#' @param x The list of \code{"fit_bglm"}, \code{"BGLM"}, or \code{"act_BGLM"} objects.
+#' @return The intersections masks
+#'
+#' @keywords internal
+intersect_mask <- function(x) {
+  what <- if (inherits(x[[1]], "fit_bglm")) {
+    "fit_bglm"
+  } else if (inherits(x[[1]]$BGLMs[[1]], "fit_bglm")) {
+    "BGLM"
+  } else if (inherits(x[[1]], "act_BGLM")) {
+    "act_BGLM"
+  } else { stop("`x` must be a list of 'BGLM' or 'act_BGLM' objects.") }
+  if (!all(vapply(x, inherits, FALSE, what))) {
+    if (!all(vapply(x, function(q){inherits(q$BGLMs[[1]], "fit_bglm")}, FALSE))) {
+      stop("`x` must be a list of 'BGLM' or 'act_BGLM' objects.")
+    }
+  }
 
+  brainstructures <- switch(what,
+    fit_bglm = "unknown",
+    BGLM = names(x[[1]]$BGLMs),
+    act_BGLM = names(x[[1]]$spatial)
+  )
+  nB <- length(brainstructures)
   # [TO DO] check that brainstructures match across sessions.
 
   # Get intersection mask for each brainstructure.
   Masks <- setNames(vector("list", nB), brainstructures)
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
-    spatial_type_bb <- act_list[[1]]$spatial[[bs]]$spatial_type
-    if (spatial_type_bb=="surf") {
-      masks <- do.call(rbind, lapply(act_list, function(x){
-        x$spatial[[bs]]$mask
-      }))
+    spatial_type_bb <- switch(bs,
+      cortexL = "surf",
+      cortexR = "surf",
+      subcort = "voxel",
+      unknown = x$spatial$spatial_type # BGLM case
+    )
 
-      # Identify non-empty locations with identical labels across sessions.
+    if (spatial_type_bb=="surf") {
+      masks <- if (what == "fit_bglm") {
+        do.call(rbind, lapply(x, function(q){
+          q[[bs]]$spatial$mask
+        }))
+      } else if (what == "BGLM") {
+        do.call(rbind, lapply(x, function(q){
+          q$BGLMs[[bs]]$spatial$mask
+        }))
+      } else if (what == "act_BGLM") {
+        do.call(rbind, lapply(x, function(q){
+          q$spatial[[bs]]$mask
+        }))
+      } else { stop() }
+
       Masks[[bb]] <- apply(masks, 2, all)
 
     } else if (spatial_type_bb=="voxel") {
       # Get vectorized, unmasked labels for every session.
-      labels <- do.call(rbind, lapply(act_list, function(x){
-        q <- x$spatial[[bs]]$mask * 1
-        q[q==0] <- as.numeric(x$spatial[[bs]]$labels)
-      }))
+      labels <- if (what == "fit_bglm") {
+        do.call(rbind, lapply(x, function(q){
+          q[[bs]]$spatial$labels
+        }))
+      } else if (what == "BGLM") {
+        do.call(rbind, lapply(x, function(q){
+          q$BGLMs[[bs]]$spatial$labels
+        }))
+      } else if (what == "act_BGLM") {
+        do.call(rbind, lapply(x, function(q){
+          q$spatial[[bs]]$labels
+        }))
+      } else { stop() }
 
       # Identify non-empty locations with identical labels across sessions.
       Masks[[bb]] <- (colVars(labels)==0) & (labels[1,]!=0)

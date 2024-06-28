@@ -1,48 +1,82 @@
 #' Retroactively mask locations from fit_bglm result.
 #'
-#' Work in progress.
-#'
 #' @param x The \code{"fit_bglm"} result
-#' @param mask The mask to be applied to \code{x} (on top of any masks already
-#'  applied to it.)
+#' @param mask The mask to be applied to \code{x}. It's relative to the full
+#'  mesh/voxel array, not \code{x}.
+#
 #' @return The masked result
 #'
 #' @keywords internal
-retro_mask_BGLM <- function(x, mask){
+retro_mask_fit_bglm <- function(x, mask){
   stopifnot(inherits(x, "fit_bglm"))
+  spatial_type <- x$spatial$spatial_type
+
+  mask_x <- switch(spatial_type,
+    surf = x$spatial$mask,
+    voxel = x$spatial$labels != 0
+  )
+
   nS <- length(x$session_names)
   nK <- length(x$field_names)
-  nV <- sum(x$mask)
-  nT <- length(x$y) / nV / nS
+  nV_T <- length(mask_x)
+  nV_D <- sum(mask_x)
+  nT <- length(x$y) / nV_D / nS
   stopifnot(nT == round(nT))
 
   stopifnot(is.logical(mask))
-  stopifnot(nV == length(mask))
+  stopifnot(nV_T == length(mask))
   stopifnot(sum(mask) > 0)
 
-  mask2 <- x$mask
-  x$mask[x$mask][!mask] <- FALSE
-  x$mask[!mask2] <- FALSE
+  mask_new <- mask[mask_x]
 
-  for (ii in seq(length(x$field_estimates))) {
-    x$field_estimates[[ii]][!mask2,] <- NA
+  for (ss in seq(length(x$field_estimates))) {
+    x$field_estimates[[ss]] <- x$field_estimates[[ss]][mask_new,,drop=FALSE]
+  }
+
+  for (ss in seq(length(x$RSS))) {
+    x$RSS[[ss]] <- x$RSS[[ss]][mask_new]
   }
 
   if ("result_classical" %in% names(x)) {
-    for (ii in seq(length(x$result_classical))) {
-      x$result_classical[[ii]]$estimates[!mask2,] <- NA
-      x$result_classical[[ii]]$SE_estimates[!mask2,] <- NA
-      x$result_classical[[ii]]$resids <- x$result_classical[[ii]]$resids[mask,]
-      x$result_classical[[ii]]$mask[!mask2] <- FALSE
+    for (ss in seq(length(x$result_classical))) {
+      x$result_classical[[ss]]$estimates <- x$result_classical[[ss]]$estimates[mask_new,,drop=FALSE]
+      x$result_classical[[ss]]$SE_estimates <- x$result_classical[[ss]]$SE_estimates[mask_new,,drop=FALSE]
+      x$result_classical[[ss]]$resids <- x$result_classical[[ss]]$resids[mask_new,,drop=FALSE]
+      x$result_classical[[ss]]$RSS <- x$result_classical[[ss]]$RSS[mask_new]
     }
   }
 
-  x$mesh <- retro_mask_mesh(x$mesh, mask)
+  # Note: spde updated later
 
-  x$y <- c(matrix(x$y, ncol=nV)[,mask])
-  for (ii in seq(length(x$X))) {
-    x$X[[ii]] <- x$X[[ii]][rep(mask, each=nT),rep(mask, each=nK)]
+  # [TO DO] Ignore mask_qc right? It's for the user's interest; we don't use this.
+
+  # Do this before `spatial` because the subcortex needs the old buffer mask.
+  x$y <- c(matrix(x$y, ncol=nV_D)[,mask_new,drop=FALSE])
+  for (ss in seq(length(x$X))) {
+    print(dim(x$X[[ss]]))
+    x$X[[ss]] <- if (spatial_type == "surf") {
+      x$X[[ss]][rep(mask_new, each=nT),rep(mask_new, each=nK),drop=FALSE]
+    } else if (spatial_type == "voxel") {
+      # something is wrong before here, when `mask_new` is not all TRUE.
+      q <- x$spatial$buffer_mask;
+      q[q] <- mask_new;
+      q[!x$spatial$buffer_mask] <- TRUE;
+      x$X[[ss]][rep(mask_new, each=nT),rep(q, each=nK),drop=FALSE]
+    } else { stop() }
+    print(dim(x$X[[ss]]))
   }
+
+  if (spatial_type == "surf") {
+    x$spatial$mask <- mask
+    x$spde$mesh <- retro_mask_mesh(x$spde$mesh, mask_new)
+  } else if (spatial_type == "voxel") {
+    x$spatial$labels[x$spatial$labels!=0][!mask_new] <- 0
+    x$spatial$buffer_mask[x$spatial$buffer_mask] <- mask_new
+    x$spatial$data_loc <- x$spatial$data_loc[mask_new]
+    # [TO DO] in the future, leave labels alone?
+  } else { stop() }
+
+  cat("\n")
 
   x
 }
@@ -73,66 +107,58 @@ retro_mask_mesh <- function(x, mask){
 
 #' Retroactively mask activations
 #'
-#' @param x The activation list
-#' @param mask The mask to be applied to \code{x} (on top of any masks already
-#'  applied to it.)
+#' @param x The activations object
+#' @param Masks The masks to be applied to each brain structure of \code{x}.
 #' @return The masked result
 #'
 #' @keywords internal
-retro_mask_act <- function(x){
+retro_mask_act <- function(x, Masks){
 
-  Masks <- intersect_mask_act(x)
-  # [TO DO] tell the user about `Mask`, how many /bs
   brainstructures <- names(Masks)
   nB <- length(Masks)
-
-  nN <- length(x)
-  nS <- length(x[[1]]$activations[[1]])
-  nG <- length(x[[1]]$activations[[1]][[1]])
+  nS <- length(x$activations[[1]])
+  nG <- length(x$activations[[1]][[1]])
 
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
     # Get the mask to apply to the elements of `active`.
-    spatial_type_bb <- x[[1]]$spatial[[bb]]$spatial_type
+    spatial_type_bb <- x$spatial[[bb]]$spatial_type
+    mask_bb <- switch(spatial_type_bb,
+      surf = Masks[[bb]][x$spatial[[bb]]$mask],
+      voxel = Masks[[bb]][x$spatial[[bb]]$labels[] != 0]
+    )
 
-    for (nn in seq(nN)) {
-      mask_bb <- switch(spatial_type_bb,
-        surf = Masks[[bb]][x[[nn]]$spatial[[bb]]$mask],
-        voxel = Masks[[bb]][x[[nn]]$spatial[[bb]]$labels[] != 0]
-      )
+    if (!all(mask_bb)) {
+      message("\tRemoving ", sum(!mask_bb), " locations in ", bs, " model.")# for subject ", nn, ".")
+    }
 
-      if (!all(mask_bb)) {
-        message("Intersection mask: removing ", sum(!mask_bb), " locations in ", bs, " model for subject ", nn, ".")
-      }
+    # Apply the mask.
+    for (ss in seq(nS)) {
+      # Adjust `activations_xii`
+      if (bs=="cortexL") {
+        x$activations_xii[[ss]]$data$cortex_left <- x$activations_xii[[ss]]$data$cortex_left[mask_bb,,drop=FALSE]
+        x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left[x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left] <- mask_bb
+      } else if (bs=="cortexR") {
+        x$activations_xii[[ss]]$data$cortex_right <- x$activations_xii[[ss]]$data$cortex_right[mask_bb,,drop=FALSE]
+        x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right[x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right] <- mask_bb
+      } else if (bs=="subcort") {
+        x$activations_xii[[ss]]$data$subcort <- x$activations_xii[[ss]]$data$subcort[mask_bb,,drop=FALSE]
+        x$activations_xii[[ss]]$meta$subcort$labels <- x$activations_xii[[ss]]$meta$subcort$labels[mask_bb]
+        x$activations_xii[[ss]]$meta$subcort$mask[x$activations_xii[[ss]]$meta$subcort$mask] <- mask_bb
+      } else { stop() }
 
-      # Apply the mask.
+      # Adjust `spatial`
+      if (spatial_type_bb=="surf") {
+        x$spatial[[bb]]$mask <- mask_bb
+      } else if (spatial_type_bb=="voxel") {
+        # This will change...
+        x$spatial[[bb]]$labels[x$spatial[[bb]]$labels != 0][!mask_bb] <- 0
+      } else { stop() }
+
+      # Adjust `activations`
       for (ss in seq(nS)) {
-        # Adjust `activations_xii`
-        if (bs=="cortexL") {
-          x[[nn]]$activations_xii[[ss]]$data$cortex_left <- x[[nn]]$activations_xii[[ss]]$data$cortex_left[mask_bb,,drop=FALSE]
-          x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left[x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left] <- mask_bb
-        } else if (bs=="cortexR") {
-          x[[nn]]$activations_xii[[ss]]$data$cortex_right <- x[[nn]]$activations_xii[[ss]]$data$cortex_right[mask_bb,,drop=FALSE]
-          x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right[x[[nn]]$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right] <- mask_bb
-        } else if (bs=="subcort") {
-          x[[nn]]$activations_xii[[ss]]$data$subcort <- x[[nn]]$activations_xii[[ss]]$data$subcort[mask_bb,,drop=FALSE]
-          x[[nn]]$activations_xii[[ss]]$meta$subcort$labels <- x[[nn]]$activations_xii[[ss]]$meta$subcort$labels[mask_bb]
-          x[[nn]]$activations_xii[[ss]]$meta$subcort$mask[x[[nn]]$activations_xii[[ss]]$meta$subcort$mask] <- mask_bb
-        } else { stop() }
-
-        # Adjust `spatial`
-        if (spatial_type_bb=="surf") {
-          x[[nn]]$spatial[[bb]]$mask <- mask_bb
-        } else if (spatial_type_bb=="voxel") {
-          x[[nn]]$spatial[[bb]]$labels <- x[[nn]]$spatial[[bb]]$labels[mask_bb]
-          x[[nn]]$spatial[[bb]]$mask[x[[nn]]$spatial[[bb]]$mask] <- mask_bb
-        } else { stop() }
-
-        # Adjust `activations`
-        for (ss in seq(nS)) {
-          for (gg in seq(nG)) {
-            x[[nn]]$activations[[bb]][[ss]][[gg]]$active <- x[[nn]]$activations[[bb]][[ss]][[gg]]$active[mask_bb,,drop=FALSE]
-          }
+        for (gg in seq(nG)) {
+          x$activations[[bb]][[ss]][[gg]]$active <- x$activations[[bb]][[ss]][[gg]]$active[mask_bb,,drop=FALSE]
         }
       }
     }
