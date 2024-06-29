@@ -8,9 +8,6 @@ retro_mask_act(x)
 }
 \arguments{
 \item{x}{The activation list}
-
-\item{mask}{The mask to be applied to \code{x} (on top of any masks already
-applied to it.)}
 }
 \value{
 The masked result

@@ -74,8 +74,8 @@ retro_mask_mesh <- function(x, mask){
 #' Retroactively mask activations
 #'
 #' @param x The activation list
-#' @param mask The mask to be applied to \code{x} (on top of any masks already
-#'  applied to it.)
+# @param mask The mask to be applied to \code{x} (on top of any masks already
+#  applied to it.)
 #' @return The masked result
 #'
 #' @keywords internal
@@ -93,7 +93,9 @@ retro_mask_act <- function(x){
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
     # Get the mask to apply to the elements of `active`.
-    spatial_type_bb <- x[[1]]$spatial[[bb]]$spatial_type
+    spatial_bb <- act_list[[1]]$spatial[[bs]]
+    if("buffer_mask" %in% names(spatial_bb)) spatial_type_bb <- "voxel"
+    if("surf" %in% names(spatial_bb)) spatial_type_bb <- "surf"
 
     for (nn in seq(nN)) {
       mask_bb <- switch(spatial_type_bb,
