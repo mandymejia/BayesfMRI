@@ -8,7 +8,9 @@ intersect_mask_act <- function(act_list) {
   Masks <- setNames(vector("list", nB), brainstructures)
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
-    spatial_type_bb <- act_list[[1]]$spatial[[bs]]$spatial_type
+    spatial_bb <- act_list[[1]]$spatial[[bs]]
+    if("buffer_mask" %in% names(spatial_bb)) spatial_type_bb <- "voxel"
+    if("surf" %in% names(spatial_bb)) spatial_type_bb <- "surf"
     if (spatial_type_bb=="surf") {
       masks <- do.call(rbind, lapply(act_list, function(x){
         x$spatial[[bs]]$mask
