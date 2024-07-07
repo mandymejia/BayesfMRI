@@ -227,7 +227,7 @@ BayesGLM2 <- function(
     }
 
     # `mesh`, `spde`, and `Amat`
-    if (spatial_type == "surf") {
+    if (spatial_type == "vertex") {
       mesh <- results_mm[[1]]$spde$mesh
       spde <- INLA::inla.spde2.matern(mesh)
 

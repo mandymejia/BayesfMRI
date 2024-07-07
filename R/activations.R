@@ -331,15 +331,15 @@ activations.classical <- function(x,
   se_beta <- x$result_classical[[session]]$SE_estimates[,fields_idx,drop=FALSE]
   DOF <- x$result_classical[[session]]$DOF
 
-  nV_D <- nrow(beta_est)
+  nV_input <- nrow(beta_est)
   #if(any(!(fields %in% 1:K))) stop(paste0('fields must be between 1 and the number of fields, ',K))
   nK <- length(fields)
 
   #Compute t-statistics and p-values
   t_star <- (beta_est - gamma) / se_beta
-  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nV_D)
+  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nV_input)
   #perform multiple comparisons correction
-  p_values <- p_values_adj <- active <- matrix(NA, nV_D, nK)
+  p_values <- p_values_adj <- active <- matrix(NA, nV_input, nK)
 
   for (kk in seq(nK)) {
     p_values_k <- sapply(t_star[,kk], pt, df = DOF, lower.tail = F)

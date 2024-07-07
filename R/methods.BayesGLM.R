@@ -16,8 +16,7 @@ summary.BGLM <- function(object, ...) {
     fields = x[[1]]$fields,
     sessions = x[[1]]$sessions,
     n_sess_orig = x[[1]]$n_sess_orig,
-    n_loc_total = lapply(x, '[[', "n_loc_total"),
-    n_loc_modeled = lapply(x, '[[', "n_loc_modeled"),
+    n_loc_Mdat = lapply(x, '[[', "n_loc_Mdat"),
     #xii = summary(x$estimate_xii$classical[[1]]),
     GLM_type = x[[1]]$GLM_type
   )
@@ -41,10 +40,10 @@ print.summary.BGLM <- function(x, ...) {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
   }
   cat("Locations:\n")
-  for (ii in seq(length(x$n_loc_total))) {
+  for (ii in seq(length(x$n_loc_Mdat))) {
     cat(
-      "          ", paste0(names(x$n_loc_total)[ii], ": ", x$n_loc_modeled[[ii]]),
-      "modeled,", x$n_loc_total[[ii]], "total", "\n"
+      "          ", paste0(names(x$n_loc_Mdat)[ii], ": ", x$n_loc_Mdat[[ii]]),
+      "modeled data locations", "\n"
     )
   }
   cat("GLM type: ", x$GLM_type, "\n")

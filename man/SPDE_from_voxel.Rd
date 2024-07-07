@@ -4,15 +4,17 @@
 \alias{SPDE_from_voxel}
 \title{SPDE from voxel model}
 \usage{
-SPDE_from_voxel(spatial, logkappa = NULL, logtau = NULL)
+SPDE_from_voxel(spatial, qc_mask, logkappa = NULL, logtau = NULL)
 }
 \arguments{
 \item{spatial}{See \code{BayesGLM}.}
 
+\item{qc_mask}{QC mask.}
+
 \item{logkappa, logtau}{vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.}
 }
 \value{
-List
+List: \code{mesh}, \code{spde}, \code{spatial}.
 }
 \description{
 SPDE from voxel model

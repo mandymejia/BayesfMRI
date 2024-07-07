@@ -32,7 +32,7 @@ Default: \code{1e-6} for mean and variance, \code{50} for SNR.}
 A \code{"CompareGLM"} object: a list with elements
 \describe{
 \item{field_estimates}{The estimated coefficients for the Bayesian model.}
-\item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+\item{mask}{A mask of \code{mesh} indicating the locations inside \code{mesh}.}
 \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
 \item{field_names}{The names of the fields.}
 \item{session_names}{The names of the sessions.}

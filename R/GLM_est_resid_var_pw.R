@@ -16,14 +16,14 @@ GLM_est_resid_var_pw <- function(
 
   nS <- length(session_names)
   nK <- length(field_names)
-  nV_D <- get_nV(spatial)$D
+  nV <- get_nV(spatial)
 
   AR_coefs_avg <- var_avg <- max_AIC <- NULL
 
-  var_resid <- array(dim = c(nV_D, nS))
+  var_resid <- array(dim = c(nV$mdata, nS))
   if (do_pw) {
-    AR_coefs <- array(dim = c(nV_D, ar_order, nS))
-    AR_AIC <- if (aic) { array(dim = c(nV_D, nS)) } else { NULL }
+    AR_coefs <- array(dim = c(nV$mdata, ar_order, nS))
+    AR_AIC <- if (aic) { array(dim = c(nV$mdata, nS)) } else { NULL }
   }
 
   # Estimate parameters for each session.
@@ -36,7 +36,7 @@ GLM_est_resid_var_pw <- function(
       )
     } else if (design_type == "per_location") {
       resid_ss <- BOLD[[ss]]*0
-      for (dd in seq(nV_D)) {
+      for (dd in seq(nV$mdata)) {
         resid_ss[,dd] <- fMRItools::nuisance_regression(
           BOLD[[ss]][,dd,drop=FALSE],
           matrix(design[[ss]][,vcols_ss,dd,drop=FALSE], nrow=dim(design[[ss]])[1])
@@ -75,7 +75,7 @@ GLM_est_resid_var_pw <- function(
   }
 
   sqrtInv_all <- lapply(nT, function(q){ make_sqrtInv_all(q,
-    nV_D, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg
+    nV$mdata, do_pw, n_threads, ar_order, AR_coefs_avg, var_avg
   )})
 
   list(

@@ -42,9 +42,8 @@
 #'    \item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
 #'    \item{field_estimates}{The estimated coefficients for the Bayesian model.}
 #'    \item{result_classical}{Results from the classical model: field estimates, field standard error estimates, residuals, degrees of freedom, and the mask.}
-#'    \item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
-#'    \item{mesh_orig}{The original mesh provided.}
-#'    \item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+#'    \item{mesh}{The model mesh.}
+#'    \item{mask}{A mask of \code{mesh} indicating the locations inside \code{mesh}.}
 #'    \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
 #'    \item{field_names}{The names of the fields.}
 #'    \item{session_names}{The names of the sessions.}
@@ -98,8 +97,8 @@ fit_bayesglm <- function(
 
   # Initialize return values that may or may not be computed. ------------------
   INLA_model_obj <- hyperpar_posteriors <- Q_theta <- NULL
-  field_estimates <- RSS <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
-  theta_estimates <- theta_estimates2 <- Sig_inv <- mesh <- mesh_orig <- NULL
+  field_ests <- RSS <- hyperpar_posteriors <- mu_theta <- y_all <- XA_all_list <- NULL
+  theta_ests <- theta_ests2 <- Sig_inv <- mesh <- NULL
 
   # Argument checks. -----------------------------------------------------------
   ### Simple parameters. -------------------------------------------------------
@@ -130,272 +129,65 @@ fit_bayesglm <- function(
   # Modeled after `BayesGLM` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ### Check `BOLD`. ------------------------------------------------------------
   nS <- length(BOLD)
-
-  # DONE IN BAYESGLM()
-  ### Check `design`. ----------------------------------------------------------
-  # Make `design` a sessions-length list of design matrices.
-  #   Get `nK`, `field_names`, and `do$perLocDesign`. Check for consistent dims
-  #   across sessions.
-  # x <- BayesGLM_format_design(design, scale_design=FALSE, nS_expect=nS)
-  # design <- x$design
-  # nT <- x$nT
-  # nK <- x$nK
-  # nD <- x$nD
-  # field_names <- x$field_names
-  # design_names <- x$design_names
-  # do$perLocDesign <- x$per_location_design
-  # rm(x)
-
   nT <- sapply(design, nrow) #number of fMRI time points
   nK <- dim(design[[1]])[2] #number of columns in design matrix
   field_names <- colnames(design[[1]]) #names of task regressors
   do$perLocDesign <- (length(dim(design[[1]])) == 3)
   #nD <- if(do$perLocDesign) sapply(design, function(x) dim(x)[3]) else rep(1, nS) #number of design matrices, if allowed to vary by location
-
-  # if (verbose>0) {
-  #   cat("Number of timepoints:    ",
-  #     if (length(unique(nT))==1) { nT } else { paste0(min(nT), "-", max(nT)) }, "\n")
-  #   cat("Number of fields:        ", nK, "\n")
-  # }
-
-  # DONE IN BAYESGLM()
-  # ### Get `session_names`. -----------------------------------------------------
-  # session_names <- BayesGLM_session_names(
-  #   nS, session_names=NULL, names(BOLD), names(design)
-  # )
-  # names(BOLD) <- session_names
-  # names(design) <- session_names
   session_names <- names(design)
 
-  # if (verbose>0) {
-  #   cat("Session names:           ", paste0(session_names, collapse=", "), "\n")
-  #   cat("Field names:             ", paste0(field_names, collapse=", "), "\n")
-  # }
-
-  # DONE IN BAYESGLM()
-  # ### Check `nuisance`. --------------------------------------------------------
-  # if (!is.null(nuisance) && !all(vapply(nuisance, is.null, FALSE))) {
-  #   nuisance <- BayesGLM_format_nuisance(nuisance, nS_expect=nS, nT_expect=nT)
-  #
-  #   if (!is.null(names(nuisance)) && !all(names(nuisance) == session_names)) {
-  #     #warning("Ignoring `names(nuisance)`; use `session_names` in `make_design`.")
-  #   }
-  # } else {
-  #   nuisance <- vector("list", nS)
-  # }
-  # names(nuisance) <- session_names
-  #
-
-  # MOVED TO BAYESGLM()
-  # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # design_type <- if (do$perLocDesign) { "per_location" } else { "regular" }
-  # valid_cols <- do.call(rbind, lapply(design, function(q) {
-  #   apply(q, 2, function(r){!all(is.na(r))})
-  # }))
-  # if (any(colSums(valid_cols)==0)) { stop("Some tasks are missing from every session.") }
-  # for (ss in seq(nS)) {
-  #   any_bad_design_cols <- if (nD == 1) {
-  #     any(is.na(c(design[[ss]][,valid_cols[ss,]])))
-  #   } else {
-  #     any(is.na(c(design[[ss]][,valid_cols[ss,],])))
-  #   }
-  #   if (any_bad_design_cols) {
-  #     stop("`design` has some sessions & tasks for which some data values ",
-  #       "are `NA`. Partially missing data is not allowed. (Missing tasks ",
-  #       "should have all `NA`.)")
-  #   }
-  # }
-
-  ### Check `spatial` and get `nV`. --------------------------------------------
-
-  stopifnot(is.list(spatial))
+  ### Validate `spatial`. ------------------------------------------------------
+  validate_spatial(spatial)
   spatial_type <- spatial$spatial_type
-  if (spatial_type == "surf") {
-    stopifnot(length(spatial) == 3)
-    stopifnot(names(spatial) == c("spatial_type", "surf", "mask"))
-  } else if (spatial_type == "voxel") {
-    stopifnot(length(spatial) == 8)
-    stopifnot(names(spatial) == c(
-      "spatial_type", "labels", "trans_mat", "trans_units", 
-      "nbhd_order", "buffer", "buffer_mask", "data_loc")
-    )    
-  } else { stop("Unknown spatial$spatial_type.") }
-  nV <- get_nV(spatial) #total number of locations, number of data locations
+  nV <- get_nV(spatial)
 
-  if (spatial_type=="surf" && (nV$T != nV$D)) {
+  if (spatial_type=="vertex" && (nV$total != nV$mdata)) {
     if (verbose>0) {
-      cat(paste0(
-        "\t", (nV$T-nV$D),
-        " locations on the mesh do not have data.\n"
-      ))
+      cat(paste0("\t", (nV$total-nV$mdata), " vertices do not have data.\n"))
     }
   }
 
-  # QC mask. -------------------------------------------------------------------
-  # Mask based on quality control metrics of the BOLD data.
-  mask_qc <- make_mask(
-    BOLD,
-    meanTol=meanTol, varTol=varTol, verbose=verbose>0
-  ) #, snrTol=snrTol)
-  if (!any(mask_qc$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
-  if (any(!mask_qc$mask)) {
-    if (spatial_type == "surf") {
-      spatial$mask[spatial$mask] <- mask_qc$mask
-    } else if (spatial_type == "voxel") {
-      spatial$labels[spatial$labels!=0][!mask_qc$mask] <- 0 #remove bad locations from subcortical labels
-    } else { stop() }
-    BOLD <- lapply(BOLD, function(q){ q[,mask_qc$mask,drop=FALSE] }) #remove bad locations from BOLD
-  }
-
-  # Initialize and construct informative priors for SPDE hyperparameters --------------------
-
-  logkappa_vec <- logtau_vec <- NULL #for default priors
+  # Initialize and construct informative priors for SPDE hyperparameters -------
+  logkappa_vec <- logtau_vec <- logkappa0 <- logtau0 <- NULL # default priors
   if (do$Bayesian) {
-
-    d <- if(spatial_type == "surf"){ 2 } else { 3 }
-    nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
-
-    ### LOG KAPPA
-
-    #determine reasonable values for spatial range
-    if(spatial_type == "surf"){
-      max_dist <- apply(spatial$surf$vertices, 2, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE)) #MAX distance within the mesh (Euclidean, a bad proxy for geodesic)
-      range2 <- max(max_dist)/2 #this is our upper limit for the spatial correlation range
-      tri_dist <- apply(matrix(1:nrow(spatial$surf$faces), ncol=1), 1, #for each face/triangle #MIN distance within the mesh
-                        function(x) { mean(dist(spatial$surf$vertices[spatial$surf$faces[x,],])) }) #compute the avg distance among vertices in the triangle
-      min_dist <- min(tri_dist) #distance between vertices in the smallest triangle
-      range1 <- min_dist*2
-      range0 <- range1*5
-
-    } else {
-
-      res <- abs(diag(spatial$trans_mat)[1:3])
-      range2 <- c()
-      for(r in unique(spatial$labels[spatial$labels != 0])){
-        mask_r <- (spatial$labels == r)
-        #compute max distance within mask in each direction
-        x_r <- diff(range(which(apply(mask_r, 1, sum) > 0)))*res[1]
-        y_r <- diff(range(which(apply(mask_r, 2, sum) > 0)))*res[2]
-        z_r <- diff(range(which(apply(mask_r, 3, sum) > 0)))*res[3]
-        range2 <- c(range2, max(c(x_r, y_r, z_r))) #largest 1D distance in any direction
-      }
-      #this is our upper limit for the spatial correlation range. Since volumetric structures are smaller, we allow a larger range
-      range2 <- max(range2)*2 #max over ROIs, doubled (in case we don't observe the full range)
-      range1 <- min(res)*2 #smallest voxel dimension
-      #reasonable starting value
-      range0 <- range1*5
-    }
-
-    range_vec <- c(range1, range2, range0)
-
-    if(hyperpriors == "informative") logkappa_vec <- log(sqrt(8*nu)/range_vec) #r = sqrt(8*nu)/kappa
-    logkappa0 <- log(sqrt(8*nu)/range0) #we will use a good starting value even with the default prior
-
-    # logkappa1 <-
-    # logkappa2 <- log(sqrt(8*nu)/range2)
-    # logkappa0 <- log(sqrt(8*nu)/range0) #starting value
-
-
-    ### LOG TAU
-
-    # Get initial value for tau
-    var2logtau <- function(var, d, kappa){
-      nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
-      tausq <- gamma(nu)/(var * (4*pi)^(d/2) * kappa^(2*nu))
-      log(sqrt(tausq))
-    }
-
-    # # Get initial value for tau based on variance of classical GLM
-    # var0 <- apply(result_classical[[ss]]$estimates, 2, var, na.rm=TRUE)
-
-    var0 <- 0.1 #we usually expect most of the activation amplitudes to be between (-2 and 2) --> SD ~= 0.33, Var ~= 0.1
-    var_vec <- c(0.01, 1, var0) #reasonable range for variance
-    if(hyperpriors == "informative") logtau_vec <- var2logtau(var_vec, d, exp(logkappa0))
-    logtau0 <- var2logtau(var0, d, exp(logkappa0)) #we will use a good starting value even with the default prior
-
-    ### SUMMARY
-
-    if (verbose > 0 && hyperpriors == 'informative') {
-      cat(paste0('\tPutting an informative prior on kappa so that the spatial range is between ',
-        round(range1, 2), ' and ', round(range2, 2), ' mm.\n',
-        '\t\tLog kappa prior range (95% density): ', round(logkappa_vec[2], 2), ' to ', round(logkappa_vec[1], 2), '\n'))
-      cat(paste0('\tPutting an informative prior on tau so variance of the spatial field is between ',
-      (var_vec[1]), ' and ', (var_vec[2]), '.\n',
-      '\t\tLog tau prior range (95% density): ',round(logtau_vec[2], 2), ' to ', round(logtau_vec[1], 2), '\n'))
-    }
+    x <- log_kappa_tau(spatial, hyperpriors, verbose)
+    logkappa_vec <- x$logkappa_vec
+    logkappa0 <- x$logkappa0
+    logtau <- x$logtau
+    logtau0 <- x$logtau0
   }
 
+  # QC mask, mesh, and SPDE. ---------------------------------------------------
 
-  # Get SPDE and mask based on it (additional vertices may be excluded).
-  x <- switch(spatial_type, surf=SPDE_from_surf, voxel=SPDE_from_voxel)(
-    spatial,
-    logkappa = logkappa_vec,
-    logtau = logtau_vec)
+  # Get QC mask.
+  BOLD_QC <- do_QC(
+    BOLD, meanTol=meanTol, varTol=varTol, verbose=verbose>0
+  ) #, snrTol=snrTol)
+  if (!any(BOLD_QC$mask)) { stop("No locations meeeting `meanTol` and `varTol`.") }
 
-  if (spatial_type=="surf") {
-    BOLD <- lapply(BOLD, function(q){ q[,x$mask_new_diff,drop=FALSE] })
+  # Apply QC mask to BOLD data.
+  if (any(!BOLD_QC$mask)) {
+    BOLD <- lapply(BOLD, function(q){ q[,BOLD_QC$mask,drop=FALSE] }) #remove bad locations from BOLD
   }
+
+  # Get mesh and SPDE, using `spatial` and the QC mask.
+  x <- switch(spatial_type, vertex=SPDE_from_vertex, voxel=SPDE_from_voxel)(
+    spatial, qc_mask = BOLD_QC$mask,
+    logkappa = logkappa_vec, logtau = logtau_vec
+  )
+  mesh <- x$mesh
   spde <- x$spde
-  spatial <- x$spatial #unchanged for surface data
-  spatial$data_loc <- x$data_loc
+  spatial <- x$spatial
   rm(x)
 
-
-  # Adjust design for per-location modeling.
-
   # Update and display the number of data locations. ---------------------------
-  # (Need to update after QC mask and SPDE)
   nV <- get_nV(spatial)
   if (verbose>0) {
-    cat('\tNumber of data locations:', nV$D, '\n')
-    if (spatial_type == "voxel") {
-      cat('\tNumber of data + boundary locations:', nV$DB, '\n')
-    }
+    cat('\tNumber of modeled data locations:', nV$mdata, '\n')
+    cat('\tNumber of modeled data + boundary locations:', nV$model, '\n')
   }
 
   # Nuisance regression and scaling. -------------------------------------------
-
-  # THIS PART MOVED TO BAYESGLM()
-  # ### Check for intercepts and flat columns in design and nuisance. ------------
-  # # (Design should have neither; nuisance matrix should have at least one.)
-  # des_has_intercept <- vector("logical", nS)
-  # for (ss in seq(nS)) {
-  #   # Stop if any zero-var, zero-mean column exists.
-  #   des_ss_is_flat <- apply(abs(design[[ss]]) < 1e-8, 2, all)
-  #   if (any(des_ss_is_flat)) {
-  #     stop("Design matrix for session ", ss, " has at least one column that is ",
-  #       "flat (all values are near-zero).")
-  #   }
-  #
-  #   # Detect zero-var, nonzero-mean columns.
-  #   if (design_type=="per_location") {
-  #     des_ss_is_intercept <- apply(design[[ss]], c(2,3), var) < 1e-8
-  #   } else {
-  #     des_ss_is_intercept <- matrixStats::colVars(design[[ss]]) < 1e-8
-  #   }
-  #   # THIS PART HAS BEEN MODIFIED BECAUSE DESIGN NO LONGER ALLOWED TO HAVE INTERCEPT
-  #   # if (sum(des_ss_is_intercept) > 1) {
-  #   #   stop("Design matrix for session ", ss, " has more than one intercept-like ",
-  #   #     "column, which will cause problems during model fitting. Please fix.")
-  #   # }
-  #   if(any(des_ss_is_intercept)) {
-  #     stop('Design matrix must not have an intercept, since data and design will ',
-  #       'be centered prior to model fitting. Please fix.')
-  #   }
-  #
-  #   # For nuisance: detect zero-var, nonzero-mean columns.
-  #   if (!is.null(nuisance[[ss]])) {
-  #     nuis_ss_is_intercept <- matrixStats::colVars(nuisance[[ss]]) < 1e-8
-  #   } else {
-  #     nuis_ss_is_intercept <- FALSE
-  #   }
-  #
-  #   # If no intercept in nuisance, add one.
-  #   if (!any(nuis_ss_is_intercept)) {
-  #     nuisance[[ss]] <- cbind2(nuisance[[ss]], as.matrix(rep(1, nT[ss])))
-  #   }
-  # }
-
   ### Do nuisance regression of BOLD and design, and BOLD scaling. -------------
 
   #identify valid design matrix columns for each session
@@ -408,69 +200,11 @@ fit_bayesglm <- function(
     # Remove any missing fields from design matrix for classical GLM
     vcols_ss <- valid_cols[ss,]
 
-    # THIS PART HAS BEEN MODIFIED BECAUSE DESIGN NO LONGER ALLOWED TO HAVE INTERCEPT
-    # if (!all(vcols_ss)) { warning(
-    #   'For session ',ss,', ignoring ',sum(!vcols_ss),
-    #   ' design matrix columns of zeros for classical GLM.'
-    # )}
-    # If the design matrix has an intercept, ensure the nuisance matrix does not.
-    # If neither have an intercept, add one to the nuisance for centering
-    #   `BOLD` and `design`.
-    #if (des_has_intercept[ss]) {
-      # if (nuis_has_intercept[ss]) {
-      #   stop("Both the design and nuisance for session ", ss, " has an ",
-      #     "intercept column. Remove one.")
-      # }
-      # if (verbose > 0) {
-      #   cat(paste0("\t\tSession ", ss, ": modeling BOLD means using the intercept field in the provided `design`.\n"))
-      # }
-    #} else
-
     if (verbose > 0) { if(ss==1) cat("\tBOLD and design nuisance regression.\n") }
     # Regress nuisance parameters from BOLD data and design matrix.
     nuis_ss <- nuisance[[ss]]
     nK2[ss] <- ncol(nuis_ss)
     stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
-
-    #THIS PART MOVED TO BAYESGLM()
-    # #Check for collinearity among columns of design and nuisance
-    # checkCollinear <- function(design){
-    #   X <- cbind(nuis_ss, design)
-    #   suppressWarnings(corX <- cor(X)); diag(corX) <- NA
-    #   max(corX, na.rm=TRUE)
-    # }
-    # checkVIF <- function(design){
-    #   int <- (apply(nuis_ss, 2, var) == 0) #exclude intercept column of nuisance
-    #   X <- cbind(nuis_ss[,!int], design)
-    #   y <- rnorm(nT) #add fake y variable, has no influence
-    #   Xnames <- paste0("X",1:ncol(X))
-    #   df <- as.data.frame(cbind(X, y)); names(df) <- c(Xnames,"y")
-    #   f <- as.formula(paste0('y ~ ',paste(Xnames, collapse = " + ")))
-    #   suppressWarnings(car::vif(lm(f, data = df)))
-    # }
-    #
-    # # Single Design Matrix
-    # if (!do$perLocDesign) {
-    #   x1 <- checkCollinear(design[[ss]][,vcols_ss]) #max correlation between any two columns of design & nuisance
-    #   x2 <- checkVIF(design[[ss]][,vcols_ss])
-    #   x2a <- x2[1:(ncol(nuis_ss) - 1)]
-    #   x2b <- x2[ncol(nuis_ss):length(x2)]
-    #   if(verbose > 0) {
-    #     cat('\tChecking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
-    #     cat(paste0('\t\tVIF for columns of nuisance matrix : ', paste(round(x2a), collapse=', '),'\n'))
-    #     cat(paste0('\t\tVIF for columns of design matrix: ', paste(round(x2b), collapse=', '),'\n'))
-    #     cat(paste0('\t\tMaximum correlation among all regressors: ', round(x1,2),'\n'))
-    #   }
-    #   if(x1 > 0.95) stop('I detected high collinearity (cor > 0.95) between regressors in the design and nuisance matrices. Please fix.')
-    # } else {
-    #   # Multiple Design Matrices (one per location)
-    #   x1 <- apply(design[[ss]][,,vcols_ss], 1, checkCollinear)
-    #   if(verbose > 0) {
-    #     cat('\tChecking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
-    #     cat(paste0('\t\tMaximum correlation among regressors, max over locations: ', round(max(x1),2),'\n'))
-    #   }
-    #   if(max(x1) > 0.95) stop('I detected high collinearity (cor > 0.95) between regressors in the design and nuisance matrices for at least one location. Please fix.')
-    # }
 
     #center, filter/detrend, and nuisance regress the BOLD
     BOLD_mean_ss <- apply(BOLD[[ss]], MARGIN = 2, FUN = median) # [TO DO] instead, save the intercept from nuisance regression
@@ -491,13 +225,19 @@ fit_bayesglm <- function(
 
     # Scale data.
     # (`scale_BOLD` expects VxT data, so transpose before and after.)
-    BOLD[[ss]] <- t(scale_BOLD(t(BOLD[[ss]]), scale=scale_BOLD, v_means = BOLD_mean_ss))
+    BOLD[[ss]] <- t(
+      scale_BOLD(t(BOLD[[ss]]), 
+      scale=scale_BOLD, v_means = BOLD_mean_ss)
+    )
   }
   rm(vcols_ss, nuisance)
 
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
-  if (do$pw && verbose>0 && ar_smooth==0) { cat("\tEstimating prewhitening parameters.\n") }
-  if (do$pw && verbose>0 && ar_smooth > 0) { cat("\tEstimating and smoothing prewhitening parameters.\n") }
+  if (do$pw && verbose > 0) {
+    x <- if (ar_smooth > 0) { "and smoothing" } else { "" }
+    cat("\tEstimating", x, "prewhitening parameters.")
+  }
+
   design_type <- if (do$perLocDesign) { "per_location" } else { "regular" }
   x <- GLM_est_resid_var_pw(
     BOLD, design, spatial,
@@ -515,9 +255,9 @@ fit_bayesglm <- function(
   for (ss in seq(nS)) {
     if (verbose>0) {
       if (nS==1) {
-        cat('\tFitting classical GLM.\n')
+        cat('\n\tFitting classical GLM.\n')
       } else {
-        if (ss==1) { cat('\tFitting classical GLM for session ') }
+        if (ss==1) { cat('\n\tFitting classical GLM for session ') }
         if (ss!=nS) { cat(paste0(ss, ", ")) } else { cat(paste0(ss, ".\n")) }
       }
     }
@@ -540,7 +280,7 @@ fit_bayesglm <- function(
 
     # Compute classical GLM.
     result_classical[[ss]] <- GLM_classical(
-      BOLD[[ss]], design[[ss]], nK2[ss], nV$D,
+      BOLD[[ss]], design[[ss]], nK2[ss], nV$mdata,
       field_names, design_type,
       vcols_ss, nT[ss],
       do$pw, compute_SE=TRUE
@@ -572,10 +312,7 @@ fit_bayesglm <- function(
   if (do$Bayesian) {
 
     # Construct betas and repls objects.
-    x <- make_replicates(
-      nSess=nS, field_names=field_names, spatial
-      #, data_loc=data_loc) #indices of original data locations
-    )
+    x <- make_replicates(nSess=nS, field_names=field_names, spatial)
     betas <- x$betas
     repls <- x$repls
     rm(x)
@@ -608,46 +345,49 @@ fit_bayesglm <- function(
       control.predictor=list(A=Amat, compute = TRUE),
       verbose = verbose>1, keep = FALSE, num.threads = n_threads,
       control.inla = list(strategy = "gaussian", int.strategy = "eb"),
-      control.family=list(hyper=list(prec=list(initial=0, #log(1) = 0
-                                               param=c(1, 1)))), #put a more informative prior on the residual precision
+      control.family=list(
+        hyper=list(prec=list(initial=0, #log(1) = 0
+        param=c(1, 1)))
+      ), #put a more informative prior on the residual precision
       control.compute=list(config=TRUE), contrasts = NULL, lincomb = NULL #required for excursions
     )
     if (verbose>0) cat("\tDone!\n")
 
     # Extract stuff from INLA model result -------------------------------------
 
-    field_estimates <- extract_estimates(
+    field_ests <- extract_estimates(
       INLA_model_obj=INLA_model_obj,
       session_names=session_names,
       spatial=spatial, spde=spde
     ) #posterior means of latent field
 
-    theta_estimates <- INLA_model_obj$summary.hyperpar$mode
-    names(theta_estimates) <- rownames(INLA_model_obj$summary.hyperpar)
-    names(theta_estimates) <- gsub("Theta1", "log_tau",  names(theta_estimates))
-    names(theta_estimates) <- gsub("Theta2", "log_kappa",  names(theta_estimates))
+    theta_ests <- INLA_model_obj$summary.hyperpar$mode
+    names(theta_ests) <- rownames(INLA_model_obj$summary.hyperpar)
+    names(theta_ests) <- gsub("Theta1", "log_tau",  names(theta_ests))
+    names(theta_ests) <- gsub("Theta2", "log_kappa",  names(theta_ests))
 
     #compute spatial range and var for each task
+    d <- if (spatial_type == "vertex"){ 2 } else { 3 }
     nu <- 2 - d/2
-    theta_estimates2 <- matrix(NA, length(field_names), 2)
-    colnames(theta_estimates2) <- c('range','var')
-    rownames(theta_estimates2) <- field_names
+    theta_ests2 <- matrix(NA, length(field_names), 2)
+    colnames(theta_ests2) <- c('range','var')
+    rownames(theta_ests2) <- field_names
     for(ff in field_names){
       for_f <- paste0(" for ",ff)
-      hyper_f <- theta_estimates[grep(for_f, names(theta_estimates))]
-      logtau_f <- theta_estimates[paste0('log_tau', for_f)]
-      logkappa_f <- theta_estimates[paste0('log_kappa', for_f)]
+      hyper_f <- theta_ests[grep(for_f, names(theta_ests))]
+      logtau_f <- theta_ests[paste0('log_tau', for_f)]
+      logkappa_f <- theta_ests[paste0('log_kappa', for_f)]
       (range_f <- sqrt(8*nu)/exp(logkappa_f)) # r = sqrt(8*nu)/kappa
       (var_f <- gamma(nu)/(exp(logtau_f)^2 * (4*pi)^(d/2) * exp(logkappa_f)^(2*nu)))
-      theta_estimates2[ff,1] <- range_f
-      theta_estimates2[ff,2] <- var_f
+      theta_ests2[ff,1] <- range_f
+      theta_ests2[ff,2] <- var_f
     }
 
     RSS <- vector("list", nS)
     for (ss in seq(nS)) {
       RSS[[ss]] <- rowSums(t(matrix(
         as.matrix(c(BOLD[[ss]])) - (
-          do.call(cbind, design[[ss]][valid_cols[ss,]]) %*% as.matrix(c(field_estimates[[ss]]))
+          do.call(cbind, design[[ss]][valid_cols[ss,]]) %*% as.matrix(c(field_ests[[ss]]))
         ),
         nrow = nT[ss]
       ))^2)
@@ -672,16 +412,16 @@ fit_bayesglm <- function(
     )
     attr(INLA_model_obj, "format") <- return_INLA
   } else {
-    field_estimates <- lapply(result_classical, function(x){ x$estimates })
-    attr(field_estimates, "GLM_type") <- "classical"
+    field_ests <- lapply(result_classical, function(x){ x$estimates })
+    attr(field_ests, "GLM_type") <- "classical"
   }
 
   result <- list(
-    field_estimates = field_estimates, # new in 6.0: these are masked.
+    field_estimates = field_ests, # new in 6.0: these are masked.
     INLA_model_obj = INLA_model_obj,
     hyperpar_posteriors = hyperpar_posteriors,
-    theta_estimates = theta_estimates, #kappa and tau
-    theta_estimates2 = theta_estimates2, #range and var
+    theta_estimates = theta_ests, #kappa and tau
+    theta_estimates2 = theta_ests2, #range and var
     RSS = RSS,
     result_classical = result_classical,
     #result_FIR = result_FIR,
@@ -689,7 +429,7 @@ fit_bayesglm <- function(
     spde = spde,
     field_names = field_names,
     session_names = session_names,
-    mask_qc = mask_qc,
+    BOLD_QC = BOLD_QC,
     # For joint group model ~~~~~~~~~~~~~
     #posterior_Sig_inv = Sig_inv,
     y = y_all,

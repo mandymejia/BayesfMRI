@@ -12,19 +12,19 @@ retro_mask_fit_bglm <- function(x, mask){
   spatial_type <- x$spatial$spatial_type
 
   mask_x <- switch(spatial_type,
-    surf = x$spatial$mask,
+    vertex = x$spatial$mask,
     voxel = x$spatial$labels != 0
   )
 
   nS <- length(x$session_names)
   nK <- length(x$field_names)
-  nV_T <- length(mask_x)
-  nV_D <- sum(mask_x)
-  nT <- length(x$y) / nV_D / nS
+  nV_total <- length(mask_x)
+  nV_input <- sum(mask_x)
+  nT <- length(x$y) / nV_input / nS
   stopifnot(nT == round(nT))
 
   stopifnot(is.logical(mask))
-  stopifnot(nV_T == length(mask))
+  stopifnot(nV_total == length(mask))
   stopifnot(sum(mask) > 0)
 
   mask_new <- mask[mask_x]
@@ -51,10 +51,10 @@ retro_mask_fit_bglm <- function(x, mask){
   # [TO DO] Ignore mask_qc right? It's for the user's interest; we don't use this.
 
   # Do this before `spatial` because the subcortex needs the old buffer mask.
-  x$y <- c(matrix(x$y, ncol=nV_D)[,mask_new,drop=FALSE])
+  x$y <- c(matrix(x$y, ncol=nV_input)[,mask_new,drop=FALSE])
   for (ss in seq(length(x$X))) {
     print(dim(x$X[[ss]]))
-    x$X[[ss]] <- if (spatial_type == "surf") {
+    x$X[[ss]] <- if (spatial_type == "vertex") {
       x$X[[ss]][rep(mask_new, each=nT),rep(mask_new, each=nK),drop=FALSE]
     } else if (spatial_type == "voxel") {
       # something is wrong before here, when `mask_new` is not all TRUE.
@@ -66,7 +66,7 @@ retro_mask_fit_bglm <- function(x, mask){
     print(dim(x$X[[ss]]))
   }
 
-  if (spatial_type == "surf") {
+  if (spatial_type == "vertex") {
     x$spatial$mask <- mask
     x$spde$mesh <- retro_mask_mesh(x$spde$mesh, mask_new)
   } else if (spatial_type == "voxel") {
@@ -148,7 +148,7 @@ retro_mask_act <- function(x, Masks){
       } else { stop() }
 
       # Adjust `spatial`
-      if (spatial_type_bb=="surf") {
+      if (spatial_type_bb=="vertex") {
         x$spatial[[bb]]$mask <- mask_bb
       } else if (spatial_type_bb=="voxel") {
         # This will change...

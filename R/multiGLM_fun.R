@@ -22,7 +22,7 @@
 #' @return A \code{"CompareGLM"} object: a list with elements
 #'  \describe{
 #'    \item{field_estimates}{The estimated coefficients for the Bayesian model.}
-#'    \item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+#'    \item{mask}{A mask of \code{mesh} indicating the locations inside \code{mesh}.}
 #'    \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
 #'    \item{field_names}{The names of the fields.}
 #'    \item{session_names}{The names of the sessions.}
@@ -124,7 +124,7 @@ multiGLM_fun <- function(
 
   # QC mask. -------------------------------------------------------------------
   # Mask based on quality control metrics of the BOLD data.
-  mask_qc <- make_mask(
+  mask_qc <- do_QC(
     list(BOLD),
     meanTol=meanTol, varTol=varTol, verbose=verbose>0
   ) #, snrTol=snrTol)
@@ -164,7 +164,7 @@ multiGLM_fun <- function(
   # [TO DO] centering?
 
   # # Center design matrix.
-  # des_means <- rep(colMeans(design[,valid_cols,,drop=FALSE]), nV$D)
+  # des_means <- rep(colMeans(design[,valid_cols,,drop=FALSE]), nV$mdata)
   # design[,valid_cols,] <- design[,valid_cols,,drop=FALSE] - des_means
 
   result <- GLM_multi(y=t(BOLD), X=design, X2=nuisance, Xc=design_canonical, verbose=verbose)

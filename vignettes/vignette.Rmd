@@ -44,7 +44,7 @@ Now that `BayesfMRI` and its dependencies are installed, you can load the `Bayes
 ```{r}
 library(BayesfMRI) 
 library(ciftiTools)
-ciftiTools.setOption('wb_path','/Applications') #where your Connectome Workbench installation is located
+ciftiTools.setOption('wb_path','~/Desktop/workbench') #where your Connectome Workbench installation is located
 ```
 
 # 3. First-Level Modeling
@@ -138,8 +138,8 @@ short or noisy, this can be helpful to produce more accurate parameter estimates
 system.time(
   bglm <- BayesGLM(BOLD=BOLD_xii,
         design=design$design,
-        brainstructures="all", #cortical surfaces and subcortex
-        subROI=c('Amygdala-L','Amygdala-R','Hippocampus-L','Hippocampus-R'),
+        brainstructures=c("left", "sub"), #cortical surfaces and subcortex
+        subROI=c('Amygdala-L'),
         TR=TR,
         nuisance=motion,
         scale_BOLD='mean',
@@ -150,6 +150,27 @@ system.time(
         Bayes=TRUE,
         verbose=0 ,
         meanTol=1))
+
+  bglm2 <- BayesGLM(BOLD=BOLD_xii2,
+        design=design$design,
+        brainstructures=c("left", "sub"), #cortical surfaces and subcortex
+        subROI=c('Amygdala-L'),
+        TR=TR,
+        nuisance=motion,
+        scale_BOLD='mean',
+        hpf=.01,
+        nbhd_order=1,
+        ar_order=3,
+        ar_smooth=0,
+        Bayes=TRUE,
+        verbose=0 ,
+        meanTol=1)
+```
+
+```{r}
+act <- activations(bglm, gamma=0)
+act2 <- activations(bglm2, gamma=0)
+q <- prevalence(list(act, act2))
 ```
 
 ## 3.4 Visualize the results

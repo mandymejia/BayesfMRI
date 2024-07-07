@@ -14,8 +14,7 @@ summary.fit_bglm2 <- function(object, ...) {
     n_contrasts = length(object$contrasts),
     fields = object$field_names,
     sessions = object$session_names,
-    n_loc_total = vapply(lapply(object$model_results, '[[', "mask"), length, 0),
-    n_loc_modeled = vapply(lapply(object$model_results, '[[', "mask"), sum, 0),
+    n_loc_Mdat = vapply(lapply(object$model_results, '[[', "mask"), sum, 0),
     excursion_type = object$excursion_type
   )
   class(x) <- "summary.fit_bglm2"
@@ -37,10 +36,10 @@ print.summary.fit_bglm2 <- function(x, ...) {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
   }
   cat("Locations:\n")
-  for (ii in seq(length(x$n_loc_total))) {
+  for (ii in seq(length(x$n_loc_Mdat))) {
     cat(
-      "          ", paste0(names(x$n_loc_total)[ii], ": ", x$n_loc_modeled[[ii]]),
-      "modeled,", x$n_loc_total[[ii]], "total", "\n"
+      "          ", paste0(names(x$n_loc_Mdat)[ii], ": ", x$n_loc_Mdat[[ii]]),
+      "modeled data locations", "\n"
     )
   }
   cat("Excursion:", paste(x$excursion_type, collapse=", "), "\n")

@@ -14,18 +14,7 @@
 #'
 make_replicates <- function(nSess, field_names, spatial){
 
-  nV <- get_nV(spatial) #total number of locations, number of data locations
-  if (spatial$spatial_type=='surf') {
-    nMesh <- nV$D
-  } else if (spatial$spatial_type=='voxel') {
-    nMesh <- nV$DB
-    #data_loc <- spatial$data_loc
-  } else {
-    stop()
-  }
-  seq_nMesh <- 1:nMesh # [TO DO] allow for non-data locations in cortical mesh
-
-  #seq_nMesh <- seq(nMesh) #data_loc
+  nV <- get_nV(spatial)
 	nK <- length(field_names)
 
 	grps <- ((1:(nSess*nK) + (nK-1)) %% nK) + 1 # 1, 2, .. nK, 1, 2, .. nK, ...
@@ -40,14 +29,14 @@ make_replicates <- function(nSess, field_names, spatial){
 		#set up replicates vectors
 		sess_NA_ii <- rep(NA, nSess*nK)
 		sess_NA_ii[inds_ii] <- 1:nSess
-		repls[[ii]] <- rep(sess_NA_ii, each=nMesh)
+		repls[[ii]] <- rep(sess_NA_ii, each=nV$model)
 		names(repls)[ii] <- paste0('repl',ii)
 
 		#set up ith beta vector with replicates for sessions
-		NAs <- rep(NA, nMesh)
+		NAs <- rep(NA, nV$model)
 		preNAs <- rep(NAs, times=(ii-1))
 		postNAs <- rep(NAs, times=(nK-ii))
-		betas[[ii]] <- rep(c(preNAs, seq_nMesh, postNAs), nSess)
+		betas[[ii]] <- rep(c(preNAs, seq(nV$model), postNAs), nSess)
 	}
 
 	list(betas=betas, repls=repls)
@@ -138,25 +127,11 @@ extract_estimates <- function(
   res.beta <- INLA_model_obj$summary.random
   nK <- length(res.beta)
   field_names <- names(res.beta)
-
   nS <- length(session_names)
-  mask <- if (spatial$spatial_type=="surf") {
-    spatial$mask
-  } else {
-    spatial$labels != 0
-  }
 
-  #determine number of locations
-  #	nV  = the number of data locations used in model fitting
-  # nV2 or nMesh = the number of mesh locations, which may be a superset
-  # nV0 = the number of data locations prior to applying a mask
-  nV_T <- length(mask) #number of data locations prior to applying a mask pre-model fitting
-  nV_DB <- if (spatial$spatial_type=="surf") {
-    sum(mask)
-  } else {
-    get_nV(spatial)$DB
-  }
-  stopifnot(nV_DB*nS == length(res.beta[[1]]$mean))
+  nV <- get_nV(spatial)
+
+  stopifnot(nV$model*nS == length(res.beta[[1]]$mean))
 
   betas <- vector('list', nS)
   names(betas) <- session_names
@@ -166,15 +141,13 @@ extract_estimates <- function(
   stat_ind <- which(stat_names==stat)
 
   for (ss in seq(nS)) {
-    inds_ss <- seq(nV_DB) + (ss-1)*nV_T
+    inds_ss <- seq(nV$model) + (ss-1)*nV$total
     betas[[ss]] <- do.call(cbind,
       lapply(setNames(seq(nK), field_names), function(kk){
         res.beta[[kk]][[stat_ind]][inds_ss]
       })
     )
-    if (spatial$spatial_type=="voxel") {
-      betas[[ss]] <- betas[[ss]][spatial$buffer_mask,,drop=FALSE]
-    }
+    betas[[ss]] <- betas[[ss]][spatial$Mmap,,drop=FALSE]
   }
 
   attr(betas, "GLM_type") <- "Bayesian"
@@ -291,4 +264,96 @@ trim_INLA_model_obj <- function(INLA_model_obj, minimal=FALSE) {
 
   class(out_object) <- "inla"
   out_object
+}
+
+#' Make \code{log_kappa} and \code{log_tau}
+#'
+#' Make \code{log_kappa} and \code{log_tau}
+#'
+#' @param spatial,hyperpriors,verbose See \code{fit_bayesglm}
+#'
+#' @keywords internal
+log_kappa_tau <- function(spatial, hyperpriors, verbose){
+
+  d <- switch(spatial$spatial_type, vertex=2, voxel=3)
+  nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
+
+  # Log kappa ----------------------------------------------------------------
+  #determine reasonable values for spatial range
+  if (spatial$spatial_type == "vertex") {
+    ssv <- spatial$surf$vertices
+    ssf <- spatial$surf$faces
+    max_dist <- apply(ssv, 2, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE)) #MAX distance within the mesh (Euclidean, a bad proxy for geodesic)
+    range2 <- max(max_dist)/2 #this is our upper limit for the spatial correlation range
+    tri_dist <- apply(
+      matrix(1:nrow(ssf), ncol=1), 1, #for each face/triangle #MIN distance within the mesh
+      function(x) { mean(dist(ssv[ssf[x,],])) } #compute the avg distance among vertices in the triangle
+    )
+    min_dist <- min(tri_dist) #distance between vertices in the smallest triangle
+    range1 <- min_dist*2
+    range0 <- range1*5
+
+  } else {
+    res <- abs(diag(spatial$trans_mat)[1:3])
+    range2 <- c()
+    for(r in levels(spatial$labels)){
+      #get mask of just this ROI
+      mask_r <- spatial$mask
+      mask_r[mask_r][spatial$labels != r] <- FALSE
+      #compute max distance within mask in each direction
+      x_r <- diff(range(which(apply(mask_r, 1, sum) > 0)))*res[1]
+      y_r <- diff(range(which(apply(mask_r, 2, sum) > 0)))*res[2]
+      z_r <- diff(range(which(apply(mask_r, 3, sum) > 0)))*res[3]
+      range2 <- c(range2, max(c(x_r, y_r, z_r))) #largest 1D distance in any direction
+    }
+    #this is our upper limit for the spatial correlation range. Since volumetric structures are smaller, we allow a larger range
+    range2 <- max(range2)*2 #max over ROIs, doubled (in case we don't observe the full range)
+    range1 <- min(res)*2 #smallest voxel dimension
+    #reasonable starting value
+    range0 <- range1*5
+  }
+
+  range_vec <- c(range1, range2, range0)
+
+  if(hyperpriors == "informative") logkappa_vec <- log(sqrt(8*nu)/range_vec) #r = sqrt(8*nu)/kappa
+  logkappa0 <- log(sqrt(8*nu)/range0) #we will use a good starting value even with the default prior
+
+  # logkappa1 <-
+  # logkappa2 <- log(sqrt(8*nu)/range2)
+  # logkappa0 <- log(sqrt(8*nu)/range0) #starting value
+
+
+  # Log tau ------------------------------------------------------------------
+  # Get initial value for tau
+  var2logtau <- function(var, d, kappa){
+    nu <- 2 - d/2 #nu = alpha - d/2, alpha = 2
+    tausq <- gamma(nu)/(var * (4*pi)^(d/2) * kappa^(2*nu))
+    log(sqrt(tausq))
+  }
+
+  # # Get initial value for tau based on variance of classical GLM
+  # var0 <- apply(result_classical[[ss]]$estimates, 2, var, na.rm=TRUE)
+
+  var0 <- 0.1 #we usually expect most of the activation amplitudes to be between (-2 and 2) --> SD ~= 0.33, Var ~= 0.1
+  var_vec <- c(0.01, 1, var0) #reasonable range for variance
+  if(hyperpriors == "informative") logtau_vec <- var2logtau(var_vec, d, exp(logkappa0))
+  logtau0 <- var2logtau(var0, d, exp(logkappa0)) #we will use a good starting value even with the default prior
+
+  ### SUMMARY
+
+  if (verbose > 0 && hyperpriors == 'informative') {
+    cat(paste0('\tPutting an informative prior on kappa so that the spatial range is between ',
+      round(range1, 2), ' and ', round(range2, 2), ' mm.\n',
+      '\t\tLog kappa prior range (95% density): ', round(logkappa_vec[2], 2), ' to ', round(logkappa_vec[1], 2), '\n'))
+    cat(paste0('\tPutting an informative prior on tau so variance of the spatial field is between ',
+    (var_vec[1]), ' and ', (var_vec[2]), '.\n',
+    '\t\tLog tau prior range (95% density): ',round(logtau_vec[2], 2), ' to ', round(logtau_vec[1], 2), '\n'))
+  }
+
+  list(
+    logkappa_vec=logkappa_vec,
+    logkappa0=logkappa0,
+    logtau0=logtau0,
+    logtau_vec=logtau_vec
+  )
 }

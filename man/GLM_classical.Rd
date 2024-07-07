@@ -8,7 +8,7 @@ GLM_classical(
   BOLD,
   design,
   nK2,
-  nV_D,
+  nV_input,
   field_names,
   design_type,
   valid_cols,
@@ -22,7 +22,7 @@ GLM_classical(
 
 \item{design}{List of large sparse design matrices (each TVxV), one per regressor, result of \code{sparse_and_PW}}
 
-\item{nK2, nV_D, field_names, design_type}{See \code{fit_bayesglm}.}
+\item{nK2, nV_input, field_names, design_type}{See \code{fit_bayesglm}.}
 
 \item{valid_cols, nT}{See \code{fit_bayesglm}.}
 

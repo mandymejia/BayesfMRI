@@ -106,7 +106,7 @@ BayesGLM <- function(
 
   do <- vector("list")
 
-  # In a separate function because these checks are shared with `BayesGLM`.
+  # In a separate function because these checks are shared with `fit_bayesglm`.
   x <- BayesGLM_argChecks(
     scale_BOLD = scale_BOLD,
     Bayes = Bayes,
@@ -185,7 +185,7 @@ BayesGLM <- function(
     has_bs <- c("left", "right", "subcortical")[!vapply(BOLD[[1]]$data, is.null, FALSE)]
     if(!all(brainstructures %in% has_bs)) stop("BOLD data does not contain all of the structures indicated in `brainstructures`")
   }
-  
+
   do$left <- ('left' %in% brainstructures)
   do$right <- ('right' %in% brainstructures)
   do$sub <- ('subcortical' %in% brainstructures)
@@ -325,48 +325,37 @@ BayesGLM <- function(
 
     #Check for collinearity among columns of design and nuisance
     nuis_ss <- nuisance[[ss]]
-    checkCorr <- function(design){
-      X <- cbind(nuis_ss, design)
-      suppressWarnings(corX <- cor(X)); diag(corX) <- NA
-      corX
-    }
-    checkVIF <- function(design){
-      int <- (apply(nuis_ss, 2, var) == 0) #exclude intercept column of nuisance
-      X <- cbind(nuis_ss[,!int], design)
-      y <- rnorm(nT[ss]) #add fake y variable, has no influence
-      Xnames <- paste0("X",1:ncol(X))
-      df <- as.data.frame(cbind(X, y)); names(df) <- c(Xnames,"y")
-      f <- as.formula(paste0('y ~ ',paste(Xnames, collapse = " + ")))
-      suppressWarnings(car::vif(lm(f, data = df)))
-    }
-
 
     # Single Design Matrix
     vcols_ss <- valid_cols[ss,]
     if (!do$perLocDesign) {
-      cor_x <- checkCorr(design[[ss]][,vcols_ss])
+      cor_x <- checkX_cor(cbind(
+        nuis_ss,
+        design[[ss]][,vcols_ss]
+      ))
       x1 <- max(abs(cor_x), na.rm=TRUE) #max correlation between any two columns of design & nuisance
-      x2 <- checkVIF(design[[ss]][,vcols_ss])
+      x2 <- checkX_VIF(cbind(
+        nuis_ss[,colVars(nuis_ss) > 1e-8],
+        design[[ss]][,vcols_ss]
+      ))
       x2a <- x2[1:(ncol(nuis_ss) - 1)] #nuisance regressors
       x2b <- x2[ncol(nuis_ss):length(x2)] #design regressors
-      if(verbose > 0) {
-        cat('Checking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
+      if (verbose > 0) {
+        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively \n')
         cat(paste0('\tVIF for design regressors: ', paste0(round(x2b), collapse=', '),'\n'))
         cat(paste0('\tMaximum VIF among all nuisance regressors: ', round(max(x2a)),'\n'))
         inds <- which(abs(cor_x) == x1, arr.ind = TRUE)
         cat(paste0('\tMaximum correlation among all regressors: ', round(x1,4), ' (',
             rownames(cor_x)[inds[1,1]], ' and ', rownames(cor_x)[inds[1,2]], ')\n'))
       }
-#
-#       if(verbose > 0) {
-#         if(x1 > 0.95) {
-#           inds <- which(abs(cor_x) > 0.95, arr.ind = TRUE)
-#           rows <- unique(inds[,1])
-#           cols <- unique(inds[,2])
-#           print(round(cor_x[rows,cols],2))
-#         }
-#       }
-
+      # if(verbose > 0) {
+      #   if(x1 > 0.95) {
+      #     inds <- which(abs(cor_x) > 0.95, arr.ind = TRUE)
+      #     rows <- unique(inds[,1])
+      #     cols <- unique(inds[,2])
+      #     print(round(cor_x[rows,cols],2))
+      #   }
+      # }
       if(x1 > 0.999) {
         stop('I detected high collinearity (cor > 0.999) between regressors in the design and nuisance matrices. Please fix.')
       }
@@ -374,10 +363,10 @@ BayesGLM <- function(
       # Multiple Design Matrices (one per location)
       x1 <- apply(
         design[[ss]][,vcols_ss,,drop=FALSE], 3, function(x)
-        max(abs(checkCorr(x)), na.rm=TRUE)
+        max(abs(checkX_cor(x)), na.rm=TRUE)
       )
       if(verbose > 0) {
-        cat('Checking for collinearity of the design matrix and nuisance matrix (including DCT bases) collectively \n')
+        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively \n')
         cat(paste0('\tMaximum correlation among regressors, max over locations: ', round(max(x1),2),'\n'))
       }
       if(max(x1) > 0.99) stop('I detected high collinearity (cor > 0.99) between regressors in the design and nuisance matrices for at least one location. Please fix.')
@@ -386,15 +375,31 @@ BayesGLM <- function(
 
   # Initialize `spatial` to store all spatial information. ---------------------
   spatial <- list(
-    cortexL = list(spatial_type="surf", surf=NULL, mask=NULL),
-    cortexR = list(spatial_type="surf", surf=NULL, mask=NULL),
+    cortexL = list(
+      spatial_type="vertex",
+      surf=NULL,
+      maskIn=NULL,   # input mask: medial wall mask
+      maskMdat=NULL, # model data mask: `maskIn` after QC
+      maskMbuf=NULL, # !maskMdat for cortex
+      Mmap=NULL      # which(maskMdat) for cortex
+    ),
+    cortexR = list(
+      spatial_type="vertex",
+      surf=NULL,
+      maskIn=NULL,
+      maskMdat=NULL,
+      maskMbuf=NULL,
+      Mmap=NULL
+    ),
     subcort = list(
       spatial_type="voxel",
-      labels=NULL,
+      labels=NULL, # input labels
       trans_mat=NULL, trans_units=NULL,
-      nbhd_order=nbhd_order, buffer=buffer,
-      buffer_mask=NULL, # created in `SPDE_from_voxel`
-      data_loc=NULL # created in `fit_bayesglm`
+      nbhd_order=nbhd_order, buffer=buffer, # not used once maskMdat/maskMbuf is decided
+      maskIn=NULL,   # input mask
+      maskMdat=NULL, # model data mask: `maskIn` after QC
+      maskMbuf=NULL, # model buffer mask, created in `SPDE_from_voxel`
+      Mmap=NULL     # indices from model results to model data mask, created in `fit_bayesglm`
     )
   )
   if (!do$left) { spatial$cortexL <- NULL }
@@ -462,14 +467,14 @@ BayesGLM <- function(
 
   # `BOLD`: read in data and metadata, for each brain structure. ---------------
 
-  # Total number of locations, `nV_T`. Check it's consistent across sessions.
+  # Total number of locations, `nV_total`. Check it's consistent across sessions.
   #   Just use to check for the same resolution across multiple-sessions.
-  #   Instead of passing `nV_T`, `spatial` is passed on to `BayesGLM`.
-  nV_T <- setNames(NA*vector("numeric", length(spatial)), names(spatial))
+  #   Instead of passing `nV_total`, `spatial` is passed on to `BayesGLM`.
+  nV_total <- setNames(NA*vector("numeric", length(spatial)), names(spatial))
 
   BOLD_input_msg <- function(ss, nS, do=c("read", "resample")){
     do <- switch(do, read="Reading", resample="Resampling")
-    out <- if (ss==1) { paste0("\t", do,  " BOLD data") } else { "" }
+    out <- if (ss==1) { paste0(do,  " BOLD data") } else { "" }
     if (do=="resample") { out <- paste0(out, " to ", resamp_res) }
     if (nS==1) {
       out <- paste0(out, ".\n")
@@ -517,9 +522,9 @@ BayesGLM <- function(
     }
 
     if (ss == 1 && verbose>0) {
-      cat("Brain structures:   ", paste0(brainstructures, collapse=", "), "\n")
+      cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
       if (do$sub) {
-        cat("Subcortical ROIs: ", paste0(subROI, collapse=", "), "\n")
+        cat("Subcortical ROIs:        ", paste0(subROI, collapse=", "), "\n")
       }
     }
 
@@ -555,37 +560,37 @@ BayesGLM <- function(
       xii_res <- c(xii_res, c(subcort=sum(BOLD[[ss]]$meta$subcort$mask)))
     }
 
-    # Set `nV_T` based on the `xii_res` of the first session...
+    # Set `nV_total` based on the `xii_res` of the first session...
     if (ss == 1) {
       if (do$left) {
         # Check that the left cortex data is nonempty.
         if (xii_res["left"] %in% c(0, NA, NaN)) { stop("This BOLD session does not seem to have left cortex data.") }
-        surfL_res <- get_nV(spatial$cortexL)$T
+        surfL_res <- get_nV(spatial$cortexL)$total
         # Check that the left cortex resolution matches the surface resolution.
-        if (xii_res["left"] != get_nV(spatial$cortexL)$T) {
+        if (xii_res["left"] != get_nV(spatial$cortexL)$total) {
           if (is.null(resamp_res)) {
             # If mismatch and `resamp_res` was `NULL`, try resampling the surface to match the data.
             spatial$cortexL$surf <- resample_surf(spatial$cortexL$surf, xii_res["left"])
-            if(xii_res["left"] != get_nV(spatial$cortexL)$T) {
-              stop("The left surface could not be resampled to the resolution of the left cortex BOLD data,", xii_res["left"])
+            if(xii_res["left"] != get_nV(spatial$cortexL)$total) {
+              stop("The left surface could not be resampled to the resolution of the left cortex BOLD data, ", xii_res["left"])
             }
           } else {
             # If mismatch and `resamp_res` was not `NULL`, we have a problem.
-            stop("The left surface could not be resampled to the resolution of the left cortex BOLD data,", xii_res["left"])
+            stop("The left surface could not be resampled to the resolution of the left cortex BOLD data, ", xii_res["left"])
           }
         }
-        nV_T["cortexL"] <- xii_res["left"]
+        nV_total["cortexL"] <- xii_res["left"]
       }
       if (do$right) {
         # Check that the right cortex data is nonempty.
         if (xii_res["right"] %in% c(0, NA, NaN)) { stop("This BOLD session does not seem to have right cortex data.") }
-        surfL_res <- get_nV(spatial$cortexR)$T
+        surfL_res <- get_nV(spatial$cortexR)$tital
         # Check that the right cortex resolution matches the surface resolution.
-        if (xii_res["right"] != get_nV(spatial$cortexR)$T) {
+        if (xii_res["right"] != get_nV(spatial$cortexR)$tital) {
           if (is.null(resamp_res)) {
             # If mismatch and `resamp_res` was `NULL`, try resampling the surface to match the data.
             spatial$cortexR$surf <- resample_surf(spatial$cortexR$surf, xii_res["right"])
-            if(xii_res["right"] != get_nV(spatial$cortexR)$T) {
+            if(xii_res["right"] != get_nV(spatial$cortexR)$tital) {
               stop("The right surface could not be resampled to the resolution of the right cortex BOLD data,", xii_res["right"])
             }
           } else {
@@ -593,33 +598,33 @@ BayesGLM <- function(
             stop("The right surface could not be resampled to the resolution of the right cortex BOLD data,", xii_res["left"])
           }
         }
-        nV_T["cortexR"] <- xii_res["right"]
+        nV_total["cortexR"] <- xii_res["right"]
       }
       if (do$sub) {
-        nV_T["subcort"] <- sum(BOLD[[ss]]$meta$subcort$mask)
+        nV_total["subcort"] <- sum(BOLD[[ss]]$meta$subcort$mask)
       }
 
-    # ...Check `nV_T` matches `xii_res` of other sessions.
+    # ...Check `nV_total` matches `xii_res` of other sessions.
     } else {
-      if (do$left && (xii_res["left"] != nV_T["cortexL"])) {
+      if (do$left && (xii_res["left"] != nV_total["cortexL"])) {
         stop(
           "This BOLD session appears to have left cortex data with ",
           xii_res["left"], "total vertices, while the first session ",
-          "appears to have", nV_T["cortexL"], "total vertices."
+          "appears to have", nV_total["cortexL"], "total vertices."
         )
       }
-      if (do$right && (xii_res["right"] != nV_T["cortexR"])) {
+      if (do$right && (xii_res["right"] != nV_total["cortexR"])) {
         stop(
           "This BOLD session appears to have right cortex data with ",
           xii_res["right"], "total vertices, while the first session ",
-          "appears to have", nV_T["cortexR"], "total vertices."
+          "appears to have", nV_total["cortexR"], "total vertices."
         )
       }
-      if (do$sub && (xii_res["subcort"] != nV_T["subcort"])) {
+      if (do$sub && (xii_res["subcort"] != nV_total["subcort"])) {
         stop(
           "This BOLD session appears to have subcortical data with",
           xii_res["subcort"], "total voxels, while the first session ",
-          "appears to have", nV_T["subcort"], " total voxels."
+          "appears to have", nV_total["subcort"], " total voxels."
         )
       }
     }
@@ -627,67 +632,68 @@ BayesGLM <- function(
   }
 
    ### Collect `spatial` metadata. ---------------------------------------------
-   # Cortex: ROI `mask`. Use the intersection.
+   # Cortex: `maskIn`. Use the intersection.
    # Subcortex: `labels`, `trans_mat`, `trans_units`. Require same across sessions.
   if (do$left) {
     maskL <- lapply(BOLD, function(q){
       mask_ss <- q$meta$cortex$medial_wall_mask$left
-      if (is.null(mask_ss)) { mask_ss <- rep(TRUE, nV_T["cortexL"]) }
+      if (is.null(mask_ss)) { mask_ss <- rep(TRUE, nV_total["cortexL"]) }
       mask_ss
     })
     maskL <- colSums(do.call(rbind, maskL))
     maskL_has_diffs <- (!all(maskL %in% c(0, nS)))
-    if (maskL_has_diffs && verbose>0) {
-      cat("BOLD left cortex initial ROIs do not match across sessions; using their intersection by setting mismatch locations to `NA`.\n")
-    }
-    spatial$cortexL$mask <- maskL == nS
     if (maskL_has_diffs) {
-      # Set to `NA`--masking of data (and design for per-location model) will be handled in `BayesGLM`.
-      for (ss in seq(nS)) {
-        new_mask_ss <- maskL[BOLD[[ss]]$meta$cortex$medial_wall_mask$left]
-        BOLD[[ss]]$data$cortex_left[!new_mask_ss,] <- NA
-      }
+      # if (verbose>0) {
+      #   cat("BOLD left cortex initial ROIs do not match across sessions; using their intersection by setting mismatch locations to `NA`.\n")
+      # }
+      # # Set to `NA`--masking of data (and design for per-location model) will be handled in `BayesGLM`.
+      # for (ss in seq(nS)) {
+      #   new_mask_ss <- maskL[BOLD[[ss]]$meta$cortex$medial_wall_mask$left]
+      #   BOLD[[ss]]$data$cortex_left[!new_mask_ss,] <- NA
+      # }
+      stop("BOLD left cortex initial ROIs do not match across sessions.")
     }
-    #if(verbose > 0) cat('Left cortex resolution: ', paste0(nrow(BOLD[[1]]$data$cortex_left),' vertices\n'))
+    spatial$cortexL$maskIn <- maskL == nS
     rm(maskL, maskL_has_diffs)
   }
 
   if (do$right) {
     maskR <- lapply(BOLD, function(q){
       mask_ss <- q$meta$cortex$medial_wall_mask$right
-      if (is.null(mask_ss)) { mask_ss <- rep(TRUE, nV_T["cortexR"]) }
+      if (is.null(mask_ss)) { mask_ss <- rep(TRUE, nV_total["cortexR"]) }
       mask_ss
     })
     maskR <- colSums(do.call(rbind, maskR))
     maskR_has_diffs <- (!all(maskR %in% c(0, nS)))
-    if (maskR_has_diffs && verbose>0) {
-      cat("BOLD right cortex initial ROIs do not match across sessions; using their intersection by setting mismatch locations to `NA`.\n")
-    }
-    spatial$cortexR$mask <- maskR == nS
     if (maskR_has_diffs) {
-      # Set to `NA`--masking of data (and design for per-location model) will be handled in `BayesGLM`.
-      for (ss in seq(nS)) {
-        new_mask_ss <- maskR[BOLD[[ss]]$meta$cortex$medial_wall_mask$right]
-        BOLD[[ss]]$data$cortex_right[!new_mask_ss,] <- NA
-      }
+      # if (verbose > 0) {
+      #   cat("BOLD right cortex initial ROIs do not match across sessions; using their intersection by setting mismatch locations to `NA`.\n")
+      # }
+      # # Set to `NA`--masking of data (and design for per-location model) will be handled in `BayesGLM`.
+      # for (ss in seq(nS)) {
+      #   new_mask_ss <- maskR[BOLD[[ss]]$meta$cortex$medial_wall_mask$right]
+      #   BOLD[[ss]]$data$cortex_right[!new_mask_ss,] <- NA
+      # }
+      stop("BOLD left cortex initial ROIs do not match across sessions.")
     }
-    #if(verbose > 0) cat('Right cortex resolution: ', paste0(nrow(BOLD[[1]]$data$cortex_right),' vertices\n'))
+    spatial$cortexR$maskIn <- maskR == nS
     rm(maskR, maskR_has_diffs)
   }
-
 
   if (do$sub) {
     for (ss in seq(nS)) {
       if (ss == 1) {
         submeta <- BOLD[[ss]]$meta$subcort
-        spatial$subcort["labels"] <- list(submeta$mask*0)
-        spatial$subcort$labels[submeta$mask==TRUE] <- submeta$labels
+        spatial$subcort["labels"] <- list(submeta$labels)
+        spatial$subcort["maskIn"] <- list(submeta$mask)
         spatial$subcort["trans_mat"] <- list(submeta$trans_mat)
         spatial$subcort["trans_units"] <- list(submeta$trans_units)
       } else {
-        stopifnot(length(dim(spatial$subcort$labels)) == length(dim(BOLD[[ss]]$meta$subcort$mask)))
-        stopifnot(all(dim(spatial$subcort$labels) == dim(BOLD[[ss]]$meta$subcort$mask)))
-        stopifnot(all((spatial$subcort$labels!=0) == BOLD[[ss]]$meta$subcort$mask))
+        stopifnot(length(spatial$subcort$labels) == length(BOLD[[ss]]$meta$subcort$labels))
+        stopifnot(all(spatial$subcort$labels == BOLD[[ss]]$meta$subcort$labels))
+        stopifnot(length(dim(spatial$subcort$maskIn)) == length(dim(BOLD[[ss]]$meta$subcort$mask)))
+        stopifnot(all(dim(spatial$subcort$maskIn) == dim(BOLD[[ss]]$meta$subcort$mask)))
+        stopifnot(all((spatial$subcort$maskIn!=0) == BOLD[[ss]]$meta$subcort$mask))
       }
     }
 
@@ -696,7 +702,7 @@ BayesGLM <- function(
     if(!is.numeric(res)) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
     if(any(is.na(res)) | any(is.nan(res))) stop('I cannot infer subcortical voxel resolution from CIFTI header.  Check trans_mat or contact developer.')
     if(min(res) < 1 | max(res > 4)) stop('Voxel resolution appears to be implausible (less than 1 or greater than 4).  Check trans_mat in CIFTI header or contact developer.')
-    if(verbose > 0) cat('Subcortical voxel size: ', paste0(paste(res, collapse = ' x '),' mm \n'))
+    if(verbose > 0) cat('Subcortical voxel size:  ', paste0(paste(res, collapse = ' x '),' mm \n'))
 
   } else {
     submeta <- NULL
@@ -717,7 +723,6 @@ BayesGLM <- function(
   BOLD <- lapply(BOLD, function(q){lapply(q, t)})
 
   # Do GLM. --------------------------------------------------------------------
-
   BGLMs <- setNames(vector("list", length(spatial)), names(spatial))
 
   ## Loop through brainstructures. ---------------------------------------------
@@ -726,17 +731,18 @@ BayesGLM <- function(
     v = c("Left cortex", "Right cortex", "Subcortex") # Verbose names to show user.
   )
 
-  # number of data locations (vs. `nV_T` includes masked locations on the mesh.)
-
-  nV_D <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
+  # number of data locations (vs. `nV_total` includes masked locations on the mesh.)
+  nV_input <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
 
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }
+
+    # Get design matrix.
     dname_bb <- bs_names$d[bb]
-    if (verbose>0) { cat(bs_names$v[bb], "analysis:\n") }
+    if (verbose>0) { cat(paste0("\n", bs_names$v[bb], " analysis:\n")) }
     design_bb <- if (do$perLocDesign) {
       lapply(design, function(q){q[,,seq(
-        sum(c(0, nV_D)[seq(bb)])+1, sum(nV_D[seq(bb)])
+        sum(c(0, nV_input)[seq(bb)])+1, sum(nV_input[seq(bb)])
         ),drop=FALSE]})
     } else {
       design
@@ -787,7 +793,7 @@ BayesGLM <- function(
 
   result_dim <- c(
     c(sess = nS, time = nT),
-    setNames(nV_T, paste0("loc_", names(nV_T)))
+    setNames(nV_total, paste0("loc_", names(nV_total)))
   )
 
   result <- list(

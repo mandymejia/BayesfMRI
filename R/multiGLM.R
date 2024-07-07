@@ -169,13 +169,13 @@ multiGLM <- function(
   }
 
   # `BOLD`: read in data and metadata, for each brain structure. ---------------
-  nV_T <- setNames(NA*vector("numeric", length(brainstructures)), names(brainstructures))
-  names(nV_T)[names(nV_T)=="cortex_left"] <- "cortexL"
-  names(nV_T)[names(nV_T)=="cortex_right"] <- "cortexR"
+  nV_total <- setNames(NA*vector("numeric", length(brainstructures)), names(brainstructures))
+  names(nV_total)[names(nV_total)=="cortex_left"] <- "cortexL"
+  names(nV_total)[names(nV_total)=="cortex_right"] <- "cortexR"
 
   BOLD_input_msg <- function(do=c("read", "resample")){
     do <- switch(do, read="Reading", resample="Resampling")
-    out <- paste0("\t", do,  " BOLD data")
+    out <- paste0(do,  " BOLD data")
     if (do=="resample") { out <- paste0(out, " to ", resamp_res) }
     out <- paste0(out, ".\n")
   }
@@ -225,10 +225,10 @@ multiGLM <- function(
     xii_res <- c(xii_res, c(subcort=sum(BOLD$meta$subcort$mask)))
   }
 
-  # Set `nV_T` based on the `xii_res`.
-  if (do$left) { nV_T["cortexL"] <- xii_res["left"] }
-  if (do$right) { nV_T["cortexR"] <- xii_res["right"] }
-  if (do$sub) { nV_T["subcort"] <- sum(BOLD$meta$subcort$mask) }
+  # Set `nV_total` based on the `xii_res`.
+  if (do$left) { nV_total["cortexL"] <- xii_res["left"] }
+  if (do$right) { nV_total["cortexR"] <- xii_res["right"] }
+  if (do$sub) { nV_total["subcort"] <- sum(BOLD$meta$subcort$mask) }
 
   rm(xii_res)
 
@@ -237,14 +237,14 @@ multiGLM <- function(
    # Subcortex: `submeta`.`
   if (do$left) {
     maskL <- BOLD$meta$cortex$medial_wall_mask$left
-    if (is.null(maskL)) { maskL <- rep(TRUE, nV_T["cortexL"]) }
+    if (is.null(maskL)) { maskL <- rep(TRUE, nV_total["cortexL"]) }
   } else {
     maskL <- NULL
   }
 
   if (do$right) {
     maskR <- BOLD$meta$cortex$medial_wall_mask$right
-    if (is.null(maskR)) { maskR <- rep(TRUE, nV_T["cortexR"]) }
+    if (is.null(maskR)) { maskR <- rep(TRUE, nV_total["cortexR"]) }
   } else {
     maskR <- NULL
   }
@@ -274,7 +274,7 @@ multiGLM <- function(
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }
     dname_bb <- bs_names$d[bb]
-    if (verbose>0) { cat(bs_names$v[bb], "analysis:\n") }
+    if (verbose>0) { cat(paste0("\n", bs_names$v[bb], " analysis:\n")) }
 
     ## `multiGLM_fun` call. ----------------------------------------------------
     mGLM0s[[dname_bb]] <- multiGLM_fun(

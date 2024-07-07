@@ -9,7 +9,7 @@
 GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
   # Step 1: Identify no-signal locations. Compare null vs. canonical model using out-of-sample prediction error.
   nT <- nrow(y)
-  nV_D <- ncol(y)
+  nV_input <- ncol(y)
   nK <- ncol(X)
 
   # F = (RSS0 - RSS1)/RSS1 * (n - p1)/(p1 - p0), where
@@ -22,7 +22,7 @@ GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
   # c) Compute F-statistic
   # d) Compute p-value, since F ~ F(nK, n-p1) ( Basically a chi-sq, since n -> Inf.  nK*F ~ X2(nK))
 
-  Fstat <- pvalF <- rep(0, nV_D)
+  Fstat <- pvalF <- rep(0, nV_input)
 
   if (!is.null(Xc)) {
     X1 <- cbind(Xc, rep(1, nT), X2) #combine design with intercept and nuisance
@@ -55,7 +55,7 @@ GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
   # X2_list <- list(cbind(1, X2[inds1,]), cbind(1, X2[inds2,])) #for nuisance regression of the "held out" data
   # X1_list <- list(design_can[inds1,], design_can[inds2,]) #canonical HRF task regressors
   #
-  # RSS_OS <- matrix(0, nrow=nV_D, ncol=2)
+  # RSS_OS <- matrix(0, nrow=nV_input, ncol=2)
   # RSS_OS[mask==FALSE,] <- NA
   # for(pred in 1:2){
   #
@@ -94,7 +94,7 @@ GLM_multi <- function(y, X, X2, Xc=NULL, verbose=TRUE) {
 
   #loop over models
   nP <- dim(X)[3]
-  RSS <- matrix(NA, nrow=nV_D, ncol=nP) #keep track of residual sum of squares (proxy for R^2 or AIC)
+  RSS <- matrix(NA, nrow=nV_input, ncol=nP) #keep track of residual sum of squares (proxy for R^2 or AIC)
 
   if(verbose > 0) { cat('\tFitting models: Model ') }
   for(pp in 1:nP){

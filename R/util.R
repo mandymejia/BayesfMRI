@@ -161,10 +161,10 @@ s2m_B <- function(B,sigma){
 #' BOLD2 <- matrix(rnorm(nT*nV), nrow=nT)
 #' BOLD2[,65] <- BOLD2[,65] / 1e10
 #' BOLD <- list(sess1=BOLD1, sess2=BOLD2)
-#' make_mask(BOLD)
+#' do_QC(BOLD)
 #'
 #' @export
-make_mask <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 
   nS <- length(BOLD)
   nV <- ncol(BOLD[[1]])

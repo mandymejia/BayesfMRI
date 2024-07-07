@@ -1,26 +1,30 @@
 #' SPDE from voxel model
 #'
 #' @param spatial See \code{BayesGLM}.
+#' @param qc_mask QC mask.
 #' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
-#' @return List
+#' @return List: \code{mesh}, \code{spde}, \code{spatial}.
 #' @keywords internal
-SPDE_from_voxel <- function(spatial, logkappa = NULL, logtau = NULL){
+SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
   labels <- spatial$labels
-  mask <- labels!=0
+  mask <- spatial$mask
   nbhd_order <- spatial$nbhd_order
   buffer <- spatial$buffer
   res <- abs(diag(spatial$trans_mat)[1:3])
 
-  #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
-  #Simply remove those locations (in addition to bad data locations, as below) from the labels array before creating SPDE
 
-  ROIs <- unique(labels[mask])
+
+  #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
+  #Simply remove those locations (in addition to bad data locations) from the labels array before creating SPDE
+
+  ROIs <- unique(labels)
   nR <- length(ROIs)
 
   #construct the C and G for the SPDE by block-diagonalizing over ROIs
   C_list <- G_list <- spde_list <- vector('list', length=nR)
   for (rr in seq(nR)) {
-    mask_rr <- (labels == ROIs[rr])
+    mask_rr <- spatial$mask
+    mask_rr[mask_rr][spatial$labels != ROIs[rr]] <- FALSE
     # [stop] this breaks [TO DO]
     spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer, res=res)
     C_list[[rr]] <- spde_list[[rr]]$mats$C
@@ -69,12 +73,15 @@ SPDE_from_voxel <- function(spatial, logkappa = NULL, logtau = NULL){
     }
   }
 
-  # Add `buffer_mask` to `spatial`.
-  spatial$buffer_mask <- seq(spde$n.spde) %in% data_loc
+  # Add masks and data locations to `spatial`.
+  spatial$Mmap <- data_loc
+  maskM <- seq(spde$n.spde) %in% data_loc
+  spatial$maskMdat <- NULL 
+  spatial$maskMbuf <- maskM & (!spatial$maskMdat)
 
   list(
+    mesh = NULL,
     spde = spde,
-    spatial = spatial,
-    data_loc = data_loc
+    spatial = spatial
   )
 }

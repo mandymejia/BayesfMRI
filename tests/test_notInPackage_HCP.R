@@ -113,9 +113,12 @@ for (ss in seq(2)) {
 
 
 # BayesGLM ---------------------------------------------------------------------
+BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
+BOLD[[1]]$data$cortex_left[c(1,11,111),] <- NA
+
 ### Classical vs Bayes; Single- vs Multi-session -----
 BGLM_cii_args <- function(sess, resamp_factor=1){
-  BOLD_ss <- c(fnames$cifti_1, fnames$cifti_2)[sess]
+  BOLD_ss <- BOLD[sess] #c(fnames$cifti_1, fnames$cifti_2)[sess]
   design_ss <- des[sess]
   nuis_ss <- nuis[sess]
   if (length(sess)==1) {
@@ -128,7 +131,7 @@ BGLM_cii_args <- function(sess, resamp_factor=1){
     design = design_ss,
     nuisance = nuis_ss,
     TR = 0.72,
-    brainstructures = c("left", "sub"),
+    brainstructures = "left", #c("left", "sub"),
     surfL=ciftiTools.files()$surf["left"],
     surfR=ciftiTools.files()$surf["right"],
     resamp_res = resamp_res * resamp_factor,

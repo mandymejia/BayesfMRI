@@ -152,25 +152,20 @@ BayesGLM_argChecks <- function(
 #'  the number of boundary locations.
 get_nV <- function(spatial){
 
-  spatial_type <- if('surf' %in% names(spatial)) { 'surf' } else if('labels' %in% names(spatial)) { 'voxel' } else { stop() }
-
-  out <- switch(spatial_type,
-    surf = list(
-      T=nrow(spatial$surf$vertices),
-      D=sum(spatial$mask)
-    ),
-    voxel = list(
-      T=prod(dim(spatial$labels)), # [TO DO] redefine?
-      D=sum(spatial$labels!=0)
-    )
+  # for `nV_total`, use these instead of masks, b/c `BayesGLM`
+  #   will have these before the masks are read in.
+  nV_total <- switch(spatial$spatial_type, 
+    vertex = nrow(spatial$surf$vertices), 
+    voxel = prod(dim(spatial$mask))
   )
 
-  if (spatial_type=="voxel" && !is.null(spatial$buffer_mask)) {
-    stopifnot(out$D == sum(spatial$buffer_mask))
-    out <- c(out, list(DB=length(spatial$buffer_mask)))
-  }
-
-  out
+  list(
+    total = nV_total, #length(spatial$maskIn),
+    input = sum(spatial$maskIn),
+    model = sum(spatial$maskMdat) + sum(spatial$maskMbuf),
+    mdata = sum(spatial$maskMdat),
+    mbuffer = sum(spatial$maskMbuf)
+  )
 }
 
 nT_message <- function(nT) {
@@ -212,4 +207,28 @@ dgCMatrix_cols_to_zero <- function(mat, cols) {
   mat@i <- new_i
   mat@p <- as.integer(new_p)
   mat
+}
+
+#' Validate \code{spatial}
+#' 
+#' Validate \code{spatial}
+#' 
+#' @param spatial \code{spatial}
+#' @return \code{NULL}, invisibly
+#' @keywords internal
+#' 
+validate_spatial <- function(spatial) {
+  stopifnot(is.list(spatial))
+  if (spatial$spatial_type == "vertex") {
+    stopifnot(length(spatial) == 6)
+    stopifnot(names(spatial) == c("spatial_type", "surf", "maskIn", "maskMdat", "maskMbuf", "Mmap"))
+  } else if (spatial$spatial_type == "voxel") {
+    stopifnot(length(spatial) == 10)
+    stopifnot(names(spatial) == c(
+      "spatial_type", "labels", "trans_mat", "trans_units", 
+      "nbhd_order", "buffer", "maskIn", "maskMdat", "maskMbuf", "mMap")
+    )    
+  } else { stop("Unknown spatial$spatial_type.") }
+
+  invisible(NULL)
 }

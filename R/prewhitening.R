@@ -78,18 +78,22 @@ AICc <- function(y, demean=FALSE, order.max = 10) {
 pw_smooth <- function(spatial, AR, var, FWHM=5){
 
   nV <- get_nV(spatial)
-  if (nV$D != nrow(AR)) { stop('Number of rows in `AR` must match number of locations.') }
-  if (nV$D != length(var)) { stop('Length of `var` must match number of locations.') }
+  if (nV$mdata != nrow(AR)) { stop('Number of rows in `AR` must match number of locations.') }
+  if (nV$mdata != length(var)) { stop('Length of `var` must match number of locations.') }
 
-  if (spatial$spatial_type == "surf") {
-    if (is.null(spatial$mask)) {
-      spatial$mask <- rep(TRUE, nrow(spatial$surf$vertices))
+  if (spatial$spatial_type == "vertex") {
+    maskMdat <- if (is.null(spatial$maskMdat)) {
+      rep(TRUE, nrow(spatial$surf$vertices))
+    } else {
+      spatial$maskMdat
     }
+
+    # Just use left cortex, even though the data may be for the right cortex.
 
     AR_xif <- ciftiTools::as_xifti(
       cortexL = AR,
       surfL = spatial$surf,
-      cortexL_mwall = spatial$mask
+      cortexL_mwall = maskMdat
     )
     #AR_xif$meta$cifti$brainstructures <- "left"
     AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, surf_FWHM = FWHM))
@@ -98,28 +102,25 @@ pw_smooth <- function(spatial, AR, var, FWHM=5){
     var_xif <- ciftiTools::as_xifti(
       cortexL = var,
       surfL = spatial$surf,
-      cortexL_mwall = spatial$mask
+      cortexL_mwall = maskMdat
     )
     #var_xif$meta$cifti$brainstructures <- "left"
     var_smoothed <- suppressWarnings(smooth_cifti(var_xif, surf_FWHM = FWHM))
     var_smoothed <- var_smoothed$data$cortex_left
 
   } else if (spatial$spatial_type == "voxel") {
-    subMask <- spatial$labels != 0
-    subLabs <- spatial$labels[subMask]
-
     AR_xif <- ciftiTools::as_xifti(
       subcortVol = AR,
-      subcortLabs = subLabs,
-      subcortMask = subMask
+      subcortLabs = spatial$labels,
+      subcortMask = spatial$maskMdat
     )
     AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, vol_FWHM = FWHM))
     AR_smoothed <- AR_smoothed$data$subcort
 
     var_xif <- ciftiTools::as_xifti(
       subcortVol = as.matrix(var),
-      subcortLabs = subLabs,
-      subcortMask = subMask
+      subcortLabs = spatial$labels,
+      subcortMask = spatial$maskMdat
     )
     var_smoothed <- suppressWarnings(smooth_cifti(var_xif, vol_FWHM = FWHM))
     var_smoothed <- var_smoothed$data$subcort

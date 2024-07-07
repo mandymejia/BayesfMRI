@@ -31,13 +31,13 @@ intersect_mask <- function(x) {
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
     spatial_type_bb <- switch(bs,
-      cortexL = "surf",
-      cortexR = "surf",
+      cortexL = "vertex",
+      cortexR = "vertex",
       subcort = "voxel",
       unknown = x$spatial$spatial_type # BGLM case
     )
 
-    if (spatial_type_bb=="surf") {
+    if (spatial_type_bb=="vertex") {
       masks <- if (what == "fit_bglm") {
         do.call(rbind, lapply(x, function(q){
           q[[bs]]$spatial$mask

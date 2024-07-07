@@ -8,15 +8,6 @@
 make_A_mat <- function(spatial){
   nV <- get_nV(spatial)
 
-  spatial_type <- spatial$spatial_type
-
-  valid_inds <- if (spatial_type=="surf") {
-    which(spatial$mask)
-  } else if (spatial_type=="voxel") {
-    spatial$data_loc #subset of "mesh" locations that are data locations, see `SPDE_from_voxel`
-    #which(spatial$labels!=0)
-  } else { stop() }
-
   ### `A`. -----
 	# [TO DO]
   # A_sparse <- make_A_mat_rs(
@@ -24,15 +15,7 @@ make_A_mat <- function(spatial){
   #   ciftiTools::mask_surf(spatial$surf, spatial$mask)
   # )
 
-  if (spatial_type=="surf"){
-    A_sparse <- Matrix::Diagonal(nV$T)[valid_inds,]
-  } else if (spatial_type=="voxel") {
-    A_sparse <- Matrix::Diagonal(nV$DB)[valid_inds,] # n_data x n_mesh matrix
-  } else {
-    stop()
-  }
-
-  A_sparse
+  A_sparse <- Matrix::Diagonal(nV$model)[spatial$maskMdat,]
 }
 
 #' Make A matrix with resampling framework

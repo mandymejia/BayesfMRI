@@ -323,8 +323,8 @@ make_design <- function(
     des_cor_max <- des_vif_max <- tdiff_min <- NA
   } else {
     ### Correlation ------------------------------------------------------------
-    des_cor <- cor(design)
-    des_cor_max <- max(des_cor[upper.tri(des_cor)], na.rm=TRUE)
+    des_cor <- checkX_cor(design)
+    des_cor_max <- max(abs(des_cor), na.rm=TRUE)
     if (verbose) { cat("Maximum corr.: ", round(des_cor_max, 3), "\n") }
     if (des_cor_max > .9) {
       warning("Maximum corr. between design matrix columns is high (",
@@ -334,13 +334,7 @@ make_design <- function(
     }
 
     ### VIF --------------------------------------------------------------------
-    fnames2 <- paste0("field_", field_names) # Error during `lm` if field names start w/ number.
-    f_rhs <- paste(fnames2, collapse = ' + ')
-    des2 <- as.data.frame(design)
-    colnames(des2) <- fnames2
-    des2$y <- rnorm(nTime) #add fake y variable, has no influence
-    f <- as.formula(paste0('y ~ ',f_rhs))
-    des_vif <-  try(car::vif(try(lm(f, data = des2))))
+    des_vif <-  checkX_VIF(design)
     if (inherits(des_vif, "try-error")) {
       des_vif_max <- des_vif
     } else {
@@ -353,7 +347,7 @@ make_design <- function(
       }
     }
 
-    ### Min time btwn onset/offset minimum time between ------------------------
+    ### Min time btwn onset/offset ---------------------------------------------
     if (!is.null(onset) || !is.null(offset)) {
       tdiff_min <- min(diff(sort(c(all_onset_onset, all_offset_onset))))
       if (verbose) { cat("Min. time btwn onset/offset (s): ", round(tdiff_min, 3), "\n") }
