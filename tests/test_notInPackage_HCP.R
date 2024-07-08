@@ -7,7 +7,7 @@ saveResults <- TRUE
 overwriteResults <- TRUE
 resamp_res <- 7000
 # my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
-my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
+my_wb <- "~/Applications/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
 dir_results <- "tests/results_notInPackage"

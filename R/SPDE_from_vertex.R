@@ -3,9 +3,15 @@
 #' @param spatial See \code{BayesGLM}.
 #' @param qc_mask QC mask.
 #' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
-#' @return List: \code{mesh}, \code{spde}, \code{spatial}.
+#' @return List: \code{spde} and \code{spatial}.
 #' @keywords internal
 SPDE_from_vertex <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
+
+  # Update `spatial`.
+  spatial$maskMdat <- spatial$maskIn
+  spatial$maskMdat[spatial$maskMdat][!qc_mask] <- FALSE
+  spatial$Mmap <- which(spatial$maskMdat)
+
   surf <- spatial$surf
   mask <- spatial$maskIn
 
@@ -34,12 +40,9 @@ SPDE_from_vertex <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
     theta.prior.prec = diag(c(Qlog.tau, Qlog.kappa))
   )
 
-  spatial$maskMdat <- spatial$maskIn; spatial$maskMdat[spatial$maskMdat][!qc_mask] <- FALSE
-  spatial$maskMbuf <- !spatial$maskMdat
-  spatial$Mmap <- which(spatial$maskMdat)
+  spatial$nV_M <- spde$n.spde
 
   list(
-    mesh = mesh,
     spde = spde,
     spatial = spatial
   )

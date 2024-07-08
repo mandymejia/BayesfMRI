@@ -158,13 +158,18 @@ get_nV <- function(spatial){
     vertex = nrow(spatial$surf$vertices), 
     voxel = prod(dim(spatial$mask))
   )
+  
+  nV_input <- sum(spatial$maskIn)
+  nV_model <- spatial$nV_M
+  nV_mdata <- sum(spatial$maskMdat)
+  nV_mbuffer <- nV_model - sum(spatial$maskMdat)
 
   list(
     total = nV_total, #length(spatial$maskIn),
-    input = sum(spatial$maskIn),
-    model = sum(spatial$maskMdat) + sum(spatial$maskMbuf),
-    mdata = sum(spatial$maskMdat),
-    mbuffer = sum(spatial$maskMbuf)
+    input = nV_input,
+    model = nV_model,
+    mdata = nV_mdata,
+    mbuffer = nV_mbuffer
   )
 }
 
@@ -220,13 +225,16 @@ dgCMatrix_cols_to_zero <- function(mat, cols) {
 validate_spatial <- function(spatial) {
   stopifnot(is.list(spatial))
   if (spatial$spatial_type == "vertex") {
-    stopifnot(length(spatial) == 6)
-    stopifnot(names(spatial) == c("spatial_type", "surf", "maskIn", "maskMdat", "maskMbuf", "Mmap"))
+    stopifnot(length(spatial) == 7)
+    stopifnot(names(spatial) == c(
+      "spatial_type", "surf", "maskIn", "maskMdat", "nV_M", "Mmap", "mesh"
+    ))
   } else if (spatial$spatial_type == "voxel") {
-    stopifnot(length(spatial) == 10)
+    stopifnot(length(spatial) == 11)
     stopifnot(names(spatial) == c(
       "spatial_type", "labels", "trans_mat", "trans_units", 
-      "nbhd_order", "buffer", "maskIn", "maskMdat", "maskMbuf", "mMap")
+      "nbhd_order", "buffer", 
+      "maskIn", "labsMdat", "maskMdat", "nV_M", "Mmap")
     )    
   } else { stop("Unknown spatial$spatial_type.") }
 

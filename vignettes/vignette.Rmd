@@ -44,7 +44,7 @@ Now that `BayesfMRI` and its dependencies are installed, you can load the `Bayes
 ```{r}
 library(BayesfMRI) 
 library(ciftiTools)
-ciftiTools.setOption('wb_path','~/Desktop/workbench') #where your Connectome Workbench installation is located
+ciftiTools.setOption('wb_path','~/Applications/workbench') #where your Connectome Workbench installation is located
 ```
 
 # 3. First-Level Modeling
@@ -138,7 +138,7 @@ short or noisy, this can be helpful to produce more accurate parameter estimates
 system.time(
   bglm <- BayesGLM(BOLD=BOLD_xii,
         design=design$design,
-        brainstructures=c("left", "sub"), #cortical surfaces and subcortex
+        brainstructures=c("sub"), #cortical surfaces and subcortex
         subROI=c('Amygdala-L'),
         TR=TR,
         nuisance=motion,
@@ -148,7 +148,7 @@ system.time(
         ar_order=3,
         ar_smooth=0,
         Bayes=TRUE,
-        verbose=0 ,
+        verbose=TRUE ,
         meanTol=1))
 
   bglm2 <- BayesGLM(BOLD=BOLD_xii2,

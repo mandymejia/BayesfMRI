@@ -157,7 +157,7 @@ fit_bayesglm <- function(
     logtau0 <- x$logtau0
   }
 
-  # QC mask, mesh, and SPDE. ---------------------------------------------------
+  # QC mask, priors, mesh, and SPDE. -------------------------------------------
 
   # Get QC mask.
   BOLD_QC <- do_QC(
@@ -170,12 +170,12 @@ fit_bayesglm <- function(
     BOLD <- lapply(BOLD, function(q){ q[,BOLD_QC$mask,drop=FALSE] }) #remove bad locations from BOLD
   }
 
-  # Get mesh and SPDE, using `spatial` and the QC mask.
+  # Update `spatial` w/ QC info and mesh for cortex model.
+  # Get SPDE, using `spatial` and the QC mask.
   x <- switch(spatial_type, vertex=SPDE_from_vertex, voxel=SPDE_from_voxel)(
     spatial, qc_mask = BOLD_QC$mask,
     logkappa = logkappa_vec, logtau = logtau_vec
   )
-  mesh <- x$mesh
   spde <- x$spde
   spatial <- x$spatial
   rm(x)
@@ -226,7 +226,7 @@ fit_bayesglm <- function(
     # Scale data.
     # (`scale_BOLD` expects VxT data, so transpose before and after.)
     BOLD[[ss]] <- t(
-      scale_BOLD(t(BOLD[[ss]]), 
+      scale_BOLD(t(BOLD[[ss]]),
       scale=scale_BOLD, v_means = BOLD_mean_ss)
     )
   }

@@ -3,16 +3,19 @@
 #' @param spatial See \code{BayesGLM}.
 #' @param qc_mask QC mask.
 #' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
-#' @return List: \code{mesh}, \code{spde}, \code{spatial}.
+#' @return List: \code{spde} and \code{spatial}.
 #' @keywords internal
 SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
-  labels <- spatial$labels
-  mask <- spatial$mask
+  # Update `spatial`.
+  spatial$maskMdat <- spatial$maskIn
+  spatial$maskMdat[spatial$maskMdat][!qc_mask] <- FALSE
+  spatial$labsMdat <- spatial$labels[spatial$maskMdat[spatial$maskIn]]
+
+  labels <- spatial$labsMdat
+  mask <- spatial$maskMdat
   nbhd_order <- spatial$nbhd_order
   buffer <- spatial$buffer
   res <- abs(diag(spatial$trans_mat)[1:3])
-
-
 
   #[TO DO] Allow the user to additionally specify a mask input excluding certain within-ROI locations
   #Simply remove those locations (in addition to bad data locations) from the labels array before creating SPDE
@@ -23,7 +26,7 @@ SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
   #construct the C and G for the SPDE by block-diagonalizing over ROIs
   C_list <- G_list <- spde_list <- vector('list', length=nR)
   for (rr in seq(nR)) {
-    mask_rr <- spatial$mask
+    mask_rr <- spatial$maskMdat
     mask_rr[mask_rr][spatial$labels != ROIs[rr]] <- FALSE
     # [stop] this breaks [TO DO]
     spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer, res=res)
@@ -59,6 +62,8 @@ SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
     B2 = 1
   )
 
+  spatial$nV_M <- spde$n.spde
+
   # [TO DO] test this code for multiple regions, it might break
   # Get indices of data locations.
   data_loc_list <- lapply(spde_list, function(x) which(x$idx2 %in% x$idx))
@@ -75,12 +80,9 @@ SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
 
   # Add masks and data locations to `spatial`.
   spatial$Mmap <- data_loc
-  maskM <- seq(spde$n.spde) %in% data_loc
-  spatial$maskMdat <- NULL 
-  spatial$maskMbuf <- maskM & (!spatial$maskMdat)
+  # maskM <- seq(spde$n.spde) %in% data_loc
 
   list(
-    mesh = NULL,
     spde = spde,
     spatial = spatial
   )

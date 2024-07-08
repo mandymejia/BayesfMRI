@@ -14,7 +14,7 @@ SPDE_from_voxel(spatial, qc_mask, logkappa = NULL, logtau = NULL)
 \item{logkappa, logtau}{vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.}
 }
 \value{
-List: \code{mesh}, \code{spde}, \code{spatial}.
+List: \code{spde} and \code{spatial}.
 }
 \description{
 SPDE from voxel model

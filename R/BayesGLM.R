@@ -341,7 +341,7 @@ BayesGLM <- function(
       x2a <- x2[1:(ncol(nuis_ss) - 1)] #nuisance regressors
       x2b <- x2[ncol(nuis_ss):length(x2)] #design regressors
       if (verbose > 0) {
-        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively \n')
+        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively.\n')
         cat(paste0('\tVIF for design regressors: ', paste0(round(x2b), collapse=', '),'\n'))
         cat(paste0('\tMaximum VIF among all nuisance regressors: ', round(max(x2a)),'\n'))
         inds <- which(abs(cor_x) == x1, arr.ind = TRUE)
@@ -366,7 +366,7 @@ BayesGLM <- function(
         max(abs(checkX_cor(x)), na.rm=TRUE)
       )
       if(verbose > 0) {
-        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively \n')
+        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively.\n')
         cat(paste0('\tMaximum correlation among regressors, max over locations: ', round(max(x1),2),'\n'))
       }
       if(max(x1) > 0.99) stop('I detected high collinearity (cor > 0.99) between regressors in the design and nuisance matrices for at least one location. Please fix.')
@@ -380,26 +380,29 @@ BayesGLM <- function(
       surf=NULL,
       maskIn=NULL,   # input mask: medial wall mask
       maskMdat=NULL, # model data mask: `maskIn` after QC
-      maskMbuf=NULL, # !maskMdat for cortex
-      Mmap=NULL      # which(maskMdat) for cortex
+      nV_M=NULL,     # n.spde 
+      Mmap=NULL,     # indices from model results to `maskMdat`. which(maskMdat) for cortex.
+      mesh=NULL      
     ),
     cortexR = list(
       spatial_type="vertex",
       surf=NULL,
       maskIn=NULL,
       maskMdat=NULL,
-      maskMbuf=NULL,
-      Mmap=NULL
+      nV_M=NULL,     # n.spde 
+      Mmap=NULL,
+      mesh=NULL
     ),
     subcort = list(
       spatial_type="voxel",
-      labels=NULL, # input labels
+      labels=NULL,   # input labels
       trans_mat=NULL, trans_units=NULL,
       nbhd_order=nbhd_order, buffer=buffer, # not used once maskMdat/maskMbuf is decided
       maskIn=NULL,   # input mask
+      labsMdat=NULL, # labels corresponding to `maskMdat`/`Mmap`, the modeled data locations
       maskMdat=NULL, # model data mask: `maskIn` after QC
-      maskMbuf=NULL, # model buffer mask, created in `SPDE_from_voxel`
-      Mmap=NULL     # indices from model results to model data mask, created in `fit_bayesglm`
+      nV_M=NULL,     # n.spde 
+      Mmap=NULL      # indices from model results to `maskMdat`.
     )
   )
   if (!do$left) { spatial$cortexL <- NULL }
