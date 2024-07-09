@@ -156,7 +156,7 @@ get_nV <- function(spatial){
   #   will have these before the masks are read in.
   nV_total <- switch(spatial$spatial_type, 
     vertex = nrow(spatial$surf$vertices), 
-    voxel = prod(dim(spatial$mask))
+    voxel = prod(dim(spatial$maskIn))
   )
   
   nV_input <- sum(spatial$maskIn)

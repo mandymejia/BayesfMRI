@@ -380,16 +380,16 @@ BayesGLM <- function(
       surf=NULL,
       maskIn=NULL,   # input mask: medial wall mask
       maskMdat=NULL, # model data mask: `maskIn` after QC
-      nV_M=NULL,     # n.spde 
+      nV_M=NULL,     # n.spde
       Mmap=NULL,     # indices from model results to `maskMdat`. which(maskMdat) for cortex.
-      mesh=NULL      
+      mesh=NULL
     ),
     cortexR = list(
       spatial_type="vertex",
       surf=NULL,
       maskIn=NULL,
       maskMdat=NULL,
-      nV_M=NULL,     # n.spde 
+      nV_M=NULL,     # n.spde
       Mmap=NULL,
       mesh=NULL
     ),
@@ -401,7 +401,7 @@ BayesGLM <- function(
       maskIn=NULL,   # input mask
       labsMdat=NULL, # labels corresponding to `maskMdat`/`Mmap`, the modeled data locations
       maskMdat=NULL, # model data mask: `maskIn` after QC
-      nV_M=NULL,     # n.spde 
+      nV_M=NULL,     # n.spde
       Mmap=NULL      # indices from model results to `maskMdat`.
     )
   )
@@ -777,7 +777,7 @@ BayesGLM <- function(
   if (verbose>0) cat("Formatting results.\n")
 
   estimate_xii <- RSS_xii <- list(Bayes=NULL, classical=NULL)
-  for (method in c("classical", "Bayes")[seq(1+do$Bayes)]) {
+  for (method in c("classical", "Bayes")[seq(1+do$Bayesian)]) {
     x <- BayesGLM_format_cifti(
       BGLMs = BGLMs,
       do = do,

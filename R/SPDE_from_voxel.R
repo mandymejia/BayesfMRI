@@ -28,7 +28,6 @@ SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
   for (rr in seq(nR)) {
     mask_rr <- spatial$maskMdat
     mask_rr[mask_rr][spatial$labels != ROIs[rr]] <- FALSE
-    # [stop] this breaks [TO DO]
     spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer, res=res)
     C_list[[rr]] <- spde_list[[rr]]$mats$C
     G_list[[rr]] <- spde_list[[rr]]$mats$G

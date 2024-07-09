@@ -234,8 +234,8 @@ fit_bayesglm <- function(
 
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
   if (do$pw && verbose > 0) {
-    x <- if (ar_smooth > 0) { "and smoothing" } else { "" }
-    cat("\tEstimating", x, "prewhitening parameters.")
+    x <- if (ar_smooth > 0) { " and smoothing" } else { "" }
+    cat(paste0("\tEstimating", x, " prewhitening parameters."))
   }
 
   design_type <- if (do$perLocDesign) { "per_location" } else { "regular" }
@@ -354,7 +354,6 @@ fit_bayesglm <- function(
     if (verbose>0) cat("\tDone!\n")
 
     # Extract stuff from INLA model result -------------------------------------
-
     field_ests <- extract_estimates(
       INLA_model_obj=INLA_model_obj,
       session_names=session_names,

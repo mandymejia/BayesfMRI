@@ -14,8 +14,7 @@ make_A_mat <- function(spatial){
   #   spatial$surf,
   #   ciftiTools::mask_surf(spatial$surf, spatial$mask)
   # )
-
-  A_sparse <- Matrix::Diagonal(nV$model)[spatial$maskMdat,]
+  A_sparse <- Matrix::Diagonal(nV$model)[spatial$Mmap,,drop=FALSE]
 }
 
 #' Make A matrix with resampling framework

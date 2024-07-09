@@ -35,7 +35,6 @@ sparse_and_PW <- function(
 
 	y <- as.vector(BOLD) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
   X <- design
-
   A_sparse <- make_A_mat(spatial)
 
   ### Make `X_all` (design) and `bigX`. -----

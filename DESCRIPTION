@@ -45,7 +45,7 @@ Additional_repositories: https://inla.r-inla-download.org/R/testing
 Encoding: UTF-8
 Imports: 
     car,
-    ciftiTools (>= 0.14.0),
+    ciftiTools (>= 0.16.0),
     excursions,
     foreach,
     fMRItools (>= 0.4.2),

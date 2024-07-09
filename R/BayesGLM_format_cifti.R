@@ -53,7 +53,7 @@ BayesGLM_format_cifti <- function(
           Bayesian_RSS = BGLMs$subcort$RSS[[ss]]
         )
         subMask <- BGLMs$subcort$spatial$maskMdat
-        subLabs <- BGLMs$subcort$spatial$labels[stop()]
+        subLabs <- BGLMs$subcort$spatial$labsMdat
         colnames(datSub) <- NULL
       }
       result_xii[[ss]] <- ciftiTools::as_xifti(
