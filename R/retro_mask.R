@@ -11,15 +11,10 @@ retro_mask_fit_bglm <- function(x, mask){
   stopifnot(inherits(x, "fit_bglm"))
   spatial_type <- x$spatial$spatial_type
 
-  mask_x <- switch(spatial_type,
-    vertex = x$spatial$mask,
-    voxel = x$spatial$labels != 0
-  )
-
   nS <- length(x$session_names)
   nK <- length(x$field_names)
-  nV_total <- length(mask_x)
-  nV_input <- sum(mask_x)
+  nV_total <- length(x$spatial$maskMdat)
+  nV_input <- sum(x$spatial$maskMdat)
   nT <- length(x$y) / nV_input / nS
   stopifnot(nT == round(nT))
 
@@ -27,7 +22,7 @@ retro_mask_fit_bglm <- function(x, mask){
   stopifnot(nV_total == length(mask))
   stopifnot(sum(mask) > 0)
 
-  mask_new <- mask[mask_x]
+  mask_new <- mask[x$spatial$maskMdat]
 
   for (ss in seq(length(x$field_estimates))) {
     x$field_estimates[[ss]] <- x$field_estimates[[ss]][mask_new,,drop=FALSE]
@@ -123,10 +118,8 @@ retro_mask_act <- function(x, Masks){
     bs <- brainstructures[bb]
     # Get the mask to apply to the elements of `active`.
     spatial_type_bb <- x$spatial[[bb]]$spatial_type
-    mask_bb <- switch(spatial_type_bb,
-      surf = Masks[[bb]][x$spatial[[bb]]$mask],
-      voxel = Masks[[bb]][x$spatial[[bb]]$labels[] != 0]
-    )
+    browser()
+    mask_bb <- Masks[[bb]][as.logical(x$spatial[[bb]]$maskMdat)]
 
     if (!all(mask_bb)) {
       message("\tRemoving ", sum(!mask_bb), " locations in ", bs, " model.")# for subject ", nn, ".")
@@ -148,12 +141,10 @@ retro_mask_act <- function(x, Masks){
       } else { stop() }
 
       # Adjust `spatial`
-      if (spatial_type_bb=="vertex") {
-        x$spatial[[bb]]$mask <- mask_bb
-      } else if (spatial_type_bb=="voxel") {
-        # This will change...
-        x$spatial[[bb]]$labels[x$spatial[[bb]]$labels != 0][!mask_bb] <- 0
-      } else { stop() }
+      x$spatial[[bb]]$maskMdat[x$spatial[[bb]]$maskMdat] <- mask_bb
+      if (spatial_type_bb=="voxel") {
+        x$spatial[[bb]]$labsMdat <- x$spatial[[bb]]$labsMdat[mask_bb]
+      }
 
       # Adjust `activations`
       for (ss in seq(nS)) {

@@ -138,23 +138,8 @@ short or noisy, this can be helpful to produce more accurate parameter estimates
 system.time(
   bglm <- BayesGLM(BOLD=BOLD_xii,
         design=design$design,
-        brainstructures=c("sub"), #cortical surfaces and subcortex
-        subROI=c('Amygdala-L'),
-        TR=TR,
-        nuisance=motion,
-        scale_BOLD='mean',
-        hpf=.01,
-        nbhd_order=1,
-        ar_order=3,
-        ar_smooth=0,
-        Bayes=TRUE,
-        verbose=TRUE ,
-        meanTol=1))
-
-  bglm2 <- BayesGLM(BOLD=BOLD_xii2,
-        design=design$design,
-        brainstructures=c("left", "sub"), #cortical surfaces and subcortex
-        subROI=c('Amygdala-L'),
+        brainstructures="all", #cortical surfaces and subcortex
+        subROI=c('Amygdala-L','Amygdala-R','Hippocampus-L','Hippocampus-R'),
         TR=TR,
         nuisance=motion,
         scale_BOLD='mean',
@@ -164,13 +149,12 @@ system.time(
         ar_smooth=0,
         Bayes=TRUE,
         verbose=0 ,
-        meanTol=1)
+        meanTol=1))
 ```
 
 ```{r}
 act <- activations(bglm, gamma=0)
-act2 <- activations(bglm2, gamma=0)
-q <- prevalence(list(act, act2))
+q <- prevalence(list(act, act))
 ```
 
 ## 3.4 Visualize the results
@@ -281,9 +265,9 @@ We can preview the results through the summary or print function associated with
 objects of class `BGLM2`, the result of `BayesGLM2()`.
 
 ```{r}
-#fnames <- list.files("../vignette_data/glm_results")
-#bglm2 <- BayesGLM2(file.path("../vignette_data/glm_results", fnames), gamma = 0, alpha = 0.05)
-#saveRDS(bglm2, file='../vignette_data/bglm2.rds')
+fnames <- list.files("../vignette_data/glm_results")
+bglm2 <- BayesGLM2(file.path("../vignette_data/glm_results", fnames), gamma = 0, alpha = 0.05)
+saveRDS(bglm2, file='../vignette_data/bglm2.rds')
 bglm2 <- readRDS(file='../vignette_data/bglm2.rds')
 bglm2
 ```
@@ -321,6 +305,7 @@ for(ii in 1:nN){
   acts[[ii]] <- readRDS(file.path(dir_act, fnames_act[ii]))
 }
 #compute prevalence map
+
 prev <- prevalence(act_list = acts)
 ```
 

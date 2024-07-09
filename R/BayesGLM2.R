@@ -205,7 +205,7 @@ BayesGLM2 <- function(
         )
       }
     } else {
-      results[[nn]] <- retro_mask_fit_bglm(results[[nn]], Masks)
+      results[[nn]] <- retro_mask_fit_bglm(results[[nn]], Masks[[1]])
     }
   }
 

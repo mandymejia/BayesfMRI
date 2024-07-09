@@ -34,45 +34,25 @@ intersect_mask <- function(x) {
       cortexL = "vertex",
       cortexR = "vertex",
       subcort = "voxel",
-      unknown = x$spatial$spatial_type # BGLM case
+      unknown = x[[bb]]$spatial$spatial_type # BGLM case
     )
 
-    if (spatial_type_bb=="vertex") {
-      masks <- if (what == "fit_bglm") {
-        do.call(rbind, lapply(x, function(q){
-          q[[bs]]$spatial$mask
-        }))
-      } else if (what == "BGLM") {
-        do.call(rbind, lapply(x, function(q){
-          q$BGLMs[[bs]]$spatial$mask
-        }))
-      } else if (what == "act_BGLM") {
-        do.call(rbind, lapply(x, function(q){
-          q$spatial[[bs]]$mask
-        }))
-      } else { stop() }
-
-      Masks[[bb]] <- apply(masks, 2, all)
-
-    } else if (spatial_type_bb=="voxel") {
-      # Get vectorized, unmasked labels for every session.
-      labels <- if (what == "fit_bglm") {
-        do.call(rbind, lapply(x, function(q){
-          q[[bs]]$spatial$labels
-        }))
-      } else if (what == "BGLM") {
-        do.call(rbind, lapply(x, function(q){
-          q$BGLMs[[bs]]$spatial$labels
-        }))
-      } else if (what == "act_BGLM") {
-        do.call(rbind, lapply(x, function(q){
-          q$spatial[[bs]]$labels
-        }))
-      } else { stop() }
-
-      # Identify non-empty locations with identical labels across sessions.
-      Masks[[bb]] <- (colVars(labels)==0) & (labels[1,]!=0)
+    masks <- if (what == "fit_bglm") {
+      ## nB == 1
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$spatial$maskMdat)
+      }))
+    } else if (what == "BGLM") {
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$BGLMs[[bb]]$spatial$maskMdat)
+      }))
+    } else if (what == "act_BGLM") {
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$spatial[[bb]]$maskMdat)
+      }))
     } else { stop() }
+    browser()
+    Masks[[bb]] <- apply(masks, 2, all)
   }
 
   Masks

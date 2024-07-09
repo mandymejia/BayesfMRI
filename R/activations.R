@@ -142,10 +142,9 @@ activations <- function(
         q[[gg]] <- do.call(actFUN,
           c(actArgs, list(x=x[[bb]], session=sessions[ss], gamma=gamma[gg]))
         )
-        #remove boundary locations for subcortex
-        if (Bayes & !is.null(spatial[[bb]]$buffer_mask)) {
-          mask_ <- spatial[[bb]]$buffer_mask
-          q[[gg]]$active <- q[[gg]]$active[mask_,,drop=FALSE]
+        #apply mask to get data locs, removing boundary locs
+        if (Bayes & !is.null(spatial[[bb]]$maskMdat)) {
+          q[[gg]]$active <- q[[gg]]$active[spatial[[bb]]$Mmap,,drop=FALSE]
         }
       }
       activations[[bb]][[ss]] <- q

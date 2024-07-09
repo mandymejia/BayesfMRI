@@ -587,13 +587,13 @@ BayesGLM <- function(
       if (do$right) {
         # Check that the right cortex data is nonempty.
         if (xii_res["right"] %in% c(0, NA, NaN)) { stop("This BOLD session does not seem to have right cortex data.") }
-        surfL_res <- get_nV(spatial$cortexR)$tital
+        surfL_res <- get_nV(spatial$cortexR)$total
         # Check that the right cortex resolution matches the surface resolution.
-        if (xii_res["right"] != get_nV(spatial$cortexR)$tital) {
+        if (xii_res["right"] != get_nV(spatial$cortexR)$total) {
           if (is.null(resamp_res)) {
             # If mismatch and `resamp_res` was `NULL`, try resampling the surface to match the data.
             spatial$cortexR$surf <- resample_surf(spatial$cortexR$surf, xii_res["right"])
-            if(xii_res["right"] != get_nV(spatial$cortexR)$tital) {
+            if(xii_res["right"] != get_nV(spatial$cortexR)$total) {
               stop("The right surface could not be resampled to the resolution of the right cortex BOLD data,", xii_res["right"])
             }
           } else {
