@@ -58,7 +58,7 @@ and quadratic drift terms in the nuisance matrix. So if DCT detrending is
 being used here, there is no need to add linear and quadratic drift terms to
 \code{nuisance}.}
 
-\item{nuisance}{(Optional) A \eqn{T \times N} matrix of nuisance signals,
+\item{nuisance}{(Optional) A \eqn{T \times N_{nuis}} matrix of nuisance signals,
 where \eqn{T} is the number of timepoints and \eqn{N} is the number of
 nuisance signals, or a list of these for multi-session analysis. Nuisance
 signals are regressed from the fMRI data and design matrix prior to GLM
@@ -66,7 +66,11 @@ computation. Nuisance signals can include motion regressors, HRF derivatives
 not being modeled as tasks, and other sources of noise.
 
 Detrending/high-pass filtering is accomplished by adding DCT bases to the
-nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
+nuisance matrix; see the parameters \code{hpf} and \code{DCT}.
+
+Do not add spike regressors for scrubbing to the \code{nuisance} matrix.
+Rather, provide these in \code{scrub} so that their corresponding timepoints
+are also removed from the BOLD data after nuisance regression.}
 
 \item{design_canonical}{TO DO}
 

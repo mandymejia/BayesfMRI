@@ -116,22 +116,30 @@ for (ss in seq(2)) {
 BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
 BOLD[[1]]$data$cortex_left[c(1,11,111),] <- NA
 
+scrub <- list(
+  c(rep(TRUE, 5), rep(FALSE, 253-5)),
+  c(rep(FALSE, 253-8), rep(TRUE, 8))
+)
+
 ### Classical vs Bayes; Single- vs Multi-session -----
 BGLM_cii_args <- function(sess, resamp_factor=1){
   BOLD_ss <- BOLD[sess] #c(fnames$cifti_1, fnames$cifti_2)[sess]
   design_ss <- des[sess]
   nuis_ss <- nuis[sess]
+  scrub_ss <- scrub[sess]
   if (length(sess)==1) {
     design_ss <- design_ss[[1]]
     nuis_ss <- nuis_ss[[1]]
+    scrub_ss <- scrub_ss[[1]]
   }
 
   list(
     BOLD = BOLD_ss,
     design = design_ss,
     nuisance = nuis_ss,
+    scrub = scrub_ss,
     TR = 0.72,
-    brainstructures = "left", #c("left", "sub"),
+    brainstructures = c("left", "sub"),
     surfL=ciftiTools.files()$surf["left"],
     surfR=ciftiTools.files()$surf["right"],
     resamp_res = resamp_res * resamp_factor,
@@ -147,7 +155,7 @@ BGLM_cii_args <- function(sess, resamp_factor=1){
 #bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
 #bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=.1)))
-bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
+bglm_b2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(seq(2), resamp_factor=.1)))
 
 bglm_x1 <- bglm_b1$BGLMs$cortexL
 bglm_x2 <- bglm_b2$BGLMs$cortexL

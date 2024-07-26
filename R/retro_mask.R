@@ -118,7 +118,7 @@ retro_mask_act <- function(x, Masks){
     bs <- brainstructures[bb]
     # Get the mask to apply to the elements of `active`.
     spatial_type_bb <- x$spatial[[bb]]$spatial_type
-    browser()
+    #browser()
     mask_bb <- Masks[[bb]][as.logical(x$spatial[[bb]]$maskMdat)]
 
     if (!all(mask_bb)) {

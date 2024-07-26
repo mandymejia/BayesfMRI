@@ -31,7 +31,7 @@ GLM_classical <- function(
 
   if (compute_SE) {
     # Residual SD.
-    DOF_true <- (length(y)/nV_input) - nK - nK2 - 1
+    DOF_true <- (length(y)/nV_input) - nK - nK2 - 1 #[TO DO] check `nK2` w/ scrubbing
     DOF_false <- (length(y)/nV_input - 1)
     var_error <- matrixStats::rowVars(resids) * DOF_false / DOF_true #correct DOF
     if(do_pw) var_error <- rep(mean(var_error), length(var_error)) #if prewhitening has been done, use same estimate of residual SD everywhere

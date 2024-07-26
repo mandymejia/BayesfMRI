@@ -6,6 +6,13 @@
 #'
 #' @param BOLD,design,nuisance Session-length list of numeric matrices/arrays,
 #'  each with volumes along the first dimension.
+#' @param scrub Session-length list of spike regressors: numeric matrices, with
+#'  volumes along the first dimension, valued at 1 for scrubbed volumes and 0
+#'  otherwise. 
+#'
+#'  Scrubbing is performed by incorporating spike regressors in the nuisance
+#'  matrix during nuisance regression (in a simultaneous framework), and then
+#'  removing the scrubbed timepoints from the resulting BOLD and design.
 #' @param spatial Gives the spatial information:
 #'  \describe{
 #'    \item{surf}{A list of two: \code{vertices} \eqn{V \times 3} numeric matrix of vertex locations in XYZ coordinate space, and \code{faces}, \eqn{F \times 3} matrix of positive integers defining the triangular faces.}
@@ -72,6 +79,7 @@ fit_bayesglm <- function(
   BOLD,
   design,
   nuisance=NULL,
+  scrub=NULL,
   spatial,
   # Below arguments shared with `BayesGLM`.
   scale_BOLD = c("mean", "sd", "none"),
@@ -129,7 +137,7 @@ fit_bayesglm <- function(
   # Modeled after `BayesGLM` ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ### Check `BOLD`. ------------------------------------------------------------
   nS <- length(BOLD)
-  nT <- sapply(design, nrow) #number of fMRI time points
+  # nT <- vapply(design, nrow, 0) #number of fMRI time points # not used; wait till after scrubbing
   nK <- dim(design[[1]])[2] #number of columns in design matrix
   field_names <- colnames(design[[1]]) #names of task regressors
   do$perLocDesign <- (length(dim(design[[1]])) == 3)
@@ -139,13 +147,6 @@ fit_bayesglm <- function(
   ### Validate `spatial`. ------------------------------------------------------
   validate_spatial(spatial)
   spatial_type <- spatial$spatial_type
-  nV <- get_nV(spatial)
-
-  if (spatial_type=="vertex" && (nV$total != nV$mdata)) {
-    if (verbose>0) {
-      cat(paste0("\t", (nV$total-nV$mdata), " vertices do not have data.\n"))
-    }
-  }
 
   # Initialize and construct informative priors for SPDE hyperparameters -------
   logkappa_vec <- logtau_vec <- logkappa0 <- logtau0 <- NULL # default priors
@@ -158,6 +159,14 @@ fit_bayesglm <- function(
   }
 
   # QC mask, priors, mesh, and SPDE. -------------------------------------------
+
+  # Print message about medial wall mask, for cortex model.
+  nV <- get_nV(spatial)
+  if (spatial_type=="vertex" && (nV$total != nV$input)) {
+    if (verbose>0) {
+      cat(paste0("\t", (nV$total-nV$input), " vertices do not have data.\n"))
+    }
+  }
 
   # Get QC mask.
   BOLD_QC <- do_QC(
@@ -187,7 +196,7 @@ fit_bayesglm <- function(
     cat('\tNumber of modeled data + boundary locations:', nV$model, '\n')
   }
 
-  # Nuisance regression and scaling. -------------------------------------------
+  # Nuisance regression, scrubbing, and scaling. -------------------------------
   ### Do nuisance regression of BOLD and design, and BOLD scaling. -------------
 
   #identify valid design matrix columns for each session
@@ -196,16 +205,19 @@ fit_bayesglm <- function(
   }))
 
   nK2 <- vector("numeric", nS)
+  scrub_vec <- vector("list", nS)
   for (ss in seq(nS)) {
+    if (verbose > 0) { if(ss==1) cat("\tBOLD and design nuisance regression.\n") }
+
     # Remove any missing fields from design matrix for classical GLM
     vcols_ss <- valid_cols[ss,]
 
-    if (verbose > 0) { if(ss==1) cat("\tBOLD and design nuisance regression.\n") }
-    # Regress nuisance parameters from BOLD data and design matrix.
-    nuis_ss <- nuisance[[ss]]
-    nK2[ss] <- ncol(nuis_ss)
+    # Merge scrubbing spike regressors with the nuisance matrix
+    nuis_ss <- cbind2(scrub[[ss]], nuisance[[ss]])
+    # nK2[ss] <- ncol(nuis_ss)
     stopifnot((is.matrix(nuis_ss) || is.data.frame(nuis_ss)) && is.numeric(nuis_ss))
 
+    # Regress nuisance parameters from BOLD data and design matrix.
     #center, filter/detrend, and nuisance regress the BOLD
     BOLD_mean_ss <- apply(BOLD[[ss]], MARGIN = 2, FUN = median) # [TO DO] instead, save the intercept from nuisance regression
     BOLD[[ss]] <- fMRItools::nuisance_regression(BOLD[[ss]], nuis_ss)
@@ -223,6 +235,18 @@ fit_bayesglm <- function(
     nuisance[ss] <- list(NULL)
     rm(nuis_ss)
 
+    # Scrub BOLD and design.
+    if (!is.null(scrub[[ss]])) {
+      # Get the timepoints to remove.
+      scrub_vec[[ss]] <- apply(scrub[[ss]] != 0, 1, any)
+
+      # Remove.
+      cat(paste0("\tScrubbing ", sum(scrub_vec[[ss]]),
+        " volumes from session ", ss, ".\n"))
+      BOLD[[ss]] <- BOLD[[ss]][!scrub_vec[[ss]],,drop=FALSE]
+      design[[ss]] <- design[[ss]][!scrub_vec[[ss]],,drop=FALSE]
+    }
+
     # Scale data.
     # (`scale_BOLD` expects VxT data, so transpose before and after.)
     BOLD[[ss]] <- t(
@@ -231,6 +255,9 @@ fit_bayesglm <- function(
     )
   }
   rm(vcols_ss, nuisance)
+
+  # Update `nT` due to scrubbing.
+  nT <- vapply(BOLD, nrow, 0)
 
   # Estimate residual variance (for var. std.izing) and get prewhitening info.
   if (do$pw && verbose > 0) {
@@ -424,6 +451,7 @@ fit_bayesglm <- function(
     RSS = RSS,
     result_classical = result_classical,
     #result_FIR = result_FIR,
+    scrub_vec = scrub_vec,
     spatial = spatial,
     spde = spde,
     field_names = field_names,

@@ -19,6 +19,7 @@
 #' @param subROI Which subcortical ROIs should be analyzed?
 #' @inheritParams design_Param_BayesGLM
 #' @inheritParams nuisance_Param_BayesGLM
+#' @inheritParams scrub_Param_BayesGLM
 #' @inheritParams hpf_Param_BayesGLM
 #' @inheritParams TR_Param_BayesGLM
 #' @inheritParams surfaces_Param_BayesGLM
@@ -66,6 +67,7 @@ BayesGLM <- function(
   design,
   # Nuisance
   nuisance=NULL,
+  scrub=NULL,
   hpf=NULL,
   TR=NULL,
   # For surface models
@@ -143,7 +145,7 @@ BayesGLM <- function(
     }
   }
 
-  # Check `BOLD` w/o reading CIFTIs in; check `design` and `nuisance`. ---------
+  # Check `BOLD` w/o reading CIFTIs in; check `design`, `nuisance`, and `scrub`.
   #   Get all dimensions except for `nV` (because `BOLD` is not read in yet.)
 
   ### Check `BOLD`. ------------------------------------------------------------
@@ -240,13 +242,29 @@ BayesGLM <- function(
     nuisance <- vector("list", nS)
   }
   names(nuisance) <- session_names
-  nK2 <- ncol(nuisance[[1]])
-  if(is.null(nK2)) nK2 <- 0
+  nK2 <- vapply(nuisance, ncol, 0)
+  if (is.null(nK2)) { nK2 <- rep(0, nS) }
+  nK2 <- unique(nK2)
+  if (length(nK2) > 1) { nK2 <- paste0(min(nK2), ' - ', max(nK2)) }
 
   if (verbose>0) {
     cat("Num. nuisance regressors:", nK2, "\n")
   }
 
+  ### Check `scrub`. -----------------------------------------------------------
+  if (!is.null(scrub)) {
+    scrub <- BayesGLM_format_scrub(scrub, nS_expect=nS, nT_expect=nT)
+  } else {
+    scrub <- vector("list", nS)
+  }
+  names(scrub) <- session_names
+  nKs <- vapply(scrub, function(x){if(is.null(x)) { 0 } else { ncol(x) }}, 0)
+  nKs <- unique(nKs)
+  if (length(nKs) > 1) { nKs <- paste0(min(nKs), ' - ', max(nKs)) }
+
+  if (verbose>0) {
+    cat("Num. volumes to scrub:   ", nKs, "\n")
+  }
 
   ### Make DCT bases for the high-pass filter ----------------------------------
   if (!is.null(hpf)) {
@@ -524,13 +542,6 @@ BayesGLM <- function(
       BOLD[[ss]]$meta$subcort$labels <- BOLD[[ss]]$meta$subcort$labels[mask_new]
     }
 
-    if (ss == 1 && verbose>0) {
-      cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
-      if (do$sub) {
-        cat("Subcortical ROIs:        ", paste0(subROI, collapse=", "), "\n")
-      }
-    }
-
     #Check that nT matches design matrix
     if (ncol(BOLD[[ss]]) != nT[ss]) { stop(
       "The design for session '", session_names[ss], "' indicates ", nT[ss],
@@ -632,6 +643,13 @@ BayesGLM <- function(
       }
     }
     rm(xii_res)
+  }
+
+  if (verbose>0) {
+    cat("Brain structures:        ", paste0(brainstructures, collapse=", "), "\n")
+    if (do$sub) {
+      cat("Subcortical ROIs:        ", paste0(subROI, collapse=", "), "\n")
+    }
   }
 
    ### Collect `spatial` metadata. ---------------------------------------------
@@ -756,6 +774,7 @@ BayesGLM <- function(
       BOLD = BOLD[[dname_bb]],
       design = design_bb,
       nuisance = nuisance,
+      scrub = scrub,
       spatial = spatial[[dname_bb]],
       scale_BOLD = scale_BOLD,
       Bayes = do$Bayesian,
