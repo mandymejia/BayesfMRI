@@ -299,7 +299,7 @@ log_kappa_tau <- function(spatial, hyperpriors, verbose){
     for(r in levels(spatial$labels)){
       #get mask of just this ROI
       mask_r <- spatial$maskIn
-      mask_r[mask_r][spatial$labels != r] <- FALSE
+      mask_r[mask_r][spatial$labels[spatial$maskMdat[spatial$maskIn]] != r] <- FALSE
       if (!any(mask_r)) { next }
       #compute max distance within mask in each direction
       x_r <- diff(range(which(apply(mask_r, 1, sum) > 0)))*res[1]

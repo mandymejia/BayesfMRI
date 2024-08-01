@@ -468,7 +468,7 @@ BayesGLM2 <- function(
         out$BayesGLM2_results$model_results$cortexR$mask,
         c(NA, NaN),
         out$BayesGLM2_results$model_results$subcort$active[x$spatial$buffer_mask,],
-        x$spatial$labels
+        x$spatial$labels[x$spatial$maskMdat[x$spatial$maskIn]]
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)

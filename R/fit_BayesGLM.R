@@ -8,7 +8,7 @@
 #'  each with volumes along the first dimension.
 #' @param scrub Session-length list of spike regressors: numeric matrices, with
 #'  volumes along the first dimension, valued at 1 for scrubbed volumes and 0
-#'  otherwise. 
+#'  otherwise.
 #'
 #'  Scrubbing is performed by incorporating spike regressors in the nuisance
 #'  matrix during nuisance regression (in a simultaneous framework), and then
