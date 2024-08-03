@@ -42,7 +42,7 @@ retro_mask_fit_bglm <- function(x, mask){
     x$BOLD_QC$mask_snr <- x$BOLD_QC$mask_snr[mask_new]
     if ("prewhiten_info" %in% names(x)) {
       x$prewhiten_info$AR_coefs_avg <- x$prewhiten_info$AR_coefs_avg[mask_new,,drop=FALSE]
-      x$prewhiten_info$var_avg <- x$prewhiten_info$var_avg[mask_new,,drop=FALSE]
+      x$prewhiten_info$var_avg <- x$prewhiten_info$var_avg[mask_new,drop=FALSE]
     }
   }
   mask_new
