@@ -51,7 +51,6 @@ intersect_mask <- function(x) {
         as.logical(q$spatial[[bb]]$maskMdat)
       }))
     } else { stop() }
-    #browser()
     Masks[[bb]] <- apply(masks, 2, all)
   }
 

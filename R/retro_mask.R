@@ -24,54 +24,44 @@ retro_mask_fit_bglm <- function(x, mask){
 
   mask_new <- mask[x$spatial$maskMdat]
 
-  for (ss in seq(length(x$field_estimates))) {
+  if (all(mask_new)) { return(x) }
+
+  for (ss in seq(nS)) {
     x$field_estimates[[ss]] <- x$field_estimates[[ss]][mask_new,,drop=FALSE]
-  }
-
-  for (ss in seq(length(x$RSS))) {
     x$RSS[[ss]] <- x$RSS[[ss]][mask_new]
-  }
-
-  if ("result_classical" %in% names(x)) {
-    for (ss in seq(length(x$result_classical))) {
+    if ("result_classical" %in% names(x)) {
       x$result_classical[[ss]]$estimates <- x$result_classical[[ss]]$estimates[mask_new,,drop=FALSE]
       x$result_classical[[ss]]$SE_estimates <- x$result_classical[[ss]]$SE_estimates[mask_new,,drop=FALSE]
       x$result_classical[[ss]]$resids <- x$result_classical[[ss]]$resids[mask_new,,drop=FALSE]
       x$result_classical[[ss]]$RSS <- x$result_classical[[ss]]$RSS[mask_new]
     }
+    x$BOLD_QC$mask <- x$BOLD_QC$mask[mask_new]
+    x$BOLD_QC$mask_na <- x$BOLD_QC$mask_na[mask_new]
+    x$BOLD_QC$mask_mean <- x$BOLD_QC$mask_mean[mask_new]
+    x$BOLD_QC$mask_var <- x$BOLD_QC$mask_var[mask_new]
+    x$BOLD_QC$mask_snr <- x$BOLD_QC$mask_snr[mask_new]
+    if ("prewhiten_info" %in% names(x)) {
+      x$prewhiten_info$AR_coefs_avg <- x$prewhiten_info$AR_coefs_avg[mask_new,,drop=FALSE]
+      x$prewhiten_info$var_avg <- x$prewhiten_info$var_avg[mask_new,,drop=FALSE]
+    }
   }
-
-  # Note: spde updated later
-
-  # [TO DO] Ignore mask_qc right? It's for the user's interest; we don't use this.
+  mask_new
+  # Note: `spde` updated later
 
   # Do this before `spatial` because the subcortex needs the old buffer mask.
   x$y <- c(matrix(x$y, ncol=nV_input)[,mask_new,drop=FALSE])
   for (ss in seq(length(x$X))) {
-    print(dim(x$X[[ss]]))
-    x$X[[ss]] <- if (spatial_type == "vertex") {
-      x$X[[ss]][rep(mask_new, each=nT),rep(mask_new, each=nK),drop=FALSE]
-    } else if (spatial_type == "voxel") {
-      # something is wrong before here, when `mask_new` is not all TRUE.
-      q <- x$spatial$buffer_mask;
-      q[q] <- mask_new;
-      q[!x$spatial$buffer_mask] <- TRUE;
-      x$X[[ss]][rep(mask_new, each=nT),rep(q, each=nK),drop=FALSE]
-    } else { stop() }
-    print(dim(x$X[[ss]]))
+    x$X[[ss]] <- x$X[[ss]][rep(mask_new, each=nT),,drop=FALSE]
+    if (spatial_type == "voxel") {
+      # Remove dropped locations from `X`.
+      to_drop_Mdat <- which(!mask[x$spatial$maskMdat])
+      if (length(to_drop_Mdat)!=0) {
+        to_drop_spde <-x$spatial$Mmap[to_drop_Mdat]
+        id_drop_spde <- seq(x$spde$n.spde) %in% to_drop_spde
+        x$X[[ss]] <- x$X[[ss]][,!rep(id_drop_spde, times=nK),drop=FALSE]
+      }
+    }
   }
-
-  if (spatial_type == "vertex") {
-    x$spatial$mask <- mask
-    x$spde$mesh <- retro_mask_mesh(x$spde$mesh, mask_new)
-  } else if (spatial_type == "voxel") {
-    x$spatial$labels[x$spatial$labels!=0][!mask_new] <- 0
-    x$spatial$buffer_mask[x$spatial$buffer_mask] <- mask_new
-    x$spatial$data_loc <- x$spatial$data_loc[mask_new]
-    # [TO DO] in the future, leave labels alone?
-  } else { stop() }
-
-  cat("\n")
 
   x
 }
@@ -118,7 +108,6 @@ retro_mask_act <- function(x, Masks){
     bs <- brainstructures[bb]
     # Get the mask to apply to the elements of `active`.
     spatial_type_bb <- x$spatial[[bb]]$spatial_type
-    #browser()
     mask_bb <- Masks[[bb]][as.logical(x$spatial[[bb]]$maskMdat)]
 
     if (!all(mask_bb)) {

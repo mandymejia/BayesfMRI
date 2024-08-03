@@ -5,11 +5,16 @@
 #' @param logkappa,logtau vector of min, max and initial value for prior on log kappa and log tau. Min and max are extreme quantiles, not hard constraints.
 #' @return List: \code{spde} and \code{spatial}.
 #' @keywords internal
-SPDE_from_voxel <- function(spatial, qc_mask, logkappa = NULL, logtau = NULL){
-  # Update `spatial`.
-  spatial$maskMdat <- spatial$maskIn
-  spatial$maskMdat[spatial$maskMdat][!qc_mask] <- FALSE
-  spatial$labsMdat <- spatial$labels[spatial$maskMdat[spatial$maskIn]]
+SPDE_from_voxel <- function(spatial, qc_mask=NULL, logkappa = NULL, logtau = NULL){
+  
+  if (!is.null(qc_mask)) {
+    # Update `spatial`.
+    ### Update `maskMdat` by applying `qc_mask` to it.
+    spatial$maskMdat <- spatial$maskIn
+    spatial$maskMdat[spatial$maskMdat][!qc_mask] <- FALSE
+    ### Update `labsMdat` by using the new `maskMdat`
+    spatial$labsMdat <- spatial$labels[spatial$maskMdat[spatial$maskIn]]
+  }
 
   labels <- spatial$labsMdat
   mask <- spatial$maskMdat

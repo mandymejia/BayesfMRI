@@ -4,7 +4,7 @@
 \alias{SPDE_from_voxel}
 \title{SPDE from voxel model}
 \usage{
-SPDE_from_voxel(spatial, qc_mask, logkappa = NULL, logtau = NULL)
+SPDE_from_voxel(spatial, qc_mask = NULL, logkappa = NULL, logtau = NULL)
 }
 \arguments{
 \item{spatial}{See \code{BayesGLM}.}

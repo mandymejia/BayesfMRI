@@ -154,11 +154,11 @@ get_nV <- function(spatial){
 
   # for `nV_total`, use these instead of masks, b/c `BayesGLM`
   #   will have these before the masks are read in.
-  nV_total <- switch(spatial$spatial_type, 
-    vertex = nrow(spatial$surf$vertices), 
+  nV_total <- switch(spatial$spatial_type,
+    vertex = nrow(spatial$surf$vertices),
     voxel = prod(dim(spatial$maskIn))
   )
-  
+
   nV_input <- sum(spatial$maskIn)
   nV_model <- spatial$nV_M
   nV_mdata <- sum(spatial$maskMdat)
@@ -211,17 +211,18 @@ dgCMatrix_cols_to_zero <- function(mat, cols) {
   mat@x <- new_x
   mat@i <- new_i
   mat@p <- as.integer(new_p)
+
   mat
 }
 
 #' Validate \code{spatial}
-#' 
+#'
 #' Validate \code{spatial}
-#' 
+#'
 #' @param spatial \code{spatial}
 #' @return \code{NULL}, invisibly
 #' @keywords internal
-#' 
+#'
 validate_spatial <- function(spatial) {
   stopifnot(is.list(spatial))
   if (spatial$spatial_type == "vertex") {
@@ -232,10 +233,10 @@ validate_spatial <- function(spatial) {
   } else if (spatial$spatial_type == "voxel") {
     stopifnot(length(spatial) == 11)
     stopifnot(names(spatial) == c(
-      "spatial_type", "labels", "trans_mat", "trans_units", 
-      "nbhd_order", "buffer", 
+      "spatial_type", "labels", "trans_mat", "trans_units",
+      "nbhd_order", "buffer",
       "maskIn", "labsMdat", "maskMdat", "nV_M", "Mmap")
-    )    
+    )
   } else { stop("Unknown spatial$spatial_type.") }
 
   invisible(NULL)
