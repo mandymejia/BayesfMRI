@@ -251,7 +251,7 @@ plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = sli
 ## 5.1 Call `BayesGLM2()`
 
 We have "precooked" the result of `BayesGLM2()`.  First, we ran `BayesGLM` on 10
-sesssions separately, then passed those results into `BayesGLM2()`. By default, 
+sessions separately, then passed those results into `BayesGLM2()`. By default, 
 that function estimates a group average activation map for each field, but it is
 also possible to estimate other contrasts through the `contrasts` argument. See
 `help(BayesGLM2)` for more details.
