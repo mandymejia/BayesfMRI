@@ -17,7 +17,9 @@
 #' @inheritParams BOLD_Param_BayesGLM
 #' @inheritParams brainstructures_Param_BayesGLM
 #' @param subROI Which subcortical ROIs should be analyzed? Can be \code{"all"}
-#'  to analyze all subcortex ROIs.
+#'  to analyze all subcortex ROIs. See the \code{ciftiTools_Name} column of 
+#'  \code{ciftiTools:::substructure_table()} for a list of possible 
+#'  subcortical ROIs.
 #' @inheritParams design_Param_BayesGLM
 #' @inheritParams nuisance_Param_BayesGLM
 #' @inheritParams scrub_Param_BayesGLM
