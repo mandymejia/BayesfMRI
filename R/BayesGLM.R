@@ -16,7 +16,8 @@
 #'
 #' @inheritParams BOLD_Param_BayesGLM
 #' @inheritParams brainstructures_Param_BayesGLM
-#' @param subROI Which subcortical ROIs should be analyzed?
+#' @param subROI Which subcortical ROIs should be analyzed? Can be \code{"all"}
+#'  to analyze all subcortex ROIs.
 #' @inheritParams design_Param_BayesGLM
 #' @inheritParams nuisance_Param_BayesGLM
 #' @inheritParams scrub_Param_BayesGLM
@@ -535,6 +536,7 @@ BayesGLM <- function(
     #Remove extra subcortical ROIs
     if(do$sub){
       label_names <- as.character(unique(BOLD[[ss]]$meta$subcort$labels))
+      if (identical(subROI, "all")) { subROI <- label_names }
       if(!all(subROI %in% label_names)) stop('All elements of subROI must be valid subcortical labels and present in BOLD')
       mask_new <- BOLD[[ss]]$meta$subcort$labels %in% subROI
       BOLD[[ss]]$data$subcort <- BOLD[[ss]]$data$subcort[mask_new,]

@@ -49,7 +49,8 @@ of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
 and/or \code{"subcortical"} structures. Or \code{"all"} to model all three.
 Default: \code{c("left","right")} (cortex only).}
 
-\item{subROI}{Which subcortical ROIs should be analyzed?}
+\item{subROI}{Which subcortical ROIs should be analyzed? Can be \code{"all"}
+to analyze all subcortex ROIs.}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
 \code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
