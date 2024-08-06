@@ -32,7 +32,7 @@ BayesGLM_is_valid_one_scrub <- function(scrub) {
   stopifnot(all(apply(scrub, 2, is.numeric)))
   stopifnot(all(dim(scrub) > 0))
   stopifnot(all(colSums(scrub) == 1))
-  stopifnot(all(colSums(scrub == 0)) == nrow(scrub)-1)
+  stopifnot(all(colSums(scrub == 0) == nrow(scrub)-1))
   TRUE
 }
 
