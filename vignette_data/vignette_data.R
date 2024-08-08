@@ -112,6 +112,9 @@ bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_co
 saveRDS(bglm2, file='bglm2.rds')
 saveRDS(bglm2b, file='bglm2b.rds')
 
+# Manual step: Copy 100206 to sub1 directory
+
+
 
 
 
