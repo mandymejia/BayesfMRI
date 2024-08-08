@@ -240,7 +240,7 @@ fit_bayesglm <- function(
       # Get the timepoints to remove.
       scrub_vec[[ss]] <- apply(scrub[[ss]] != 0, 1, any)
 
-      # Remove.
+      # Remove. # [TO DO] fix 
       cat(paste0("\tScrubbing ", sum(scrub_vec[[ss]]),
         " volumes from session ", ss, ".\n"))
       BOLD[[ss]] <- BOLD[[ss]][!scrub_vec[[ss]],,drop=FALSE]
@@ -249,6 +249,7 @@ fit_bayesglm <- function(
 
     # Scale data.
     # (`scale_BOLD` expects VxT data, so transpose before and after.)
+    # [TO DO] Scale based off scrubbed data, but scale all data points.
     BOLD[[ss]] <- t(
       scale_BOLD(t(BOLD[[ss]]),
       scale=scale_BOLD, v_means = BOLD_mean_ss)
