@@ -36,7 +36,7 @@ b) You can then install `ciftiTools` from CRAN or Github.
 # install.packages('ciftiTools')
 # install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 # library(INLA) #load INLA at least one time to ensure it was installed properly
-# devtools::install_github('mandymejia/BayesfMRI', ref=`8.0)
+# devtools::install_github('mandymejia/BayesfMRI', ref='8.0')
 ```
 
 Now that `BayesfMRI` and its dependencies are installed, you can load the `BayesfMRI` package. We will also load the `ciftiTools` package, since we need to point to the Connectome Workbench installation to facilitate working with CIFTI files.
