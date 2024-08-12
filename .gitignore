@@ -15,7 +15,7 @@ tests/test_notInPackage_HCP_sub.R
 tests/temp*
 vignette_data/original/*
 vignette_data/bglms_full/*
-vignette_data/vignette_data.R
 /vignettes/vignette_cache
 /vignette_data/glms_full
 /vignette_data/glms
+/vignette_data/act

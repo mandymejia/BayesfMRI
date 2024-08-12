@@ -2,7 +2,6 @@
 % Please edit documentation in R/BayesGLM2.R
 \name{BayesGLM2}
 \alias{BayesGLM2}
-\alias{BayesGLM_group}
 \title{Group-level Bayesian GLM}
 \usage{
 BayesGLM2(
@@ -11,19 +10,6 @@ BayesGLM2(
   quantiles = NULL,
   excursion_type = NULL,
   contrast_names = NULL,
-  gamma = 0,
-  alpha = 0.05,
-  nsamp_theta = 50,
-  nsamp_beta = 100,
-  num_cores = NULL,
-  verbose = 1
-)
-
-BayesGLM_group(
-  results,
-  contrasts = NULL,
-  quantiles = NULL,
-  excursion_type = NULL,
   gamma = 0,
   alpha = 0.05,
   nsamp_theta = 50,

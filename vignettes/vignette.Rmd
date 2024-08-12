@@ -248,7 +248,16 @@ plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = sli
 
 # 5. Second-Level Modeling
 
-## 5.1 Call `BayesGLM2()`
+After running `BayesGLM()` on individual sessions, second-level modeling can be
+performed by passing the results to the `BayesGLM2()` function. There are two main
+steps:
+
+1. Call `BayesGLM2()` to compute group average maps and identify group-level areas of activation
+2. Visualize cortical and/or subcortical estimates and/or activations using `plot()` (or equivalently `plot.BGLM2()`)
+
+## Example 1: Group average of `fear` or `neutral` condition
+
+### Step 1: Call `BayesGLM2()`
 
 We have "precooked" the result of `BayesGLM2()`.  First, we ran `BayesGLM` on 10
 sessions separately, then passed those results into `BayesGLM2()`. By default, 
@@ -272,12 +281,50 @@ bglm2 <- readRDS(file='../vignette_data/bglm2.rds')
 bglm2
 ```
 
-Let's display the group-average estimates.
+### Step 2: Call `plot()` or `plot.BGLM2()` to visualize results
+
+Let's display the group-average estimates:
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm2, idx=1, title = "Group-average (fear)")
+plot(bglm2, type = 'contrasts', idx=1, title = "Group-average (fear)", what = 'surface')
 ```
 
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+slices <- 27:30 
+plot(bglm2, type = 'contrasts', idx="fear", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+cat('\t')
+plot(bglm2, type = 'contrasts', idx="neut", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+```
+
+And the activation maps:
+
+### [TO DO] Show surface results too
+
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+slices <- 27:30 
+plot(bglm2, type = 'activations', idx="fear", title = "fear", what = 'volume', slices = slices, n_slices=4)
+cat('\t')
+plot(bglm2, type = 'activations', idx="neut", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+```
+
+## Example 2: Group average of contrast `fear` minus `neutral`
+
+### [TO DO]: Add in fear_vs_neut contrast, similar to Example 1 (hope to see subcortex activation)
+
+### Step 1: Call `BayesGLM2()`
+
+### Step 2: Call `plot()` or `plot.BGLM2()` to visualize results
+
+
+<!-- # Second-level analysis 1: Fear & Neutral (mean over subjects) -->
+<!-- bglm2 <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20) -->
+
+<!-- # Second-level analysis 2: Fear - Neutral (mean over subjects) -->
+<!-- bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20, -->
+<!--                     contrast = list(fear_vs_neut = rep(c(1, -1), 10)/10)) -->
+
+<!-- saveRDS(bglm2, file='bglm2.rds') -->
+<!-- saveRDS(bglm2b, file='bglm2b.rds') -->
 
 
 # 6. Prevalence Maps
@@ -321,7 +368,20 @@ plot(prev, idx = 2, what = 'surface', title = "Prevalence (neutral)")
 
 # 7. Bonus Section
 
-## 7.1 More on Design Matrix Construction
+## 7.1 Tips for Installation
+
+* If you have trouble with the INLA install due to dependencies failing to install, you can run the INLA install with `dep=FALSE`.  In that case, you will also need to install some required dependencies from CRAN, including `sp`, `sf`, `Matrix`, `units`, and `fmesher`.
+
+* If you are using Linux, you may need to install the appropriate INLA binaries via `inla.binary.install()`. 
+
+* On Linux, you may need to install certain libraries required for some of the dependencies of INLA and BayesfMRI
+
+   - for `units`, you need to install in shell: `sudo apt-get install libudunits2-dev`
+   - for `sf`, you need to install in shell: `sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev`
+   - for `excursions` (a dependency of `BayesfMRI`), you need to install in shell: `sudo apt-get install libgsl-dev`
+
+
+## 7.2 More on Design Matrix Construction
 
 In addition to the design matrix itself, this function returns additonal information, including the hemodynamic response function (HRF) convolved with the stimulus response function, 
 
@@ -330,7 +390,7 @@ names(design)
 head(design$design) #the actual design matrix
 ```
 
-#### Including HRF Derivatives
+### 7.2.1 HRF Derivatives
 
 We can optionally set `dHRF = 1` to include the temporal derivative of the HRF or `dHRF = 2` to include both temporal and dispersion derivatives. This allows for small shifts in the timing of the HRF. 
 
@@ -350,7 +410,7 @@ bglm <- BayesGLM(..., design = new_design, nuisance = new_nuisance, ...)
 ```
 
 
-#### Constructing Contrasts 
+### 7.2.2  Contrasts 
 
 In the design matrix above, there is one regressor for each task.  If we are interested more in the contrast *between* tasks, we can modify the design matrix.  If $x_1$ and $x_2$ are two separate tasks that we wish to contrast, then we can construct two columns: $w_1 = x_1 + x_2$ and $w_2 = \frac{1}{2}(x_1 - x_2)$ (or $\frac{1}{2}(x_2 - x_1)$, depending on the direction of the contrast of interest).  Then our modified design matrix consists of two columns, $w_1$ and $w_2$.  The coefficient associated with $w_1$ is the *average* activation across both tasks, and the coefficient associated with $w_2$ is the *difference* in activation with task $x_1$ versus task $x_2$.
 
@@ -365,27 +425,34 @@ design1 <- cbind(avg_fear_neut, fear_vs_neut)
 plot_design(design1, colors = c('red','black'))
 ```
 
+### 7.2.3 Scrubbing
 
-## 7.2 Tips for Installation
-
-* If you have trouble with the INLA install due to dependencies failing to install, you can run the INLA install with `dep=FALSE`.  In that case, you will also need to install some required dependencies from CRAN, including `sp`, `sf`, `Matrix`, `units`, and `fmesher`.
-
-* If you are using Linux, you may need to install the appropriate INLA binaries via `inla.binary.install()`. 
-
-* On Linux, you may need to install certain libraries required for some of the dependencies of INLA and BayesfMRI
-
-   - for `units`, you need to install in shell: `sudo apt-get install libudunits2-dev`
-   - for `sf`, you need to install in shell: `sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev`
-   - for `excursions` (a dependency of `BayesfMRI`), you need to install in shell: `sudo apt-get install libgsl-dev`
+We recommend implementing scrubbing via spike regressors, since some preprocessing 
+steps (e.g., temporal filtering, prewhitening) depend on the temporal structure 
+of the data.  `BayesGLM()` includes an argument, `scrub`, to facilitate scrubbing in a simultaneous regression framework via spike regressors. 
 
 
-## 7.3  Future features planned
+
+#### [TO DO] Fill this part in with additional information and example
+
+<!-- **Scrubbing**: To remove certain time points due to head motion or other reasons (e.g. drowsiness), the `scrub` argument will be used to indicate any time points that should be excluded from analysis. Using a simultaneous regression approach, time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data. -->
+
+## 7.3 Spatially-varying design
+
+#### [TO DO] Fill this part in with additional information and example
+
+<!-- **Adaptive HRF modeling**: Using data from multiple subjects, we can learn a better HRF shape to use for different individuals and across the brain.  The `BayesGLM()` function allows for a spatially-varying design, which results when the HRF is allowed -->
+<!-- to vary across the brain. -->
+
+## 7.4 QC Masking
+
+#### [TO DO] Fill this part in with additional information and example, including how this affects BayesGLM2 and prevalence mapping
+
+
+
+## 7.5  Future features planned
 
 `BayesfMRI` is always improving, and users are welcome to request additional functionality.  Several additional features are currently in the works, including:
 
-**Scrubbing**: To remove certain time points due to head motion or other reasons (e.g. drowsiness), the `scrub` argument will be used to indicate any time points that should be excluded from analysis. Using a simultaneous regression approach, time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data.
-
-**Adaptive HRF modeling**: Using data from multiple subjects, we can learn a better HRF shape to use for different individuals
-and across the brain.  The `BayesGLM()` function allows for a spatially-varying design, which results when the HRF is allowed
-to vary across the brain.
+**Prevalence Map testing**: Inference on prevalence maps to determine where a certain proportion of participants (e.g. at least 50\%) display activation, or where there are differences in the prevalence of activation between groups.
 

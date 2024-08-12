@@ -238,6 +238,7 @@ BayesGLM2 <- function(
         "spatial_type", "labels",
         "trans_mat", "trans_units",
         "nbhd_order", "buffer")] }))
+
       if (length(unique(spatials_expEq)) != 1) {
         stop("`spatial`s for voxel model are expected to match in labels, trans_mat, trans_units, nbhd_order, and buffer.")
       }
@@ -446,7 +447,7 @@ BayesGLM2 <- function(
 
     ### Save results
     out[[mm]] <- list(
-      estimates = betas.summ,
+      estimates = betas.summ, #includes boundary locations
       quantiles = quantiles.summ,
       ppm = ppm.summ,
       active = active,
@@ -473,14 +474,14 @@ BayesGLM2 <- function(
   if (is_cifti) {
     out <- list(
       contrast_estimate_xii = as.xifti(
-        out$model_results$cortexL$estimates[Masks$cortexL,,drop=FALSE],
-        out$model_results$cortexL$mask,
-        out$model_results$cortexR$estimates[Masks$cortexR,,drop=FALSE],
-        out$model_results$cortexR$mask,
+        cortexL = out$model_results$cortexL$estimates[Masks$cortexL,,drop=FALSE],
+        cortexL_mwall = out$model_results$cortexL$mask,
+        cortexR = out$model_results$cortexR$estimates[Masks$cortexR,,drop=FALSE],
+        cortexR_mwall = out$model_results$cortexR$mask,
         c(NA, NaN),
-        out$model_results$subcort$estimates[spatial_sub$Mmap,,drop=FALSE],
-        spatial_sub$labsMdat,
-        spatial_sub$maskMdat
+        subcortVol = out$model_results$subcort$estimates[spatial_sub$Mmap,,drop=FALSE],
+        subcortLabs = spatial_sub$labsMdat,
+        subcortMask = spatial_sub$maskMdat
       ),
       activations_xii = NULL,
       masks = Masks,
@@ -489,14 +490,14 @@ BayesGLM2 <- function(
     out$contrast_estimate_xii$meta$cifti$names <- names(contrasts)
     if (do_excur) {
       act_xii <- as.xifti(
-        out$BayesGLM2_results$model_results$cortexL$active[Masks$cortexL,,drop=FALSE],
-        out$BayesGLM2_results$model_results$cortexL$mask,
-        out$BayesGLM2_results$model_results$cortexR$active[Masks$cortexR,,drop=FALSE],
-        out$BayesGLM2_results$model_results$cortexR$mask,
+        cortexL = out$BayesGLM2_results$model_results$cortexL$active[Masks$cortexL,,drop=FALSE],
+        cortexL_mwall = out$BayesGLM2_results$model_results$cortexL$mask,
+        cortexR = out$BayesGLM2_results$model_results$cortexR$active[Masks$cortexR,,drop=FALSE],
+        cortexR_mwall = out$BayesGLM2_results$model_results$cortexR$mask,
         c(NA, NaN),
-        out$BayesGLM2_results$subcort$active[spatial_sub$Mmap,,drop=FALSE],
-        spatial_sub$labsMdat,
-        spatial_sub$maskMdat
+        subcortVol = out$BayesGLM2_results$subcort$active[spatial_sub$Mmap,,drop=FALSE],
+        subcortLabs = spatial_sub$labsMdat,
+        subcortMask = spatial_sub$maskMdat
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)
@@ -504,31 +505,6 @@ BayesGLM2 <- function(
     }
     class(out) <- "BGLM2"
   }
-
   out
 }
 
-#' @rdname BayesGLM2
-#' @export
-BayesGLM_group <- function(
-  results,
-  contrasts = NULL,
-  quantiles = NULL,
-  excursion_type=NULL,
-  gamma = 0,
-  alpha = 0.05,
-  nsamp_theta = 50,
-  nsamp_beta = 100,
-  num_cores = NULL,
-  verbose = 1){
-
-  BayesGLM2(
-    results=results,
-    contrasts=contrasts,
-    quantiles=quantiles,
-    excursion_type=excursion_type,
-    gamma=gamma, alpha=alpha,
-    nsamp_theta=nsamp_theta, nsamp_beta=nsamp_beta,
-    num_cores=num_cores, verbose=verbose
-  )
-}

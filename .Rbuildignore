@@ -21,6 +21,7 @@
 # ^R/EM_utils\.R$
 # Vignettes (TO-DO) ------------
 ^vignettes
+^vignette_data
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
