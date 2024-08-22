@@ -15,7 +15,7 @@
 #'  signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
 #'  a \code{gamma} is required for the Bayesian method; \code{NULL}
 #'  (default) will use a \code{gamma} of zero for the classical method.
-#' @param alpha Significance level. Default: \code{0.05}.
+#' @param alpha Significance level for inference. Default: \code{0.05}.
 #' @param correction For the classical method only: Type of multiple comparisons
 #'  correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
 #'  (Benjamini Hochberg), or \code{"none"}.
