@@ -99,6 +99,8 @@ prevalence <- function(
         stopifnot(p_test <= 1)
         correction <- match.arg(correction, c("FWER", "FDR", "none"))
 
+        p_test_name <- paste0("> ", p_test,  " (alpha = ", alpha, ")")
+
         # Compute pvals
         n_act <- as.matrix(n_act)
         pvals <- pbinom(n_act[], nN, p_test, lower.tail = FALSE, log.p = FALSE)
@@ -175,7 +177,7 @@ prevalence <- function(
         prev_test_xii_ss,
         to = "dlabel",
         levels=c(0, 1),
-        labels=c("Not Significant", "Significant"),
+        labels=c("Not Significant", paste("Significant", p_test_name)),
         colors="red"
       )
     }

@@ -133,7 +133,6 @@ The `BayesGLM` function provides a few additional options:
 session-specific estimates, but will pool information across sessions to estimate the model parameters.  If the runs are
 short or noisy, this can be helpful to produce more accurate parameter estimates.
 
-
 ```{r}
 system.time(
   bglm <- BayesGLM(BOLD=BOLD_xii,
@@ -152,9 +151,9 @@ system.time(
         meanTol=1))
 ```
 
-```{r}
+```{r, echo=FALSE}
 act <- activations(bglm, gamma=0)
-q <- prevalence(list(act, act))
+prev <- prevalence(list(act, act))
 ```
 
 ## 3.4 Visualize the results
@@ -275,8 +274,8 @@ objects of class `BGLM2`, the result of `BayesGLM2()`.
 
 ```{r}
 fnames <- list.files("../vignette_data/glm_results")
-bglm2 <- BayesGLM2(file.path("../vignette_data/glm_results", fnames), gamma = 0, alpha = 0.05)
-saveRDS(bglm2, file='../vignette_data/bglm2.rds')
+# bglm2 <- BayesGLM2(file.path("../vignette_data/glm_results", fnames), gamma = 0, alpha = 0.05)
+# saveRDS(bglm2, file='../vignette_data/bglm2.rds')
 bglm2 <- readRDS(file='../vignette_data/bglm2.rds')
 bglm2
 ```
@@ -286,25 +285,39 @@ bglm2
 Let's display the group-average estimates:
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm2, type = 'contrasts', idx=1, title = "Group-average (fear)", what = 'surface')
+plot(bglm2, stat = 'contrasts', idx="fear_avg", title = "Group-average (fear)", what = 'surface')
+```
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2, stat = 'contrasts', idx="neut_avg", title = "Group-average (neutral)", what = 'surface')
 ```
 
 ```{r, fig.height=4, fig.width=4, fig.show='hold'}
 slices <- 27:30 
-plot(bglm2, type = 'contrasts', idx="fear", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+plot(bglm2, stat = 'contrasts', idx="fear_avg", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
 cat('\t')
-plot(bglm2, type = 'contrasts', idx="neut", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+plot(bglm2, stat = 'contrasts', idx="neut_avg", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
 ```
 
 And the activation maps:
 
-### [TO DO] Show surface results too
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2, stat="activations", idx="fear_avg", title = "fear", what = 'surface')
+```
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2, stat="activations", idx="fear_avg", title = "fear", what = 'surface')
+```
+
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2, stat="activations", idx="neut_avg", title = "fear", what = 'surface')
+```
 
 ```{r, fig.height=4, fig.width=4, fig.show='hold'}
 slices <- 27:30 
-plot(bglm2, type = 'activations', idx="fear", title = "fear", what = 'volume', slices = slices, n_slices=4)
+plot(bglm2, stat = 'activations', idx="fear_avg", title = "fear", what = 'volume', slices = slices, n_slices=4)
 cat('\t')
-plot(bglm2, type = 'activations', idx="neut", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+plot(bglm2, stat = 'activations', idx="neut_avg", title = "neutral", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
 ```
 
 ## Example 2: Group average of contrast `fear` minus `neutral`
@@ -447,7 +460,6 @@ of the data.  `BayesGLM()` includes an argument, `scrub`, to facilitate scrubbin
 ## 7.4 QC Masking
 
 #### [TO DO] Fill this part in with additional information and example, including how this affects BayesGLM2 and prevalence mapping
-
 
 
 ## 7.5  Future features planned

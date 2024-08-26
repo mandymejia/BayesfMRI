@@ -495,7 +495,7 @@ BayesGLM2 <- function(
         cortexR = out$BayesGLM2_results$model_results$cortexR$active[Masks$cortexR,,drop=FALSE],
         cortexR_mwall = out$BayesGLM2_results$model_results$cortexR$mask,
         c(NA, NaN),
-        subcortVol = out$BayesGLM2_results$subcort$active[spatial_sub$Mmap,,drop=FALSE],
+        subcortVol = out$BayesGLM2_results$model_results$subcort$active[spatial_sub$Mmap,,drop=FALSE],
         subcortLabs = spatial_sub$labsMdat,
         subcortMask = spatial_sub$maskMdat
       )

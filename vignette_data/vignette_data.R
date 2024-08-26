@@ -1,5 +1,5 @@
 library(ciftiTools)
-ciftiTools.setOption('wb_path','/Applications') #where your Connectome Workbench installation is located
+ciftiTools.setOption('wb_path','~/Applications') #where your Connectome Workbench installation is located
 library(BayesfMRI)
 
 # Data:
@@ -107,16 +107,7 @@ bglm2 <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cor
 
 # Second-level analysis 2: Fear - Neutral (mean over subjects)
 bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20,
-                    contrast = list(fear_vs_neut = rep(c(1, -1), 10)/10))
+                    contrasts = list(fear_vs_neut = rep(c(1, -1), 10)/10))
 
 saveRDS(bglm2, file='bglm2.rds')
 saveRDS(bglm2b, file='bglm2b.rds')
-
-# Manual step: Copy 100206 to sub1 directory
-
-
-
-
-
-
-
