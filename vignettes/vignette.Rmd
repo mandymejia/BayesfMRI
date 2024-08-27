@@ -1,7 +1,7 @@
 ---
 title: "Spatial Task fMRI Modeling with BayesfMRI"
 author: "Mandy Mejia and Damon Pham"
-date: "2024-06-06"
+date: "2024-08-26"
 output: html_document
 ---
 
@@ -30,13 +30,13 @@ b) You can then install `ciftiTools` from CRAN or Github.
 
 2. The spatial Bayesian modeling underlying `BayesGLM` relies on the INLA package. This package must be installed following the instructions here: https://www.r-inla.org/download-install. If you are using Linux or have trouble with the install, refer the section *Installation Tips* at the bottom of this demo.
 
-3. Once you have installed `ciftiTools` and `INLA`, go ahead and install `BayesfMRI`.  This demo was built on version `8.0`, which can be installed from Github -- see the commented-out code below.  
+3. Once you have installed `ciftiTools` and `INLA`, go ahead and install `BayesfMRI`.  This demo was built on version `9.0`, which can be installed from Github -- see the commented-out code below.  
 
 ```{r}
 # install.packages('ciftiTools')
 # install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 # library(INLA) #load INLA at least one time to ensure it was installed properly
-# devtools::install_github('mandymejia/BayesfMRI', ref='8.0')
+# devtools::install_github('mandymejia/BayesfMRI', ref='9.0')
 ```
 
 Now that `BayesfMRI` and its dependencies are installed, you can load the `BayesfMRI` package. We will also load the `ciftiTools` package, since we need to point to the Connectome Workbench installation to facilitate working with CIFTI files.
@@ -61,7 +61,7 @@ For any task fMRI analysis, we need at a minimum:
 
 3. A set of nuisance regressors, e.g. motion realignment parameters
 
-We will start by reading in each of these. Note that all of the data we will use can be found in the Github repository for `BayesfMRI` at [https://github.com/mandymejia/BayesfMRI/].
+We will start by reading in each of these. Note that the data for this subject, `sub1`, can be found in the Github repository for `BayesfMRI` at [https://github.com/mandymejia/BayesfMRI/].
 
 ```{r}
 dir_data <- '../vignette_data/sub1/session1'
@@ -151,11 +151,6 @@ system.time(
         meanTol=1))
 ```
 
-```{r, echo=FALSE}
-act <- activations(bglm, gamma=0)
-prev <- prevalence(list(act, act))
-```
-
 ## 3.4 Visualize the results
 
 Let's look at the results! To render surface images in RMarkdown, we need the `rgl` package and a couple of setup steps.  This is not usually necessary outside of RMarkdown.
@@ -198,7 +193,7 @@ significance level $\alpha$ (say, 0.05) and minimum effect size $\gamma$.
 In classical massive univariate modeling, we typically set $\gamma=0$ (without necessarily
 even thinking about it) when we do hypothesis tests to identify areas of activation.
 In a spatial GLM, often we have much higher power to detect activations, so it can
-be useful to set $\gamma$ to a higher value to identify only activations exeeding a 
+be useful to set $\gamma$ to a higher value to identify only activations exceeding a 
 certain minimum effect size. Because the data is by default scaled to represent percent
 local signal change, setting $\gamma = 1$ would identify locations exhibiting activation
 significantly greater than $1\%$ local signal change.
@@ -273,8 +268,8 @@ We can preview the results through the summary or print function associated with
 objects of class `BGLM2`, the result of `BayesGLM2()`.
 
 ```{r}
-fnames <- list.files("../vignette_data/glm_results")
-# bglm2 <- BayesGLM2(file.path("../vignette_data/glm_results", fnames), gamma = 0, alpha = 0.05)
+fnames <- list.files("glms_full")
+# bglm2 <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20)
 # saveRDS(bglm2, file='../vignette_data/bglm2.rds')
 bglm2 <- readRDS(file='../vignette_data/bglm2.rds')
 bglm2
@@ -306,10 +301,6 @@ plot(bglm2, stat="activations", idx="fear_avg", title = "fear", what = 'surface'
 ```
 
 ```{r, rgl=TRUE, format = "jpg"}
-plot(bglm2, stat="activations", idx="fear_avg", title = "fear", what = 'surface')
-```
-
-```{r, rgl=TRUE, format = "jpg"}
 plot(bglm2, stat="activations", idx="neut_avg", title = "fear", what = 'surface')
 ```
 
@@ -326,19 +317,36 @@ plot(bglm2, stat = 'activations', idx="neut_avg", title = "neutral", what = 'vol
 
 ### Step 1: Call `BayesGLM2()`
 
+```{r}
+fnames <- list.files("glms_full")
+# bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20, contrasts = list(fear_vs_neut = rep(c(1, -1), 10)/10))
+# saveRDS(bglm2b, file='../vignette_data/bglm2b.rds')
+bglm2b <- readRDS('../vignette_data/bglm2b.rds')
+```
+
 ### Step 2: Call `plot()` or `plot.BGLM2()` to visualize results
 
+Here are the group-average estimates:
 
-<!-- # Second-level analysis 1: Fear & Neutral (mean over subjects) -->
-<!-- bglm2 <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20) -->
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2b, stat = 'contrasts', idx="fear_vs_neut", title = "Group-average (fear)", what = 'surface')
+```
 
-<!-- # Second-level analysis 2: Fear - Neutral (mean over subjects) -->
-<!-- bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20, -->
-<!--                     contrast = list(fear_vs_neut = rep(c(1, -1), 10)/10)) -->
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+slices <- 27:30 
+plot(bglm2b, stat = 'contrasts', idx="fear_vs_neut", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
+```
 
-<!-- saveRDS(bglm2, file='bglm2.rds') -->
-<!-- saveRDS(bglm2b, file='bglm2b.rds') -->
+And the activation maps:
 
+```{r, rgl=TRUE, format = "jpg"}
+plot(bglm2b, stat="activations", idx="fear_vs_neut", title = "fear", what = 'surface')
+```
+
+```{r, fig.height=4, fig.width=4, fig.show='hold'}
+slices <- 27:30 
+plot(bglm2b, stat = 'activations', idx="fear_vs_neut", title = "fear", what = 'volume', slices = slices, n_slices=4)
+```
 
 # 6. Prevalence Maps
 
@@ -359,6 +367,7 @@ results, then call `prevalence()` to produce a group-level prevalence map.
 #read in the result of activations() for 10 subjects
 dir_act <- '../vignette_data/act'
 fnames_act <- list.files(dir_act)
+fnames_act <- fnames_act[!grepl("0", fnames_act, fixed=TRUE)] # alternate calcs.
 nN <- length(fnames_act)
 acts <- vector('list', length=nN)
 for(ii in 1:nN){
@@ -377,6 +386,15 @@ plot(prev, idx = 1, what = 'surface', title = "Prevalence (fear)")
 
 ```{r, rgl=TRUE, format = "jpg"}
 plot(prev, idx = 2, what = 'surface', title = "Prevalence (neutral)")
+```
+
+## 6.3 Prevalence map testing
+
+Add the argument `p_test` to conduct inference on prevalence maps, to determine where a certain proportion of participants (e.g. at least 50\%) display activation.
+
+```{r}
+prev <- prevalence(act_list = acts, p_test=.50)
+plot(prev$prev_test_xii$single_sess)
 ```
 
 # 7. Bonus Section
@@ -444,27 +462,82 @@ We recommend implementing scrubbing via spike regressors, since some preprocessi
 steps (e.g., temporal filtering, prewhitening) depend on the temporal structure 
 of the data.  `BayesGLM()` includes an argument, `scrub`, to facilitate scrubbing in a simultaneous regression framework via spike regressors. 
 
+In this example, we scrub volumes with modified FD > 0.15 mm. This threshold is a bit low, but is chosen to serve as an example. 
 
+```{r}
+fd <- fMRIscrub::FD(motion, TR_for_resp_filt=.72, lag=4, cutoff=.15)$outlier_flag
 
-#### [TO DO] Fill this part in with additional information and example
-
-<!-- **Scrubbing**: To remove certain time points due to head motion or other reasons (e.g. drowsiness), the `scrub` argument will be used to indicate any time points that should be excluded from analysis. Using a simultaneous regression approach, time points will only be removed after the DCT bases are generated and the prewhitening parameters are estimated, since those steps assume the original temporal structure of the data. -->
+bglm <- BayesGLM(BOLD=BOLD_xii,
+      design=design$design,
+      scrub=fd,
+      brainstructures="left",
+      TR=TR,
+      nuisance=motion,
+      scale_BOLD='mean',
+      hpf=.01,
+      ar_order=0,
+      Bayes=FALSE,
+      verbose=0 ,
+      meanTol=1)
+```
 
 ## 7.3 Spatially-varying design
 
-#### [TO DO] Fill this part in with additional information and example
+The design matrix can vary across the data locations. For example, spatially-varied HRF modeling will yield a different design matrix for each data location, even if the task design is unchan For spatially-varying design, the `design` argument will be a 3-dimensional array.
+
+In this example, we will just use a duplciated, identical design matrix for each location.
+
+```{r}
+des3 <- array(NA, dim=c(dim(design$design), nrow(BOLD_xii)))
+dimnames(des3)[[2]] <- colnames(design$design)
+des3[] <- design$design[]
+
+bglm <- BayesGLM(BOLD=BOLD_xii,
+      design=des3,
+      brainstructures="right",
+      TR=TR,
+      nuisance=motion,
+      scale_BOLD='mean',
+      resamp_res=NULL,
+      hpf=.01,
+      ar_order=0,
+      Bayes=FALSE,
+      verbose=0 ,
+      meanTol=1)
+```
 
 <!-- **Adaptive HRF modeling**: Using data from multiple subjects, we can learn a better HRF shape to use for different individuals and across the brain.  The `BayesGLM()` function allows for a spatially-varying design, which results when the HRF is allowed -->
 <!-- to vary across the brain. -->
 
 ## 7.4 QC Masking
 
-#### [TO DO] Fill this part in with additional information and example, including how this affects BayesGLM2 and prevalence mapping
+The quality control (QC) measures of mean and variance can be used to detect locations unsuitable for analysis. Adjust `meanTol` and `varTol` to set the limit, and locations not meeting either threshold will be masked out and excluded from analysis.
 
+```{r}
+bglm <- BayesGLM(BOLD=BOLD_xii,
+      design=design$design,
+      brainstructures="left",
+      varTol=5000,
+      TR=TR,
+      nuisance=motion,
+      scale_BOLD='mean',
+      resamp_res=NULL,
+      hpf=.01,
+      ar_order=0,
+      Bayes=TRUE,
+      verbose=TRUE,
+      meanTol=1)
+```
+
+```{r, rgl=TRUE, format = "jpg", fig.width=3.5}
+plot(bglm, idx = 1, what = 'surface', title = "BayesGLM with QC masking")
+```
+
+<!--  Fill this part in with how this affects BayesGLM2 and prevalence mapping. -->
 
 ## 7.5  Future features planned
 
 `BayesfMRI` is always improving, and users are welcome to request additional functionality.  Several additional features are currently in the works, including:
 
-**Prevalence Map testing**: Inference on prevalence maps to determine where a certain proportion of participants (e.g. at least 50\%) display activation, or where there are differences in the prevalence of activation between groups.
+**Prevalence map tests for group differences**: testing if there are differences in the prevalence of activation between groups.
 

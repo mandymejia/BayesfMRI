@@ -17,8 +17,8 @@
 #' @inheritParams BOLD_Param_BayesGLM
 #' @inheritParams brainstructures_Param_BayesGLM
 #' @param subROI Which subcortical ROIs should be analyzed? Can be \code{"all"}
-#'  to analyze all subcortex ROIs. See the \code{ciftiTools_Name} column of 
-#'  \code{ciftiTools:::substructure_table()} for a list of possible 
+#'  to analyze all subcortex ROIs. See the \code{ciftiTools_Name} column of
+#'  \code{ciftiTools:::substructure_table()} for a list of possible
 #'  subcortical ROIs.
 #' @inheritParams design_Param_BayesGLM
 #' @inheritParams nuisance_Param_BayesGLM
@@ -759,19 +759,21 @@ BayesGLM <- function(
   # number of data locations (vs. `nV_total` includes masked locations on the mesh.)
   nV_input <- vapply(lapply(BOLD, function(q){q[[1]]}), ncol, 0)
 
+  des_vidx <- 0
   for (bb in seq(nrow(bs_names))) {
     if (!(bs_names$d[bb] %in% names(BOLD))) { next }
 
     # Get design matrix.
     dname_bb <- bs_names$d[bb]
     if (verbose>0) { cat(paste0("\n", bs_names$v[bb], " analysis:\n")) }
+    if (do$perLocDesign) { nV_bb <- nV_input[bs_names$d[bb]] }
     design_bb <- if (do$perLocDesign) {
       lapply(design, function(q){q[,,seq(
-        sum(c(0, nV_input)[seq(bb)])+1, sum(nV_input[seq(bb)])
-        ),drop=FALSE]})
+        des_vidx+1, des_vidx+nV_bb),drop=FALSE]})
     } else {
       design
     }
+    if (do$perLocDesign) { des_vidx <- des_vidx + nV_bb }
 
     ## `fit_bayesglm` call. --------------------------------------------------------
     BGLMs[[dname_bb]] <- fit_bayesglm(
