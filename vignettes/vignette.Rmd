@@ -392,9 +392,9 @@ plot(prev, idx = 2, what = 'surface', title = "Prevalence (neutral)")
 
 Add the argument `p_test` to conduct inference on prevalence maps, to determine where a certain proportion of participants (e.g. at least 50\%) display activation.
 
-```{r}
+```{r, rgl=TRUE, format = "jpg"}
 prev <- prevalence(act_list = acts, p_test=.50)
-plot(prev$prev_test_xii$single_sess)
+plot(prev$prev_test_xii$single_sess, what="surface", title="Prevalence test (50%)")
 ```
 
 # 7. Bonus Section
