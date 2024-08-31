@@ -313,7 +313,7 @@ plot(bglm2, stat = 'activations', idx="neut_avg", title = "neutral", what = 'vol
 
 ## Example 2: Group average of contrast `fear` minus `neutral`
 
-### [TO DO]: Add in fear_vs_neut contrast, similar to Example 1 (hope to see subcortex activation)
+<!--  [TO DO]: Add in fear_vs_neut contrast, similar to Example 1 (hope to see subcortex activation) -->
 
 ### Step 1: Call `BayesGLM2()`
 
