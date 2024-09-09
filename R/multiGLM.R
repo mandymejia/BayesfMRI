@@ -135,6 +135,7 @@ multiGLM <- function(
   field_names <- x$field_names
   design_names <- x$design_names
   do$perLocDesign <- x$per_location_design
+  do$perLocDesign <- FALSE #workaround for multiGLM since the multiple design matrices are not per-location in this case
   stopifnot(!do$perLocDesign)
   rm(x)
 
@@ -320,7 +321,7 @@ multiGLM <- function(
   # Convert `bestmodel_xii` to `dlabel`.
   result$bestmodel_xii$meta$cifti$names <- "multiGLM"
   result$bestmodel_xii <- convert_xifti(
-    result$bestmodel_xii, "dlabel", 
+    result$bestmodel_xii, "dlabel",
     levels=seq(nD), levels_old=seq(nD),
     labels=design_names, add_white=FALSE
   )
