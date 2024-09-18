@@ -89,6 +89,7 @@ multiGLM_fun <- function(
   nD <- x$nD
   field_names <- x$field_names
   design_names <- x$design_names
+  x$per_location_design <- FALSE #workaround for multiGLM_fun since the multiple design matrices are not per-location in this case
   if(x$per_location_design) stop("Not supported: per-location design in `compareGLM`.")
   rm(x)
 
