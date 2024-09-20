@@ -257,7 +257,9 @@ make_design <- function(
       # [NOTE] If the min-len event occurs close to the end of the session, the peak will be missed.
       if (length(unique(dur_jj)) > 1) {
         warning("Task '", task_names[jj], "' has events with differing ",
-          "durations. Using the minimum duration, ", dur_jj[one_idx], ".")
+          "durations. Using the minimum duration, ", dur_jj[one_idx], ", to ",
+          "determine the scaling factor for scaling the design matrix columns."
+        )
       }
       start_ii <- round(ots_jj[one_idx]*upsample)
       if (start_ii==0) { start_ii <- 1 }
