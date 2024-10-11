@@ -159,6 +159,7 @@ bglm_b2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(seq(2), resamp_f
 
 bglm_x1 <- bglm_b1$BGLMs$cortexL
 bglm_x2 <- bglm_b2$BGLMs$cortexL
+bglm_x2$session_names <- bglm_x1$session_names
 bglm2a <- BayesGLM2(list(bglm_x1, bglm_x2))
 bglm_x1 <- bglm_b1; bglm_x1$BGLMs$subcort <- NULL
 bglm_x2 <- bglm_b2; bglm_x2$BGLMs$subcort <- NULL
@@ -167,6 +168,7 @@ bglm2b <- BayesGLM2(list(bglm_x1, bglm_x2))
 
 bglm_x1 <- bglm_b1$BGLMs$subcort
 bglm_x2 <- bglm_b2$BGLMs$subcort
+bglm_x2$session_names <- bglm_x1$session_names
 bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2))
 
 # Misc

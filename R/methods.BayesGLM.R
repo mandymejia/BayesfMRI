@@ -41,7 +41,7 @@ print.summary.BGLM <- function(x, ...) {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
   }
   cat("Locations:\n")
-  for (ii in seq(length(x$n_loc_total))) {
+  for (ii in seq(length(x$n_loc_Mdat))) {
     cat(
       "          ",
       paste0(

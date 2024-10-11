@@ -109,21 +109,18 @@ pw_smooth <- function(spatial, AR, var, FWHM=5){
     var_smoothed <- var_smoothed$data$cortex_left
 
   } else if (spatial$spatial_type == "voxel") {
-    subMask <- spatial$labels != 0
-    subLabs <- spatial$labels[subMask]
-
     AR_xif <- ciftiTools::as.xifti(
       subcortVol = AR,
-      subcortLabs = subLabs,
-      subcortMask = subMask
+      subcortLabs = spatial$labsMdat,
+      subcortMask = spatial$maskMdat
     )
     AR_smoothed <- suppressWarnings(smooth_cifti(AR_xif, vol_FWHM = FWHM))
     AR_smoothed <- AR_smoothed$data$subcort
 
     var_xif <- ciftiTools::as.xifti(
       subcortVol = as.matrix(var),
-      subcortLabs = subLabs,
-      subcortMask = subMask
+      subcortLabs = spatial$labsMdat,
+      subcortMask = spatial$maskMdat
     )
     var_smoothed <- suppressWarnings(smooth_cifti(var_xif, vol_FWHM = FWHM))
     var_smoothed <- var_smoothed$data$subcort
