@@ -115,6 +115,7 @@ for (ss in seq(2)) {
 # BayesGLM ---------------------------------------------------------------------
 BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
 BOLD[[1]]$data$cortex_left[c(1,11,111),] <- NA
+BOLD[[2]]$data$subcort[c(14274, 14275, 25481),] <- NA
 
 scrub <- list(
   c(rep(TRUE, 5), rep(FALSE, 253-5)),
@@ -156,6 +157,7 @@ bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor
 bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(seq(2), resamp_factor=.1)))
+bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
 
 bglm_x1 <- bglm_b1$BGLMs$cortexL
 bglm_x2 <- bglm_b2$BGLMs$cortexL
