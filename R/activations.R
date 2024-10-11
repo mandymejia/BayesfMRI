@@ -53,13 +53,13 @@ activations <- function(
   if (is_cifti) {
     cifti_obj <- x
     x <- cifti_obj$BGLMs
-    spatial <- lapply(x, '[[', "spatial" )
   } else {
     if (!inherits(x, "fit_bglm")) {
       stop("`x` is not a `'BGLM'` or 'fit_bglm' object.")
     }
     x <- list(bglm=x)
   }
+  spatial <- lapply(x, '[[', "spatial" )
   models <- names(x) #which brainstructures are in x
   idx1 <- min(which(!vapply(x, is.null, FALSE))) #first brainstructure in x
 
@@ -142,10 +142,18 @@ activations <- function(
         q[[gg]] <- do.call(actFUN,
           c(actArgs, list(x=x[[bb]], session=sessions[ss], gamma=gamma[gg]))
         )
-        #apply mask to get data locs, removing boundary locs
+        # Apply mask to get data locs, removing boundary locs.
         if (Bayes & !is.null(spatial[[bb]]$maskMdat)) {
           q[[gg]]$active <- q[[gg]]$active[spatial[[bb]]$Mmap,,drop=FALSE]
         }
+        # Both `actFUN`, posterior and classical, work on the `Mdat`
+        #   locations. So here, we need to apply the mask to get the data
+        #   locations, removing boundary locations.
+        if (!Bayes) {
+          q[[gg]]$p_values <- unmask_Mdat2In(q[[gg]]$p_values, spatial[[bb]]$maskIn, spatial[[bb]]$maskMdat)
+          q[[gg]]$p_values_adj <- unmask_Mdat2In(q[[gg]]$p_values_adj, spatial[[bb]]$maskIn, spatial[[bb]]$maskMdat)
+        }
+        q[[gg]]$active <- unmask_Mdat2In(q[[gg]]$active, spatial[[bb]]$maskIn, spatial[[bb]]$maskMdat)
       }
       activations[[bb]][[ss]] <- q
     }
@@ -157,6 +165,7 @@ activations <- function(
     alpha=alpha,
     gamma=gamma,
     correction=correction,
+    spatial=spatial,
     field_names = fields,
     session_names = sessions
   )
@@ -167,9 +176,6 @@ activations <- function(
     class(result) <- "act_fit_bglm"
     return(result)
   }
-
-  # If class(x) = BGLM
-  result <- c(list(spatial=spatial), result)
 
   act_xii <- vector("list", length(sessions))
   names(act_xii) <- sessions
@@ -185,12 +191,6 @@ activations <- function(
       )
       if (!is.null(the_xii$data[[bs]])) {
         dat <- Reduce("+", lapply(activations[[bs2]][[sess]], function(q){1*q$active}))
-        #remove NA values (i.e. medial wall)
-        if (!Bayes) { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
-        # #remove boundary locations -- now done above
-        # if (Bayes & !is.null(spatial[[bs2]]$buffer_mask)) {
-        #   dat <- dat[spatial[[bs2]]$buffer_mask,,drop=FALSE]
-        # }
         act_xii_ss$data[[bs]] <- dat
       }
     }
@@ -326,8 +326,9 @@ activations.classical <- function(x,
 
   fields_idx <- x$field_names %in% fields
   stopifnot(any(fields_idx))
-  beta_est <- x$result_classical[[session]]$estimates[,fields_idx,drop=FALSE]
-  se_beta <- x$result_classical[[session]]$SE_estimates[,fields_idx,drop=FALSE]
+  mask_In2Mdat <- x$spatial$maskMdat[x$spatial$maskIn]
+  beta_est <- x$result_classical[[session]]$estimates[mask_In2Mdat,fields_idx,drop=FALSE]
+  se_beta <- x$result_classical[[session]]$SE_estimates[mask_In2Mdat,fields_idx,drop=FALSE]
   DOF <- x$result_classical[[session]]$DOF
 
   nV_input <- nrow(beta_est)

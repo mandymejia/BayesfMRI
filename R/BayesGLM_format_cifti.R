@@ -31,8 +31,7 @@ BayesGLM_format_cifti <- function(
           classical_RSS = BGLMs$cortexL$result_classical[[ss]]$RSS,
           Bayesian_RSS = BGLMs$cortexL$RSS[[ss]],
         )
-        # Update mwall b/c `mask2` in `fit_bayesglm` can change the medial wall.
-        mwallL <- BGLMs$cortexL$spatial$maskMdat
+        mwallL <- BGLMs$cortexL$spatial$maskIn
         colnames(datL) <- NULL
       }
       if (do$right) {
@@ -42,7 +41,7 @@ BayesGLM_format_cifti <- function(
           classical_RSS = BGLMs$cortexR$result_classical[[ss]]$RSS,
           Bayesian_RSS = BGLMs$cortexR$RSS[[ss]]
         )
-        mwallR <- BGLMs$cortexR$spatial$maskMdat
+        mwallR <- BGLMs$cortexR$spatial$maskIn
         colnames(datR) <- NULL
       }
       if (do$sub) {
@@ -52,8 +51,8 @@ BayesGLM_format_cifti <- function(
           classical_RSS = BGLMs$subcort$result_classical[[ss]]$RSS,
           Bayesian_RSS = BGLMs$subcort$RSS[[ss]]
         )
-        subMask <- BGLMs$subcort$spatial$maskMdat
-        subLabs <- BGLMs$subcort$spatial$labsMdat
+        subMask <- BGLMs$subcort$spatial$maskIn
+        subLabs <- BGLMs$subcort$spatial$labels
         colnames(datSub) <- NULL
       }
       result_xii[[ss]] <- ciftiTools::as.xifti(

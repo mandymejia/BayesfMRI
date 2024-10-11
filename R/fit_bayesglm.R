@@ -240,7 +240,7 @@ fit_bayesglm <- function(
       # Get the timepoints to remove.
       scrub_vec[[ss]] <- apply(scrub[[ss]] != 0, 1, any)
 
-      # Remove. # [TO DO] fix 
+      # Remove. # [TO DO] fix
       cat(paste0("\tScrubbing ", sum(scrub_vec[[ss]]),
         " volumes from session ", ss, ".\n"))
       BOLD[[ss]] <- BOLD[[ss]][!scrub_vec[[ss]],,drop=FALSE]
@@ -441,6 +441,26 @@ fit_bayesglm <- function(
   } else {
     field_ests <- lapply(result_classical, function(x){ x$estimates })
     attr(field_ests, "GLM_type") <- "classical"
+  }
+
+  # Tidy up and return. --------------------------------------------------------
+
+  # Unmask.
+  for (ss in seq(nS)) {
+    field_ests[[ss]] <- unmask_Mdat2In(field_ests[[ss]], spatial$maskIn, spatial$maskMdat)
+
+    if (!is.null(RSS)) {
+      RSS[[ss]] <- unmask_Mdat2In(RSS[[ss]], spatial$maskIn, spatial$maskMdat)
+    }
+
+    result_classical[[ss]]$estimates <- unmask_Mdat2In(
+      result_classical[[ss]]$estimates, spatial$maskIn, spatial$maskMdat)
+    result_classical[[ss]]$SE_estimates <- unmask_Mdat2In(
+      result_classical[[ss]]$SE_estimates, spatial$maskIn, spatial$maskMdat)
+    result_classical[[ss]]$resids <- unmask_Mdat2In(
+      result_classical[[ss]]$resids, spatial$maskIn, spatial$maskMdat)
+    result_classical[[ss]]$RSS <- unmask_Mdat2In(
+      result_classical[[ss]]$RSS, spatial$maskIn, spatial$maskMdat)
   }
 
   result <- list(

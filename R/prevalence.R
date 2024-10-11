@@ -70,7 +70,7 @@ prevalence <- function(
     }
   }
 
-  # Get and apply intersection mask
+  # Get and apply Mdat-based intersection mask
   Masks <- intersect_mask(act_list)
   for (nn in seq(nN)) {
     cat(paste0("Checking data mask for subject ", nn, ".\n")) # [TO DO] option to hide?
@@ -151,9 +151,27 @@ prevalence <- function(
   names(prev_xii) <- session_names
   if (!is.null(p_test)) { prev_test_xii <- prev_xii }
   for (session in session_names) {
+
+    # Get the empty xifti, using `act_list`.
     prev_xii_ss <- 0*convert_xifti(act_list[[1]]$activations_xii[[session]], "dscalar")
+    # Unapply intersect Mdat mask, and apply intersect maskIn mask
+    #   cortex
+    prev_xii_ss <- move_from_mwall(prev_xii_ss, -1)
+    if (!is.null(prev_xii_ss$data$cortex_left)) {
+      prev_xii_ss$data$cortex_left[!Masks$In$cortexL,] <- NA
+    }
+    if (!is.null(prev_xii_ss$data$cortex_right)) {
+      prev_xii_ss$data$cortex_right[!Masks$In$cortexR,] <- NA
+    }
+    prev_xii_ss <- move_to_mwall(prev_xii_ss, NA)
+    #   subcortex
+    sub_mask <- prev_xii_ss$meta$subcort$mask
+    sub_mask[] <- Masks$In$subcort
+    prev_xii_ss <- move_from_submask(prev_xii_ss, sub_mask, -1)
     prev_xii_ss$meta$cifti$names <- field_names
     if (!is.null(p_test)) { prev_test_xii_ss <- prev_xii_ss }
+
+    # Fill the empty xifti with `prev`
     for (bs in names(prev_xii_ss$data)) {
       bs2 <- switch(bs,
         cortex_left="cortexL",
@@ -161,24 +179,28 @@ prevalence <- function(
         subcort="subcort"
       )
       if (!is.null(prev_xii_ss$data[[bs]])) {
+        # Unapply intersect Mdat mask, and apply intersect maskIn mask
         dat <- prev[[bs2]][[session]]
         colnames(dat) <- NULL
-        prev_xii_ss$data[[bs]] <- dat
+        prev_xii_ss$data[[bs]] <- unmask_Mdat2In(dat, Masks$In[[bs2]], Masks$Mdat[[bs2]])
         if (!is.null(p_test)) {
           dat <- prev_test[[bs2]][[session]]
           colnames(dat) <- NULL
-          prev_test_xii_ss$data[[bs]] <- dat
+          prev_test_xii_ss$data[[bs]] <- unmask_Mdat2In(dat, Masks$In[[bs2]], Masks$Mdat[[bs2]])
         }
       }
     }
     prev_xii[[session]] <- prev_xii_ss
+
+    # Also do `p_test`
     if (!is.null(p_test)) {
+      prev_test_xii_ss <- transform_xifti(prev_test_xii_ss, function(q){ifelse(is.na(q), -1, q)})
       prev_test_xii[[session]] <- convert_xifti(
         prev_test_xii_ss,
         to = "dlabel",
-        levels=c(0, 1),
-        labels=c("Not Significant", paste("Significant", p_test_name)),
-        colors="red"
+        levels=c(-1, 0, 1),
+        labels=c("Masked out", "Not Significant", paste("Significant", p_test_name)),
+        colors=c("lightgrey", "red")
       )
     }
   }

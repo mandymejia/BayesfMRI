@@ -33,6 +33,11 @@ You can also obtain citation information from within R like so:
 citation("BayesfMRI")
 ```
 
+## Function names change
+
+In version 0.8.0 (June 2024), the function `BayesGLM_cifti` was renamed to
+`BayesGLM`, and the function `BayesGLM` was renamed to `fit_bayesglm`.
+
 ## Important Note on Dependencies:
 
 `BayesfMRI` depends on the `ciftiTools` package, which requires an

@@ -11,15 +11,18 @@ intersect_mask <- function(x) {
     "BGLM"
   } else if (inherits(x[[1]], "act_BGLM")) {
     "act_BGLM"
-  } else { stop("`x` must be a list of 'BGLM' or 'act_BGLM' objects.") }
+  } else if (inherits(x[[1]], "act_fit_bglm")) {
+    "act_fit_bglm"
+  } else { stop("`x` must be a list of 'BGLM', 'act_BGLM', `fit_bglm`, or `act_fit_bglm` objects.") }
   if (!all(vapply(x, inherits, FALSE, what))) {
     if (!all(vapply(x, function(q){inherits(q$BGLMs[[1]], "fit_bglm")}, FALSE))) {
-      stop("`x` must be a list of 'BGLM' or 'act_BGLM' objects.")
+      stop("`x` must be a list of 'BGLM', 'act_BGLM', `fit_bglm`, or `act_fit_bglm` objects.")
     }
   }
 
   brainstructures <- switch(what,
     fit_bglm = "unknown",
+    act_fit_bglm = "unknown",
     BGLM = names(x[[1]]$BGLMs),
     act_BGLM = names(x[[1]]$spatial)
   )
@@ -27,7 +30,11 @@ intersect_mask <- function(x) {
   # [TO DO] check that brainstructures match across sessions.
 
   # Get intersection mask for each brainstructure.
-  Masks <- setNames(vector("list", nB), brainstructures)
+  Masks <- list(
+    Mdat=setNames(vector("list", nB), brainstructures),
+    In=setNames(vector("list", nB), brainstructures)
+  )
+
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
     spatial_type_bb <- switch(bs,
@@ -37,10 +44,15 @@ intersect_mask <- function(x) {
       unknown = x[[bb]]$spatial$spatial_type # BGLM case
     )
 
-    masks <- if (what == "fit_bglm") {
+    masksMdat <- if (what == "fit_bglm") {
       ## nB == 1
       do.call(rbind, lapply(x, function(q){
         as.logical(q$spatial$maskMdat)
+      }))
+    } else if (what == "act_fit_bglm") {
+      ## nB == 1
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$spatial[[bb]]$maskMdat)
       }))
     } else if (what == "BGLM") {
       do.call(rbind, lapply(x, function(q){
@@ -51,7 +63,28 @@ intersect_mask <- function(x) {
         as.logical(q$spatial[[bb]]$maskMdat)
       }))
     } else { stop() }
-    Masks[[bb]] <- apply(masks, 2, all)
+    Masks$Mdat[[bb]] <- apply(masksMdat, 2, all)
+
+    masksIn <- if (what == "fit_bglm") {
+      ## nB == 1
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$spatial$maskIn)
+      }))
+    } else if (what == "act_fit_bglm") {
+      ## nB == 1
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$spatial[[bb]]$maskIn)
+      }))
+    } else if (what == "BGLM") {
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$BGLMs[[bb]]$spatial$maskIn)
+      }))
+    } else if (what == "act_BGLM") {
+      do.call(rbind, lapply(x, function(q){
+        as.logical(q$spatial[[bb]]$maskIn)
+      }))
+    } else { stop() }
+    Masks$In[[bb]] <- apply(masksIn, 2, all)
   }
 
   Masks

@@ -99,16 +99,22 @@ retro_mask_mesh <- function(x, mask){
 #' @keywords internal
 retro_mask_act <- function(x, Masks){
 
-  brainstructures <- names(Masks)
-  nB <- length(Masks)
-  nS <- length(x$activations[[1]])
-  nG <- length(x$activations[[1]][[1]])
+  brainstructures <- names(Masks$Mdat)
+  nB <- length(Masks$Mdat)
+
+  one_bs_act <- if (inherits(x, "act_fit_bglm")) {
+    x$activations
+  } else if (inherits(x, "act_BGLM")) {
+    x$activations[[1]]
+  }
+  nS <- length(one_bs_act)
+  nG <- length(one_bs_act[[1]])
 
   for (bb in seq(nB)) {
     bs <- brainstructures[bb]
     # Get the mask to apply to the elements of `active`.
     spatial_type_bb <- x$spatial[[bb]]$spatial_type
-    mask_bb <- Masks[[bb]][as.logical(x$spatial[[bb]]$maskMdat)]
+    mask_bb <- Masks$Mdat[[bb]][as.logical(x$spatial[[bb]]$maskIn)]
 
     if (!all(mask_bb)) {
       message("\tRemoving ", sum(!mask_bb), " locations in ", bs, " model.")# for subject ", nn, ".")
@@ -117,29 +123,36 @@ retro_mask_act <- function(x, Masks){
     # Apply the mask.
     for (ss in seq(nS)) {
       # Adjust `activations_xii`
-      if (bs=="cortexL") {
-        x$activations_xii[[ss]]$data$cortex_left <- x$activations_xii[[ss]]$data$cortex_left[mask_bb,,drop=FALSE]
-        x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left[x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left] <- mask_bb
-      } else if (bs=="cortexR") {
-        x$activations_xii[[ss]]$data$cortex_right <- x$activations_xii[[ss]]$data$cortex_right[mask_bb,,drop=FALSE]
-        x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right[x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right] <- mask_bb
-      } else if (bs=="subcort") {
-        x$activations_xii[[ss]]$data$subcort <- x$activations_xii[[ss]]$data$subcort[mask_bb,,drop=FALSE]
-        x$activations_xii[[ss]]$meta$subcort$labels <- x$activations_xii[[ss]]$meta$subcort$labels[mask_bb]
-        x$activations_xii[[ss]]$meta$subcort$mask[x$activations_xii[[ss]]$meta$subcort$mask] <- mask_bb
-      } else { stop() }
-
-      # Adjust `spatial`
-      x$spatial[[bb]]$maskMdat[x$spatial[[bb]]$maskMdat] <- mask_bb
-      if (spatial_type_bb=="voxel") {
-        x$spatial[[bb]]$labsMdat <- x$spatial[[bb]]$labsMdat[mask_bb]
+      if (inherits(x, "act_BGLM")) {
+        if (bs=="cortexL") {
+          x$activations_xii[[ss]]$data$cortex_left <- x$activations_xii[[ss]]$data$cortex_left[mask_bb,,drop=FALSE]
+          x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left[x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$left] <- mask_bb
+        } else if (bs=="cortexR") {
+          x$activations_xii[[ss]]$data$cortex_right <- x$activations_xii[[ss]]$data$cortex_right[mask_bb,,drop=FALSE]
+          x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right[x$activations_xii[[ss]]$meta$cortex$medial_wall_mask$right] <- mask_bb
+        } else if (bs=="subcort") {
+          x$activations_xii[[ss]]$data$subcort <- x$activations_xii[[ss]]$data$subcort[mask_bb,,drop=FALSE]
+          x$activations_xii[[ss]]$meta$subcort$labels <- x$activations_xii[[ss]]$meta$subcort$labels[mask_bb]
+          x$activations_xii[[ss]]$meta$subcort$mask[x$activations_xii[[ss]]$meta$subcort$mask] <- mask_bb
+        } else { stop() }
       }
 
       # Adjust `activations`
       for (ss in seq(nS)) {
         for (gg in seq(nG)) {
-          x$activations[[bb]][[ss]][[gg]]$active <- x$activations[[bb]][[ss]][[gg]]$active[mask_bb,,drop=FALSE]
+          if (inherits(x, "act_BGLM")) {
+            x$activations[[bb]][[ss]][[gg]]$active <- x$activations[[bb]][[ss]][[gg]]$active[mask_bb,,drop=FALSE]
+          } else {
+            x$activations[[ss]][[gg]]$active <- x$activations[[ss]][[gg]]$active[mask_bb,,drop=FALSE]
+          }
         }
+      }
+
+      # Adjust `spatial`
+      mask_bb <- Masks$Mdat[[bb]][as.logical(x$spatial[[bb]]$maskMdat)]
+      x$spatial[[bb]]$maskMdat[x$spatial[[bb]]$maskMdat] <- mask_bb
+      if (spatial_type_bb=="voxel") {
+        x$spatial[[bb]]$labsMdat <- x$spatial[[bb]]$labsMdat[mask_bb]
       }
     }
   }

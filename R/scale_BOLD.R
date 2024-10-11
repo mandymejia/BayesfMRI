@@ -51,6 +51,7 @@ scale_BOLD <- function(BOLD, scale=c("mean", "sd", "none"), v_means = NULL){
 		v_sd <- sqrt(apply(BOLD, 1, var, na.rm=TRUE))
 		v_sd[is.na(v_sd)] <- 0
 		if (min(v_sd) < 1e-6) {
+			# [TO DO]: warning, state the smallest SD.
 			stop("Some local sds are less than 1e-6. Please set `scale_BOLD` to `'none'` or adjust `varTol` to exclude low-variance locations.")
 		}
 		BOLD <- BOLD / v_sd
