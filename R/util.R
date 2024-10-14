@@ -206,7 +206,8 @@ do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     # Mark columns with mean/var falling under the thresholds for removal.
     means_ss <- colMeans(BOLD[[ss]][,mask_na,drop=FALSE])
     vars_ss <- matrixStats::colVars(BOLD[[ss]][,mask_na,drop=FALSE])
-    snr_ss <- means_ss/sqrt(vars_ss)
+    snr_ss <- rep(NA, nV) # use `NA` values for `NA` columns.
+    snr_ss[mask_na] <- means_ss/sqrt(vars_ss)
     mask_mean[mask_na][means_ss < meanTol] <- FALSE
     mask_var[mask_na][vars_ss < varTol] <- FALSE
     #mask_snr[mask_na][snr_ss < snrTol] <- FALSE

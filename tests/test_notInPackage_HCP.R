@@ -115,7 +115,9 @@ for (ss in seq(2)) {
 # BayesGLM ---------------------------------------------------------------------
 BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
 BOLD[[1]]$data$cortex_left[c(1,11,111),] <- NA
-BOLD[[2]]$data$subcort[c(14274, 14275, 25481),] <- NA
+BOLD[[2]]$data$cortex_left[c(11),] <- NA
+BOLD[[1]]$data$subcort[c(25481),] <- NA
+BOLD[[2]]$data$subcort[c(14274, 14275, 25481, 25237),] <- NA
 
 scrub <- list(
   c(rep(TRUE, 5), rep(FALSE, 253-5)),
@@ -159,19 +161,23 @@ bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(seq(2), resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
 
+z1 <- activations(bglm_b1, gamma=.001)
+z2 <- activations(bglm_b2, gamma=.001)
+q <- prevalence(list(z1, z2))
+
 bglm_x1 <- bglm_b1$BGLMs$cortexL
 bglm_x2 <- bglm_b2$BGLMs$cortexL
 bglm_x2$session_names <- bglm_x1$session_names
-bglm2a <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm2a <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 bglm_x1 <- bglm_b1; bglm_x1$BGLMs$subcort <- NULL
 bglm_x2 <- bglm_b2; bglm_x2$BGLMs$subcort <- NULL
 bglm_x2$session_names <- bglm_x1$session_names
-bglm2b <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm2b <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 
 bglm_x1 <- bglm_b1$BGLMs$subcort
 bglm_x2 <- bglm_b2$BGLMs$subcort
 bglm_x2$session_names <- bglm_x1$session_names
-bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 
 # Misc
 BOLD <- as.matrix(read_cifti(fnames$cifti_1))

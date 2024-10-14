@@ -6,7 +6,7 @@
 #' @return List: \code{spde} and \code{spatial}.
 #' @keywords internal
 SPDE_from_voxel <- function(spatial, qc_mask=NULL, logkappa = NULL, logtau = NULL){
-  
+
   if (!is.null(qc_mask)) {
     # Update `spatial`.
     ### Update `maskMdat` by applying `qc_mask` to it.
@@ -16,8 +16,7 @@ SPDE_from_voxel <- function(spatial, qc_mask=NULL, logkappa = NULL, logtau = NUL
     spatial$labsMdat <- spatial$labels[spatial$maskMdat[spatial$maskIn]]
   }
 
-  labels <- spatial$labsMdat
-  mask <- spatial$maskMdat
+  labels <- spatial$labels
   nbhd_order <- spatial$nbhd_order
   buffer <- spatial$buffer
   res <- abs(diag(spatial$trans_mat)[1:3])
@@ -29,13 +28,20 @@ SPDE_from_voxel <- function(spatial, qc_mask=NULL, logkappa = NULL, logtau = NUL
   nR <- length(ROIs)
 
   #construct the C and G for the SPDE by block-diagonalizing over ROIs
-  C_list <- G_list <- spde_list <- vector('list', length=nR)
+  rr_list <- setNames(vector('list', length=nR), ROIs)
+  C_list <- G_list <- spde_list <- mask_In_to_Mdat <- rr_list
+  maskIn_to_Mdat_all <- spatial$maskMdat[][spatial$maskIn[]]
   for (rr in seq(nR)) {
-    mask_rr <- spatial$maskMdat
-    mask_rr[mask_rr][spatial$labsMdat != ROIs[rr]] <- FALSE
+    # Ge maskIn for just ROI rr
+    mask_rr <- spatial$maskIn
+    mask_rr[mask_rr][spatial$labels != ROIs[rr]] <- FALSE
+    # Construct the SPDE for ROI rr based on maskIn
     spde_list[[rr]] <- vol2spde(mask_rr, nbhd_order=nbhd_order, buffer=buffer, res=res)
     C_list[[rr]] <- spde_list[[rr]]$mats$C
     G_list[[rr]] <- spde_list[[rr]]$mats$G
+    # We will drop the QC-masked locations using `dat_loc`. So for now,
+    #   Get the mask to convert from maskIn to maskMdat for just ROI rr.
+    mask_In_to_Mdat[[rr]] <- maskIn_to_Mdat_all[spatial$labels == ROIs[rr]]
   }
   C_sub <- Matrix::bdiag(C_list)
   G_sub <- Matrix::bdiag(G_list)
@@ -71,12 +77,17 @@ SPDE_from_voxel <- function(spatial, qc_mask=NULL, logkappa = NULL, logtau = NUL
   # [TO DO] test this code for multiple regions, it might break
   # Get indices of data locations.
   data_loc_list <- lapply(spde_list, function(x) which(x$idx2 %in% x$idx))
+  # Drop QC-masked locations from `data_loc_list`
+  for (rr in seq(nR)) {
+    data_loc_list[[rr]] <- data_loc_list[[rr]][mask_In_to_Mdat[[rr]]]
+  }
+  # Get vector of data_loc
   data_loc <- data_loc_list[[1]]
   if (nR > 1) {
     before <- 0 # Cumulative sum of previous regions.
-    for (r in seq(2,nR)) {
-      before <- before + nrow(spde_list[[r-1]]$mats$C)
-      data_loc_r <- data_loc_list[[r]]
+    for (rr in seq(2,nR)) {
+      before <- before + nrow(spde_list[[rr-1]]$mats$C)
+      data_loc_r <- data_loc_list[[rr]]
       data_loc_r <- data_loc_r + before
       data_loc <- c(data_loc, data_loc_r)
     }

@@ -311,17 +311,6 @@ BayesGLM2 <- function(
       y_vec <- results_mm[[nn]]$y
       X_list <- results_mm[[nn]]$X
 
-      if (spatial_type=="voxel") {
-        for (ss in seq(nS)) {
-          # Removed: setting the locations to zero. Instead, we need to drop them.
-          # # X_list[[ss]][,rep(Mask, times = nK)] <- 0 # Too computationally intensive
-          # X_list[[ss]] <- dgCMatrix_cols_to_zero(
-          #   X_list[[ss]],
-          #   which(rep(!Mask[results_mm[[nn]]$spatial$maskMdat], times=nK))
-          # )
-        }
-      }
-
       if (length(X_list) > 1) {
         n_sess <- length(X_list)
         X_list <- Matrix::bdiag(X_list) #block-diagonialize over sessions

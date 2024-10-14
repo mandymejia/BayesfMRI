@@ -22,44 +22,46 @@ retro_mask_fit_bglm <- function(x, mask){
   stopifnot(nV_total == length(mask))
   stopifnot(sum(mask) > 0)
 
-  mask_new <- mask[x$spatial$maskMdat]
+  maskIn_new <- mask[x$spatial$maskIn]
+  maskMdat_new <- mask[x$spatial$maskMdat]
 
-  if (all(mask_new)) { return(x) }
-
-  for (ss in seq(nS)) {
-    x$field_estimates[[ss]] <- x$field_estimates[[ss]][mask_new,,drop=FALSE]
-    x$RSS[[ss]] <- x$RSS[[ss]][mask_new]
-    if ("result_classical" %in% names(x)) {
-      x$result_classical[[ss]]$estimates <- x$result_classical[[ss]]$estimates[mask_new,,drop=FALSE]
-      x$result_classical[[ss]]$SE_estimates <- x$result_classical[[ss]]$SE_estimates[mask_new,,drop=FALSE]
-      x$result_classical[[ss]]$resids <- x$result_classical[[ss]]$resids[mask_new,,drop=FALSE]
-      x$result_classical[[ss]]$RSS <- x$result_classical[[ss]]$RSS[mask_new]
-    }
-    x$BOLD_QC$mask <- x$BOLD_QC$mask[mask_new]
-    x$BOLD_QC$mask_na <- x$BOLD_QC$mask_na[mask_new]
-    x$BOLD_QC$mask_mean <- x$BOLD_QC$mask_mean[mask_new]
-    x$BOLD_QC$mask_var <- x$BOLD_QC$mask_var[mask_new]
-    x$BOLD_QC$mask_snr <- x$BOLD_QC$mask_snr[mask_new]
-    if ("prewhiten_info" %in% names(x)) {
-      x$prewhiten_info$AR_coefs_avg <- x$prewhiten_info$AR_coefs_avg[mask_new,,drop=FALSE]
-      x$prewhiten_info$var_avg <- x$prewhiten_info$var_avg[mask_new,drop=FALSE]
+  if (any(!maskIn_new)) {
+    for (ss in seq(nS)) {
+      # Length nV_input of this session (not intersection)
+      x$field_estimates[[ss]] <- x$field_estimates[[ss]][maskIn_new,,drop=FALSE]
+      x$RSS[[ss]] <- x$RSS[[ss]][maskIn_new]
+      if ("result_classical" %in% names(x)) {
+        x$result_classical[[ss]]$estimates <- x$result_classical[[ss]]$estimates[maskIn_new,,drop=FALSE]
+        x$result_classical[[ss]]$SE_estimates <- x$result_classical[[ss]]$SE_estimates[maskIn_new,,drop=FALSE]
+        x$result_classical[[ss]]$resids <- x$result_classical[[ss]]$resids[maskIn_new,,drop=FALSE]
+        x$result_classical[[ss]]$RSS <- x$result_classical[[ss]]$RSS[maskIn_new]
+      }
+      x$BOLD_QC$mask <- x$BOLD_QC$mask[maskIn_new]
+      x$BOLD_QC$mask_na <- x$BOLD_QC$mask_na[maskIn_new]
+      x$BOLD_QC$mask_mean <- x$BOLD_QC$mask_mean[maskIn_new]
+      x$BOLD_QC$mask_var <- x$BOLD_QC$mask_var[maskIn_new]
+      x$BOLD_QC$mask_snr <- x$BOLD_QC$mask_snr[maskIn_new]
     }
   }
-  mask_new
-  # Note: `spde` updated later
 
-  # Do this before `spatial` because the subcortex needs the old buffer mask.
-  x$y <- c(matrix(x$y, ncol=nV_input)[,mask_new,drop=FALSE])
-  for (ss in seq(length(x$X))) {
-    x$X[[ss]] <- x$X[[ss]][rep(mask_new, each=nT),,drop=FALSE]
-    if (spatial_type == "voxel") {
-      # Remove dropped locations from `X`.
-      to_drop_Mdat <- which(!mask[x$spatial$maskMdat])
-      if (length(to_drop_Mdat)!=0) {
-        to_drop_spde <-x$spatial$Mmap[to_drop_Mdat]
-        id_drop_spde <- seq(x$spde$n.spde) %in% to_drop_spde
-        x$X[[ss]] <- x$X[[ss]][,!rep(id_drop_spde, times=nK),drop=FALSE]
+  if (any(!maskMdat_new)) {
+    for (ss in seq(nS)) {
+      # Length nV_mdata of this session (not intersection)
+      if ("prewhiten_info" %in% names(x)) {
+        x$prewhiten_info$AR_coefs_avg <- x$prewhiten_info$AR_coefs_avg[maskMdat_new,,drop=FALSE]
+        x$prewhiten_info$var_avg <- x$prewhiten_info$var_avg[maskMdat_new,drop=FALSE]
       }
+    }
+
+    # Notes for `BayesGLM2`:
+    #   `spde` has been updated prior to `retro_mask_fit_bglm` call, and will
+    #     be set after this function call.
+    #   `spatial` will be determined later after this function call.
+
+    # Do this before `spatial` because the subcortex needs the old buffer mask.
+    x$y <- c(matrix(x$y, ncol=nV_input)[,maskMdat_new,drop=FALSE])
+    for (ss in seq(length(x$X))) {
+      x$X[[ss]] <- x$X[[ss]][rep(maskMdat_new, each=nT),,drop=FALSE]
     }
   }
 
