@@ -159,5 +159,9 @@ retro_mask_act <- function(x, Masks){
     }
   }
 
+  # Now: 
+  # `X` is (timepoints x intersect_nV_Mdata) by (n.spde x nK)
+  # `y` is (timepoints x intersect_nV_Mdata) length
+
   x
 }
