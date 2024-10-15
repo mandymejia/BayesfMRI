@@ -180,11 +180,18 @@ bglm_x2$session_names <- bglm_x1$session_names
 bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 
 # Misc
-BOLD <- as.matrix(read_cifti(fnames$cifti_1))
+BOLD <- read_cifti(fnames$cifti_1)
 design <- abind::abind(des[[1]], des[[2]], along=3)
 nuisance <- nuis$rp_1
 
 ### multiGLM
+multiGLM_fun(
+  BOLD = as.matrix(BOLD),
+  design = design,
+  nuisance=cbind(nuisance, dct_bases(253, 5)),
+  verbose = TRUE
+)
+
 multiGLM(
   BOLD = BOLD,
   design = design,
@@ -195,14 +202,14 @@ multiGLM(
 ### Per-location design
 bglmA <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
-  design = cbind(des[[1]], 1),
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5), 1), Bayes=FALSE,
-  verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
+  design = des[[1]],
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  verbose=TRUE, hpf=NULL, ar_order=0, resamp_res=100, TR=.72
 )
 bglmB <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
   design = des[[2]],
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  nuisance=nuis$rp_1, Bayes=FALSE,
   verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
 )
 # alternate every voxel A & B
@@ -212,20 +219,20 @@ desX <- array(
   dim=c(253, 3, 169)
 )
 bglmX <- BayesGLM(
-  BOLD = read_cifti(fnames$cifti_1),
+  BOLD = read_cifti(fnames$cifti_1, brainstructures=c("left", "right")),
   design = desX,
   #nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
   verbose=TRUE,# hpf=.01, ar_order=0,
   resamp_res=100, TR=.72
 )
-## looks good
 
 ### Subcortex
 BOLD <- read_cifti(fnames$cifti_1, brainstructures="sub")
 bglmA <- BayesGLM(
   BOLD = BOLD,
-  design = cbind(des[[1]], 1),
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  design = des[[1]],
+  brainstructures="sub",
+  nuisance=nuis$rp_1, Bayes=FALSE,
   verbose=TRUE, hpf=.01, ar_order=0, TR=.72
 )
 
