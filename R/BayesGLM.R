@@ -245,7 +245,7 @@ BayesGLM <- function(
     nuisance <- vector("list", nS)
   }
   names(nuisance) <- session_names
-  nK2 <- vapply(nuisance, ncol, 0)
+  nK2 <- vapply(nuisance, function(q){if(is.null(q)) {0} else {ncol(q)}}, 0)
   if (is.null(nK2)) { nK2 <- rep(0, nS) }
   nK2 <- unique(nK2)
   if (length(nK2) > 1) { nK2 <- paste0(min(nK2), ' - ', max(nK2)) }
@@ -362,12 +362,16 @@ BayesGLM <- function(
       x2a <- x2[1:(ncol(nuis_ss) - 1)] #nuisance regressors
       x2b <- x2[ncol(nuis_ss):length(x2)] #design regressors
       if (verbose > 0) {
-        cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively.\n')
-        cat(paste0('\tVIF for design regressors: ', paste0(round(x2b), collapse=', '),'\n'))
-        cat(paste0('\tMaximum VIF among all nuisance regressors: ', round(max(x2a)),'\n'))
-        inds <- which(abs(cor_x) == x1, arr.ind = TRUE)
-        cat(paste0('\tMaximum correlation among all regressors: ', round(x1,4), ' (',
-            rownames(cor_x)[inds[1,1]], ' and ', rownames(cor_x)[inds[1,2]], ')\n'))
+        if (any(is.na(x2b))) {
+          cat("Skipping collinearity checks due to error.\n")
+        } else {
+          cat('Checking for collinearity of the design & nuisance matrices (including DCT bases) collectively.\n')
+          cat(paste0('\tVIF for design regressors: ', paste0(round(x2b), collapse=', '),'\n'))
+          cat(paste0('\tMaximum VIF among all nuisance regressors: ', round(max(x2a)),'\n'))
+          inds <- which(abs(cor_x) == x1, arr.ind = TRUE)
+          cat(paste0('\tMaximum correlation among all regressors: ', round(x1,4), ' (',
+                     rownames(cor_x)[inds[1,1]], ' and ', rownames(cor_x)[inds[1,2]], ')\n'))
+        }
       }
       # if(verbose > 0) {
       #   if(x1 > 0.95) {
