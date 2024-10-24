@@ -476,12 +476,37 @@ BayesGLM2 <- function(
       if (spatial_type == "vertex") {
         result_oomSetNA[[mm]]$estimates[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
         result_oomSetNA[[mm]]$estimates <- result_oomSetNA[[mm]]$estimates[Masks$In[[mm]],,drop=FALSE]
+
+        if (!is.null(result_oomSetNA[[mm]]$ppm)) {
+          result_oomSetNA[[mm]]$ppm[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
+          result_oomSetNA[[mm]]$ppm <- result_oomSetNA[[mm]]$ppm[Masks$In[[mm]],,drop=FALSE]
+        }
+        if (!is.null(result_oomSetNA[[mm]]$active)) {
+          result_oomSetNA[[mm]]$active[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
+          result_oomSetNA[[mm]]$active <- result_oomSetNA[[mm]]$active[Masks$In[[mm]],,drop=FALSE]
+        }
+
       } else {
         result_oomSetNA[[mm]]$estimates <- unmask_Mdat2In(
           result_oomSetNA[[mm]]$estimates[spatial_sub$Mmap,,drop=FALSE],
           spatial_sub$maskMdat[],
           spatial_sub$maskIn[]
         )
+
+        if (!is.null(result_oomSetNA[[mm]]$ppm)) {
+          result_oomSetNA[[mm]]$ppm <- unmask_Mdat2In(
+            result_oomSetNA[[mm]]$ppm[spatial_sub$Mmap,,drop=FALSE],
+            spatial_sub$maskMdat[],
+            spatial_sub$maskIn[]
+          )
+        }
+        if (!is.null(result_oomSetNA[[mm]]$active)) {
+          result_oomSetNA[[mm]]$active <- unmask_Mdat2In(
+            result_oomSetNA[[mm]]$active[spatial_sub$Mmap,,drop=FALSE],
+            spatial_sub$maskMdat[],
+            spatial_sub$maskIn[]
+          )
+        }
       }
     }
 
@@ -516,12 +541,36 @@ BayesGLM2 <- function(
         if (spatial_type == "vertex") {
           result_oomSetNA[[mm]]$estimates[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
           result_oomSetNA[[mm]]$estimates <- result_oomSetNA[[mm]]$estimates[Masks$In[[mm]],,drop=FALSE]
+
+          if (!is.null(result_oomSetNA[[mm]]$ppm)) {
+            result_oomSetNA[[mm]]$ppm[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
+            result_oomSetNA[[mm]]$ppm <- result_oomSetNA[[mm]]$ppm[Masks$In[[mm]],,drop=FALSE]
+          }
+          if (!is.null(result_oomSetNA[[mm]]$active)) {
+            result_oomSetNA[[mm]]$active[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
+            result_oomSetNA[[mm]]$active <- result_oomSetNA[[mm]]$active[Masks$In[[mm]],,drop=FALSE]
+          }
         } else {
           result_oomSetNA[[mm]]$estimates <- unmask_Mdat2In(
             result_oomSetNA[[mm]]$estimates[spatial_sub$Mmap,,drop=FALSE],
             spatial_sub$maskMdat[],
             spatial_sub$maskIn[]
           )
+
+          if (!is.null(result_oomSetNA[[mm]]$ppm)) {
+            result_oomSetNA[[mm]]$ppm <- unmask_Mdat2In(
+              result_oomSetNA[[mm]]$ppm[spatial_sub$Mmap,,drop=FALSE],
+              spatial_sub$maskMdat[],
+              spatial_sub$maskIn[]
+            )
+          }
+          if (!is.null(result_oomSetNA[[mm]]$active)) {
+            result_oomSetNA[[mm]]$active <- unmask_Mdat2In(
+              result_oomSetNA[[mm]]$active[spatial_sub$Mmap,,drop=FALSE],
+              spatial_sub$maskMdat[],
+              spatial_sub$maskIn[]
+            )
+          }
         }
       }
 
@@ -532,8 +581,8 @@ BayesGLM2 <- function(
         cortexR_mwall = Masks$In$cortexR,
         c(NA, NaN),
         subcortVol = result_oomSetNA$subcort$active,
-        subcortLabs = spatial_sub$labsMdat,
-        subcortMask = spatial_sub$maskMdat
+        subcortLabs = spatial_sub$labels,
+        subcortMask = spatial_sub$maskIn
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
       out$activations_xii$meta$cifti$names <- names(contrasts)
