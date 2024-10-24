@@ -198,6 +198,7 @@ prevalence <- function(
       prev_test_xii[[session]] <- convert_xifti(
         prev_test_xii_ss,
         to = "dlabel",
+        levels_old=c(-1, 0, 1),
         levels=c(-1, 0, 1),
         labels=c("Masked out", "Not Significant", paste("Significant", p_test_name)),
         colors=c("lightgrey", "red")
