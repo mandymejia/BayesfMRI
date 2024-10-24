@@ -104,10 +104,15 @@ fnames <- list.files("glms_full")
 
 # Second-level analysis 1: Fear & Neutral (mean over subjects)
 bglm2 <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20)
+saveRDS(bglm2, file='bglm2.rds')
 
 # Second-level analysis 2: Fear - Neutral (mean over subjects)
 bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20,
                     contrasts = list(fear_vs_neut = rep(c(1, -1), 10)/10))
-
-saveRDS(bglm2, file='bglm2.rds')
 saveRDS(bglm2b, file='bglm2b.rds')
+
+
+
+
+
+
