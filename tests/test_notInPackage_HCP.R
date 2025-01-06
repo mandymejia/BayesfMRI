@@ -143,8 +143,8 @@ BGLM_cii_args <- function(sess, resamp_factor=1){
     scrub = scrub_ss,
     TR = 0.72,
     brainstructures = c("left", "sub"),
-    surfL=ciftiTools.files()$surf["left"],
-    surfR=ciftiTools.files()$surf["right"],
+    surfL="fs_LR",
+    surfR="fs_LR",
     resamp_res = resamp_res * resamp_factor,
     hpf=.01,
     ar_order = 1,
@@ -223,6 +223,7 @@ bglmX <- BayesGLM(
   design = desX,
   #nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
   verbose=TRUE,# hpf=.01, ar_order=0,
+  surfL="fs_LR", surfR="fs_LR",
   resamp_res=100, TR=.72
 )
 
@@ -233,7 +234,8 @@ bglmA <- BayesGLM(
   design = des[[1]],
   brainstructures="sub",
   nuisance=nuis$rp_1, Bayes=FALSE,
-  verbose=TRUE, hpf=.01, ar_order=0, TR=.72
+  verbose=TRUE, hpf=.01,
+  ar_order=0, TR=.72
 )
 
 ##### Second pass to get results of decent resolution

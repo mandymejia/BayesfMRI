@@ -453,8 +453,21 @@ BayesGLM <- function(
         }
         surfL <- BOLD[[1]]$surf$cortex_left
       } else {
+        if (do$Bayesian) { 
+          if (do$right && is.null(surfR) && !(is_xifti && !is.null(BOLD[[1]]$surf$cortex_right))) {
+            stop("Please provide `surfL` and `surfR` to specify the cortex spatial models. ",
+              "These can be set to `fs_LR` to use the default HCP inflated surfaces.")
+          } else {
+            stop("Please provide `surfL` to specify the left cortex spatial model. ",
+              "It can be set to `fs_LR` to use the default HCP inflated surfaces.")
+          }
+        }
         surfL <- ciftiTools.files()$surf["left"]
         if(verbose>0) cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
+      }
+    } else {
+      if (fMRItools::is_1(surfL, "character") && surfL=="fs_LR") {
+        surfL <- ciftiTools.files()$surf["left"]
       }
     }
     # Read and resample, if necessary.
@@ -480,8 +493,16 @@ BayesGLM <- function(
         }
         surfR <- BOLD[[1]]$surf$cortex_right
       } else {
+        if (do$Bayesian) { 
+          stop("Please provide `surfR` to specify the right cortex spatial model. ",
+            "It can be set to `fs_LR` to use the default HCP inflated surfaces.")
+        }
         surfR <- ciftiTools.files()$surf["right"]
         if(verbose>0) cat("Since no surfaces provided or present, I will use the fs_LR inflated surfaces for all modeling.\n")
+      }
+    } else {
+      if (fMRItools::is_1(surfR, "character") && surfR=="fs_LR") {
+        surfR <- ciftiTools.files()$surf["right"]
       }
     }
     # Read and resample, if necessary.
