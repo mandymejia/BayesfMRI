@@ -331,8 +331,9 @@ make_design <- function(
     if (des_cor_max > .9) {
       warning("Maximum corr. between design matrix columns is high (",
         round(des_cor_max, 3), "). The design may ",
-        "be too collinear, causing issues for model estimation. Consider ",
-        "modeling some fields as nuisance instead of task, if possible.")
+        "be too collinear, causing issues for model estimation. ",
+        "Please visually inspect the design matrix with `plot` and modify ",
+        "as necessary. ")
     }
 
     ### VIF --------------------------------------------------------------------
@@ -342,10 +343,11 @@ make_design <- function(
     } else {
       des_vif_max <- max(des_vif, na.rm=TRUE)
       if (verbose) { cat("Maximum VIF:   ", round(des_vif_max, 3), "\n") }
-      if (des_vif_max > 5) {
-        warning("Maximum VIF is high (", round(des_vif_max, 3), "). The design may ",
-                "be too collinear, causing issues for model estimation. Consider ",
-                "modeling some fields as nuisance instead of task, if possible.")
+      if (des_vif_max > 10) {
+        warning("Maximum VIF is high (", round(des_vif_max, 3), "). The ",
+          "design may be too collinear, causing issues for model estimation. ",
+          "Please visually inspect the design matrix with `plot` and modify ",
+          "as necessary. ")
       }
     }
 
