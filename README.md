@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# BayesfMRI
+# BayesfMRI <img src="man/figures/logo.png" align="right" height="139" alt="BayesfMRI sticker" />
 
 <!-- badges: start -->
 
@@ -33,10 +33,20 @@ You can also obtain citation information from within R like so:
 citation("BayesfMRI")
 ```
 
-## Function names change
+## Installation
 
-In version 0.8.0 (June 2024), the function `BayesGLM_cifti` was renamed to
-`BayesGLM`, and the function `BayesGLM` was renamed to `fit_bayesglm`.
+You can install `BayesfMRI` from [CRAN](https://cran.r-project.org/)
+with:
+
+``` r
+install.packages("BayesfMRI")
+```
+
+## Vignette
+
+See [this
+link](https://htmlpreview.github.io/?https://github.com/mandymejia/BayesfMRI/blob/master/vignettes/BayesfMRI_vignette.html)
+to view the tutorial vignette.
 
 ## Important Note on Dependencies:
 

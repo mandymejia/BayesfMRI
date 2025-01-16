@@ -4,7 +4,7 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# BayesfMRI
+# BayesfMRI <img src="man/figures/logo.png" align="right" height="139" alt="BayesfMRI sticker" />
 
 <!-- badges: start -->
 [![CRAN status](https://www.r-pkg.org/badges/version/BayesfMRI)](https://cran.r-project.org/package=BayesfMRI)
@@ -32,13 +32,26 @@ You can also obtain citation information from within R like so:
 citation("BayesfMRI")
 ```
 
+## Installation
+
+You can install `BayesfMRI` from [CRAN](https://cran.r-project.org/) with:
+
+``` r
+install.packages("BayesfMRI")
+```
+
+## Vignette
+
+See [this link](https://htmlpreview.github.io/?https://github.com/mandymejia/BayesfMRI/blob/master/vignettes/BayesfMRI_vignette.html) to view the tutorial vignette.
+
+
 ## Important Note on Dependencies:
 
 `BayesfMRI` depends on the `ciftiTools` package, which requires an installation of Connectome Workbench.  It can be installed from the [HCP website](https://www.humanconnectome.org/software/get-connectome-workbench).
 
 <!-- By default, the spatial Bayesian model in `BayesGLM` is implemented using an expectation-maximization algorithm written in C++. To instead use the INLA package, set `EM=FALSE`. The INLA package will be required, as well as an INLA-PARDISO license for computational efficiency. -->
 
- The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain it by running `install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=FALSE) `. For more information, see [the INLA website](https://www.r-inla.org/download-install).  **Note: INLA must be installed before installing `BayesfMRI`.**
+The INLA package is required, which, due to a CRAN policy, will not be installed automatically. You can obtain it by running `install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=FALSE) `. For more information, see [the INLA website](https://www.r-inla.org/download-install).  **Note: INLA must be installed before installing `BayesfMRI`.**
  
 On Mac platforms, an installation of [Xcode](https://mac.r-project.org/tools/) is necessary to build the C++ code included in `BayesfMRI`. 
 

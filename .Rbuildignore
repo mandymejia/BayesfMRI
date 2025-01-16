@@ -2,12 +2,13 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^\.github$
-^appveyor\.yml$
 ^LICENSE\.md$
 ^CRAN-RELEASE$
+^CRAN-SUBMISSION$
 ^cran-comments\.md
 ^codecov\.yml$
-^CRAN-SUBMISSION$
+^vignettes/BayesfMRI_vignette\.html$
+^vignettes/BayesfMRI_vignette_cache
 # Tests ------------------------
 ^tests/simulate_cifti\.R$
 ^tests/data_notInPackage
@@ -19,12 +20,11 @@
 ^tests/data
 # EM ---------------------------
 # ^R/EM_utils\.R$
-# Vignettes (TO-DO) ------------
-^vignettes
-^vignette_data
 # Others -----------------------
 ^R/boundary\.R$
 ^R/excursions\.R$
 ^R/make_spde_surf\.R$
 ^R/summarize_sessions\.R$
-^vignette_data$
+# below: because the input data is too big
+^vignettes
+^vignette_data

@@ -11,13 +11,3 @@
 Passes the roxygen `examples`, and the tests that require data (results not included in package) appear correct.
 
 ## Previous submission
-
-#### 0.3.10
-
-Lost braces in \itemize
-
-* I think these have been fixed.
-
-Documented arguments not in \usage in Rd file
-
-* Updated docs to match function arguments
