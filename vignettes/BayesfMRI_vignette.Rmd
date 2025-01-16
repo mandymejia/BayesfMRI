@@ -111,7 +111,7 @@ Notice the format of the `EVs` argument. The `events` object above is an example
 To learn more about design matrix construction, including how to include HRF derivatives and how to construct contrasts, see the bonus section *More on design matrix construction* at the end.
 
 
-```{r, fig.height=4, fig.width=8}
+```{r, fig.height=4.5, fig.width=8}
 design <- make_design(EVs=events, nTime = nT, TR = TR)
 plot(design, colors = c('red','black'))
 ```
@@ -182,7 +182,7 @@ plot(bglm, Bayes=FALSE, idx="fear", title = "naive GLM (fear)", what = 'surface'
 
 Visualize the subcortical estimates for the "fear" condition.
 
-```{r, fig.height=3, fig.width=3, fig.show='hold'}
+```{r, fig.height=4.5, fig.width=3.2, fig.show='hold'}
 slices <- 27:30 
 plot(bglm, Bayes=TRUE, idx="fear", title = "spatial GLM", what = 'volume', slices = slices, n_slices=4) 
 cat('\t')
@@ -240,7 +240,7 @@ plot(act0, idx="fear", title = "naive GLM (FWER)", what = 'surface')
 plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'surface')
 ```
 
-```{r, fig.height=3, fig.width=3, fig.show='hold'}
+```{r, fig.height=4.5, fig.width=3.2, fig.show='hold'}
 plot(act, idx="fear", title = "spatial GLM", what = 'volume', slices = slices, n_slices=4) 
 plot(act0, idx="fear", title = "naive GLM (FWER)", what = 'volume', slices = slices, n_slices=4) 
 plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = slices, n_slices=4) 
@@ -293,7 +293,7 @@ plot(bglm2, stat = 'contrasts', idx="fear_avg", title = "Group-average (fear)", 
 plot(bglm2, stat = 'contrasts', idx="neut_avg", title = "Group-average (neutral)", what = 'surface')
 ```
 
-```{r, fig.height=3, fig.width=3, fig.show='hold'}
+```{r, fig.height=4.5, fig.width=3.2, fig.show='hold'}
 slices <- 27:30 
 plot(bglm2, stat = 'contrasts', idx="fear_avg", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
 cat('\t')
@@ -310,7 +310,7 @@ plot(bglm2, stat="activations", idx="fear_avg", title = "fear", what = 'surface'
 plot(bglm2, stat="activations", idx="neut_avg", title = "fear", what = 'surface')
 ```
 
-```{r, fig.height=3, fig.width=3, fig.show='hold'}
+```{r, fig.height=4.5, fig.width=3.2, fig.show='hold'}
 slices <- 27:30 
 plot(bglm2, stat = 'activations', idx="fear_avg", title = "fear", what = 'volume', slices = slices, n_slices=4)
 cat('\t')
@@ -338,7 +338,7 @@ Here are the group-average estimates:
 plot(bglm2b, stat = 'contrasts', idx="fear_vs_neut", title = "Group-average (fear)", what = 'surface')
 ```
 
-```{r, fig.height=3, fig.width=3, fig.show='hold'}
+```{r, fig.height=4.5, fig.width=3.2, fig.show='hold'}
 slices <- 27:30 
 plot(bglm2b, stat = 'contrasts', idx="fear_vs_neut", title = "fear", what = 'volume', slices = slices, n_slices=4, zlim = c(-0.5,0.5)) 
 ```
@@ -349,7 +349,7 @@ And the activation maps:
 plot(bglm2b, stat="activations", idx="fear_vs_neut", title = "fear", what = 'surface')
 ```
 
-```{r, fig.height=3, fig.width=3, fig.show='hold'}
+```{r, fig.height=4.5, fig.width=3.2, fig.show='hold'}
 slices <- 27:30 
 plot(bglm2b, stat = 'activations', idx="fear_vs_neut", title = "fear", what = 'volume', slices = slices, n_slices=4)
 ```
@@ -431,7 +431,7 @@ head(design$design) #the actual design matrix
 
 We can optionally set `dHRF = 1` to include the temporal derivative of the HRF or `dHRF = 2` to include both temporal and dispersion derivatives. This allows for small shifts in the timing of the HRF. 
 
-```{r, fig.height=4, fig.width=8}
+```{r, fig.height=4.5, fig.width=8}
 design_dHRFs <- make_design(EVs=events, nTime = nT, TR = TR, dHRF = 1)
 head(design_dHRFs$design)
 plot(design_dHRFs, colors = c('red','black','pink','grey'))
@@ -453,7 +453,7 @@ In the design matrix above, there is one regressor for each task.  If we are int
 
 For example, we may be interested in the contrast "fear minus neutral".  In that case, we can modify our design matrix as follows:
 
-```{r, fig.height=4, fig.width=8}
+```{r, fig.height=4.5, fig.width=8}
 design0 <- design$design #the one returned by make_design
 head(design0)
 avg_fear_neut <- design0[,1] + design0[,2]
