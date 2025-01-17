@@ -62,7 +62,6 @@ Imports:
 Suggests:
     covr,
     abind,
-    ggplot2,
     grDevices,
     hrf,
     INLA (>= 0.0-1468840039),
@@ -73,7 +72,6 @@ Suggests:
     rmarkdown,
     SQUAREM,
     testthat (>= 3.0.0),
-    tidyr,
     spelling
 VignetteBuilder:
     knitr
