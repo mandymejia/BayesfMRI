@@ -5,7 +5,7 @@
 \title{design}
 \arguments{
 \item{design}{A numeric matrix or \code{data.frame}, or a
-\code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
+\code{"BayesfMRI_design"} object from \code{make_design}. Can also
 be an array where the third dimension is the same length as the number of
 data locations, to model each location with its own design.}
 }

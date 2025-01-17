@@ -15,40 +15,6 @@ scale_design_mat <- function(design_mat) {
   })
 }
 
-#' Make DCT bases
-#' @param hpf,nT,TR See \code{BayesGLM}
-#' @return The matrix of DCT bases, or \code{NULL} if none
-#' @importFrom fMRItools dct_bases is_posNum dct_convert
-#' @keywords internal
-BayesGLM_make_DCT <- function(hpf, nT, TR){
-  DCT <- NULL # used to be an argument.
-
-  if (!is.null(DCT)) {
-    stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
-    if (DCT==0) { DCT <- NULL }
-  }
-  if (!is.null(hpf)) {
-    stopifnot(is_posNum(hpf, zero_ok=TRUE))
-    if (hpf==0) { hpf <- NULL }
-  }
-
-  if (!is.null(hpf) || !is.null(DCT)) {
-    # Get the num. of bases for this session.
-    if (!is.null(hpf)) {
-      nDCT <- round(dct_convert(T_=nT, TR=TR, f=hpf))
-    } else {
-      nDCT <- DCT
-    }
-    if (nDCT > 0) {
-      fMRItools::dct_bases(nT, nDCT)
-    } else {
-      NULL
-    }
-  } else {
-    NULL
-  }
-}
-
 #' Bayes GLM arg checks
 #'
 #' Checks arguments for \code{BayesGLM} and \code{fit_bayesglm}

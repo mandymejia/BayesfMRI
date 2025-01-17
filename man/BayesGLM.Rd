@@ -55,7 +55,7 @@ to analyze all subcortex ROIs. See the \code{ciftiTools_Name} column of
 subcortical ROIs.}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
-\code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
+\code{"BayesfMRI_design"} object from \code{make_design}. Can also
 be an array where the third dimension is the same length as the number of
 data locations, to model each location with its own design.}
 
@@ -201,7 +201,7 @@ compute just the classical (spatially-independent)
 }
 \details{
 To use \code{BayesGLM}, the design matrix must first be constructed
-with \code{\link{make_design}}.
+with \code{make_design}.
 }
 \section{Connectome Workbench Requirement}{
 
