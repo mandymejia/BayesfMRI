@@ -45,7 +45,7 @@ install.packages("BayesfMRI")
 ## Vignette
 
 See [this
-link](https://htmlpreview.github.io/?https://github.com/mandymejia/BayesfMRI/blob/master/vignettes/BayesfMRI_vignette.html)
+link](https://htmlpreview.github.io/?https://github.com/mandymejia/BayesfMRI/blob/10.0/vignettes/BayesfMRI_vignette.html)
 to view the tutorial vignette.
 
 ## Important Note on Dependencies:
