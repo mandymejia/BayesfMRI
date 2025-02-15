@@ -43,9 +43,10 @@ b) You can then install `ciftiTools` from CRAN or Github.
 # devtools::install_github('mandymejia/BayesfMRI', ref='9.0')
 ```
 
-Now that `BayesfMRI` and its dependencies are installed, you can load the `BayesfMRI` package. We will also load the `ciftiTools` package, since we need to point to the Connectome Workbench installation to facilitate working with CIFTI files.
+Now that `BayesfMRI` and its dependencies are installed, you can load the `BayesfMRI` package. We will also load `hrf` and the `ciftiTools` package, since we need to point to the Connectome Workbench installation to facilitate working with CIFTI files.
 
 ```{r}
+library(hrf)
 library(BayesfMRI) 
 library(ciftiTools)
 ciftiTools.setOption('wb_path','~/Applications/workbench') #where your Connectome Workbench installation is located
@@ -87,12 +88,12 @@ print(TR <- BOLD_xii$meta$cifti$time_step)
 print(nT <- ncol(BOLD_xii))
 ```
 
-Now read in and glimpse the motion regressors and task timing information.  We can use the functions `plot_design_image` or `plot_design_line` from `BayesfMRI` (see `help(plot_design)`) to visualize the motion regressors.
+Now read in and glimpse the motion regressors and task timing information.  We can use the functions `plot_design_image` or `plot_design_line` from `hrf` (see `help(plot_design)`) to visualize the motion regressors.
 
 ```{r}
 motion <- as.matrix(read.table(fname_motion, header=FALSE))
 head(motion) 
-plot_design_image(motion)
+hrf::plot_design_image(motion)
 ```
 
 ```{r}
@@ -459,7 +460,7 @@ head(design0)
 avg_fear_neut <- design0[,1] + design0[,2]
 fear_vs_neut <- (design0[,1] - design0[,2])/2
 design1 <- cbind(avg_fear_neut, fear_vs_neut)
-plot_design(design1, colors = c('red','black'))
+hrf::plot_design(design1, colors = c('red','black'))
 ```
 
 ### 7.2.3 Scrubbing
