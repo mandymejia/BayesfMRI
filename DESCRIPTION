@@ -49,7 +49,7 @@ Imports:
     ciftiTools (>= 0.17.2),
     excursions,
     foreach,
-    fMRItools (>= 0.4.2),
+    fMRItools (>= 0.5.3),
     MASS,
     Matrix,
     matrixStats,
