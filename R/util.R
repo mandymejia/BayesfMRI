@@ -265,11 +265,11 @@ do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
 #'
 #' Is this a matrix or data.frame?
 #'
-#' @param q The object
+#' @param x The object
 #' @return Length-one logical.
 #' @keywords internal
-is.matrix.or.df <- function(q){
-  is.matrix(q) || is.data.frame(q)
+is_matrix_or_df <- function(x){
+  is.matrix(x) || is.data.frame(x)
 }
 
 #' `cbind` if first argument might be \code{NULL}

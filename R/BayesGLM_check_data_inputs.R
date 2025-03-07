@@ -3,7 +3,7 @@
 #' @param design The design matrix/array
 #' @keywords internal
 BayesGLM_is_valid_one_design <- function(design) {
-  stopifnot(is.matrix.or.df(design) || length(dim(design))==3)
+  stopifnot(is_matrix_or_df(design) || length(dim(design))==3)
   stopifnot(all(apply(design, 2, function(q){all(is.na(q)) || is.numeric(q)})))
   stopifnot(all(dim(design) > 0))
   TRUE
@@ -14,7 +14,7 @@ BayesGLM_is_valid_one_design <- function(design) {
 #' @param nuisance The nuisance matrix
 #' @keywords internal
 BayesGLM_is_valid_one_nuisance <- function(nuisance) {
-  stopifnot(is.matrix.or.df(nuisance))
+  stopifnot(is_matrix_or_df(nuisance))
   stopifnot(all(apply(nuisance, 2, is.numeric)))
   stopifnot(all(dim(nuisance) > 0))
   TRUE
@@ -28,7 +28,7 @@ BayesGLM_is_valid_one_scrub <- function(scrub) {
   if (is.null(scrub)) { return(TRUE) }
   if (is.logical(scrub)) { return(TRUE) }
 
-  stopifnot(is.matrix.or.df(scrub))
+  stopifnot(is_matrix_or_df(scrub))
   stopifnot(all(apply(scrub, 2, is.numeric)))
   stopifnot(all(dim(scrub) > 0))
   stopifnot(all(colSums(scrub) == 1))
