@@ -29,7 +29,8 @@ if (doINLA) {
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
 roxygen2::roxygenize("~/Documents/GitHub/BayesfMRI")
-#library(BayesfMRI)
+library(fMRItools)
+library(hrf)
 
 # Get file names.
 fnames <- list(
@@ -238,6 +239,8 @@ bglmA <- BayesGLM(
   ar_order=0, TR=.72
 )
 
+BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
+
 ##### Second pass to get results of decent resolution
 bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1)))
 bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1)))
@@ -246,10 +249,10 @@ bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2)))
 #bglm_m2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, dtype="multi")))
 
-act_c1 <- activations(bglm_c1, sessions=1)
+act_c1 <- activations(bglm_c1, Bayes=FALSE, sessions=1)
 act_b1 <- activations(bglm_b1, gamma=.01, sessions=1)
 #act_m1 <- activations(bglm_b1, gamma=.01, sessions=1)
-act_c2 <- activations(bglm_c2, gamma=.01, sessions=seq(2))
+act_c2 <- activations(bglm_c2, Bayes=FALSE, gamma=.01, sessions=seq(2))
 act_b2 <- activations(bglm_b2, gamma=.01, sessions=seq(2))
 #act_m2 <- activations(bglm_b1, gamma=.01, sessions=1)
 
