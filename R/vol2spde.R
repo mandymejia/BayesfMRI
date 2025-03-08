@@ -20,8 +20,13 @@ vol2spde <- function(mask,
                      nbhd_order = 1,
                      buffer=c(1,1,3,4,4)){
 
-  #[TO DO] check that mask is an array and contains 0s and 1s. If logical, make numeric.
-  #[TO DO] check that buffer is increasing positive integers
+  stopifnot(is.logical(mask) | is.numeric(mask))
+  mask[] <- as.numeric(mask)
+  stopifnot(length(dim(mask))==3)
+  stopifnot(all(buffer >= 0))
+  stopifnot(all(diff(buffer) >= 0))
+  if (0 %in% buffer) stop('0 is not a valid value for buffer')
+
   #[TO DO] check that the buffer argument is large enough to capture all the dependence layers, plus one.  Each dependence layer is 2 neighbor layers.
 
   #bounding box limits for the mask
@@ -35,7 +40,6 @@ vol2spde <- function(mask,
   z0 <- z <- (lim_z[1]:lim_z[2])
 
   #boundary layer(s)
-  if(0 %in% buffer) stop('0 is not a valid value for buffer')
   nB <- length(buffer)
   if(!is.null(buffer)){
     for(b in 1:nB){

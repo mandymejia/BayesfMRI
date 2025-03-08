@@ -11,6 +11,7 @@ BayesGLM(
     "Hippocampus-R", "Thalamus-L", "Thalamus-R"),
   design,
   nuisance = NULL,
+  scrub = NULL,
   hpf = NULL,
   TR = NULL,
   surfL = NULL,
@@ -48,14 +49,17 @@ of \code{BOLD} to analyze: \code{"left"} cortex; \code{"right"} cortex;
 and/or \code{"subcortical"} structures. Or \code{"all"} to model all three.
 Default: \code{c("left","right")} (cortex only).}
 
-\item{subROI}{Which subcortical ROIs should be analyzed?}
+\item{subROI}{Which subcortical ROIs should be analyzed? Can be \code{"all"}
+to analyze all subcortex ROIs. See the \code{ciftiTools_Name} column of
+\code{ciftiTools:::substructure_table()} for a list of possible
+subcortical ROIs.}
 
 \item{design}{A numeric matrix or \code{data.frame}, or a
-\code{"BayesfMRI_design"} object from \code{\link{make_design}}. Can also
+\code{"BayesfMRI_design"} object from \code{make_design}. Can also
 be an array where the third dimension is the same length as the number of
 data locations, to model each location with its own design.}
 
-\item{nuisance}{(Optional) A \eqn{T \times N} matrix of nuisance signals,
+\item{nuisance}{(Optional) A \eqn{T \times N_{nuis}} matrix of nuisance signals,
 where \eqn{T} is the number of timepoints and \eqn{N} is the number of
 nuisance signals, or a list of these for multi-session analysis. Nuisance
 signals are regressed from the fMRI data and design matrix prior to GLM
@@ -63,7 +67,21 @@ computation. Nuisance signals can include motion regressors, HRF derivatives
 not being modeled as tasks, and other sources of noise.
 
 Detrending/high-pass filtering is accomplished by adding DCT bases to the
-nuisance matrix; see the parameters \code{hpf} and \code{DCT}.}
+nuisance matrix; see the parameters \code{hpf} and \code{DCT}.
+
+Do not add spike regressors for scrubbing to the \code{nuisance} matrix.
+Rather, provide these in \code{scrub} so that their corresponding timepoints
+are also removed from the BOLD data after nuisance regression.}
+
+\item{scrub}{(Optional) A \eqn{T \times N_{scrub}} matrix of spike regressors
+(one 1 value at the timepoint to scrub, and 0 for all other values), or a
+logical vector indicating the timepoints to scrub (\code{TRUE} to scrub, and
+\code{FALSE} to keep). For multi-session data, a session-length list of
+such matrices or logical vectors.
+
+The spike regressors will be included in the nuisance
+regression, and afterwards the timepoints indicated in \code{scrub} will be
+removed from the BOLD data and design matrix.}
 
 \item{hpf}{Add DCT bases to \code{nuisance} to apply a temporal high-pass
 filter to the data, for detrending? \code{hpf} is the filter frequency.
@@ -183,7 +201,7 @@ compute just the classical (spatially-independent)
 }
 \details{
 To use \code{BayesGLM}, the design matrix must first be constructed
-with \code{\link{make_design}}.
+with \code{make_design}.
 }
 \section{Connectome Workbench Requirement}{
 

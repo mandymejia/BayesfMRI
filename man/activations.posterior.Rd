@@ -14,7 +14,7 @@ activations.posterior(x, fields, session, alpha = 0.05, gamma)
 \value{
 A list with two elements: \code{active}, which gives a matrix of zeros
 and ones of the same dimension as \code{x$field_estimates${session}},
-and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+and \code{excur_result}, an object of class \code{"excurobj"} (see INLA's \code{excursions.inla} for
 more information).
 }
 \description{

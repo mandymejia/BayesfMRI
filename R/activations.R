@@ -15,7 +15,7 @@
 #'  signal change if \code{scale_BOLD=="mean"} during model estimation. Setting
 #'  a \code{gamma} is required for the Bayesian method; \code{NULL}
 #'  (default) will use a \code{gamma} of zero for the classical method.
-#' @param alpha Significance level. Default: \code{0.05}.
+#' @param alpha Significance level for inference. Default: \code{0.05}.
 #' @param correction For the classical method only: Type of multiple comparisons
 #'  correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
 #'  (Benjamini Hochberg), or \code{"none"}.
@@ -53,13 +53,13 @@ activations <- function(
   if (is_cifti) {
     cifti_obj <- x
     x <- cifti_obj$BGLMs
-    spatial <- lapply(x, '[[', "spatial" )
   } else {
     if (!inherits(x, "fit_bglm")) {
       stop("`x` is not a `'BGLM'` or 'fit_bglm' object.")
     }
     x <- list(bglm=x)
   }
+  spatial <- lapply(x, '[[', "spatial" )
   models <- names(x) #which brainstructures are in x
   idx1 <- min(which(!vapply(x, is.null, FALSE))) #first brainstructure in x
 
@@ -142,11 +142,18 @@ activations <- function(
         q[[gg]] <- do.call(actFUN,
           c(actArgs, list(x=x[[bb]], session=sessions[ss], gamma=gamma[gg]))
         )
-        #remove boundary locations for subcortex
-        if (Bayes & !is.null(spatial[[bb]]$buffer_mask)) {
-          mask_ <- spatial[[bb]]$buffer_mask
-          q[[gg]]$active <- q[[gg]]$active[mask_,,drop=FALSE]
+        # Apply mask to get data locs, removing boundary locs.
+        if (Bayes & !is.null(spatial[[bb]]$maskMdat)) {
+          q[[gg]]$active <- q[[gg]]$active[spatial[[bb]]$Mmap,,drop=FALSE]
         }
+        # Both `actFUN`, posterior and classical, work on the `Mdat`
+        #   locations. So here, we need to apply the mask to get the data
+        #   locations, removing boundary locations.
+        if (!Bayes) {
+          q[[gg]]$p_values <- unmask_Mdat2In(q[[gg]]$p_values, spatial[[bb]]$maskIn, spatial[[bb]]$maskMdat)
+          q[[gg]]$p_values_adj <- unmask_Mdat2In(q[[gg]]$p_values_adj, spatial[[bb]]$maskIn, spatial[[bb]]$maskMdat)
+        }
+        q[[gg]]$active <- unmask_Mdat2In(q[[gg]]$active, spatial[[bb]]$maskIn, spatial[[bb]]$maskMdat)
       }
       activations[[bb]][[ss]] <- q
     }
@@ -158,6 +165,7 @@ activations <- function(
     alpha=alpha,
     gamma=gamma,
     correction=correction,
+    spatial=spatial,
     field_names = fields,
     session_names = sessions
   )
@@ -168,9 +176,6 @@ activations <- function(
     class(result) <- "act_fit_bglm"
     return(result)
   }
-
-  # If class(x) = BGLM
-  result <- c(list(spatial=spatial), result)
 
   act_xii <- vector("list", length(sessions))
   names(act_xii) <- sessions
@@ -186,12 +191,6 @@ activations <- function(
       )
       if (!is.null(the_xii$data[[bs]])) {
         dat <- Reduce("+", lapply(activations[[bs2]][[sess]], function(q){1*q$active}))
-        #remove NA values (i.e. medial wall)
-        if (!Bayes) { dat <- dat[!is.na(dat[,1]),,drop=FALSE] }
-        # #remove boundary locations -- now done above
-        # if (Bayes & !is.null(spatial[[bs2]]$buffer_mask)) {
-        #   dat <- dat[spatial[[bs2]]$buffer_mask,,drop=FALSE]
-        # }
         act_xii_ss$data[[bs]] <- dat
       }
     }
@@ -242,7 +241,7 @@ activations <- function(
 #' @param fields,session,alpha,gamma See \code{\link{activations}}.
 #' @return A list with two elements: \code{active}, which gives a matrix of zeros
 #' and ones of the same dimension as \code{x$field_estimates${session}},
-#' and \code{excur_result}, an object of class \code{"excurobj"} (see \code{\link{excursions.inla}} for
+#' and \code{excur_result}, an object of class \code{"excurobj"} (see INLA's \code{excursions.inla} for
 #'  more information).
 #'
 #' @importFrom excursions excursions.inla
@@ -327,19 +326,20 @@ activations.classical <- function(x,
 
   fields_idx <- x$field_names %in% fields
   stopifnot(any(fields_idx))
-  beta_est <- x$result_classical[[session]]$estimates[,fields_idx,drop=FALSE]
-  se_beta <- x$result_classical[[session]]$SE_estimates[,fields_idx,drop=FALSE]
+  mask_In2Mdat <- x$spatial$maskMdat[x$spatial$maskIn]
+  beta_est <- x$result_classical[[session]]$estimates[mask_In2Mdat,fields_idx,drop=FALSE]
+  se_beta <- x$result_classical[[session]]$SE_estimates[mask_In2Mdat,fields_idx,drop=FALSE]
   DOF <- x$result_classical[[session]]$DOF
 
-  nV_D <- nrow(beta_est)
+  nV_input <- nrow(beta_est)
   #if(any(!(fields %in% 1:K))) stop(paste0('fields must be between 1 and the number of fields, ',K))
   nK <- length(fields)
 
   #Compute t-statistics and p-values
   t_star <- (beta_est - gamma) / se_beta
-  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nV_D)
+  if(!is.matrix(t_star)) t_star <- matrix(t_star, nrow=nV_input)
   #perform multiple comparisons correction
-  p_values <- p_values_adj <- active <- matrix(NA, nV_D, nK)
+  p_values <- p_values_adj <- active <- matrix(NA, nV_input, nK)
 
   for (kk in seq(nK)) {
     p_values_k <- sapply(t_star[,kk], pt, df = DOF, lower.tail = F)

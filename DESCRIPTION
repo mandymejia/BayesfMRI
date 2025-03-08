@@ -1,7 +1,7 @@
-Package: BayesfMRI
 Type: Package
+Package: BayesfMRI
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.8.0
+Version: 0.10.1
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -39,16 +39,17 @@ Description: Performs a spatial Bayesian general linear model (GLM) for task
     Lindgren, M. A. Lindquist (2020) <doi:10.1080/01621459.2019.1611582> and D. 
     Spencer, Y. R. Yue, D. Bolin, S. Ryan, A. F. Mejia (2022) 
     <doi:10.1016/j.neuroimage.2022.118908>.
-Depends: R (>= 3.6.0)
 License: GPL-3
+URL: https://github.com/mandymejia/BayesfMRI
+BugReports: https://github.com/mandymejia/BayesfMRI/issues
 Additional_repositories: https://inla.r-inla-download.org/R/testing
-Encoding: UTF-8
+Depends: R (>= 3.6.0)
 Imports: 
     car,
-    ciftiTools (>= 0.14.0),
+    ciftiTools (>= 0.17.2),
     excursions,
     foreach,
-    fMRItools (>= 0.4.2),
+    fMRItools (>= 0.5.3),
     MASS,
     Matrix,
     matrixStats,
@@ -61,9 +62,8 @@ Imports:
 Suggests:
     covr,
     abind,
-    dplyr,
-    ggplot2,
     grDevices,
+    hrf,
     INLA (>= 0.0-1468840039),
     knitr,
     MatrixModels,
@@ -72,12 +72,10 @@ Suggests:
     rmarkdown,
     SQUAREM,
     testthat (>= 3.0.0),
-    tidyr,
     spelling
+Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
-URL: https://github.com/mandymejia/BayesfMRI
-BugReports: https://github.com/mandymejia/BayesfMRI/issues
+RoxygenNote: 7.3.2
 LinkingTo:
     RcppEigen,
     Rcpp

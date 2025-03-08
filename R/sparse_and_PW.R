@@ -30,12 +30,11 @@ sparse_and_PW <- function(
   ){
   nV <- get_nV(spatial)
   nK <- length(field_names)
-	nIX <- seq(nT*nV$D)
-	nIY <- rep(seq(nV$D), each = nT)
+	nIX <- seq(nT*nV$mdata)
+	nIY <- rep(seq(nV$mdata), each = nT)
 
 	y <- as.vector(BOLD) #makes a vector (y_1,...,y_V), where y_v is the timeseries for data location v
   X <- design
-
   A_sparse <- make_A_mat(spatial)
 
   ### Make `X_all` (design) and `bigX`. -----
@@ -49,11 +48,11 @@ sparse_and_PW <- function(
 	    # Expand the kth column of X into a VT x V.
 	    # Then in `fit_bayesglm`: will post-multiply by A to get a VT x V2 matrix
 	    #   (a V x V2 matrix for each time point).
-	    X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV$D))
+	    X_all[[kk]] <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], times=nV$mdata))
 	    # #needs to be c-binded before model fitting.  For Bayesian GLM, post-multiply each by A before cbind().
 
 	    # # previous approach
-	    # X_k <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], nV$D)) # %*% A #multiply by A to expand to the non-data locations
+	    # X_k <- Matrix::sparseMatrix(nIX, nIY, x=rep(X[,kk], nV$mdata)) # %*% A #multiply by A to expand to the non-data locations
 	    # bigX <- if (kk==1) { X_k } else { cbind(bigX, X_k) }
 	  } else if (design_type == "per_location") {
 	    if (!valid_cols[kk]) { # formerly if (is.nan(X[1,kk]))

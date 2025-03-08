@@ -4,7 +4,7 @@
 \alias{plot.BGLM2}
 \title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM2"} object}
 \usage{
-\method{plot}{BGLM2}(x, idx = NULL, what = c("contrasts", "activations"), zlim = c(-1, 1), ...)
+\method{plot}{BGLM2}(x, idx = NULL, stat = c("contrasts", "activations"), zlim = c(-1, 1), ...)
 }
 \arguments{
 \item{x}{An object of class "BGLM2"}
@@ -13,7 +13,7 @@
 names. \code{NULL} (default) will show all contrasts. This argument
 overrides the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
 
-\item{what}{Estimates of the \code{"contrasts"} (default), or their
+\item{stat}{Estimates of the \code{"contrasts"} (default), or their
 thresholded \code{"activations"}.}
 
 \item{zlim}{Overrides the \code{zlim} argument for

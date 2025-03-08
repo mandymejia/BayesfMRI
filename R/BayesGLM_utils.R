@@ -15,40 +15,6 @@ scale_design_mat <- function(design_mat) {
   })
 }
 
-#' Make DCT bases
-#' @param hpf,nT,TR See \code{BayesGLM}
-#' @return The matrix of DCT bases, or \code{NULL} if none
-#' @importFrom fMRItools dct_bases is_posNum dct_convert
-#' @keywords internal
-BayesGLM_make_DCT <- function(hpf, nT, TR){
-  DCT <- NULL # used to be an argument.
-
-  if (!is.null(DCT)) {
-    stopifnot(is_posNum(DCT, zero_ok=TRUE) && DCT==round(DCT))
-    if (DCT==0) { DCT <- NULL }
-  }
-  if (!is.null(hpf)) {
-    stopifnot(is_posNum(hpf, zero_ok=TRUE))
-    if (hpf==0) { hpf <- NULL }
-  }
-
-  if (!is.null(hpf) || !is.null(DCT)) {
-    # Get the num. of bases for this session.
-    if (!is.null(hpf)) {
-      nDCT <- round(dct_convert(T_=nT, TR=TR, f=hpf))
-    } else {
-      nDCT <- DCT
-    }
-    if (nDCT > 0) {
-      fMRItools::dct_bases(nT, nDCT)
-    } else {
-      NULL
-    }
-  } else {
-    NULL
-  }
-}
-
 #' Bayes GLM arg checks
 #'
 #' Checks arguments for \code{BayesGLM} and \code{fit_bayesglm}
@@ -152,25 +118,25 @@ BayesGLM_argChecks <- function(
 #'  the number of boundary locations.
 get_nV <- function(spatial){
 
-  spatial_type <- if('surf' %in% names(spatial)) { 'surf' } else if('labels' %in% names(spatial)) { 'voxel' } else { stop() }
-
-  out <- switch(spatial_type,
-    surf = list(
-      T=nrow(spatial$surf$vertices),
-      D=sum(spatial$mask)
-    ),
-    voxel = list(
-      T=prod(dim(spatial$labels)), # [TO DO] redefine?
-      D=sum(spatial$labels!=0)
-    )
+  # for `nV_total`, use these instead of masks, b/c `BayesGLM`
+  #   will have these before the masks are read in.
+  nV_total <- switch(spatial$spatial_type,
+    vertex = nrow(spatial$surf$vertices),
+    voxel = prod(dim(spatial$maskIn))
   )
 
-  if (spatial_type=="voxel" && !is.null(spatial$buffer_mask)) {
-    stopifnot(out$D == sum(spatial$buffer_mask))
-    out <- c(out, list(DB=length(spatial$buffer_mask)))
-  }
+  nV_input <- sum(spatial$maskIn)
+  nV_model <- spatial$nV_M
+  nV_mdata <- sum(spatial$maskMdat)
+  nV_mbuffer <- nV_model - sum(spatial$maskMdat)
 
-  out
+  list(
+    total = nV_total, #length(spatial$maskIn),
+    input = nV_input,
+    model = nV_model,
+    mdata = nV_mdata,
+    mbuffer = nV_mbuffer
+  )
 }
 
 nT_message <- function(nT) {
@@ -211,5 +177,33 @@ dgCMatrix_cols_to_zero <- function(mat, cols) {
   mat@x <- new_x
   mat@i <- new_i
   mat@p <- as.integer(new_p)
+
   mat
+}
+
+#' Validate \code{spatial}
+#'
+#' Validate \code{spatial}
+#'
+#' @param spatial \code{spatial}
+#' @return \code{NULL}, invisibly
+#' @keywords internal
+#'
+validate_spatial <- function(spatial) {
+  stopifnot(is.list(spatial))
+  if (spatial$spatial_type == "vertex") {
+    stopifnot(length(spatial) == 7)
+    stopifnot(names(spatial) == c(
+      "spatial_type", "surf", "maskIn", "maskMdat", "nV_M", "Mmap", "mesh"
+    ))
+  } else if (spatial$spatial_type == "voxel") {
+    stopifnot(length(spatial) == 11)
+    stopifnot(names(spatial) == c(
+      "spatial_type", "labels", "trans_mat", "trans_units",
+      "nbhd_order", "buffer",
+      "maskIn", "labsMdat", "maskMdat", "nV_M", "Mmap")
+    )
+  } else { stop("Unknown spatial$spatial_type.") }
+
+  invisible(NULL)
 }

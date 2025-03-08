@@ -1,17 +1,20 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# BayesfMRI
+# BayesfMRI <img src="man/figures/logo.png" align="right" height="139" alt="BayesfMRI sticker" />
 
 <!-- badges: start -->
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/BayesfMRI)](https://cran.r-project.org/package=BayesfMRI)
 [![R-CMD-check](https://github.com/mandymejia/BayesfMRI/workflows/R-CMD-check/badge.svg)](https://github.com/mandymejia/BayesfMRI/actions)
 [![Codecov test
 coverage](https://codecov.io/gh/mandymejia/BayesfMRI/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/BayesfMRI?branch=master)
 <!-- badges: end -->
 
 The `BayesfMRI` R package includes the main function `BayesGLM`, which
-implements a spatial Bayesian GLM for task fMRI in CIFTI file format. 
+implements a spatial Bayesian GLM for task fMRI. It also contains a
+wrapper function `BayesGLM_cifti`, for CIFTI cortical surface fMRI data.
 
 <!-- * `BayesGLM_vol` - implements `BayesGLM` on NIFTI subcortical voxel fMRI data -->
 
@@ -30,10 +33,20 @@ You can also obtain citation information from within R like so:
 citation("BayesfMRI")
 ```
 
-## Function names change
+## Installation
 
-In version 0.8.0 (June 2024), the function `BayesGLM_cifti` was renamed to
-`BayesGLM`, and the function `BayesGLM` was renamed to `fit_bayesglm`.
+You can install `BayesfMRI` from [CRAN](https://cran.r-project.org/)
+with:
+
+``` r
+install.packages("BayesfMRI")
+```
+
+## Vignette
+
+See [this
+link](https://htmlpreview.github.io/?https://github.com/mandymejia/BayesfMRI/blob/10.0/vignettes/BayesfMRI_vignette.html)
+to view the tutorial vignette.
 
 ## Important Note on Dependencies:
 

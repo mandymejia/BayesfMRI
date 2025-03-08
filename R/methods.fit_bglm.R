@@ -10,17 +10,11 @@
 #' @method summary fit_bglm
 summary.fit_bglm <- function(object, ...) {
 
-  loc_mask <- if (!is.null(object$spatial$mask)) {
-    object$spatial$mask
-  } else {
-    object$spatial$labels != 0
-  }
-
   x <- list(
     fields = object$field_names,
     sessions = object$session_names,
-    n_loc_total = length(loc_mask),
-    n_loc_modeled = sum(loc_mask),
+    n_loc_In = sum(object$spatial$maskIn),
+    n_loc_Mdat = sum(object$spatial$maskMdat),
     GLM_type = attr(object$field_estimates, "GLM_type")
   )
 
@@ -43,7 +37,8 @@ print.summary.fit_bglm <- function(x, ...) {
   } else {
     cat("Sessions: ", paste0("(", length(x$sessions), ") ", paste(x$sessions, collapse=", ")), "\n")
   }
-  cat("Locations:", x$n_loc_modeled, "modeled,", x$n_loc_total, "total", "\n")
+  cat("Locations:", x$n_loc_Mdat, "modeled",
+      paste0("(", x$n_loc_In, " input)\n"))
   cat("GLM type: ", x$GLM_type, "\n")
   cat("\n")
   invisible(NULL)

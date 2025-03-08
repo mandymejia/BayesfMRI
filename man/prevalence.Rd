@@ -4,7 +4,13 @@
 \alias{prevalence}
 \title{Activations prevalence.}
 \usage{
-prevalence(act_list, gamma_idx = 1)
+prevalence(
+  act_list,
+  gamma_idx = 1,
+  p_test = NULL,
+  alpha = 0.05,
+  correction = c("FWER", "FDR", "none")
+)
 }
 \arguments{
 \item{act_list}{List of activations from \code{\link{activations}}. All
@@ -12,6 +18,16 @@ should have the same sessions, fields, and brainstructures.}
 
 \item{gamma_idx}{If activations at multiple thresholds were computed, which
 threshold should be used for prevalence? Default: the first (lowest).}
+
+\item{p_test}{For inference: the expected baseline rate of activation for all
+data locations, under the null hypothesis. Default: \code{NULL} (do not
+perform hypothesis testing).}
+
+\item{alpha}{Significance level for inference. Default: \code{.05}.}
+
+\item{correction}{For the classical method only: Type of multiple comparisons
+correction: \code{"FWER"} (Bonferroni correction, the default), \code{"FDR"}
+(Benjamini Hochberg), or \code{"none"}.}
 }
 \value{
 A list containing the prevalences of activation, as a proportion of

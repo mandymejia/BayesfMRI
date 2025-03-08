@@ -16,7 +16,7 @@ GLM_est_resid_var_pw <- function(
 
   nS <- length(session_names)
   nK <- length(field_names)
-  nV_D <- get_nV(spatial)$D
+  nV_D <- get_nV(spatial)$mdata
 
   AR_coefs_avg <- var_avg <- max_AIC <- NULL
 

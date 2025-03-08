@@ -27,7 +27,7 @@ summary.act_fit_bglm <- function(object, ...) {
     activations_g1 = lapply(act, function(x_model){
       lapply(x_model, function(x_sess){
         x_sess <- x_sess[[1]] # use first level of gamma
-        q <- apply(x_sess$active, 2, function(avec){c(`TRUE`=sum(avec>0), `FALSE`=sum(avec==0))})
+        q <- apply(x_sess$active, 2, function(avec){c(`TRUE`=sum(avec>0, na.rm=TRUE), `FALSE`=sum(avec==0, na.rm=TRUE))})
         colnames(q) <- object$field_names
         q
       })
@@ -60,7 +60,7 @@ print.summary.act_fit_bglm <- function(x, ...) {
   cat("====fit_bglm Activations====================\n")
   cat(paste0(
     "Activated locations (",
-    sum(x$activations_g1[[1]][,1]), " modeled locations)",
+    sum(x$activations_g1[[1]][,1], na.rm=TRUE), " modeled locations)",
     gamma_msg, ":\n"
   ))
   for (ii in seq(length(x$activations_g1))) {
@@ -137,7 +137,7 @@ print.summary.act_BGLM <- function(x, ...) {
     act_ii <- x$activations_g1[[ii]]
     cat(paste0(
       "  ", names(x$activations_g1)[ii],
-      " (", sum(act_ii[,1]), " modeled locations)\n"
+      " (", sum(act_ii[,1], na.rm=TRUE), " modeled locations)\n"
     ))
     for (kk in seq(ncol(act_ii))) {
       cat(paste0(

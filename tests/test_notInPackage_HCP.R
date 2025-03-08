@@ -7,7 +7,7 @@ saveResults <- TRUE
 overwriteResults <- TRUE
 resamp_res <- 7000
 # my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
-my_wb <- "~/Desktop/workbench" # path to your Connectome Workbench
+my_wb <- "~/Applications/workbench" # path to your Connectome Workbench
 
 dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
 dir_results <- "tests/results_notInPackage"
@@ -29,7 +29,8 @@ if (doINLA) {
 library(ciftiTools)
 ciftiTools.setOption('wb_path', my_wb)
 roxygen2::roxygenize("~/Documents/GitHub/BayesfMRI")
-#library(BayesfMRI)
+library(fMRItools)
+library(hrf)
 
 # Get file names.
 fnames <- list(
@@ -113,24 +114,38 @@ for (ss in seq(2)) {
 
 
 # BayesGLM ---------------------------------------------------------------------
+BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
+BOLD[[1]]$data$cortex_left[c(1,11,111),] <- NA
+BOLD[[2]]$data$cortex_left[c(11),] <- NA
+BOLD[[1]]$data$subcort[c(25481),] <- NA
+BOLD[[2]]$data$subcort[c(14274, 14275, 25481, 25237),] <- NA
+
+scrub <- list(
+  c(rep(TRUE, 5), rep(FALSE, 253-5)),
+  c(rep(FALSE, 253-8), rep(TRUE, 8))
+)
+
 ### Classical vs Bayes; Single- vs Multi-session -----
 BGLM_cii_args <- function(sess, resamp_factor=1){
-  BOLD_ss <- c(fnames$cifti_1, fnames$cifti_2)[sess]
+  BOLD_ss <- BOLD[sess] #c(fnames$cifti_1, fnames$cifti_2)[sess]
   design_ss <- des[sess]
   nuis_ss <- nuis[sess]
+  scrub_ss <- scrub[sess]
   if (length(sess)==1) {
     design_ss <- design_ss[[1]]
     nuis_ss <- nuis_ss[[1]]
+    scrub_ss <- scrub_ss[[1]]
   }
 
   list(
     BOLD = BOLD_ss,
     design = design_ss,
     nuisance = nuis_ss,
+    scrub = scrub_ss,
     TR = 0.72,
     brainstructures = c("left", "sub"),
-    surfL=ciftiTools.files()$surf["left"],
-    surfR=ciftiTools.files()$surf["right"],
+    surfL="fs_LR",
+    surfR="fs_LR",
     resamp_res = resamp_res * resamp_factor,
     hpf=.01,
     ar_order = 1,
@@ -141,28 +156,43 @@ BGLM_cii_args <- function(sess, resamp_factor=1){
 }
 
 # ##### First pass to detect errors
-#bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
-#bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
+bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1, resamp_factor=.1)))
+bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, resamp_factor=.1)))
 bglm_b1 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(1, resamp_factor=.1)))
+bglm_b2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(seq(2), resamp_factor=.1)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2, resamp_factor=.1)))
+
+z1 <- activations(bglm_b1, gamma=.001)
+z2 <- activations(bglm_b2, gamma=.001)
+q <- prevalence(list(z1, z2))
 
 bglm_x1 <- bglm_b1$BGLMs$cortexL
 bglm_x2 <- bglm_b2$BGLMs$cortexL
-bglm2a <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm_x2$session_names <- bglm_x1$session_names
+bglm2a <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 bglm_x1 <- bglm_b1; bglm_x1$BGLMs$subcort <- NULL
 bglm_x2 <- bglm_b2; bglm_x2$BGLMs$subcort <- NULL
-bglm2b <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm_x2$session_names <- bglm_x1$session_names
+bglm2b <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 
 bglm_x1 <- bglm_b1$BGLMs$subcort
 bglm_x2 <- bglm_b2$BGLMs$subcort
-bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2))
+bglm_x2$session_names <- bglm_x1$session_names
+bglm2c <- BayesGLM2(list(bglm_x1, bglm_x2), nsamp_theta = 3, nsamp_beta = 2)
 
 # Misc
-BOLD <- as.matrix(read_cifti(fnames$cifti_1))
+BOLD <- read_cifti(fnames$cifti_1)
 design <- abind::abind(des[[1]], des[[2]], along=3)
 nuisance <- nuis$rp_1
 
 ### multiGLM
+multiGLM_fun(
+  BOLD = as.matrix(BOLD),
+  design = design,
+  nuisance=cbind(nuisance, dct_bases(253, 5)),
+  verbose = TRUE
+)
+
 multiGLM(
   BOLD = BOLD,
   design = design,
@@ -173,14 +203,14 @@ multiGLM(
 ### Per-location design
 bglmA <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
-  design = cbind(des[[1]], 1),
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5), 1), Bayes=FALSE,
-  verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
+  design = des[[1]],
+  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  verbose=TRUE, hpf=NULL, ar_order=0, resamp_res=100, TR=.72
 )
 bglmB <- BayesGLM(
   BOLD = read_cifti(fnames$cifti_1),
   design = des[[2]],
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
+  nuisance=nuis$rp_1, Bayes=FALSE,
   verbose=TRUE, hpf=.01, ar_order=0, resamp_res=100, TR=.72
 )
 # alternate every voxel A & B
@@ -190,22 +220,26 @@ desX <- array(
   dim=c(253, 3, 169)
 )
 bglmX <- BayesGLM(
-  BOLD = read_cifti(fnames$cifti_1),
+  BOLD = read_cifti(fnames$cifti_1, brainstructures=c("left", "right")),
   design = desX,
   #nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
   verbose=TRUE,# hpf=.01, ar_order=0,
+  surfL="fs_LR", surfR="fs_LR",
   resamp_res=100, TR=.72
 )
-## looks good
 
 ### Subcortex
 BOLD <- read_cifti(fnames$cifti_1, brainstructures="sub")
 bglmA <- BayesGLM(
   BOLD = BOLD,
-  design = cbind(des[[1]], 1),
-  nuisance=cbind(nuis$rp_1, dct_bases(253, 5)), Bayes=FALSE,
-  verbose=TRUE, hpf=.01, ar_order=0, TR=.72
+  design = des[[1]],
+  brainstructures="sub",
+  nuisance=nuis$rp_1, Bayes=FALSE,
+  verbose=TRUE, hpf=.01,
+  ar_order=0, TR=.72
 )
+
+BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
 
 ##### Second pass to get results of decent resolution
 bglm_c1 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(1)))
@@ -215,10 +249,10 @@ bglm_c2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2)))
 bglm_b2 <- do.call(BayesGLM, c(list(Bayes=TRUE), BGLM_cii_args(2)))
 #bglm_m2 <- do.call(BayesGLM, c(list(Bayes=FALSE), BGLM_cii_args(2, dtype="multi")))
 
-act_c1 <- activations(bglm_c1, sessions=1)
+act_c1 <- activations(bglm_c1, Bayes=FALSE, sessions=1)
 act_b1 <- activations(bglm_b1, gamma=.01, sessions=1)
 #act_m1 <- activations(bglm_b1, gamma=.01, sessions=1)
-act_c2 <- activations(bglm_c2, gamma=.01, sessions=seq(2))
+act_c2 <- activations(bglm_c2, Bayes=FALSE, gamma=.01, sessions=seq(2))
 act_b2 <- activations(bglm_b2, gamma=.01, sessions=seq(2))
 #act_m2 <- activations(bglm_b1, gamma=.01, sessions=1)
 

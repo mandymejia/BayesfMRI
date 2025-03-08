@@ -22,11 +22,11 @@ GLM_compare <- function(...){NULL}
 
 #     beta_hat_ss <- array(
 #       NA,
-#       dim=c(nV$T, nK, nD),
-#       dimnames = list(loc = 1:nV$T, field = field_names, model = seq(nD))
+#       dim=c(nV$total, nK, nD),
+#       dimnames = list(loc = 1:nV$total, field = field_names, model = seq(nD))
 #     )
 #     # Keep track of residual SD (proxy for R^2 or AIC)
-#     sigma2_ss <- matrix(NA, nrow=nV$T, ncol=nD)
+#     sigma2_ss <- matrix(NA, nrow=nV$total, ncol=nD)
 
 #     for (dd in seq(nD)) {
 #       cat(paste0('\tFitting model ',dd,'\n'))
@@ -64,7 +64,6 @@ GLM_compare <- function(...){NULL}
 #     result_multiple = out#,
 #     # mesh = mesh,
 #     # spde = spde,
-#     # mesh_orig = mesh_orig,
 #     # mask = mask,
 #     # mask_orig = mask_orig, #[TO DO] return the params passed into the function instead?
 #     # mask_qc = mask_qc,

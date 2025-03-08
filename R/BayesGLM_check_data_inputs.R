@@ -3,7 +3,7 @@
 #' @param design The design matrix/array
 #' @keywords internal
 BayesGLM_is_valid_one_design <- function(design) {
-  stopifnot(is.matrix.or.df(design) || length(dim(design))==3)
+  stopifnot(is_matrix_or_df(design) || length(dim(design))==3)
   stopifnot(all(apply(design, 2, function(q){all(is.na(q)) || is.numeric(q)})))
   stopifnot(all(dim(design) > 0))
   TRUE
@@ -14,9 +14,25 @@ BayesGLM_is_valid_one_design <- function(design) {
 #' @param nuisance The nuisance matrix
 #' @keywords internal
 BayesGLM_is_valid_one_nuisance <- function(nuisance) {
-  stopifnot(is.matrix.or.df(nuisance))
+  stopifnot(is_matrix_or_df(nuisance))
   stopifnot(all(apply(nuisance, 2, is.numeric)))
   stopifnot(all(dim(nuisance) > 0))
+  TRUE
+}
+
+#' Is a valid scrub?
+#'
+#' @param scrub The scrub matrix
+#' @keywords internal
+BayesGLM_is_valid_one_scrub <- function(scrub) {
+  if (is.null(scrub)) { return(TRUE) }
+  if (is.logical(scrub)) { return(TRUE) }
+
+  stopifnot(is_matrix_or_df(scrub))
+  stopifnot(all(apply(scrub, 2, is.numeric)))
+  stopifnot(all(dim(scrub) > 0))
+  stopifnot(all(colSums(scrub) == 1))
+  stopifnot(all(colSums(scrub == 0) == nrow(scrub)-1))
   TRUE
 }
 
@@ -266,8 +282,6 @@ BayesGLM_format_nuisance <- function(
     if (is.data.frame(nuisance[[ss]])) { nuisance[[ss]] <- as.matrix(nuisance[[ss]]) }
   }
 
-  must_match_msg <- "This must match across sessions. Please fix."
-
   # First dimension, nT
   nuis_nT <- vapply(nuisance, nrow, 0)
   # Note that nuisances are allowed to have different numbers of timepoints,
@@ -278,11 +292,76 @@ BayesGLM_format_nuisance <- function(
     stopifnot(length(nT_expect) == nS)
     for (ss in seq(nS)) {
       if (nuis_nT[ss] != nT_expect[ss]) {
-        stop("The nuisance has ", nuis_nT[ss], " locations, but ", nT_expect[ss],
-          " locations are expected.")
+        stop("The `nuisance` for session ", ss, "has ", nuis_nT[ss],
+          " locations, but ", nT_expect[ss], " locations are expected.")
       }
     }
   }
 
+  # [TO DO] detect and warn user about columns that look like spike regressors
+
   nuisance
+}
+
+
+#' Format scrub
+#'
+#' Format scrub for \code{BayesGLM}, \code{fit_bayesglm},
+#'  \code{multiGLM}, and \code{multiGLM_fun}.
+#' @param scrub The \code{scrub} argument input. Will be formatted to a
+#'  \code{nS}-length list.
+#' @param nS_expect The expected number of sessions, if known.
+#' @param nT_expect The expected number of timepoints, if known. For
+#'  multi-session data this is a session-length vector.
+#' @keywords internal
+#' @return \code{scrub}
+BayesGLM_format_scrub <- function(
+  scrub, nS_expect=NULL, nT_expect=NULL
+  ){
+
+  # Make `scrub` a sessions-length list of matrices or arrays.
+  if (!is.list(scrub) || is.data.frame(scrub)) { scrub <- list(scrub) }
+  nS <- length(scrub)
+  if (!is.null(nS_expect)) {
+    stopifnot(fMRItools::is_1(nS_expect, "numeric") && nS_expect==round(nS_expect))
+    if (length(scrub) != nS_expect) {
+      stop("`scrub` is length ", nS, ", but ", nS_expect, " sessions are expected.")
+    }
+  }
+
+  for (ss in seq(nS)) {
+    stopifnot(BayesGLM_is_valid_one_scrub(scrub[[ss]]))
+    if (is.logical(scrub[[ss]])) {
+      stopifnot(!is.null(nT_expect))
+      if (length(scrub[[ss]]) != nT_expect[ss]) {
+        stop("Logical vectors in `scrub` should be an indicator vector of ",
+          "which volumes to remove. But for session ", ss, ", the length of ",
+          "this vector, ", length(scrub[[ss]]), " does not match the length ",
+          "expected from the data ,", nT_expect[ss], ".")
+      }
+      # Convert from indicator vector to spikes
+      spikes <- matrix(0, nrow=nT_expect[ss], ncol=sum(scrub[[ss]]))
+      spikes[seq(0, (sum(scrub[[ss]])-1))*nT_expect[ss] + which(scrub[[ss]])] <- 1
+      scrub[[ss]] <- spikes
+    }
+    if (is.data.frame(scrub[[ss]])) { scrub[[ss]] <- as.matrix(scrub[[ss]]) }
+  }
+
+  # First dimension, nT
+  nuis_nT <- vapply(scrub, nrow, 0)
+  # Note that scrubs are allowed to have different numbers of timepoints,
+  #   because BOLD data may be of unequal lengths.
+  if (!is.null(nT_expect)) {
+    stopifnot(is.numeric(nT_expect))
+    if (length(nT_expect)==1) { nT_expect <- rep(nT_expect, nS) }
+    stopifnot(length(nT_expect) == nS)
+    for (ss in seq(nS)) {
+      if (nuis_nT[ss] != nT_expect[ss]) {
+        stop("The `scrub` for session ", ss, "has ", nuis_nT[ss],
+          " locations, but ", nT_expect[ss], " locations are expected.")
+      }
+    }
+  }
+
+  scrub
 }

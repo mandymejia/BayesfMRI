@@ -8,6 +8,7 @@ fit_bayesglm(
   BOLD,
   design,
   nuisance = NULL,
+  scrub = NULL,
   spatial,
   scale_BOLD = c("mean", "sd", "none"),
   Bayes = TRUE,
@@ -25,6 +26,14 @@ fit_bayesglm(
 \arguments{
 \item{BOLD, design, nuisance}{Session-length list of numeric matrices/arrays,
 each with volumes along the first dimension.}
+
+\item{scrub}{Session-length list of spike regressors: numeric matrices, with
+volumes along the first dimension, valued at 1 for scrubbed volumes and 0
+otherwise.
+
+Scrubbing is performed by incorporating spike regressors in the nuisance
+matrix during nuisance regression (in a simultaneous framework), and then
+removing the scrubbed timepoints from the resulting BOLD and design.}
 
 \item{spatial}{Gives the spatial information:
 \describe{
@@ -95,9 +104,8 @@ A \code{"BayesGLM"} object: a list with elements
 \item{INLA_model_obj}{The full result of the call to \code{INLA::inla}.}
 \item{field_estimates}{The estimated coefficients for the Bayesian model.}
 \item{result_classical}{Results from the classical model: field estimates, field standard error estimates, residuals, degrees of freedom, and the mask.}
-\item{mesh}{The model mesh including only the locations analyzed, i.e. within \code{mask}, without missing values, and meeting \code{meanTol} and \code{varTol}.}
-\item{mesh_orig}{The original mesh provided.}
-\item{mask}{A mask of \code{mesh_orig} indicating the locations inside \code{mesh}.}
+\item{mesh}{The model mesh.}
+\item{mask}{A mask of \code{mesh} indicating the locations inside \code{mesh}.}
 \item{design}{The design matrix, after centering and scaling, but before any nuisance regression or prewhitening.}
 \item{field_names}{The names of the fields.}
 \item{session_names}{The names of the sessions.}
