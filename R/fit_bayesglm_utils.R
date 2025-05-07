@@ -284,7 +284,7 @@ log_kappa_tau <- function(spatial, hyperpriors, verbose){
     ssv <- spatial$surf$vertices
     ssf <- spatial$surf$faces
     max_dist <- apply(ssv, 2, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE)) #MAX distance within the mesh (Euclidean, a bad proxy for geodesic)
-    range2 <- max(max_dist)/2 #this is our upper limit for the spatial correlation range
+    range2 <- max(max_dist)/5 #this is our upper limit for the spatial correlation range
     tri_dist <- apply(
       matrix(1:nrow(ssf), ncol=1), 1, #for each face/triangle #MIN distance within the mesh
       function(x) { mean(dist(ssv[ssf[x,],])) } #compute the avg distance among vertices in the triangle
