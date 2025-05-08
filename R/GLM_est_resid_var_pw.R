@@ -110,7 +110,7 @@ make_sqrtInv_all <- function(
         )
       }
 
-    # Case 1B: Prewhitening; not parallel.
+    # Case 1B: Prewhitening; parallel.
     } else {
       if (!requireNamespace("parallel", quietly = TRUE)) {
         stop("Prewhitening in parallel requires the `parallel` package. Please install it.", call. = FALSE)
