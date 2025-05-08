@@ -7,8 +7,8 @@
 #'  normalization. Supports both single- and multi-session analysis. Can also
 #'  compute just the classical (spatially-independent)
 #'
-#' To use \code{BayesGLM}, the design matrix must first be constructed
-#'  with \code{make_design}.
+#' To use \code{BayesGLM}, the design matrix must be provided. One option for
+#'  constructing a design matrix from events is \code{hrf::make_design}.
 #'
 #' @inheritSection Connectome_Workbench_Description Connectome Workbench Requirement
 #' @inheritSection INLA_Description INLA Requirement
