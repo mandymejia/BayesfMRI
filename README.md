@@ -22,10 +22,10 @@ wrapper function `BayesGLM_cifti`, for CIFTI cortical surface fMRI data.
 
 If you use `BayesfMRI` please cite the following papers:
 
-| Name                                                                                   | APA Citation                                                                                                                                                                                                                       |
-|----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Spatial Bayesian GLM](https://doi.org/10.1080/01621459.2019.1611582)                  | Mejia, A. F., Yue, Y., Bolin, D., Lindgren, F., & Lindquist, M. A. (2020). A Bayesian general linear modeling approach to cortical surface fMRI data analysis. Journal of the American Statistical Association, 115(530), 501-520. |
-| [Multi-session Spatial Bayesian GLM](https://doi.org/10.1016/j.neuroimage.2022.118908) | Spencer, D., Yue, Y. R., Bolin, D., Ryan, S., & Mejia, A. F. (2022). Spatial Bayesian GLM on the cortical surface produces reliable task activations in individuals and groups. NeuroImage, 249, 118908.                           |
+| Name | APA Citation |
+|----|----|
+| [Spatial Bayesian GLM](https://doi.org/10.1080/01621459.2019.1611582) | Mejia, A. F., Yue, Y., Bolin, D., Lindgren, F., & Lindquist, M. A. (2020). A Bayesian general linear modeling approach to cortical surface fMRI data analysis. Journal of the American Statistical Association, 115(530), 501-520. |
+| [Multi-session Spatial Bayesian GLM](https://doi.org/10.1016/j.neuroimage.2022.118908) | Spencer, D., Yue, Y. R., Bolin, D., Ryan, S., & Mejia, A. F. (2022). Spatial Bayesian GLM on the cortical surface produces reliable task activations in individuals and groups. NeuroImage, 249, 118908. |
 
 You can also obtain citation information from within R like so:
 
@@ -42,7 +42,7 @@ with:
 install.packages("BayesfMRI")
 ```
 
-## Vignette
+## Vignette/Demo
 
 See [this
 link](https://htmlpreview.github.io/?https://github.com/mandymejia/BayesfMRI/blob/10.0/vignettes/BayesfMRI_vignette.html)
@@ -69,3 +69,11 @@ code included in `BayesfMRI`.
 
 <!--An INLA-PARDISO license is also required for computational efficiency.  To obtain an INLA-PARDISO license, run `inla.pardiso()` in R after running `library(INLA)`. Once you obtain a license, point to it using `INLA::inla.setOption(pardiso.license = "pardiso.lic")` followed by `INLA::inla.pardiso.check()` to ensure that PARDISO is successfully installed and running. 
 -->
+
+## Testing the INLA Installation:
+
+Sometimes INLA does not install properly. Installation issues with
+`INLA` will prevent `BayesfMRI` from functioning. We recommend verifying
+a successful INLA installation by running the [example model available
+on the INLA
+website](https://www.r-inla.org/download-install#h.nntut9w0mjc2).
