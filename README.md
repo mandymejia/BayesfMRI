@@ -72,8 +72,8 @@ code included in `BayesfMRI`.
 
 ## Testing the INLA Installation:
 
-Sometimes INLA does not install properly. Installation issues with
-`INLA` will prevent `BayesfMRI` from functioning. We recommend verifying
-a successful INLA installation by running the [example model available
-on the INLA
+Sometimes INLA does not install properly. Installation issues with INLA
+will prevent `BayesfMRI` from functioning. We recommend verifying a
+successful INLA installation by running the [example model available on
+the INLA
 website](https://www.r-inla.org/download-install#h.nntut9w0mjc2).
