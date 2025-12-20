@@ -94,9 +94,11 @@ output.}
 computation; \code{2} for occasional updates as well as running INLA in
 verbose mode (if \code{Bayes}), or \code{0} for no printed updates.}
 
-\item{meanTol, varTol}{Tolerance for mean, variance and SNR of each data location.
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
-Default: \code{1e-6} for mean and variance, \code{50} for SNR.}
+Default: \code{1e-6} for both. Note that locations with a median not meeting
+\code{meanTol} will also be masked out of the analysis (even if the mean is
+above it).}
 }
 \value{
 A \code{"BayesGLM"} object: a list with elements

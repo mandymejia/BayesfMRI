@@ -8,7 +8,8 @@ scale_BOLD(BOLD, scale = c("mean", "sd", "none"), v_means = NULL)
 }
 \arguments{
 \item{BOLD}{fMRI data as a locations by time (\eqn{V \times T}) numeric
-matrix.}
+matrix, where \eqn{V} is the number of locations and \eqn{T} is the number
+of timepoints.}
 
 \item{scale}{Option for scaling the BOLD response.}
 

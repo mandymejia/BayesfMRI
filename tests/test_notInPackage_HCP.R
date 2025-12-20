@@ -9,7 +9,7 @@ resamp_res <- 7000
 # my_pardiso <- "~/Documents/pardiso.lic" # INLA PARDISO license
 my_wb <- "~/Applications/workbench" # path to your Connectome Workbench
 
-dir_data <- "/Users/ddpham/Library/CloudStorage/OneDrive-SharedLibraries-IndianaUniversity/O365-BL-STAT-StatMIND-Projects - General/Data/bfMRI"
+dir_data <- "~/Documents/StatMind/bfMRI_test"
 dir_results <- "tests/results_notInPackage"
 thisResultName <- gsub(
   ".", "_",
@@ -43,7 +43,7 @@ fnames <- list(
   events_2w = "151526_retest/win_event.txt",
   events_2l = "151526_retest/loss_event.txt",
   events_2n = "151526_retest/neut_event.txt",
-  rp_2 = "151526/Movement_Regressors.txt"
+  rp_2 = "151526_retest/Movement_Regressors.txt"
 )
 fnames <- lapply(fnames, function(x){file.path(dir_data, x)})
 
@@ -116,6 +116,8 @@ for (ss in seq(2)) {
 # BayesGLM ---------------------------------------------------------------------
 BOLD <- lapply(fnames[c("cifti_1", "cifti_2")], read_cifti)
 BOLD[[1]]$data$cortex_left[c(1,11,111),] <- NA
+BOLD[[1]]$data$cortex_left[seq(20,30),] <- 8e-7
+BOLD[[1]]$data$cortex_left[seq(20,30),6] <- 5e7
 BOLD[[2]]$data$cortex_left[c(11),] <- NA
 BOLD[[1]]$data$subcort[c(25481),] <- NA
 BOLD[[2]]$data$subcort[c(14274, 14275, 25481, 25237),] <- NA
