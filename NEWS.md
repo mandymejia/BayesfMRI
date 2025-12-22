@@ -1,3 +1,9 @@
+# 11.0
+
+* Change informative prior for kappa to lower upper bound of spatial range
+* Improve doc with reference to `hrf::make_design`
+* Use median in addition to mean for QC
+
 # 5.0
 
 * Many changes, undocumented

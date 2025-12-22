@@ -1,6 +1,6 @@
 ## Test environments
 
-* Mac aarch64-apple-darwin20 (64-bit), R 4.4.0
+* Mac aarch64-apple-darwin20 (64-bit), R 4.5.0
 
 ## R CMD check results
 
