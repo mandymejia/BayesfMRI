@@ -6,7 +6,9 @@
 \arguments{
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
-Default: \code{1e-6} for both.}
+Default: \code{1e-6} for both. Note that locations with a median not meeting
+\code{meanTol} will also be masked out of the analysis (even if the mean is
+above it).}
 }
 \description{
 mean and variance tolerance

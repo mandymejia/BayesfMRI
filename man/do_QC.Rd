@@ -4,14 +4,18 @@
 \alias{do_QC}
 \title{Mask out invalid data}
 \usage{
-do_QC(BOLD, meanTol = 1e-06, varTol = 1e-06, verbose = TRUE)
+do_QC(BOLD, meanTol = 1e-06, varTol = 1e-06, medianToo = TRUE, verbose = TRUE)
 }
 \arguments{
-\item{BOLD}{A session-length list of \eqn{T \times V} numeric BOLD data.}
+\item{BOLD}{A session-length list of \eqn{T \times V} numeric BOLD data, where
+\eqn{T} is the number of timepoints and \eqn{V} is the number of locations.}
 
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
 Defaults: \code{1e-6}.}
+
+\item{medianToo}{Also mask out locations with a median value below
+\code{meanTol}? Default: \code{TRUE}.}
 
 \item{verbose}{Print messages counting how many locations are removed?
 Default: \code{TRUE}.}

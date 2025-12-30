@@ -1,7 +1,8 @@
 #' Scale the BOLD timeseries
 #'
 #' @param BOLD fMRI data as a locations by time (\eqn{V \times T}) numeric
-#' 	matrix.
+#' 	matrix, where \eqn{V} is the number of locations and \eqn{T} is the number
+#' 	of timepoints.
 #' @param scale Option for scaling the BOLD response.
 #' @param v_means Original means of the BOLD data. ONLY provide if data has 
 #' 	already been centered.

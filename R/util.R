@@ -170,10 +170,13 @@ unmask_Mdat2In <- function(x, maskIn, maskMdat, fill_val=NA) {
 #' Mask out data locations that are invalid (missing data, low mean, or low
 #'  variance) for any session.
 #'
-#' @param BOLD A session-length list of \eqn{T \times V} numeric BOLD data.
+#' @param BOLD A session-length list of \eqn{T \times V} numeric BOLD data, where
+#'  \eqn{T} is the number of timepoints and \eqn{V} is the number of locations.
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Defaults: \code{1e-6}.
+#' @param medianToo Also mask out locations with a median value below
+#'  \code{meanTol}? Default: \code{TRUE}.
 #' @param verbose Print messages counting how many locations are removed?
 #'  Default: \code{TRUE}.
 #'
@@ -191,7 +194,7 @@ unmask_Mdat2In <- function(x, maskIn, maskMdat, fill_val=NA) {
 #' do_QC(BOLD)
 #'
 #' @export
-do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
+do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, medianToo=TRUE, verbose=TRUE){
 
   nS <- length(BOLD)
   nV <- ncol(BOLD[[1]])
@@ -205,6 +208,10 @@ do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     # Calculate means and variances of columns, except those with any NA or NaN.
     # Mark columns with mean/var falling under the thresholds for removal.
     means_ss <- colMeans(BOLD[[ss]][,mask_na,drop=FALSE])
+    if (medianToo) { 
+      medians_ss <- apply(BOLD[[ss]][,mask_na,drop=FALSE], 2, median)
+      means_ss <- pmin(means_ss, medians_ss)
+    }
     vars_ss <- matrixStats::colVars(BOLD[[ss]][,mask_na,drop=FALSE])
     snr_ss <- rep(NA, nV) # use `NA` values for `NA` columns.
     snr_ss[mask_na] <- means_ss/sqrt(vars_ss)
@@ -229,7 +236,8 @@ do_QC <- function(BOLD, meanTol=1e-6, varTol=1e-6, verbose=TRUE){
     if (any(!mask_mean2)) {
       cat(paste0(
         "\t", sum(!mask_mean2), warn_part1,
-        " removed due to low mean", warn_part2
+        " removed due to low mean", ifelse(medianToo, " or median", ""),
+        warn_part2
       ))
       warn_part1 <- " additional locations"
     }

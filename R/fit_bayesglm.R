@@ -38,9 +38,7 @@
 #' @inheritParams return_INLA_Param
 #' @inheritParams verbose_Param
 # @inheritParams combine_sessions_Param
-#' @param meanTol,varTol Tolerance for mean, variance and SNR of each data location.
-#'  Locations which do not meet these thresholds are masked out of the analysis.
-#'  Default: \code{1e-6} for mean and variance, \code{50} for SNR.
+#' @inheritParams mean_var_Tol_Param
 # Note: \code{snrTol} currently not in use, but SNR maps are returned for visualization.
 # @inheritParams emTol_Param
 #'
