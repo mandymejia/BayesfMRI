@@ -1,7 +1,7 @@
 Type: Package
 Package: BayesfMRI
 Title: Spatial Bayesian Methods for Task Functional MRI Studies
-Version: 0.11.0
+Version: 0.12.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
