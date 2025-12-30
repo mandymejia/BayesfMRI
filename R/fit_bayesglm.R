@@ -162,7 +162,7 @@ fit_bayesglm <- function(
   nV <- get_nV(spatial)
   if (spatial_type=="vertex" && (nV$total != nV$input)) {
     if (verbose>0) {
-      cat(paste0("\t", (nV$total-nV$input), " vertices do not have data.\n"))
+      cat(paste0("\t", (nV$total-nV$input), " vertices are masked out.\n"))
     }
   }
 
