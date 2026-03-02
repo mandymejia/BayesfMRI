@@ -6,7 +6,9 @@
 \usage{
 BayesGLM2(
   results,
-  contrasts = NULL,
+  design_matrix = NULL,
+  contrast_matrix = NULL,
+  contrast_list = NULL,
   quantiles = NULL,
   excursion_type = NULL,
   contrast_names = NULL,
@@ -24,39 +26,30 @@ or (2) a length \eqn{N} character vector of files storing \code{"BGLM"}
 objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
 also are accepted.}
 
-\item{contrasts}{(Optional) A list of contrast vectors that specify the
-group-level summaries of interest. If \code{NULL} (DEFAULT), use contrasts that
-compute the average of each field (field HRF) across all subjects/sessions.
+\item{design_matrix}{Design matrix for group-level summaries of interest. The
+number of rows must be equal to \eqn{K\times S\times N}, where \eqn{K} is the
+number of fields (task regressors) in the first-level design matrices, \eqn{S}
+is the number of sessions per subject, and \eqn{N} is the number of subjects.
+The rows are grouped by fields, then sessions, then subjects. The number of
+columns, \eqn{p}, depends on the group-level design. If no intercept is included,
+it will be added as long as it is not linearly dependent with the provided design.}
 
-Each contrast vector is length \eqn{KSN} specifying a group-level summary of
-interest, where \eqn{K} is the number of fields in the first-level design
-matrices, \eqn{S} is the number of sessions, and \eqn{N} is the number of
-subjects. The vector is grouped by fields, then sessions, then subjects.
+\item{contrast_matrix}{Matrix of group-level contrasts of interests, with \eqn{p}
+columns and the number of rows corresponding to the number of contrasts to
+estimate.}
 
-For a single session/subject, the contrast vector for the first field would be:
+\item{contrast_list}{(Only used if design_matrix and contrast_matrix not provided)
+A list of contrast vectors that specify the group-level summary or summaries of
+interest. If \code{NULL} (DEFAULT), a contrast will be automatically constructed
+to compute the average of each task regressor across all subjects/sessions.
 
-\code{c0 <- c(1, rep(0, K-1)) #indexes the first field for a single session}
+Contrast vectors must be of length \eqn{K\times S\times N} specifying a group
+-level summary of interest, where \eqn{K} is the number of fields (task
+regressors) in the first-level design matrices, \eqn{S} is the number of
+sessions per subject, and \eqn{N} is the number of subjects. The vector is
+grouped by fields, then sessions, then subjects.
 
-so the full contrast vector for the group \emph{average over all sessions/subjects
-for the first field} would be:
-
-\code{contrasts = rep(c0, S*N) /(S*N)}.
-
-To obtain the group average for the first field, for \emph{just the first session},
-input zeros for the remaining sessions:
-
-\code{c2 <- c(c0, rep(0, K*(S-1)))}
-\code{contrasts = rep(c2, N) /N}.
-
-To obtain the group mean \emph{difference between two sessions} (\eqn{S=2}) for the first field:
-
-\code{c3 <- c(c0, -c0)}
-\code{contrasts = rep(c3, N) / N}.
-
-To obtain the \emph{mean over sessions} of the first field, just for the first subject:
-
-\code{c4 <- rep(c0, S)}
-\code{c(c4, rep(0, K*S*(N-1))) / S}.}
+See Details for examples of contrast vectors for different group level summaries.}
 
 \item{quantiles}{(Optional) Vector of posterior quantiles to return in
 addition to the posterior mean.}
@@ -94,6 +87,37 @@ A list containing the estimates, PPMs and areas of activation for each contrast.
 \description{
 Performs group-level Bayesian GLM estimation and inference using the joint
 approach described in Mejia et al. (2020).
+}
+\details{
+The easiest way to compute group-level contrasts is to specify the
+arguments \code{design_matrix} and \code{contrast_matrix}.  If you wish to manually specify
+contrasts instead, you can specify the \code{contrast_list} argument. Some examples
+of contrast vectors for specific group-level summaries:
+
+\strong{Example 1:} For a single session/subject, the contrast vector for the first field would be:
+
+\code{c0 <- c(1, rep(0, K-1)) #indexes the first field for a single session}
+
+so the full contrast vector for the group \emph{average over all sessions/subjects
+for the first field} would be:
+
+\code{contrast_list = rep(c0, S*N) /(S*N)}.
+
+\strong{Example 2:} To obtain the group average for the first field, for \emph{just the first session},
+input zeros for the remaining sessions:
+
+\code{c2 <- c(c0, rep(0, K*(S-1)));}
+\code{contrast_list = rep(c2, N) /N}.
+
+\strong{Example 3:} To obtain the group mean \emph{difference between two sessions} (\eqn{S=2}) for the first field:
+
+\code{c3 <- c(c0, -c0);}
+\code{contrast_list = rep(c3, N) / N}.
+
+\strong{Example 4:} To obtain the \emph{mean over sessions} of the first field, just for the first subject:
+
+\code{c4 <- rep(c0, S);}
+\code{contrast_list = c(c4, rep(0, K*S*(N-1))) / S}.
 }
 \section{INLA Requirement}{
 

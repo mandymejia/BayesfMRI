@@ -9,39 +9,28 @@
 #'  or (2) a length \eqn{N} character vector of files storing \code{"BGLM"}
 #'  objects saved with \code{\link{saveRDS}}. \code{"fit_bglm"} objects
 #'  also are accepted.
-#' @param contrasts (Optional) A list of contrast vectors that specify the
-#'  group-level summaries of interest. If \code{NULL} (DEFAULT), use contrasts that
-#'  compute the average of each field (field HRF) across all subjects/sessions.
+#' @param design_matrix Design matrix for group-level summaries of interest. The
+#' number of rows must be equal to \eqn{K\times S\times N}, where \eqn{K} is the
+#' number of fields (task regressors) in the first-level design matrices, \eqn{S}
+#' is the number of sessions per subject, and \eqn{N} is the number of subjects.
+#' The rows are grouped by fields, then sessions, then subjects. The number of
+#' columns, \eqn{p}, depends on the group-level design. If no intercept is included,
+#' it will be added as long as it is not linearly dependent with the provided design.
+#' @param contrast_matrix Matrix of group-level contrasts of interests, with \eqn{p}
+#' columns and the number of rows corresponding to the number of contrasts to
+#' estimate.
+#' @param contrast_list (Only used if design_matrix and contrast_matrix not provided)
+#'  A list of contrast vectors that specify the group-level summary or summaries of
+#'  interest. If \code{NULL} (DEFAULT), a contrast will be automatically constructed
+#'  to compute the average of each task regressor across all subjects/sessions.
 #'
-#'  Each contrast vector is length \eqn{KSN} specifying a group-level summary of
-#'  interest, where \eqn{K} is the number of fields in the first-level design
-#'  matrices, \eqn{S} is the number of sessions, and \eqn{N} is the number of
-#'  subjects. The vector is grouped by fields, then sessions, then subjects.
+#'  Contrast vectors must be of length \eqn{K\times S\times N} specifying a group
+#'  -level summary of interest, where \eqn{K} is the number of fields (task
+#'  regressors) in the first-level design matrices, \eqn{S} is the number of
+#'  sessions per subject, and \eqn{N} is the number of subjects. The vector is
+#'  grouped by fields, then sessions, then subjects.
 #'
-#'  For a single session/subject, the contrast vector for the first field would be:
-#'
-#'  \code{c0 <- c(1, rep(0, K-1)) #indexes the first field for a single session}
-#'
-#'  so the full contrast vector for the group *average over all sessions/subjects
-#'  for the first field* would be:
-#'
-#'  \code{contrasts = rep(c0, S*N) /(S*N)}.
-#'
-#'  To obtain the group average for the first field, for *just the first session*,
-#'  input zeros for the remaining sessions:
-#'
-#'  \code{c2 <- c(c0, rep(0, K*(S-1)))}
-#'  \code{contrasts = rep(c2, N) /N}.
-#'
-#'  To obtain the group mean *difference between two sessions* (\eqn{S=2}) for the first field:
-#'
-#'  \code{c3 <- c(c0, -c0)}
-#'  \code{contrasts = rep(c3, N) / N}.
-#'
-#'  To obtain the *mean over sessions* of the first field, just for the first subject:
-#'
-#'  \code{c4 <- rep(c0, S)}
-#'  \code{c(c4, rep(0, K*S*(N-1))) / S}.
+#'  See Details for examples of contrast vectors for different group level summaries.
 #'
 #' @param quantiles (Optional) Vector of posterior quantiles to return in
 #'  addition to the posterior mean.
@@ -65,6 +54,37 @@
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
 #'
+#' @details The easiest way to compute group-level contrasts is to specify the
+#' arguments `design_matrix` and `contrast_matrix`.  If you wish to manually specify
+#' contrasts instead, you can specify the `contrast_list` argument. Some examples
+#' of contrast vectors for specific group-level summaries:
+#'
+#' **Example 1:** For a single session/subject, the contrast vector for the first field would be:
+#'
+#'  \code{c0 <- c(1, rep(0, K-1)) #indexes the first field for a single session}
+#'
+#'  so the full contrast vector for the group *average over all sessions/subjects
+#'  for the first field* would be:
+#'
+#'  \code{contrast_list = rep(c0, S*N) /(S*N)}.
+#'
+#'  **Example 2:** To obtain the group average for the first field, for *just the first session*,
+#'  input zeros for the remaining sessions:
+#'
+#'  \code{c2 <- c(c0, rep(0, K*(S-1)));}
+#'  \code{contrast_list = rep(c2, N) /N}.
+#'
+#'  **Example 3:** To obtain the group mean *difference between two sessions* (\eqn{S=2}) for the first field:
+#'
+#'  \code{c3 <- c(c0, -c0);}
+#'  \code{contrast_list = rep(c3, N) / N}.
+#'
+#'  **Example 4:** To obtain the *mean over sessions* of the first field, just for the first subject:
+#'
+#'  \code{c4 <- rep(c0, S);}
+#'  \code{contrast_list = c(c4, rep(0, K*S*(N-1))) / S}.
+#'
+#'
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag crossprod
 #' @importFrom ciftiTools as.xifti
@@ -72,7 +92,9 @@
 #' @export
 BayesGLM2 <- function(
   results,
-  contrasts = NULL,
+  design_matrix = NULL,
+  contrast_matrix = NULL,
+  contrast_list = NULL,
   quantiles = NULL,
   excursion_type=NULL,
   contrast_names = NULL,
@@ -132,13 +154,22 @@ BayesGLM2 <- function(
     stopifnot(identical(field_names, sub_nn$field_names))
   }
 
-  # Check `contrasts`.
-  # `contrasts` should be fields * sessions * subjects
-  if(!is.null(contrasts) & !is.list(contrasts)) contrasts <- list(contrasts)
-  if(is.null(contrasts)) {
-    if (verbose>0) cat('Using a contrast that computes the average across subjects for each field. If other contrasts are desired, provide `contrasts`.\n')
-    contrasts <- vector('list', length=nK)
-    names(contrasts) <- paste0(field_names, '_avg')
+  # Yunong TO DO:
+  # 1. Check whether design_matrix and contrast_matrix provided.
+  # If one provided but not the other, return an error with an informative message.
+  # If neither is provided, skip to the next section (check contrast_list)
+  # If both are provided,
+  # a) if contrast_list also provided, return a warning that it will be ignored
+  # b) construct contrast_list,
+  # c) proceed to the next section (no new code needed here, just proceed with the following code)
+
+  # Check `contrast_list`.
+  # `contrast_list` should be fields * sessions * subjects
+  if(!is.null(contrast_list) & !is.list(contrast_list)) contrast_list <- list(contrast_list)
+  if(is.null(contrast_list)) {
+    if (verbose>0) cat('Using a contrast that computes the average across subjects for each field. If other contrasts are desired, provide `design_matrix` and `contrast_matrix`, or `contrast_list`.\n')
+    contrast_list <- vector('list', length=nK)
+    names(contrast_list) <- paste0(field_names, '_avg')
     for (kk in 1:nK) {
       # (1/J, 0, 0, ..., 0) for k=1,
       # (0, 1/J, 0, ..., 0) for k=2,
@@ -147,26 +178,26 @@ BayesGLM2 <- function(
       # for each session, for each subject
       # where J == S * N
       contrast_1 <- c(rep(0, kk-1), 1/(nS*nN), rep(0, nK-kk)) # length nK
-      contrasts[[kk]] <- rep(rep(contrast_1, nS), nN)         # length nK*nS*nN
+      contrast_list[[kk]] <- rep(rep(contrast_1, nS), nN)         # length nK*nS*nN
     }
   } else {
     #Check that each contrast vector is numeric and length J*K
-    if(any(sapply(contrasts, length) != nK*nS*nN)) {
+    if(any(sapply(contrast_list, length) != nK*nS*nN)) {
       stop('Each contrast vector must be of length K*S*N (fields times sessions times subjects).')
     }
-    if(any(!sapply(contrasts, is.numeric))) {
+    if(any(!sapply(contrast_list, is.numeric))) {
       stop('Each contrast vector must be numeric, but at least one is not.')
     }
-    if (is.null(names(contrasts))) {
-      names(contrasts) <- paste0("contrast_", seq(length(contrasts)))
+    if (is.null(names(contrast_list))) {
+      names(contrast_list) <- paste0("contrast_", seq(length(contrast_list)))
     }
   }
-  # Override `names(contrasts)` with `contrast_names` if provided.
+  # Override `names(contrast_list)` with `contrast_names` if provided.
   if (!is.null(contrast_names)) {
-    stopifnot(length(contrast_names) == length(contrasts))
-    names(contrasts) <- contrast_names
+    stopifnot(length(contrast_names) == length(contrast_list))
+    names(contrast_list) <- contrast_names
   }
-  nC <- length(contrasts)
+  nC <- length(contrast_list)
 
   #Check `quantiles`
   if(!is.null(quantiles)){
@@ -357,7 +388,7 @@ BayesGLM2 <- function(
         spde = spde,
         Xcros = Xcros.all,
         Xycros = Xycros.all,
-        contrasts = contrasts,
+        contrasts = contrast_list,
         quantiles = quantiles,
         excursion_type = excursion_type,
         gamma = gamma,
@@ -386,7 +417,7 @@ BayesGLM2 <- function(
         spde=spde,
         Xcros = Xcros.all,
         Xycros = Xycros.all,
-        contrasts=contrasts,
+        contrasts=contrast_list,
         quantiles=quantiles,
         excursion_type=excursion_type,
         gamma=gamma,
@@ -451,7 +482,7 @@ BayesGLM2 <- function(
 
   out <- list(
     model_results = out,
-    contrasts = contrasts,
+    contrasts = contrast_list,
     excursion_type = excursion_type,
     field_names=field_names,
     session_names=session_names,
@@ -525,7 +556,7 @@ BayesGLM2 <- function(
       masks = Masks,
       BayesGLM2_results = out
     )
-    out$contrast_estimate_xii$meta$cifti$names <- names(contrasts)
+    out$contrast_estimate_xii$meta$cifti$names <- names(contrast_list)
 
     if (do_excur) {
 
@@ -585,8 +616,8 @@ BayesGLM2 <- function(
         subcortMask = spatial_sub$maskIn
       )
       out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
-      out$activations_xii$meta$cifti$names <- names(contrasts)
-      names(out$activations_xii$meta$cifti$labels) <- names(contrasts)
+      out$activations_xii$meta$cifti$names <- names(contrast_list)
+      names(out$activations_xii$meta$cifti$labels) <- names(contrast_list)
     }
     class(out) <- "BGLM2"
   }
