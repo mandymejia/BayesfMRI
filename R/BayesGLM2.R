@@ -154,20 +154,100 @@ BayesGLM2 <- function(
     stopifnot(identical(field_names, sub_nn$field_names))
   }
 
-  # Yunong TO DO:
-  # 1. Check whether design_matrix and contrast_matrix provided.
-  # If one provided but not the other, return an error with an informative message.
-  # If neither is provided, skip to the next section (check contrast_list)
-  # If both are provided,
-  # a) if contrast_list also provided, return a warning that it will be ignored
-  # b) construct contrast_list,
-  # c) proceed to the next section (no new code needed here, just proceed with the following code)
+  # Yunong added on Mar 02, 2026
+  # Check `design_matrix` and `contrast_matrix`
+  if (!is.null(design_matrix) || !is.null(contrast_matrix)) {
+
+    if (xor(!is.null(design_matrix), !is.null(contrast_matrix))) {
+      stop(
+        "You must provide both `design_matrix` and `contrast_matrix`, or provide neither.\n",
+        "If you want to specify contrasts manually, provide `contrast_list` instead.",
+        call. = FALSE
+      )
+    }
+
+    # contrast_list = (C %*% (X'X)^{-1} %*% X')
+    # Here X = design_matrix, C = contrast_matrix
+    if (!is.null(contrast_list)) {
+      warning(
+        "`design_matrix` and `contrast_matrix` were provided, so `contrast_list` will be ignored.",
+        call. = FALSE
+      )
+      contrast_list <- NULL
+    }
+
+    # Validate numeric matrices
+    design_matrix <- as.matrix(design_matrix)
+    contrast_matrix <- as.matrix(contrast_matrix)
+
+    if (!is.numeric(design_matrix)) stop("`design_matrix` must be numeric.", call. = FALSE)
+    if (!is.numeric(contrast_matrix)) stop("`contrast_matrix` must be numeric.", call. = FALSE)
+
+    J <- nK * nS * nN
+    if (nrow(design_matrix) != J) {
+      stop(
+        sprintf(
+          "`design_matrix` must have %d rows (= K*S*N = %d*%d*%d), but has %d.",
+          J, nK, nS, nN, nrow(design_matrix)
+        ),
+        call. = FALSE
+      )
+    }
+
+    # Check dimension match before adding intercept.
+    if (ncol(contrast_matrix) != ncol(design_matrix)) {
+      stop(
+        sprintf(
+          "`contrast_matrix` must have %d columns to match `design_matrix`, but has %d.",
+          ncol(design_matrix), ncol(contrast_matrix)
+        ),
+        call. = FALSE
+      )
+    }
+
+    # Try adding an intercept to `design_matrix`.
+    added_intercept <- FALSE
+    has_intercept <- any(apply(
+      design_matrix, 2,
+      function(col) isTRUE(all(abs(col - 1) < .Machine$double.eps^0.5))
+    ))
+
+    if (!has_intercept) {
+      X0 <- cbind(`(Intercept)` = 1, design_matrix)
+      # Check if adding the intercept increases the rank of `design_matrix`.
+      if (qr(X0)$rank > qr(design_matrix)$rank) {
+        design_matrix <- X0
+        added_intercept <- TRUE
+      }
+    }
+
+    # If we added an intercept to `design_matrix`, add a zero intercept column to `contrast_matrix`.
+    if (added_intercept) {
+      contrast_matrix <- cbind(`(Intercept)` = 0, contrast_matrix)
+    }
+
+    # Construct `contrast_list` from `design_matrix` and `contrast_matrix`.
+    XtX <- crossprod(design_matrix)
+    XtX_inv <- tryCatch(
+      solve(XtX),
+      error = function(e) stop("`design_matrix` is rank-deficient: cannot form (X'X)^{-1}.", call. = FALSE)
+    )
+    A <- contrast_matrix %*% XtX_inv %*% t(design_matrix)
+
+    # Each row of A is a contrast vector of length J (=K*S*N)
+    contrast_list <- lapply(seq_len(nrow(A)), function(i) as.numeric(A[i, ]))
+    if (!is.null(rownames(contrast_matrix))) {
+      names(contrast_list) <- rownames(contrast_matrix)
+    } else {
+      names(contrast_list) <- paste0("contrast_", seq_len(nrow(A)))
+    }
+  }
 
   # Check `contrast_list`.
   # `contrast_list` should be fields * sessions * subjects
   if(!is.null(contrast_list) & !is.list(contrast_list)) contrast_list <- list(contrast_list)
   if(is.null(contrast_list)) {
-    if (verbose>0) cat('Using a contrast that computes the average across subjects for each field. If other contrasts are desired, provide `design_matrix` and `contrast_matrix`, or `contrast_list`.\n')
+    if (verbose>0) cat('Computing the average across subjects for each field. If other contrasts are desired, please provide `design_matrix` and `contrast_matrix`, or `contrast_list`.\n')
     contrast_list <- vector('list', length=nK)
     names(contrast_list) <- paste0(field_names, '_avg')
     for (kk in 1:nK) {
