@@ -32,6 +32,7 @@
 #'
 #'  See Details for examples of contrast vectors for different group level summaries.
 #'
+#' @param contrasts Deprecated. Use `contrast_list` instead.
 #' @param quantiles (Optional) Vector of posterior quantiles to return in
 #'  addition to the posterior mean.
 #' @param excursion_type (For inference only) The type of excursion function for
@@ -95,6 +96,7 @@ BayesGLM2 <- function(
   design_matrix = NULL,
   contrast_matrix = NULL,
   contrast_list = NULL,
+  contrasts = NULL,
   quantiles = NULL,
   excursion_type=NULL,
   contrast_names = NULL,
@@ -163,7 +165,20 @@ BayesGLM2 <- function(
   # b) construct contrast_list,
   # c) proceed to the next section (no new code needed here, just proceed with the following code)
 
+
   # Check `contrast_list`.
+  # Check `contrasts`.
+  if (!is.null(contrasts)) {
+    .Deprecated(msg = paste0(
+      "`contrasts` is deprecated in BayesGLM2().\n",
+      "Use 'contrast_list' instead."
+    ))
+    if (is.null(contrast_list)) {
+      contrast_list <- contrasts
+    } else {
+      stop("`contrasts` and `contrast_list` were both provided. Use just `contrast_list` instead.")
+    }
+  }
   # `contrast_list` should be fields * sessions * subjects
   if(!is.null(contrast_list) & !is.list(contrast_list)) contrast_list <- list(contrast_list)
   if(is.null(contrast_list)) {
