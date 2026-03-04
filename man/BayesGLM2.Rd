@@ -9,6 +9,7 @@ BayesGLM2(
   design_matrix = NULL,
   contrast_matrix = NULL,
   contrast_list = NULL,
+  contrasts = NULL,
   quantiles = NULL,
   excursion_type = NULL,
   contrast_names = NULL,
@@ -50,6 +51,8 @@ sessions per subject, and \eqn{N} is the number of subjects. The vector is
 grouped by fields, then sessions, then subjects.
 
 See Details for examples of contrast vectors for different group level summaries.}
+
+\item{contrasts}{Deprecated. Use \code{contrast_list} instead.}
 
 \item{quantiles}{(Optional) Vector of posterior quantiles to return in
 addition to the posterior mean.}

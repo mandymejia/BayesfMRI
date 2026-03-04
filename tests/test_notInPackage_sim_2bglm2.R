@@ -164,7 +164,7 @@ plot(
 ##### umm -----
 b2$d <- BayesGLM2(
   readRDS(file.path(dir_resultsThis, "bfmri_1sess.rds")),
-  contrasts=contrasts, excursion_type = ">", quantiles=.7,
+  contrast_list=contrasts, excursion_type = ">", quantiles=.7,
   nsamp_theta=10, nsamp_beta=20, gamma=1, alpha=.05
 )
 
@@ -185,7 +185,7 @@ bglm_fname <- file.path(dir_resultsThis, "bglm2_2sess.rds")
 if (!file.exists(bglm_fname)) {
   b2 <- BayesGLM2(
     readRDS(file.path(dir_resultsThis, "bfmri_2sess.rds")),
-    contrasts <- contrasts, excursion_type = "!=", quantiles=.2,
+    contrast_list = contrasts, excursion_type = "!=", quantiles=.2,
     nsamp_theta=30, nsamp_beta=70
   )
   saveRDS(b2, bglm_fname)
@@ -207,7 +207,7 @@ bglm_fname <- file.path(dir_resultsThis, "bglm2_2sess_scrambledDesign.rds")
 if (!file.exists(bglm_fname)) {
   b2 <- BayesGLM2(
     readRDS(file.path(dir_resultsThis, "bfmri_2sess_scrambledDesign.rds")),
-    contrasts=contrasts, excursion_type=">",
+    contrast_list=contrasts, excursion_type=">",
     nsamp_theta=30, nsamp_beta=70
   )
   saveRDS(b2, bglm_fname)
@@ -235,7 +235,7 @@ bglm_fname <- file.path(dir_resultsThis, "bglm2_2sess_spatialVar.rds")
 if (!file.exists(bglm_fname)) {
   b2 <- BayesGLM2(
     readRDS(file.path(dir_resultsThis, "bfmri_2sess_spatialVar.rds")),
-    contrasts=contrasts, excursion_type=">",
+    contrast_list=contrasts, excursion_type=">",
     nsamp_theta=30, nsamp_beta=70
   )
   saveRDS(b2, bglm_fname)

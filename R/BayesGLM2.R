@@ -251,7 +251,7 @@ BayesGLM2 <- function(
   if (!is.null(contrasts)) {
     .Deprecated(msg = paste0(
       "`contrasts` is deprecated in BayesGLM2().\n",
-      "Use 'contrast_list' instead."
+      "Use `contrast_list` instead."
     ))
     if (is.null(contrast_list)) {
       contrast_list <- contrasts

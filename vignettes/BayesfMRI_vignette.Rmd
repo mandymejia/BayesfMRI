@@ -326,7 +326,7 @@ plot(bglm2, stat = 'activations', idx="neut_avg", title = "neutral", what = 'vol
 
 ```{r}
 fnames <- list.files("glms_full")
-# bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20, contrasts = list(fear_vs_neut = rep(c(1, -1), 10)/10))
+# bglm2b <- BayesGLM2(file.path("glms_full", fnames), excursion_type = '>', num_cores = 20, contrast_list = list(fear_vs_neut = rep(c(1, -1), 10)/10))
 # saveRDS(bglm2b, file='../vignette_data/bglm2b.rds')
 bglm2b <- readRDS('../vignette_data/bglm2b.rds')
 ```
