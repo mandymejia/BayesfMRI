@@ -112,49 +112,83 @@ BayesGLM2 <- function(
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
   }
 
-  # Check `results`, reading in the files if needed.
-  results_ok <- FALSE
-  if (is.character(results)) {
+  # Check `results`, but do not read all files into memory at once.
+  results_from_files <- is.character(results)
+
+  if (results_from_files) {
     if (!all(file.exists(results))) {
       stop("`results` is a character vector, but not all elements are existing files.")
     }
-    results <- lapply(results, readRDS) # [TO DO]: delete w/ each read-in, stuff not needed
-  }
-  if (!is.list(results)) {
+  } else if (!is.list(results)) {
     stop("`results` must be a list of all `'BGLM'` or all `'fit_bglm'` objects, or a character vector of files with `'BGLM(0)'` results.")
   }
-  is_BGLM <- all(vapply(results, inherits, FALSE, "fit_bglm"))
-  is_cifti <- all(vapply(results, inherits, FALSE, "BGLM"))
-  if (!is_BGLM && !is_cifti) {
+
+  .get_result <- function(nn) {
+    if (results_from_files) {
+      readRDS(results[[nn]])
+    } else {
+      results[[nn]]
+    }
+  }
+
+  .get_model <- function(res, mm, is_cifti) {
+    if (is_cifti) {
+      res$BGLMs[[mm]]
+    } else {
+      res
+    }
+  }
+
+  # Check the class of the first result to determine the object type and whether it's CIFTI. We will check that all other results match this type in the loop below.
+  res1 <- .get_result(1)
+
+  if (inherits(res1, "BGLM")) {
+    object_type <- "BGLM"
+    is_cifti <- TRUE
+  } else if (inherits(res1, "fit_bglm")) {
+    object_type <- "fit_bglm"
+    is_cifti <- FALSE
+  } else {
     stop("`results` must be a list of all `'BGLM'` or all `'fit_bglm'` objects, or a character vector of files with `'BGLM(0)'` results.")
   }
-  rm(is_BGLM) # use `is_cifti`
 
   model_names <- if (is_cifti) {
-    names(results[[1]]$BGLMs)[!vapply(results[[1]]$BGLMs, is.null, FALSE)]
+    names(res1$BGLMs)[!vapply(res1$BGLMs, is.null, FALSE)]
   } else {
     "BayesGLM"
   }
 
-  nM <- length(model_names)                 # models (brain structures, "cortexL", "cortexR", "subcort")
-  nN <- length(results)                     # subjects
-  nS <- length(results[[1]]$session_names)  # sessions
-  nK <- length(results[[1]]$field_names)     # fields
+  nM <- length(model_names)                # models (brain structures, "cortexL", "cortexR", "subcort")
+  nN <- length(results)                    # subjects
+  nS <- length(res1$session_names)         # sessions
+  nK <- length(res1$field_names)           # fields
 
-  session_names <- results[[1]]$session_names
-  field_names <- results[[1]]$field_names
+  session_names <- res1$session_names
+  field_names <- res1$field_names
 
-  # Check that every subject has the same models, sessions, fields
-  for (nn in seq(nN)) {
-    sub_nn <- results[[nn]]
-    if (is_cifti) {
+  # Check that every subject has the same object type, models, sessions, and fields
+  for (nn in seq_len(nN)) {
+    sub_nn <- .get_result(nn)
+
+    if (object_type == "BGLM") {
+      if (!inherits(sub_nn, "BGLM")) {
+        stop("Subject ", nn, " is not a 'BGLM' object.")
+      }
       stopifnot(identical(
         model_names,
         names(sub_nn$BGLMs)[!vapply(sub_nn$BGLMs, is.null, FALSE)]
       ))
+    } else if (object_type == "fit_bglm") {
+      if (!inherits(sub_nn, "fit_bglm")) {
+        stop("Subject ", nn, " is not a 'fit_bglm' object.")
+      }
     }
+
     stopifnot(identical(session_names, sub_nn$session_names))
     stopifnot(identical(field_names, sub_nn$field_names))
+
+    rm(sub_nn)
+    gc(FALSE)
   }
 
   # Yunong added on Mar 02, 2026
@@ -316,109 +350,167 @@ BayesGLM2 <- function(
   out <- vector("list", nM)
   names(out) <- model_names
 
-  # Get intersection mask.
-  Masks <- intersect_mask(results)
+  # Get intersection mask without `intersect_mask` function, to avoid reading all data into memory at once.
+  Masks <- list(
+    In = vector("list", nM),
+    Mdat = vector("list", nM)
+  )
+  names(Masks$In) <- names(Masks$Mdat) <- model_names
 
-  # If `BGLM` object, we will only be using the `BGLMs` list entry.
-  # Delete everything else from here on for clarity.
-  if (is_cifti) { results <- lapply(results, '[', "BGLMs") }
+  for (mm in seq_len(nM)) {
+    mod1 <- .get_model(res1, mm, is_cifti)
+    Masks$In[[mm]] <- as.logical(mod1$spatial$maskIn)
+    Masks$Mdat[[mm]] <- as.logical(mod1$spatial$maskMdat)
+  }
+
+  if (nN >= 2) {
+    for (nn in 2:nN) {
+      sub_nn <- .get_result(nn)
+      for (mm in seq_len(nM)) {
+        mod_nn <- .get_model(sub_nn, mm, is_cifti)
+        Masks$In[[mm]] <- Masks$In[[mm]] & as.logical(mod_nn$spatial$maskIn)
+        Masks$Mdat[[mm]] <- Masks$Mdat[[mm]] & as.logical(mod_nn$spatial$maskMdat)
+      }
+      rm(sub_nn, mod_nn)
+      gc(FALSE)
+    }
+  }
 
   spatial_sub <- NULL # only used for subcortex model
+  spatial_sub_by_model <- vector("list", nM)
+  names(spatial_sub_by_model) <- model_names
+  spatial_type_by_model <- character(nM)
+  names(spatial_type_by_model) <- model_names
 
   # Do the group model (looping over models, which are brain structures in the cifti case).
   for (mm in seq(nM)) {
-    model_intermediates <- NULL # for debugging, not exported
+    model_intermediates <- NULL
     Mask <- Masks$Mdat[[mm]]
 
-    if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
-    results_mm <- if (is_cifti) {
-      lapply(results, function(x){ x$BGLMs[[mm]] })
-    } else {
-      results
-    }
+    if (nM > 1) { if (verbose > 0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
+
+    res1_mm <- .get_model(res1, mm, is_cifti)
 
     # We know model names match, but still check `spatial_type` match.
-    spatial_type <- vapply(results_mm, function(x){x$spatial$spatial_type}, "")
-    spatial_type <- unique(spatial_type)
-    if (length(spatial_type) != 1) {
-      stop("`spatial_type` is not unique across subjects for model ", model_names[mm], ".")
+    spatial_type <- res1_mm$spatial$spatial_type
+    spatial_type_by_model[mm] <- spatial_type
+
+    for (nn in seq_len(nN)) {
+      sub_nn <- .get_result(nn)
+      sub_nn_mm <- .get_model(sub_nn, mm, is_cifti)
+      if (!identical(sub_nn_mm$spatial$spatial_type, spatial_type)) {
+        stop("`spatial_type` is not unique across subjects for model ", model_names[mm], ".")
+      }
+      rm(sub_nn, sub_nn_mm)
+      gc(FALSE)
     }
 
     # Get new `spatial`, `spde`, and `Amat`.
     mesh <- NULL # only used for vertex model
+
     if (spatial_type == "vertex") {
-      # `spatial`.
-      spatial <- results_mm[[1]]$spatial
+      # `spatial`
+      spatial <- res1_mm$spatial
       spatial$maskMdat <- Mask
       spatial$Mmap <- which(Mask)
 
-      # `mesh` and `spde`.
-      mesh <- results_mm[[1]]$spde$mesh
-      spde <- results_mm[[1]]$spde
+      # `mesh` and `spde`
+      mesh <- res1_mm$spde$mesh
+      spde <- res1_mm$spde
 
       # `Amat`
-      Amat <- INLA::inla.spde.make.A(mesh) #Psi_{km} (for one field and subject, a VxN matrix, V=num_vox, N=num_mesh)
+      Amat <- INLA::inla.spde.make.A(mesh)
       Amat <- Amat[mesh$idx$loc,]
 
     } else if (spatial_type == "voxel") {
-      # Check features of spatial that are expected to match for all subjects.
-      spatials_expEq <- unique(lapply(results_mm, function(x){ x$spatial[c(
+      # Check voxel spatial features that are expected to match across subjects.
+      spatial_ref <- res1_mm$spatial[c(
         "spatial_type", "labels",
         "trans_mat", "trans_units",
-        "nbhd_order", "buffer")] }))
+        "nbhd_order", "buffer"
+      )]
 
-      if (length(unique(spatials_expEq)) != 1) {
-        stop("`spatial`s for voxel model are expected to match in labels, trans_mat, trans_units, nbhd_order, and buffer.")
+      logkappa_ref <- res1_mm$logkappa_vec
+      logtau_ref <- res1_mm$logtau_vec
+
+      for (nn in seq_len(nN)) {
+        sub_nn <- .get_result(nn)
+        sub_nn_mm <- .get_model(sub_nn, mm, is_cifti)
+
+        spatial_nn <- sub_nn_mm$spatial[c(
+          "spatial_type", "labels",
+          "trans_mat", "trans_units",
+          "nbhd_order", "buffer"
+        )]
+
+        if (!identical(spatial_ref, spatial_nn)) {
+          stop("`spatial`s for voxel model are expected to match in labels, trans_mat, trans_units, nbhd_order, and buffer.")
+        }
+
+        if (!identical(sub_nn_mm$logkappa_vec, logkappa_ref)) {
+          warning("`logkappa_vec` is not the same across subjects. Using the first subject's.")
+          break
+        }
+
+        rm(sub_nn, sub_nn_mm, spatial_nn)
+        gc(FALSE)
       }
-      rm(spatials_expEq)
 
-      # Get.
-      spatial <- results_mm[[1]]$spatial
+      for (nn in seq_len(nN)) {
+        sub_nn <- .get_result(nn)
+        sub_nn_mm <- .get_model(sub_nn, mm, is_cifti)
 
-      # Update.
-      toKeep <- Mask[results_mm[[1]]$spatial$maskMdat]
+        if (!identical(sub_nn_mm$logtau_vec, logtau_ref)) {
+          warning("`logtau_vec` is not the same across subjects. Using the first subject's.")
+          break
+        }
+
+        rm(sub_nn, sub_nn_mm)
+        gc(FALSE)
+      }
+
+      # Get
+      spatial <- res1_mm$spatial
+
+      # Update
+      toKeep <- Mask[res1_mm$spatial$maskMdat]
       spatial$labsMdat <- spatial$labsMdat[toKeep]
       spatial$maskMdat[spatial$maskMdat] <- toKeep
       spatial$Mmap <- spatial$Mmap[toKeep]
-      spatial_sub <- spatial # for making the output xifti.
-      if (length(unique(lapply(results_mm, function(q){q$logkappa_vec}))) > 1) {
-        warning("`logkappa_vec` is no the same across subjects. Using the first subject's.")
-      }
-      if (length(unique(lapply(results_mm, function(q){q$logkappa_vec}))) > 1) {
-        warning("`logtau_vec` is no the same across subjects. Using the first subject's.")
-      }
+      spatial_sub_by_model[[mm]] <- spatial
+
       x <- SPDE_from_voxel(
         spatial,
-        logkappa = results_mm[[1]]$logkappa_vec,
-        logtau = results_mm[[1]]$logtau_vec
+        logkappa = logkappa_ref,
+        logtau = logtau_ref
       )
       spde <- x$spde
       spatial <- x$spatial
 
-      Amat <- make_A_mat(results_mm[[1]]$spatial)
+      Amat <- make_A_mat(res1_mm$spatial)
     }
 
-    Amat.tot <- bdiag(rep(list(Amat), nK)) #Psi_m from paper (VKxNK)
+    Amat.tot <- bdiag(rep(list(Amat), nK)) # Psi_m from paper (VKxNK)
 
-    # Update the results with the new SPDE.
-    for (nn in seq(nN)) {
-      cat(paste0("Checking data mask for subject ", nn, ".\n")) # [TO DO] option to hide?
-      # [NOTE] for subcortex, we need to see the old `spatial` in order to
-      # update `X`. So update `spatial` after `retro_mask_fit_bglm`, not before.
-      results_mm[[nn]] <- retro_mask_fit_bglm(results_mm[[nn]], Mask)
-      results_mm[[nn]]$spde <- spde
-      results_mm[[nn]]$spatial <- spatial
-    }
-
-    # Collecting theta posteriors from subject models
+    # Collect theta posteriors and X/y cross-products one subject at a time.
     Qmu_theta <- Q_theta <- 0
-    # Collecting X and y cross-products from subject models (for posterior distribution of beta)
     Xcros.all <- Xycros.all <- vector("list", nN)
 
-    for (nn in seq(nN)) {
+    for (nn in seq_len(nN)) {
+      cat(paste0("Checking data mask for subject ", nn, ".\n"))
+
+      sub_nn <- .get_result(nn)
+      res_nn_mm <- .get_model(sub_nn, mm, is_cifti)
+
+      # [NOTE] for subcortex, we need to see the old `spatial` in order to
+      # update `X`. So update `spatial` after `retro_mask_fit_bglm`, not before.
+      res_nn_mm <- retro_mask_fit_bglm(res_nn_mm, Mask)
+      res_nn_mm$spde <- spde
+      res_nn_mm$spatial <- spatial
+
       # Check that mesh has same neighborhood structure
       if (!is.null(mesh)) {
-        if (!all.equal(results_mm[[nn]]$spatial$mesh$faces, mesh$faces, check.attribute=FALSE)) {
+        if (!all.equal(res_nn_mm$spatial$mesh$faces, mesh$faces, check.attribute = FALSE)) {
           stop(paste0(
             'Subject ', nn,
             ' does not have the same mesh neighborhood structure as subject 1.',
@@ -427,32 +519,34 @@ BayesGLM2 <- function(
         }
       }
 
-      #Collect posterior mean and precision of hyperparameters
-      mu_theta_mm <- results_mm[[nn]]$INLA_model_obj$misc$theta.mode
-      Q_theta_mm <- solve(results_mm[[nn]]$INLA_model_obj$misc$cov.intern)
-      #iteratively compute Q_theta and mu_theta (mean and precision of q(theta|y))
-      Qmu_theta <- Qmu_theta + as.vector(Q_theta_mm%*%mu_theta_mm)
-      Q_theta <- Q_theta + Q_theta_mm
-      rm(mu_theta_mm, Q_theta_mm)
+      # Collect posterior mean and precision of hyperparameters
+      mu_theta_mm <- res_nn_mm$INLA_model_obj$misc$theta.mode
+      Q_theta_mm <- solve(res_nn_mm$INLA_model_obj$misc$cov.intern)
 
-      # compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y
-      # (all these matrices for a specific subject mm)
-      y_vec <- results_mm[[nn]]$y
-      X_list <- results_mm[[nn]]$X
+      # Iteratively compute Q_theta and mu_theta
+      Qmu_theta <- Qmu_theta + as.vector(Q_theta_mm %*% mu_theta_mm)
+      Q_theta <- Q_theta + Q_theta_mm
+
+      # Compute Xcros = Psi'X'XPsi and Xycros = Psi'X'y
+      y_vec <- res_nn_mm$y
+      X_list <- res_nn_mm$X
 
       if (length(X_list) > 1) {
         n_sess <- length(X_list)
-        X_list <- Matrix::bdiag(X_list) #block-diagonialize over sessions
-        Amat.final <- Matrix::bdiag(rep(list(Amat.tot),n_sess))
+        X_list <- Matrix::bdiag(X_list) # block-diagonalize over sessions
+        Amat.final <- Matrix::bdiag(rep(list(Amat.tot), n_sess))
       } else {
-        X_list <- X_list[[1]] #single-session case
+        X_list <- X_list[[1]] # single-session case
         Amat.final <- Amat.tot
       }
-      Xmat <- X_list #%*% Amat.final #already done within BayesGLM
+
+      Xmat <- X_list #%*% Amat.final # already done within BayesGLM
       Xcros.all[[nn]] <- Matrix::crossprod(Xmat)
       Xycros.all[[nn]] <- Matrix::crossprod(Xmat, y_vec)
+
+      rm(sub_nn, res_nn_mm, mu_theta_mm, Q_theta_mm, y_vec, X_list, Xmat, Amat.final)
+      gc(FALSE)
     }
-    #rm(results_mm, y_vec, X_list, Xmat) # save memory
 
     mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
 
@@ -610,10 +704,8 @@ BayesGLM2 <- function(
     # Mask with maskIn.
     result_oomSetNA <- out$model_results
     for (mm in seq(nM)) {
-      results_mm <- lapply(results, function(x){ x$BGLMs[[mm]] })
-      spatial_type <- unique(
-        vapply(results_mm, function(x){x$spatial$spatial_type}, "")
-      )
+      spatial_type <- spatial_type_by_model[mm]
+      spatial_sub <- spatial_sub_by_model[[mm]]
 
       if (spatial_type == "vertex") {
         result_oomSetNA[[mm]]$estimates[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
@@ -675,10 +767,8 @@ BayesGLM2 <- function(
       # Mask with maskIn.
       result_oomSetNA <- out$BayesGLM2_results$model_results
       for (mm in seq(nM)) {
-        results_mm <- lapply(results, function(x){ x$BGLMs[[mm]] })
-        spatial_type <- unique(
-          vapply(results_mm, function(x){x$spatial$spatial_type}, "")
-        )
+        spatial_type <- spatial_type_by_model[mm]
+        spatial_sub <- spatial_sub_by_model[[mm]]
 
         if (spatial_type == "vertex") {
           result_oomSetNA[[mm]]$estimates[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
