@@ -105,7 +105,8 @@ BayesGLM2 <- function(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = 1){
+  verbose = 1,
+  return_intermediates = FALSE){ # for debugging, not exported
 
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
@@ -135,7 +136,7 @@ BayesGLM2 <- function(
     "BayesGLM"
   }
 
-  nM <- length(model_names)                 # models
+  nM <- length(model_names)                 # models (brain structures, "cortexL", "cortexR", "subcort")
   nN <- length(results)                     # subjects
   nS <- length(results[[1]]$session_names)  # sessions
   nK <- length(results[[1]]$field_names)     # fields
@@ -324,8 +325,9 @@ BayesGLM2 <- function(
 
   spatial_sub <- NULL # only used for subcortex model
 
-  # Do the group model
+  # Do the group model (looping over models, which are brain structures in the cifti case).
   for (mm in seq(nM)) {
+    model_intermediates <- NULL # for debugging, not exported
     Mask <- Masks$Mdat[[mm]]
 
     if (nM>1) { if (verbose>0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
@@ -412,6 +414,7 @@ BayesGLM2 <- function(
     Qmu_theta <- Q_theta <- 0
     # Collecting X and y cross-products from subject models (for posterior distribution of beta)
     Xcros.all <- Xycros.all <- vector("list", nN)
+
     for (nn in seq(nN)) {
       # Check that mesh has same neighborhood structure
       if (!is.null(mesh)) {
@@ -452,6 +455,18 @@ BayesGLM2 <- function(
     #rm(results_mm, y_vec, X_list, Xmat) # save memory
 
     mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
+
+    # Debugging: return intermediates if desired
+    if (return_intermediates) {
+      model_intermediates <- list(
+        Qmu_theta = Qmu_theta,
+        Q_theta = Q_theta,
+        mu_theta = mu_theta,
+        Xcros.all = Xcros.all,
+        Xycros.all = Xycros.all
+      )
+    }
+
     #### DRAW SAMPLES FROM q(theta|y)
     #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
     if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
@@ -569,7 +584,8 @@ BayesGLM2 <- function(
       ppm = ppm.summ,
       active = active,
       mask = lapply(Masks, '[[', mm),
-      Amat = Amat # not Amat.final?
+      Amat = Amat, # not Amat.final?
+      intermediates = if (return_intermediates) model_intermediates else NULL # for debugging, not exported
     )
 
     if (nM>1) { cat("\n") }
@@ -615,22 +631,22 @@ BayesGLM2 <- function(
       } else {
         result_oomSetNA[[mm]]$estimates <- unmask_Mdat2In(
           result_oomSetNA[[mm]]$estimates[spatial_sub$Mmap,,drop=FALSE],
-          spatial_sub$maskMdat[],
-          spatial_sub$maskIn[]
+          spatial_sub$maskIn[],
+          spatial_sub$maskMdat[]
         )
 
         if (!is.null(result_oomSetNA[[mm]]$ppm)) {
           result_oomSetNA[[mm]]$ppm <- unmask_Mdat2In(
             result_oomSetNA[[mm]]$ppm[spatial_sub$Mmap,,drop=FALSE],
-            spatial_sub$maskMdat[],
-            spatial_sub$maskIn[]
+            spatial_sub$maskIn[],
+            spatial_sub$maskMdat[]
           )
         }
         if (!is.null(result_oomSetNA[[mm]]$active)) {
           result_oomSetNA[[mm]]$active <- unmask_Mdat2In(
             result_oomSetNA[[mm]]$active[spatial_sub$Mmap,,drop=FALSE],
-            spatial_sub$maskMdat[],
-            spatial_sub$maskIn[]
+            spatial_sub$maskIn[],
+            spatial_sub$maskMdat[]
           )
         }
       }
@@ -679,22 +695,22 @@ BayesGLM2 <- function(
         } else {
           result_oomSetNA[[mm]]$estimates <- unmask_Mdat2In(
             result_oomSetNA[[mm]]$estimates[spatial_sub$Mmap,,drop=FALSE],
-            spatial_sub$maskMdat[],
-            spatial_sub$maskIn[]
+            spatial_sub$maskIn[],
+            spatial_sub$maskMdat[]
           )
 
           if (!is.null(result_oomSetNA[[mm]]$ppm)) {
             result_oomSetNA[[mm]]$ppm <- unmask_Mdat2In(
               result_oomSetNA[[mm]]$ppm[spatial_sub$Mmap,,drop=FALSE],
-              spatial_sub$maskMdat[],
-              spatial_sub$maskIn[]
+              spatial_sub$maskIn[],
+              spatial_sub$maskMdat[]
             )
           }
           if (!is.null(result_oomSetNA[[mm]]$active)) {
             result_oomSetNA[[mm]]$active <- unmask_Mdat2In(
               result_oomSetNA[[mm]]$active[spatial_sub$Mmap,,drop=FALSE],
-              spatial_sub$maskMdat[],
-              spatial_sub$maskIn[]
+              spatial_sub$maskIn[],
+              spatial_sub$maskMdat[]
             )
           }
         }
