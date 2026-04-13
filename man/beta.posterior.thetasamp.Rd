@@ -13,7 +13,8 @@ beta.posterior.thetasamp(
   quantiles,
   excursion_type,
   gamma,
-  alpha,
+  alpha = NULL,
+  alpha_grid = NULL,
   nsamp_beta = 100
 )
 }
@@ -35,6 +36,8 @@ beta.posterior.thetasamp(
 \item{gamma}{Vector of activation thresholds for each contrast}
 
 \item{alpha}{Significance level for activation for the excursion sets}
+
+\item{alpha_grid}{Optional list of numeric vectors specifying multiple alpha thresholds for each contrast for nested excursion set inference. If provided, \code{alpha} is ignored.}
 
 \item{nsamp_beta}{The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))}
 }

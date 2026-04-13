@@ -42,9 +42,27 @@
 #' @param gamma (For inference only) Activation threshold for the excursion set,
 #'  or a vector thereof (each element corresponding to one contrast). Default:
 #'  \code{0}.
-#' @param alpha (For inference only) Significance level for activation for the
-#'  excursion set, or a vector thereof (each element corresponding to one
-#'  contrast). Default: \code{.05}.
+#' @param alpha (For inference only, single-threshold mode only) Significance
+#'  level for activation for the excursion set, or a vector thereof (each
+#'  element corresponding to one contrast). Default: \code{.05}. This argument
+#'  is ignored when \code{alpha_nested} is provided.
+#' @param alpha_nested (For inference only, nested-threshold mode) Optional
+#'  nested significance thresholds used to construct multiple activation maps
+#'  and a nested activation map. If \code{NULL} (default), the function uses
+#'  \code{alpha} and returns a single activation map for each contrast.
+#'  Default: \code{NULL}.If provided, \code{alpha} is ignored.
+#'
+#'  \code{alpha_nested} can be specified in either of the following forms:
+#'  \itemize{
+#'    \item A numeric vector, in which case the same set of alpha thresholds is
+#'    used for all contrasts.
+#'    \item A list of numeric vectors of length equal to the number of contrasts,
+#'    in which case each contrast uses its own set of alpha thresholds.
+#'  }
+#'
+#'  Each alpha threshold must be between 0 and 1. Thresholds should be ordered
+#'  from less strict to more strict (for example, \code{c(0.1, 0.05, 0.01)}),
+#'  although the function may internally reorder and deduplicate them.
 #' @param nsamp_theta Number of theta values to sample from posterior. Default:
 #'  \code{50}.
 #' @param nsamp_beta Number of beta vectors to sample conditional on each theta
@@ -92,21 +110,21 @@
 #'
 #' @export
 BayesGLM2 <- function(
-  results,
-  design_matrix = NULL,
-  contrast_matrix = NULL,
-  contrast_list = NULL,
-  contrasts = NULL,
-  quantiles = NULL,
-  excursion_type=NULL,
-  contrast_names = NULL,
-  gamma = 0,
-  alpha = 0.05,
-  nsamp_theta = 50,
-  nsamp_beta = 100,
-  num_cores = NULL,
-  verbose = 1,
-  return_intermediates = FALSE){ # for debugging, not exported
+    results,
+    design_matrix = NULL,
+    contrast_matrix = NULL,
+    contrast_list = NULL,
+    contrasts = NULL,
+    quantiles = NULL,
+    excursion_type = ">",
+    contrast_names = NULL,
+    gamma = 0,
+    alpha = 0.05,
+    alpha_nested = NULL,
+    nsamp_theta = 50,
+    nsamp_beta = 100,
+    num_cores = NULL,
+    verbose = 1){
 
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
@@ -329,22 +347,98 @@ BayesGLM2 <- function(
   }
   nC <- length(contrast_list)
 
-  #Check `quantiles`
+  # Check `quantiles`
   if(!is.null(quantiles)){
     stopifnot(is.numeric(quantiles))
     if(any(quantiles > 1 | quantiles < 0)) stop('All elements of `quantiles` must be between 0 and 1.')
   }
 
+  # Check alpha mode
+  use_nested_alpha <- !is.null(alpha_nested)
+  if (use_nested_alpha && verbose > 0) {
+    message("`alpha_nested` provided: ignoring `alpha` and using nested activation mode.")
+  }
+
+  # Validate and normalize `alpha_nested` if provided, and override `alpha` if `alpha_nested` is used.a
+  .normalize_alpha_nested <- function(alpha_nested, nC, contrast_names = NULL) {
+    if (is.numeric(alpha_nested)) {
+      alpha_grid <- replicate(
+        nC,
+        sort(unique(alpha_nested), decreasing = TRUE),
+        simplify = FALSE
+      )
+    } else if (is.list(alpha_nested)) {
+      if (length(alpha_nested) != nC) {
+        stop(
+          "`alpha_nested` must be either a numeric vector or a list of length equal to the number of contrasts.",
+          call. = FALSE
+        )
+      }
+      alpha_grid <- lapply(alpha_nested, function(x) {
+        if (!is.numeric(x)) {
+          stop("Each element of `alpha_nested` must be numeric.", call. = FALSE)
+        }
+        sort(unique(x), decreasing = TRUE)
+      })
+    } else {
+      stop(
+        "`alpha_nested` must be either a numeric vector or a list of numeric vectors.",
+        call. = FALSE
+      )
+    }
+    bad_len <- vapply(alpha_grid, length, integer(1)) == 0
+    if (any(bad_len)) {
+      stop("Each contrast must have at least one alpha threshold in `alpha_nested`.", call. = FALSE)
+    }
+    bad_val <- vapply(
+      alpha_grid,
+      function(x) any(!is.finite(x) | x <= 0 | x >= 1),
+      logical(1)
+    )
+    if (any(bad_val)) {
+      stop("All values in `alpha_nested` must be finite and strictly between 0 and 1.", call. = FALSE)
+    }
+    if (!is.null(contrast_names)) {
+      names(alpha_grid) <- contrast_names
+    }
+    alpha_grid
+  }
+
   do_excur <- !is.null(excursion_type) && (!identical(excursion_type, "none"))
+
+  alpha_grid <- NULL
+
   if (do_excur) {
-    if(length(excursion_type) == 1) excursion_type <- rep(excursion_type, nC)
-    if(length(gamma) == 1) gamma <- rep(gamma, nC)
-    if(length(alpha) == 1) alpha <- rep(alpha, nC)
-    if(length(gamma) != nC) stop('Length of gamma must match number of contrasts or be equal to one.')
-    if(length(alpha) != nC) stop('Length of alpha must match number of contrasts or be equal to one.')
-    if(length(excursion_type) != nC) stop('Length of excursion_type must match number of contrasts or be equal to one.')
+    if (length(excursion_type) == 1) excursion_type <- rep(excursion_type, nC)
+    if (length(gamma) == 1) gamma <- rep(gamma, nC)
+
+    if (length(gamma) != nC) {
+      stop("Length of `gamma` must match number of contrasts or be equal to one.", call. = FALSE)
+    }
+    if (length(excursion_type) != nC) {
+      stop("Length of `excursion_type` must match number of contrasts or be equal to one.", call. = FALSE)
+    }
+
+    if (use_nested_alpha) {
+      alpha_grid <- .normalize_alpha_nested(
+        alpha_nested = alpha_nested,
+        nC = nC,
+        contrast_names = names(contrast_list)
+      )
+      alpha <- NULL
+    } else {
+      if (length(alpha) == 1) alpha <- rep(alpha, nC)
+      if (length(alpha) != nC) {
+        stop("Length of `alpha` must match number of contrasts or be equal to one.", call. = FALSE)
+      }
+      if (any(!is.finite(alpha) | alpha <= 0 | alpha >= 1)) {
+        stop("All values in `alpha` must be finite and strictly between 0 and 1.", call. = FALSE)
+      }
+    }
   } else {
-    excursion_type <- 'none'
+    excursion_type <- "none"
+    alpha <- NULL
+    alpha_grid <- NULL
   }
 
   out <- vector("list", nM)
@@ -384,7 +478,7 @@ BayesGLM2 <- function(
 
   # Do the group model (looping over models, which are brain structures in the cifti case).
   for (mm in seq(nM)) {
-    model_intermediates <- NULL
+
     Mask <- Masks$Mdat[[mm]]
 
     if (nM > 1) { if (verbose > 0) cat(model_names[mm], " ~~~~~~~~~~~\n") }
@@ -550,17 +644,6 @@ BayesGLM2 <- function(
 
     mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
 
-    # Debugging: return intermediates if desired
-    if (return_intermediates) {
-      model_intermediates <- list(
-        Qmu_theta = Qmu_theta,
-        Q_theta = Q_theta,
-        mu_theta = mu_theta,
-        Xcros.all = Xcros.all,
-        Xycros.all = Xycros.all
-      )
-    }
-
     #### DRAW SAMPLES FROM q(theta|y)
     #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
     if (verbose>0) cat(paste0('Sampling ',nsamp_theta,' posterior samples of thetas \n'))
@@ -597,6 +680,7 @@ BayesGLM2 <- function(
         excursion_type = excursion_type,
         gamma = gamma,
         alpha = alpha,
+        alpha_grid = alpha_grid,
         nsamp_beta = nsamp_beta
       )
     } else {
@@ -626,6 +710,7 @@ BayesGLM2 <- function(
         excursion_type=excursion_type,
         gamma=gamma,
         alpha=alpha,
+        alpha_grid = alpha_grid,
         nsamp_beta=nsamp_beta
       )
       parallel::stopCluster(cl)
@@ -660,26 +745,138 @@ BayesGLM2 <- function(
     }
 
     ## Posterior probabilities and activations
-    if(do_excur){
-      ppm.all <- lapply(beta.posteriors, function(x) return(x$F))
-      ppm.wt <- mapply(function(x, a){return(x*a)}, ppm.all, wt, SIMPLIFY=FALSE) #apply weight to each element of ppm.all (one for each theta sample)
-      ppm.summ <- apply(abind::abind(ppm.wt, along=3), MARGIN = c(1,2), sum) #N x L (# of contrasts)
-      dimnames(ppm.summ) <- NULL
-      active <- array(0, dim=dim(ppm.summ))
-      for (cc in seq(nC)) { active[ppm.summ[,cc] > (1-alpha[cc]),cc] <- 1 }
+    if (do_excur) {
+
+      if (use_nested_alpha) {
+
+        ## Nested-alpha mode:
+        ## beta.posterior.thetasamp() returns F_levels instead of F.
+        ## For each contrast cc, F_levels[[cc]] is an n.mesh x n_alpha_cc matrix
+        ## for a single theta draw. We now average these over theta using wt.
+
+        ppm.summ <- NULL
+        active <- NULL
+
+        ppm.levels <- vector("list", nC)
+        active_levels <- vector("list", nC)
+        names(ppm.levels) <- names(contrast_list)
+        names(active_levels) <- names(contrast_list)
+
+        nested_code <- matrix(
+          0L,
+          nrow = nrow(betas.summ),
+          ncol = nC
+        )
+        colnames(nested_code) <- names(contrast_list)
+
+        for (cc in seq_len(nC)) {
+
+          ## Collect theta-specific F_levels for this contrast
+          ## Each element is an n.mesh x n_alpha_cc matrix
+          F.levels.cc <- lapply(beta.posteriors, function(x) x$F_levels[[cc]])
+
+          ## Apply theta weights
+          F.levels.cc.wt <- mapply(
+            function(x, a) x * a,
+            F.levels.cc, wt,
+            SIMPLIFY = FALSE
+          )
+
+          ## Weighted average over theta
+          ppm.cc <- apply(
+            abind::abind(F.levels.cc.wt, along = 3),
+            MARGIN = c(1, 2),
+            sum
+          )
+
+          ## Make sure ppm.cc stays a matrix even if there is only one alpha
+          if (is.null(dim(ppm.cc))) {
+            ppm.cc <- matrix(ppm.cc, ncol = 1)
+          }
+
+          colnames(ppm.cc) <- paste0("alpha_", alpha_grid[[cc]])
+          ppm.levels[[cc]] <- ppm.cc
+
+          ## For each alpha, threshold at 1 - alpha
+          aa <- alpha_grid[[cc]]
+          active.cc <- vapply(
+            seq_along(aa),
+            function(j) as.integer(ppm.cc[, j] > (1 - aa[j])),
+            integer(nrow(ppm.cc))
+          )
+
+          ## Keep matrix shape if only one alpha
+          if (is.null(dim(active.cc))) {
+            active.cc <- matrix(active.cc, ncol = 1)
+          }
+
+          colnames(active.cc) <- paste0("alpha_", aa)
+          active_levels[[cc]] <- active.cc
+
+          ## Nested code:
+          ## Because thresholds are nested, rowSums(active.cc) gives the level.
+          nested_code[, cc] <- rowSums(active.cc)
+        }
+
+      } else {
+
+        ## Single-alpha mode: original behavior
+        ppm.all <- lapply(beta.posteriors, function(x) x$F)
+        ppm.wt <- mapply(
+          function(x, a) x * a,
+          ppm.all, wt,
+          SIMPLIFY = FALSE
+        )
+        ppm.summ <- apply(
+          abind::abind(ppm.wt, along = 3),
+          MARGIN = c(1, 2),
+          sum
+        )
+        dimnames(ppm.summ) <- NULL
+
+        active <- array(0L, dim = dim(ppm.summ))
+        for (cc in seq_len(nC)) {
+          active[ppm.summ[, cc] > (1 - alpha[cc]), cc] <- 1L
+        }
+
+        ppm.levels <- NULL
+        active_levels <- NULL
+        nested_code <- NULL
+      }
+
     } else {
-      ppm.summ <- active <- NULL
+      ppm.summ <- NULL
+      ppm.levels <- NULL
+      active <- NULL
+      active_levels <- NULL
+      nested_code <- NULL
     }
 
     ### Save results
     out[[mm]] <- list(
-      estimates = betas.summ, #includes boundary locations
+      estimates = betas.summ,            # includes boundary locations
       quantiles = quantiles.summ,
+
+      # Single-threshold mode:
+      #   ppm is an n.mesh x nC matrix
+      # Nested-threshold mode:
+      #   ppm is NULL, and ppm_levels stores one matrix per contrast
       ppm = ppm.summ,
+      ppm_levels = ppm.levels,
+
+      # Single-threshold mode:
+      #   active is an n.mesh x nC binary matrix
+      # Nested-threshold mode:
+      #   active is NULL, and active_levels stores one binary matrix per contrast
       active = active,
+      active_levels = active_levels,
+
+      # Nested-threshold mode only:
+      #   integer code giving the nested activation level at each location
+      nested_code = nested_code,
+
       mask = lapply(Masks, '[[', mm),
-      Amat = Amat, # not Amat.final?
-      intermediates = if (return_intermediates) model_intermediates else NULL # for debugging, not exported
+      Amat = Amat                      # not Amat.final?
     )
 
     if (nM>1) { cat("\n") }
@@ -689,10 +886,17 @@ BayesGLM2 <- function(
     model_results = out,
     contrasts = contrast_list,
     excursion_type = excursion_type,
-    field_names=field_names,
-    session_names=session_names,
+    field_names = field_names,
+    session_names = session_names,
     gamma = gamma,
+
+    # Single-threshold mode: alpha is kept, alpha_nested / alpha_grid are NULL
+    # Nested-threshold mode: alpha is NULL, alpha_nested / alpha_grid are kept
     alpha = alpha,
+    alpha_nested = alpha_nested,
+    alpha_grid = alpha_grid,
+    activation_mode = if (use_nested_alpha) "nested" else "single",
+
     nsamp_theta = nsamp_theta,
     nsamp_beta = nsamp_beta
   )
@@ -756,6 +960,8 @@ BayesGLM2 <- function(
         subcortMask = spatial_sub$maskIn
       ),
       activations_xii = NULL,
+      nested_activations_xii = NULL,
+      activation_levels_xii = NULL,
       masks = Masks,
       BayesGLM2_results = out
     )
@@ -763,62 +969,155 @@ BayesGLM2 <- function(
 
     if (do_excur) {
 
-      # Set values in maskIn but not maskMdat to `NA`.
-      # Mask with maskIn.
       result_oomSetNA <- out$BayesGLM2_results$model_results
+
       for (mm in seq(nM)) {
         spatial_type <- spatial_type_by_model[mm]
         spatial_sub <- spatial_sub_by_model[[mm]]
 
-        if (spatial_type == "vertex") {
-          result_oomSetNA[[mm]]$estimates[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
-          result_oomSetNA[[mm]]$estimates <- result_oomSetNA[[mm]]$estimates[Masks$In[[mm]],,drop=FALSE]
+        if (!use_nested_alpha) {
 
-          if (!is.null(result_oomSetNA[[mm]]$ppm)) {
-            result_oomSetNA[[mm]]$ppm[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
-            result_oomSetNA[[mm]]$ppm <- result_oomSetNA[[mm]]$ppm[Masks$In[[mm]],,drop=FALSE]
+          ## Single-threshold mode: unwrap `active`
+          if (spatial_type == "vertex") {
+            if (!is.null(result_oomSetNA[[mm]]$active)) {
+              result_oomSetNA[[mm]]$active[Masks$In[[mm]] & (!Masks$Mdat[[mm]]), ] <- NA
+              result_oomSetNA[[mm]]$active <- result_oomSetNA[[mm]]$active[Masks$In[[mm]], , drop = FALSE]
+            }
+
+          } else {
+
+            if (!is.null(result_oomSetNA[[mm]]$active)) {
+              result_oomSetNA[[mm]]$active <- unmask_Mdat2In(
+                result_oomSetNA[[mm]]$active[spatial_sub$Mmap, , drop = FALSE],
+                spatial_sub$maskIn[],
+                spatial_sub$maskMdat[]
+              )
+            }
           }
-          if (!is.null(result_oomSetNA[[mm]]$active)) {
-            result_oomSetNA[[mm]]$active[Masks$In[[mm]] & (!Masks$Mdat[[mm]]),] <- NA
-            result_oomSetNA[[mm]]$active <- result_oomSetNA[[mm]]$active[Masks$In[[mm]],,drop=FALSE]
-          }
+
         } else {
-          result_oomSetNA[[mm]]$estimates <- unmask_Mdat2In(
-            result_oomSetNA[[mm]]$estimates[spatial_sub$Mmap,,drop=FALSE],
-            spatial_sub$maskIn[],
-            spatial_sub$maskMdat[]
-          )
 
-          if (!is.null(result_oomSetNA[[mm]]$ppm)) {
-            result_oomSetNA[[mm]]$ppm <- unmask_Mdat2In(
-              result_oomSetNA[[mm]]$ppm[spatial_sub$Mmap,,drop=FALSE],
-              spatial_sub$maskIn[],
-              spatial_sub$maskMdat[]
-            )
-          }
-          if (!is.null(result_oomSetNA[[mm]]$active)) {
-            result_oomSetNA[[mm]]$active <- unmask_Mdat2In(
-              result_oomSetNA[[mm]]$active[spatial_sub$Mmap,,drop=FALSE],
-              spatial_sub$maskIn[],
-              spatial_sub$maskMdat[]
-            )
+          ## Nested-threshold mode: unwrap `nested_code`
+          if (spatial_type == "vertex") {
+            if (!is.null(result_oomSetNA[[mm]]$nested_code)) {
+              result_oomSetNA[[mm]]$nested_code[Masks$In[[mm]] & (!Masks$Mdat[[mm]]), ] <- NA
+              result_oomSetNA[[mm]]$nested_code <- result_oomSetNA[[mm]]$nested_code[Masks$In[[mm]], , drop = FALSE]
+            }
+
+          } else {
+
+            if (!is.null(result_oomSetNA[[mm]]$nested_code)) {
+              result_oomSetNA[[mm]]$nested_code <- unmask_Mdat2In(
+                result_oomSetNA[[mm]]$nested_code[spatial_sub$Mmap, , drop = FALSE],
+                spatial_sub$maskIn[],
+                spatial_sub$maskMdat[]
+              )
+            }
           }
         }
       }
 
-      act_xii <- as.xifti(
-        cortexL = result_oomSetNA$cortexL$active,
-        cortexL_mwall = Masks$In$cortexL,
-        cortexR = result_oomSetNA$cortexR$active,
-        cortexR_mwall = Masks$In$cortexR,
-        c(NA, NaN),
-        subcortVol = result_oomSetNA$subcort$active,
-        subcortLabs = spatial_sub$labels,
-        subcortMask = spatial_sub$maskIn
-      )
-      out$activations_xii <- convert_xifti(act_xii, "dlabel", colors='red')
-      out$activations_xii$meta$cifti$names <- names(contrast_list)
-      names(out$activations_xii$meta$cifti$labels) <- names(contrast_list)
+      if (!use_nested_alpha) {
+
+        ## Build the original binary activation dlabel
+        act_xii <- as.xifti(
+          cortexL = result_oomSetNA$cortexL$active,
+          cortexL_mwall = Masks$In$cortexL,
+          cortexR = result_oomSetNA$cortexR$active,
+          cortexR_mwall = Masks$In$cortexR,
+          c(NA, NaN),
+          subcortVol = result_oomSetNA$subcort$active,
+          subcortLabs = spatial_sub$labels,
+          subcortMask = spatial_sub$maskIn
+        )
+
+        out$activations_xii <- convert_xifti(act_xii, "dlabel", colors = "red")
+        out$activations_xii$meta$cifti$names <- names(contrast_list)
+        names(out$activations_xii$meta$cifti$labels) <- names(contrast_list)
+
+      } else {
+
+        ## Build nested activation dlabel
+        nested_xii <- as.xifti(
+          cortexL = result_oomSetNA$cortexL$nested_code,
+          cortexL_mwall = Masks$In$cortexL,
+          cortexR = result_oomSetNA$cortexR$nested_code,
+          cortexR_mwall = Masks$In$cortexR,
+          c(NA, NaN),
+          subcortVol = result_oomSetNA$subcort$nested_code,
+          subcortLabs = spatial_sub$labels,
+          subcortMask = spatial_sub$maskIn
+        )
+
+        ## Basic color palette:
+        ## level 0 = not active
+        ## higher levels = more stringent nested significance
+        max_nested_level <- max(vapply(alpha_grid, length, integer(1)))
+
+        nested_colors <- c(
+          "grey90",  # level 0
+          grDevices::colorRampPalette(c("gold", "darkorange", "red3", "darkred"))(max_nested_level)
+        )
+
+        out$nested_activations_xii <- convert_xifti(
+          nested_xii,
+          "dlabel",
+          colors = nested_colors
+        )
+
+        out$nested_activations_xii$meta$cifti$names <- names(contrast_list)
+        names(out$nested_activations_xii$meta$cifti$labels) <- names(contrast_list)
+
+        ## Build per-contrast activation-level xifti objects
+        out$activation_levels_xii <- vector("list", nC)
+        names(out$activation_levels_xii) <- names(contrast_list)
+
+        for (cc in seq_len(nC)) {
+
+          result_level <- out$BayesGLM2_results$model_results
+
+          for (mm in seq(nM)) {
+            spatial_type <- spatial_type_by_model[mm]
+            spatial_sub <- spatial_sub_by_model[[mm]]
+
+            lev_mat <- result_level[[mm]]$active_levels[[cc]]
+
+            if (spatial_type == "vertex") {
+              lev_mat[Masks$In[[mm]] & (!Masks$Mdat[[mm]]), ] <- NA
+              lev_mat <- lev_mat[Masks$In[[mm]], , drop = FALSE]
+            } else {
+              lev_mat <- unmask_Mdat2In(
+                lev_mat[spatial_sub$Mmap, , drop = FALSE],
+                spatial_sub$maskIn[],
+                spatial_sub$maskMdat[]
+              )
+            }
+
+            result_level[[mm]]$active_levels[[cc]] <- lev_mat
+          }
+
+          level_xii <- as.xifti(
+            cortexL = result_level$cortexL$active_levels[[cc]],
+            cortexL_mwall = Masks$In$cortexL,
+            cortexR = result_level$cortexR$active_levels[[cc]],
+            cortexR_mwall = Masks$In$cortexR,
+            c(NA, NaN),
+            subcortVol = result_level$subcort$active_levels[[cc]],
+            subcortLabs = spatial_sub$labels,
+            subcortMask = spatial_sub$maskIn
+          )
+
+          level_xii <- convert_xifti(level_xii, "dlabel", colors = "red")
+          level_xii$meta$cifti$names <- paste0(
+            names(contrast_list)[cc],
+            "_alpha_",
+            alpha_grid[[cc]]
+          )
+          names(level_xii$meta$cifti$labels) <- level_xii$meta$cifti$names
+
+          out$activation_levels_xii[[cc]] <- level_xii
+        }
+      }
     }
     class(out) <- "BGLM2"
   }

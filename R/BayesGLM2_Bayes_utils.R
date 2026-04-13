@@ -13,6 +13,7 @@
 #' @param excursion_type Vector of excursion function type (">", "<", "!=") for each contrast
 #' @param gamma Vector of activation thresholds for each contrast
 #' @param alpha Significance level for activation for the excursion sets
+#' @param alpha_grid Optional list of numeric vectors specifying multiple alpha thresholds for each contrast for nested excursion set inference. If provided, `alpha` is ignored.
 #' @param nsamp_beta The number of samples to draw from full conditional of beta given the current value of theta (p(beta|theta,y))
 #'
 #' @importFrom excursions excursions.mc
@@ -22,73 +23,177 @@
 #'
 #' @keywords internal
 beta.posterior.thetasamp <- function(
-  theta, spde, Xcros, Xycros, contrasts,
-  quantiles, excursion_type, gamma, alpha, nsamp_beta=100){
+    theta,
+    spde,
+    Xcros,
+    Xycros,
+    contrasts,
+    quantiles,
+    excursion_type,
+    gamma,
+    alpha = NULL,
+    alpha_grid = NULL,
+    nsamp_beta = 100
+){
 
   n.mesh <- spde$n.spde
 
   prec.error <- exp(theta[1])
-  theta_spde <- matrix(theta[-1], nrow=2) #2xK matrix of the hyperparameters (2 per field)
+  theta_spde <- matrix(theta[-1], nrow = 2)  # 2 x K matrix of hyperparameters
   K <- ncol(theta_spde)
   M <- length(Xcros)
 
-  use_EM <- all(sapply(c("M0","M1","M2"), function(x) x %in% names(spde)))
+  use_EM <- all(sapply(c("M0", "M1", "M2"), function(x) x %in% names(spde)))
 
-  #contruct prior precision matrix for beta, Q_theta for given sampled value of thetas
+  # Construct prior precision matrix for beta, Q_theta for given sampled value of theta
   # For EM
   if (use_EM) {
     Q.beta <- apply(theta_spde, 2, function(theta_k) {
-      theta_k <- exp(theta_k) ^ 2
-      out <-
-        theta_k[1] * (theta_k[2] ^ 2 * spde$M0 + theta_k[2] * spde$M1 + spde$M2)
+      theta_k <- exp(theta_k)^2
+      out <- theta_k[1] * (theta_k[2]^2 * spde$M0 + theta_k[2] * spde$M1 + spde$M2)
       return(out)
     })
   }
+
   # For INLA
   if (!use_EM) {
     Q.beta <- list()
     for (k in 1:K) {
-      theta_k <-
-        theta_spde[, k] #theta[(2:3) + 2*(k-1)] #1:2, 2:3, 4:5, ...
-      Q.beta[[k]] <-
-        INLA::inla.spde2.precision(spde, theta = theta_k) # prior precision for a single field k
+      theta_k <- theta_spde[, k]
+      Q.beta[[k]] <- INLA::inla.spde2.precision(spde, theta = theta_k)
     }
   }
 
-  N <- dim(Q.beta[[1]])[1] #number of mesh locations
-  if(N != n.mesh) stop('Length of betas does not match number of vertices in mesh. Inform developer.')
+  N <- dim(Q.beta[[1]])[1]  # number of mesh locations
+  if (N != n.mesh) {
+    stop("Length of betas does not match number of vertices in mesh. Inform developer.")
+  }
 
   beta.samples <- NULL
+
   # ~5 seconds per subject with PARDISO
   nS <- 1
-  Q <- Q_theta <- Matrix::bdiag(Q.beta) #Q_theta in the paper
-  for(mm in seq(M)) {
-    if(nrow(Q) != nrow(Xcros[[mm]])) {
-      nS <- nrow(Xcros[[mm]]) / nrow(Q)
-      if (nS != round(nS)) { stop("Internal error.") }
-      Q_theta <- Matrix::bdiag(rep(list(Q),nS))
-    }
-    # compute posterior mean and precision of beta|theta
-    Q_mm <- prec.error*Xcros[[mm]] + Q_theta #Q_m in paper
-    cholQ_mm <- Matrix::Cholesky(Q_mm)
-    mu_mm <- INLA::inla.qsolve(Q_mm, prec.error*Xycros[[mm]]) #mu_m in paper
-    # draw samples from pi(beta_m|theta,y)
-    beta_samp_mm <- INLA::inla.qsample(n = nsamp_beta, Q = Q_mm, mu = mu_mm)
-    # # Same as above, but trying to avoid INLA.
-    # mu_mm <- Matrix::solve(cholQ_mm, prec.error*Xycros[[mm]], system = "A")
-    # beta_samp_mm <- cholQsample(n = nsamp_beta, cholQ = Q_mm, mu = mu_mm)
+  Q <- Q_theta <- Matrix::bdiag(Q.beta)  # Q_theta in the paper
 
-    # concatenate samples over models
+  for (mm in seq(M)) {
+    if (nrow(Q) != nrow(Xcros[[mm]])) {
+      nS <- nrow(Xcros[[mm]]) / nrow(Q)
+      if (nS != round(nS)) {
+        stop("Internal error.")
+      }
+      Q_theta <- Matrix::bdiag(rep(list(Q), nS))
+    }
+
+    # Compute posterior mean and precision of beta | theta
+    Q_mm <- prec.error * Xcros[[mm]] + Q_theta
+    cholQ_mm <- Matrix::Cholesky(Q_mm)
+    mu_mm <- INLA::inla.qsolve(Q_mm, prec.error * Xycros[[mm]])
+
+    # Draw samples from pi(beta_m | theta, y)
+    beta_samp_mm <- INLA::inla.qsample(n = nsamp_beta, Q = Q_mm, mu = mu_mm)
+
+    # Concatenate samples over models
     beta.samples <- rbind(beta.samples, beta_samp_mm)
   }
 
-  if (excursion_type[1] == 'none') do_excur <- FALSE else do_excur <- TRUE
+  do_excur <- !(excursion_type[1] == "none")
 
   # Loop over contrasts
   nC <- length(contrasts)
-  mu.contr <- matrix(NA, nrow=n.mesh, ncol=nC)
-  if(do_excur) F.contr <- mu.contr else F.contr <- NULL
-  if(!is.null(quantiles)){
+  mu.contr <- matrix(NA, nrow = n.mesh, ncol = nC)
+
+  use_nested_alpha <- !is.null(alpha_grid)
+
+  # Validate alpha / alpha_grid only when excursion inference is requested
+  if (do_excur) {
+    if (length(gamma) == 1) {
+      gamma <- rep(gamma, nC)
+    }
+    if (length(gamma) != nC) {
+      stop("Length of `gamma` must match number of contrasts or be equal to one.")
+    }
+
+    if (length(excursion_type) == 1) {
+      excursion_type <- rep(excursion_type, nC)
+    }
+    if (length(excursion_type) != nC) {
+      stop("Length of `excursion_type` must match number of contrasts or be equal to one.")
+    }
+
+    if (use_nested_alpha) {
+      # alpha_grid can be:
+      #   (1) one numeric vector shared by all contrasts
+      #   (2) a list of numeric vectors, one per contrast
+      if (is.numeric(alpha_grid)) {
+        alpha_grid <- replicate(
+          nC,
+          sort(unique(alpha_grid), decreasing = TRUE),
+          simplify = FALSE
+        )
+      } else if (is.list(alpha_grid)) {
+        if (length(alpha_grid) != nC) {
+          stop("`alpha_grid` must have length equal to the number of contrasts.")
+        }
+        alpha_grid <- lapply(alpha_grid, function(x) {
+          if (!is.numeric(x)) {
+            stop("Each element of `alpha_grid` must be numeric.")
+          }
+          sort(unique(x), decreasing = TRUE)
+        })
+      } else {
+        stop("`alpha_grid` must be either a numeric vector or a list of numeric vectors.")
+      }
+
+      bad_len <- vapply(alpha_grid, length, integer(1)) == 0
+      if (any(bad_len)) {
+        stop("Each contrast must have at least one alpha threshold in `alpha_grid`.")
+      }
+
+      bad_val <- vapply(
+        alpha_grid,
+        function(x) any(!is.finite(x) | x <= 0 | x >= 1),
+        logical(1)
+      )
+      if (any(bad_val)) {
+        stop("All values in `alpha_grid` must be finite and strictly between 0 and 1.")
+      }
+
+      # In nested mode, alpha is ignored
+      alpha <- NULL
+
+    } else {
+      # Single-threshold mode
+      if (is.null(alpha)) {
+        stop("`alpha` must be provided in single-threshold mode.")
+      }
+      if (length(alpha) == 1) {
+        alpha <- rep(alpha, nC)
+      }
+      if (length(alpha) != nC) {
+        stop("Length of `alpha` must match number of contrasts or be equal to one.")
+      }
+      if (any(!is.finite(alpha) | alpha <= 0 | alpha >= 1)) {
+        stop("All values in `alpha` must be finite and strictly between 0 and 1.")
+      }
+    }
+  }
+
+  # Initialize outputs
+  if (do_excur) {
+    if (use_nested_alpha) {
+      F.contr <- NULL
+      F.contr_levels <- vector("list", nC)
+      names(F.contr_levels) <- names(contrasts)
+    } else {
+      F.contr <- mu.contr
+      F.contr_levels <- NULL
+    }
+  } else {
+    F.contr <- NULL
+    F.contr_levels <- NULL
+  }
+
+  if (!is.null(quantiles)) {
     num_quantiles <- length(quantiles)
     quantiles.contr <- rep(list(mu.contr), num_quantiles)
     names(quantiles.contr) <- quantiles
@@ -97,32 +202,65 @@ beta.posterior.thetasamp <- function(
     quantiles.contr <- NULL
   }
 
-  for (cc in 1:nC) {
-    #Construct "A" matrix from paper (linear combinations)
+  for (cc in seq_len(nC)) {
+
+    # Construct "A" matrix from paper (linear combinations)
     ctr.mat <- kronecker(t(contrasts[[cc]]), Matrix::Diagonal(n.mesh, 1))
 
-    #beta.mean.pop.contr <- as.vector(ctr.mat%*%beta.mean.pop.mat)  # NKx1 or Nx1
-    samples_cc <- as.matrix(ctr.mat%*%beta.samples)  # N x nsamp_beta
-    mu.contr[,cc] <- rowMeans(samples_cc) #compute mean over beta samples
-    if(num_quantiles > 0){
-      for(iq in 1:num_quantiles){
-        quantiles.contr[[iq]][,cc] <- apply(samples_cc, 1, quantile, quantiles[iq])
+    # N x nsamp_beta
+    samples_cc <- as.matrix(ctr.mat %*% beta.samples)
+
+    # Posterior mean over beta samples
+    mu.contr[, cc] <- rowMeans(samples_cc)
+
+    # Posterior quantiles over beta samples
+    if (num_quantiles > 0) {
+      for (iq in seq_len(num_quantiles)) {
+        quantiles.contr[[iq]][, cc] <- apply(samples_cc, 1, quantile, quantiles[iq])
       }
     }
 
-    # Estimate excursions set for current contrast
+    # Excursion calculations
     if (do_excur) {
-      excur_cc <- excursions::excursions.mc(
-        samples_cc, u = gamma[cc], type = excursion_type[cc], alpha = alpha[cc]
-      )
-      F.contr[,cc] <- excur_cc$F
+      if (use_nested_alpha) {
+
+        aa <- alpha_grid[[cc]]
+
+        F_cc_levels <- vapply(
+          aa,
+          function(a) {
+            excur_tmp <- excursions::excursions.mc(
+              samples_cc,
+              u = gamma[cc],
+              type = excursion_type[cc],
+              alpha = a
+            )
+            excur_tmp$F
+          },
+          numeric(n.mesh)
+        )
+
+        colnames(F_cc_levels) <- paste0("alpha_", aa)
+        F.contr_levels[[cc]] <- F_cc_levels
+
+      } else {
+
+        excur_cc <- excursions::excursions.mc(
+          samples_cc,
+          u = gamma[cc],
+          type = excursion_type[cc],
+          alpha = alpha[cc]
+        )
+        F.contr[, cc] <- excur_cc$F
+      }
     }
   }
 
   list(
     mu = mu.contr,
     quantiles = quantiles.contr,
-    F = F.contr
+    F = F.contr,
+    F_levels = F.contr_levels
   )
 }
 

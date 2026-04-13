@@ -4,25 +4,43 @@
 \alias{plot.BGLM2}
 \title{S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM2"} object}
 \usage{
-\method{plot}{BGLM2}(x, idx = NULL, stat = c("contrasts", "activations"), zlim = c(-1, 1), ...)
+\method{plot}{BGLM2}(
+  x,
+  idx = NULL,
+  stat = c("contrasts", "activations", "nested_activations", "activation_levels"),
+  level = NULL,
+  alpha = NULL,
+  zlim = c(-1, 1),
+  ...
+)
 }
 \arguments{
-\item{x}{An object of class "BGLM2"}
+\item{x}{An object of class \code{"BGLM2"}.}
 
 \item{idx}{Which contrast should be plotted? Give the numeric indices or the
-names. \code{NULL} (default) will show all contrasts. This argument
-overrides the \code{idx} argument to \code{\link[ciftiTools]{view_xifti}}.}
+names. \code{NULL} (default) will show all contrasts for \code{stat = "contrasts"},
+\code{stat = "activations"}, and \code{stat = "nested_activations"}.
+For \code{stat = "activation_levels"}, \code{idx} must specify exactly one contrast.}
 
-\item{stat}{Estimates of the \code{"contrasts"} (default), or their
-thresholded \code{"activations"}.}
+\item{stat}{Estimates of the \code{"contrasts"} (default), the single-threshold
+\code{"activations"}, the \code{"nested_activations"}, or the per-threshold
+\code{"activation_levels"}.}
+
+\item{level}{For \code{stat = "activation_levels"} only, the integer index (or
+indices) of the activation level(s) to plot within the selected contrast.
+Default: \code{NULL}, which shows all levels for that contrast.}
+
+\item{alpha}{For \code{stat = "activation_levels"} only, the alpha threshold
+value(s) to plot within the selected contrast. Specify either \code{level} or
+\code{alpha}, but not both.}
 
 \item{zlim}{Overrides the \code{zlim} argument for
 \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.}
 
-\item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti}}}
+\item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti}}.}
 }
 \value{
-Result of the call to \code{ciftiTools::view_cifti}.
+Result of the call to \code{ciftiTools::view_xifti()}.
 }
 \description{
 S3 method: use \code{\link[ciftiTools]{view_xifti}} to plot a \code{"BGLM2"} object

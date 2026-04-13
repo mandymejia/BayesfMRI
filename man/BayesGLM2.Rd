@@ -11,10 +11,11 @@ BayesGLM2(
   contrast_list = NULL,
   contrasts = NULL,
   quantiles = NULL,
-  excursion_type = NULL,
+  excursion_type = ">",
   contrast_names = NULL,
   gamma = 0,
   alpha = 0.05,
+  alpha_nested = NULL,
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
@@ -67,9 +68,28 @@ corresponding to one contrast).  If \code{NULL}, no inference performed.}
 or a vector thereof (each element corresponding to one contrast). Default:
 \code{0}.}
 
-\item{alpha}{(For inference only) Significance level for activation for the
-excursion set, or a vector thereof (each element corresponding to one
-contrast). Default: \code{.05}.}
+\item{alpha}{(For inference only, single-threshold mode only) Significance
+level for activation for the excursion set, or a vector thereof (each
+element corresponding to one contrast). Default: \code{.05}. This argument
+is ignored when \code{alpha_nested} is provided.}
+
+\item{alpha_nested}{(For inference only, nested-threshold mode) Optional
+nested significance thresholds used to construct multiple activation maps
+and a nested activation map. If \code{NULL} (default), the function uses
+\code{alpha} and returns a single activation map for each contrast.
+Default: \code{NULL}.If provided, \code{alpha} is ignored.
+
+\code{alpha_nested} can be specified in either of the following forms:
+\itemize{
+\item A numeric vector, in which case the same set of alpha thresholds is
+used for all contrasts.
+\item A list of numeric vectors of length equal to the number of contrasts,
+in which case each contrast uses its own set of alpha thresholds.
+}
+
+Each alpha threshold must be between 0 and 1. Thresholds should be ordered
+from less strict to more strict (for example, \code{c(0.1, 0.05, 0.01)}),
+although the function may internally reorder and deduplicate them.}
 
 \item{nsamp_theta}{Number of theta values to sample from posterior. Default:
 \code{50}.}
