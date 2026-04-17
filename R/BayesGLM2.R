@@ -1054,10 +1054,9 @@ BayesGLM2 <- function(
         ## higher levels = more stringent nested significance
         max_nested_level <- max(vapply(alpha_grid, length, integer(1)))
 
-        nested_colors <- c(
-          "grey90",  # level 0
-          grDevices::colorRampPalette(c("gold", "darkorange", "red3", "darkred"))(max_nested_level)
-        )
+        nested_colors <- grDevices::colorRampPalette(
+          c("gold", "darkorange", "red3", "darkred")
+        )(max_nested_level)
 
         out$nested_activations_xii <- convert_xifti(
           nested_xii,
@@ -1065,22 +1064,32 @@ BayesGLM2 <- function(
           colors = nested_colors
         )
 
-        out$nested_activations_xii$meta$cifti$names <- names(contrast_list)
-        names(out$nested_activations_xii$meta$cifti$labels) <- names(contrast_list)
-
-        ## Build per-contrast activation-level xifti objects
+        ## Build per-contrast exact activation-level xifti objects
         out$activation_levels_xii <- vector("list", nC)
         names(out$activation_levels_xii) <- names(contrast_list)
 
         for (cc in seq_len(nC)) {
 
           result_level <- out$BayesGLM2_results$model_results
+          nlev <- length(alpha_grid[[cc]])
 
           for (mm in seq(nM)) {
             spatial_type <- spatial_type_by_model[mm]
             spatial_sub <- spatial_sub_by_model[[mm]]
 
-            lev_mat <- result_level[[mm]]$active_levels[[cc]]
+            ## Use nested_code to build exact level maps:
+            ## level j = locations with nested_code exactly equal to j
+            code_vec <- result_level[[mm]]$nested_code[, cc]
+
+            lev_mat <- vapply(
+              seq_len(nlev),
+              function(j) as.integer(code_vec == j),
+              integer(length(code_vec))
+            )
+
+            if (is.null(dim(lev_mat))) {
+              lev_mat <- matrix(lev_mat, ncol = 1)
+            }
 
             if (spatial_type == "vertex") {
               lev_mat[Masks$In[[mm]] & (!Masks$Mdat[[mm]]), ] <- NA
@@ -1093,16 +1102,16 @@ BayesGLM2 <- function(
               )
             }
 
-            result_level[[mm]]$active_levels[[cc]] <- lev_mat
+            result_level[[mm]]$activation_levels_exact <- lev_mat
           }
 
           level_xii <- as.xifti(
-            cortexL = result_level$cortexL$active_levels[[cc]],
+            cortexL = result_level$cortexL$activation_levels_exact,
             cortexL_mwall = Masks$In$cortexL,
-            cortexR = result_level$cortexR$active_levels[[cc]],
+            cortexR = result_level$cortexR$activation_levels_exact,
             cortexR_mwall = Masks$In$cortexR,
             c(NA, NaN),
-            subcortVol = result_level$subcort$active_levels[[cc]],
+            subcortVol = result_level$subcort$activation_levels_exact,
             subcortLabs = spatial_sub$labels,
             subcortMask = spatial_sub$maskIn
           )
@@ -1110,8 +1119,8 @@ BayesGLM2 <- function(
           level_xii <- convert_xifti(level_xii, "dlabel", colors = "red")
           level_xii$meta$cifti$names <- paste0(
             names(contrast_list)[cc],
-            "_alpha_",
-            alpha_grid[[cc]]
+            "_level_",
+            seq_len(nlev)
           )
           names(level_xii$meta$cifti$labels) <- level_xii$meta$cifti$names
 
