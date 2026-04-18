@@ -1064,6 +1064,9 @@ BayesGLM2 <- function(
           colors = nested_colors
         )
 
+        out$nested_activations_xii$meta$cifti$names <- names(contrast_list)
+        names(out$nested_activations_xii$meta$cifti$labels) <- names(contrast_list)
+
         ## Build per-contrast exact activation-level xifti objects
         out$activation_levels_xii <- vector("list", nC)
         names(out$activation_levels_xii) <- names(contrast_list)

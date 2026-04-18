@@ -166,6 +166,42 @@ plot.BGLM2 <- function(
     stop("Specify only one of `level` or `alpha`.")
   }
 
+  ## Shortcut:
+  ## If user asks for nested_activations + level/alpha,
+  ## interpret it as plotting exact activation levels for one contrast.
+  if (stat == "nested_activations" && (!is.null(level) || !is.null(alpha))) {
+    stat <- "activation_levels"
+  }
+
+  ## Helper: resolve contrast index by numeric index or contrast name
+  resolve_contrast_idx <- function(idx, available_names, what = "contrast") {
+    if (is.null(idx)) return(NULL)
+
+    if (is.character(idx)) {
+      idx_match <- match(idx, available_names)
+      if (anyNA(idx_match)) {
+        bad <- idx[is.na(idx_match)]
+        stop(
+          "Unknown ", what, " name(s): ",
+          paste(bad, collapse = ", "),
+          ". Available names are: ",
+          paste(available_names, collapse = ", ")
+        )
+      }
+      return(idx_match)
+    }
+
+    idx <- as.integer(idx)
+    if (anyNA(idx) || any(idx < 1L) || any(idx > length(available_names))) {
+      stop(
+        "`idx` is out of range. Valid indices are 1:",
+        length(available_names), "."
+      )
+    }
+    idx
+  }
+
+  ## Exact level maps
   if (stat == "activation_levels") {
     xii_list <- x$activation_levels_xii
 
@@ -184,36 +220,19 @@ plot.BGLM2 <- function(
 
     if (is.null(idx)) {
       stop(
-        "For `stat = 'activation_levels'`, please specify exactly one contrast in `idx`."
+        "For exact activation levels, please specify exactly one contrast in `idx`."
       )
     }
 
     if (length(idx) != 1L) {
       stop(
-        "For `stat = 'activation_levels'`, `idx` must specify exactly one contrast."
+        "For exact activation levels, `idx` must specify exactly one contrast."
       )
     }
 
-    if (is.character(idx)) {
-      contrast_idx <- match(idx, contrast_names)
-      if (is.na(contrast_idx)) {
-        stop(
-          "Unknown contrast name: ", idx,
-          ". Available names are: ",
-          paste(contrast_names, collapse = ", ")
-        )
-      }
-    } else {
-      contrast_idx <- as.integer(idx)
-      if (is.na(contrast_idx) || contrast_idx < 1L || contrast_idx > length(xii_list)) {
-        stop(
-          "`idx` is out of range for `activation_levels`. Valid indices are 1:",
-          length(xii_list), "."
-        )
-      }
-    }
-
+    contrast_idx <- resolve_contrast_idx(idx, contrast_names, what = "contrast")
     the_xii <- xii_list[[contrast_idx]]
+
     if (is.null(the_xii)) {
       stop("No activation-level maps found for the selected contrast.")
     }
@@ -261,6 +280,7 @@ plot.BGLM2 <- function(
     return(invisible(NULL))
   }
 
+  ## Other stats
   stat_name <- switch(
     stat,
     contrasts = "contrast_estimate_xii",
@@ -286,6 +306,7 @@ plot.BGLM2 <- function(
     stop("Requested statistic is not available in this `BGLM2` object.")
   }
 
+  ## Single-threshold activation labels
   if (stat_name == "activations_xii") {
     excur_type <- x$BayesGLM2_results$excursion_type
     contrast_names <- the_xii$meta$cifti$names
@@ -302,6 +323,7 @@ plot.BGLM2 <- function(
     }
   }
 
+  ## Nested activation labels
   if (stat_name == "nested_activations_xii") {
     alpha_grid <- x$BayesGLM2_results$alpha_grid
     contrast_names <- the_xii$meta$cifti$names
@@ -323,20 +345,12 @@ plot.BGLM2 <- function(
     }
   }
 
+  available_names <- the_xii$meta$cifti$names
+
   if (is.null(idx)) {
-    idx <- seq_len(ncol(do.call(rbind, the_xii$data)))
-  } else if (is.character(idx)) {
-    idx_match <- match(idx, the_xii$meta$cifti$names)
-    if (anyNA(idx_match)) {
-      bad <- idx[is.na(idx_match)]
-      stop(
-        "Unknown contrast name(s): ",
-        paste(bad, collapse = ", "),
-        ". Available names are: ",
-        paste(the_xii$meta$cifti$names, collapse = ", ")
-      )
-    }
-    idx <- idx_match
+    idx <- seq_along(available_names)
+  } else {
+    idx <- resolve_contrast_idx(idx, available_names, what = "contrast")
   }
 
   ciftiTools::view_xifti(the_xii, idx = idx, zlim = zlim, ...)
