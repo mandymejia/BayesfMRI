@@ -1067,7 +1067,9 @@ BayesGLM2 <- function(
         out$nested_activations_xii$meta$cifti$names <- names(contrast_list)
         names(out$nested_activations_xii$meta$cifti$labels) <- names(contrast_list)
 
-        ## Build per-contrast exact activation-level xifti objects
+        ## Build per-contrast cumulative activation-level xifti objects
+        ## level 1: all locations significant at alpha_1 (including stricter levels)
+        ## level 2: all locations significant at alpha_2 (including stricter levels)
         out$activation_levels_xii <- vector("list", nC)
         names(out$activation_levels_xii) <- names(contrast_list)
 
@@ -1080,16 +1082,11 @@ BayesGLM2 <- function(
             spatial_type <- spatial_type_by_model[mm]
             spatial_sub <- spatial_sub_by_model[[mm]]
 
-            ## Use nested_code to build exact level maps:
-            ## level j = locations with nested_code exactly equal to j
-            code_vec <- result_level[[mm]]$nested_code[, cc]
+            ## Use the original cumulative threshold maps stored in active_levels:
+            ## column j = all locations significant at alpha_grid[[cc]][j]
+            lev_mat <- result_level[[mm]]$active_levels[[cc]]
 
-            lev_mat <- vapply(
-              seq_len(nlev),
-              function(j) as.integer(code_vec == j),
-              integer(length(code_vec))
-            )
-
+            ## Keep matrix shape if there is only one level
             if (is.null(dim(lev_mat))) {
               lev_mat <- matrix(lev_mat, ncol = 1)
             }
@@ -1105,21 +1102,23 @@ BayesGLM2 <- function(
               )
             }
 
-            result_level[[mm]]$activation_levels_exact <- lev_mat
+            result_level[[mm]]$activation_levels_cumulative <- lev_mat
           }
 
           level_xii <- as.xifti(
-            cortexL = result_level$cortexL$activation_levels_exact,
+            cortexL = result_level$cortexL$activation_levels_cumulative,
             cortexL_mwall = Masks$In$cortexL,
-            cortexR = result_level$cortexR$activation_levels_exact,
+            cortexR = result_level$cortexR$activation_levels_cumulative,
             cortexR_mwall = Masks$In$cortexR,
             c(NA, NaN),
-            subcortVol = result_level$subcort$activation_levels_exact,
+            subcortVol = result_level$subcort$activation_levels_cumulative,
             subcortLabs = spatial_sub$labels,
             subcortMask = spatial_sub$maskIn
           )
 
           level_xii <- convert_xifti(level_xii, "dlabel", colors = "red")
+
+          ## Keep simple level names so plot.BGLM2 can index by level number
           level_xii$meta$cifti$names <- paste0(
             names(contrast_list)[cc],
             "_level_",
