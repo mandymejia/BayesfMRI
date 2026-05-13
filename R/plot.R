@@ -154,7 +154,14 @@ plot.act_BGLM <- function(x, idx=NULL, title=NULL, session=NULL, ...){
 plot.BGLM2 <- function(
     x,
     idx = NULL,
-    stat = c("contrasts", "activations", "nested_activations", "activation_levels"),
+    stat = c(
+      "contrasts",
+      "activations",
+      "nested_activations",
+      "activation_levels",
+      "activated_contrast",
+      "activated_level_contrast"
+    ),
     level = NULL,
     alpha = NULL,
     zlim = c(-1, 1),
@@ -171,6 +178,19 @@ plot.BGLM2 <- function(
   ## interpret it as plotting exact activation levels for one contrast.
   if (stat == "nested_activations" && (!is.null(level) || !is.null(alpha))) {
     stat <- "activation_levels"
+  }
+
+  ## `level` and `alpha` are only meaningful for activation-level plots
+  ## or activated-level contrast plots.
+  if (
+    stat == "activated_contrast" &&
+    (!is.null(level) || !is.null(alpha))
+  ) {
+    stop(
+      "`level` and `alpha` are not used when `stat = 'activated_contrast'`. ",
+      "Use `stat = 'activated_level_contrast'` if you want to mask beta maps ",
+      "by a specific nested activation level."
+    )
   }
 
   ## Helper: resolve contrast index by numeric index or contrast name
@@ -277,6 +297,241 @@ plot.BGLM2 <- function(
     }
 
     ciftiTools::view_xifti(the_xii, idx = level_idx, zlim = zlim, ...)
+    return(invisible(NULL))
+  }
+
+  ## Helper: mask beta maps by an activation-like xifti object
+  mask_beta_by_activation <- function(beta_xii, mask_xii, beta_idx, mask_idx) {
+    out_xii <- beta_xii
+
+    for (part in names(out_xii$data)) {
+      beta_part <- out_xii$data[[part]]
+      mask_part <- mask_xii$data[[part]]
+
+      if (is.null(beta_part) || is.null(mask_part)) next
+
+      active_mask <- !is.na(mask_part[, mask_idx]) & mask_part[, mask_idx] != 0
+
+      beta_part[!active_mask, beta_idx] <- NA_real_
+      out_xii$data[[part]] <- beta_part
+    }
+
+    out_xii
+  }
+
+  ## Activated contrast:
+  ## Use single-threshold activation maps to mask contrast beta maps.
+  if (stat == "activated_contrast") {
+    beta_xii <- x$contrast_estimate_xii
+    act_xii  <- x$activations_xii
+
+    if (is.null(beta_xii)) {
+      stop("No contrast beta maps found in `x$contrast_estimate_xii`.")
+    }
+
+    if (is.null(act_xii)) {
+      stop(
+        "No single-threshold activation maps found in `x$activations_xii`. ",
+        "Re-run `BayesGLM2()` with single-threshold activation settings, ",
+        "or use `stat = 'contrasts'` to plot unmasked beta maps."
+      )
+    }
+
+    beta_names <- beta_xii$meta$cifti$names
+    act_names  <- act_xii$meta$cifti$names
+
+    if (is.null(beta_names) || is.null(act_names)) {
+      stop("Both beta maps and activation maps must have contrast names.")
+    }
+
+    available_names <- beta_names
+
+    if (is.null(idx)) {
+      idx <- seq_along(available_names)
+    } else {
+      idx <- resolve_contrast_idx(idx, available_names, what = "contrast")
+    }
+
+    masked_beta_xii <- beta_xii
+
+    for (ii in idx) {
+      contrast_name <- beta_names[ii]
+      jj <- match(contrast_name, act_names)
+
+      if (is.na(jj)) {
+        stop(
+          "No matching activation map found for contrast `",
+          contrast_name,
+          "`."
+        )
+      }
+
+      masked_beta_xii <- mask_beta_by_activation(
+        beta_xii = masked_beta_xii,
+        mask_xii = act_xii,
+        beta_idx = ii,
+        mask_idx = jj
+      )
+
+      masked_beta_xii$meta$cifti$names[ii] <- paste0(
+        contrast_name,
+        " beta masked by activation"
+      )
+    }
+
+    ciftiTools::view_xifti(masked_beta_xii, idx = idx, zlim = zlim, ...)
+    return(invisible(NULL))
+  }
+
+  ## Activated level contrast:
+  ## Use one nested activation level to mask the corresponding contrast beta map.
+  if (stat == "activated_level_contrast") {
+    beta_xii <- x$contrast_estimate_xii
+    xii_list <- x$activation_levels_xii
+
+    if (is.null(beta_xii)) {
+      stop("No contrast beta maps found in `x$contrast_estimate_xii`.")
+    }
+
+    if (is.null(xii_list)) {
+      stop(
+        "No activation-level maps found in `x$activation_levels_xii`. ",
+        "Re-run `BayesGLM2()` with `alpha_nested`."
+      )
+    }
+
+    contrast_names <- names(xii_list)
+
+    if (is.null(contrast_names)) {
+      contrast_names <- beta_xii$meta$cifti$names
+      names(xii_list) <- contrast_names
+    }
+
+    beta_names <- beta_xii$meta$cifti$names
+
+    if (is.null(beta_names)) {
+      stop("The contrast beta maps must have contrast names.")
+    }
+
+    if (is.null(idx)) {
+      stop(
+        "For `stat = 'activated_level_contrast'`, ",
+        "please specify exactly one contrast in `idx`."
+      )
+    }
+
+    if (length(idx) != 1L) {
+      stop(
+        "For `stat = 'activated_level_contrast'`, ",
+        "`idx` must specify exactly one contrast."
+      )
+    }
+
+    contrast_idx <- resolve_contrast_idx(idx, beta_names, what = "contrast")
+    chosen_contrast <- beta_names[contrast_idx]
+
+    level_contrast_idx <- match(chosen_contrast, contrast_names)
+
+    if (is.na(level_contrast_idx)) {
+      stop(
+        "No activation-level maps found for contrast `",
+        chosen_contrast,
+        "`."
+      )
+    }
+
+    level_xii <- xii_list[[level_contrast_idx]]
+
+    if (is.null(level_xii)) {
+      stop(
+        "No activation-level map object found for contrast `",
+        chosen_contrast,
+        "`."
+      )
+    }
+
+    aa <- x$BayesGLM2_results$alpha_grid[[level_contrast_idx]]
+
+    if (!is.null(level) && !is.null(alpha)) {
+      stop("Specify only one of `level` or `alpha`.")
+    }
+
+    if (is.null(level) && is.null(alpha)) {
+      stop(
+        "For `stat = 'activated_level_contrast'`, ",
+        "please specify exactly one nested level using `level` or `alpha`."
+      )
+    }
+
+    if (!is.null(alpha)) {
+      alpha <- as.numeric(alpha)
+
+      if (length(alpha) != 1L || anyNA(alpha)) {
+        stop("`alpha` must be exactly one numeric value.")
+      }
+
+      match_alpha <- function(a, grid) {
+        tol <- sqrt(.Machine$double.eps)
+        hits <- which(abs(grid - a) < tol)
+        if (length(hits) == 0L) return(NA_integer_)
+        hits[1]
+      }
+
+      level_idx <- match_alpha(alpha, aa)
+
+      if (is.na(level_idx)) {
+        stop(
+          "Requested alpha value not found for contrast `",
+          chosen_contrast,
+          "`: ",
+          alpha,
+          ". Available alpha values are: ",
+          paste(aa, collapse = ", ")
+        )
+      }
+
+      level_label <- paste0("alpha=", alpha)
+    } else {
+      level_idx <- as.integer(level)
+
+      if (
+        length(level_idx) != 1L ||
+        is.na(level_idx) ||
+        level_idx < 1L ||
+        level_idx > length(aa)
+      ) {
+        stop(
+          "`level` must be exactly one integer between 1 and ",
+          length(aa),
+          " for contrast `",
+          chosen_contrast,
+          "`."
+        )
+      }
+
+      level_label <- paste0("level=", level_idx, ", alpha=", aa[level_idx])
+    }
+
+    masked_beta_xii <- mask_beta_by_activation(
+      beta_xii = beta_xii,
+      mask_xii = level_xii,
+      beta_idx = contrast_idx,
+      mask_idx = level_idx
+    )
+
+    masked_beta_xii$meta$cifti$names[contrast_idx] <- paste0(
+      chosen_contrast,
+      " beta masked by nested activation ",
+      level_label
+    )
+
+    ciftiTools::view_xifti(
+      masked_beta_xii,
+      idx = contrast_idx,
+      zlim = zlim,
+      ...
+    )
+
     return(invisible(NULL))
   }
 
