@@ -23,6 +23,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Amanda Mejia \email{mandy.mejia@gmail.com}
   \item Daniel Spencer \email{danieladamspencer@gmail.com} (\href{https://orcid.org/0000-0002-9705-3605}{ORCID})
 }
 

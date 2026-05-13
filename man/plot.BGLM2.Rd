@@ -7,7 +7,8 @@
 \method{plot}{BGLM2}(
   x,
   idx = NULL,
-  stat = c("contrasts", "activations", "nested_activations", "activation_levels"),
+  stat = c("contrasts", "activations", "nested_activations", "activation_levels",
+    "activated_contrast", "activated_level_contrast"),
   level = NULL,
   alpha = NULL,
   zlim = c(-1, 1),
@@ -24,7 +25,8 @@ For \code{stat = "activation_levels"}, \code{idx} must specify exactly one contr
 
 \item{stat}{Estimates of the \code{"contrasts"} (default), the single-threshold
 \code{"activations"}, the \code{"nested_activations"}, or the per-threshold
-\code{"activation_levels"}.}
+\code{"activation_levels"}. If you prefer masked estimates, the \code{"activated_contrast"}
+for single-threshold or the \code{"activated_level_contrast"} for nested level can be used.}
 
 \item{level}{For \code{stat = "activation_levels"} only, the integer index (or
 indices) of the activation level(s) to plot within the selected contrast.
