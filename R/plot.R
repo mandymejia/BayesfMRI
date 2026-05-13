@@ -133,7 +133,8 @@ plot.act_BGLM <- function(x, idx=NULL, title=NULL, session=NULL, ...){
 #'  For \code{stat = "activation_levels"}, \code{idx} must specify exactly one contrast.
 #' @param stat Estimates of the \code{"contrasts"} (default), the single-threshold
 #'  \code{"activations"}, the \code{"nested_activations"}, or the per-threshold
-#'  \code{"activation_levels"}.
+#'  \code{"activation_levels"}. If you prefer masked estimates, the \code{"activated_contrast"}
+#'  for single-threshold or the \code{"activated_level_contrast"} for nested level can be used.
 #' @param level For \code{stat = "activation_levels"} only, the integer index (or
 #'  indices) of the activation level(s) to plot within the selected contrast.
 #'  Default: \code{NULL}, which shows all levels for that contrast.
