@@ -202,8 +202,46 @@ BayesGLM2 <- function(
       }
     }
 
-    stopifnot(identical(session_names, sub_nn$session_names))
-    stopifnot(identical(field_names, sub_nn$field_names))
+    # Check session count first.
+    if (length(sub_nn$session_names) != length(session_names)) {
+      stop(
+        "BayesGLM2 currently requires every subject to have the same number of sessions.\n",
+        "Subject 1 has ", length(session_names), " session(s): ",
+        paste(session_names, collapse = ", "), ".\n",
+        "Subject ", nn, " has ", length(sub_nn$session_names), " session(s): ",
+        paste(sub_nn$session_names, collapse = ", "), ".\n",
+        "Unequal numbers of sessions across subjects are not currently supported. ",
+        "If you need this functionality, please contact the developers.",
+        call. = FALSE
+      )
+    }
+
+    # Check session names and order.
+    if (!identical(session_names, sub_nn$session_names)) {
+      stop(
+        "BayesGLM2 currently requires all subjects to have identical session names ",
+        "in the same order.\n",
+        "Subject 1 session names: ",
+        paste(session_names, collapse = ", "), ".\n",
+        "Subject ", nn, " session names: ",
+        paste(sub_nn$session_names, collapse = ", "), ".\n",
+        "Please make sure the session names and order match across subjects.",
+        call. = FALSE
+      )
+    }
+
+    # Check field names.
+    if (!identical(field_names, sub_nn$field_names)) {
+      stop(
+        "BayesGLM2 currently requires all subjects to have identical field names ",
+        "in the same order.\n",
+        "Subject 1 field names: ",
+        paste(field_names, collapse = ", "), ".\n",
+        "Subject ", nn, " field names: ",
+        paste(sub_nn$field_names, collapse = ", "), ".",
+        call. = FALSE
+      )
+    }
 
     rm(sub_nn)
     gc(FALSE)
@@ -635,6 +673,13 @@ BayesGLM2 <- function(
       }
 
       Xmat <- X_list #%*% Amat.final # already done within BayesGLM
+
+      if (nrow(Xmat) != length(y_vec)) {
+        stop(
+          "After retroactive masking, nrow(Xmat) does not match length(y_vec) ",
+          "for subject ", nn, "."
+        )
+      }
       Xcros.all[[nn]] <- Matrix::crossprod(Xmat)
       Xycros.all[[nn]] <- Matrix::crossprod(Xmat, y_vec)
 

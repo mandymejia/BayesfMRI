@@ -15,8 +15,17 @@ retro_mask_fit_bglm <- function(x, mask){
   nK <- length(x$field_names)
   nV_total <- length(x$spatial$maskMdat)
   nV_input <- sum(x$spatial$maskMdat)
-  nT <- length(x$y) / nV_input / nS
-  stopifnot(nT == round(nT))
+
+  # Allow session-specific nT.
+  stopifnot(length(x$X) == nS)
+  nT <- vapply(seq_len(nS), function(ss) {
+    nT_ss <- nrow(x$X[[ss]]) / nV_input
+    stopifnot(nT_ss == round(nT_ss))
+    as.integer(round(nT_ss))
+  }, integer(1))
+
+  # Check that y has the expected total length across all sessions.
+  stopifnot(length(x$y) == sum(nT) * nV_input)
 
   stopifnot(is.logical(mask))
   stopifnot(nV_total == length(mask))
@@ -26,43 +35,51 @@ retro_mask_fit_bglm <- function(x, mask){
   maskMdat_new <- mask[x$spatial$maskMdat]
 
   if (any(!maskIn_new)) {
-    for (ss in seq(nS)) {
-      # Length nV_input of this session (not intersection)
-      x$field_estimates[[ss]] <- x$field_estimates[[ss]][maskIn_new,,drop=FALSE]
+    for (ss in seq_len(nS)) {
+      # Session-level outputs.
+      x$field_estimates[[ss]] <- x$field_estimates[[ss]][maskIn_new, , drop = FALSE]
       x$RSS[[ss]] <- x$RSS[[ss]][maskIn_new]
+
       if ("result_classical" %in% names(x)) {
-        x$result_classical[[ss]]$estimates <- x$result_classical[[ss]]$estimates[maskIn_new,,drop=FALSE]
-        x$result_classical[[ss]]$SE_estimates <- x$result_classical[[ss]]$SE_estimates[maskIn_new,,drop=FALSE]
-        x$result_classical[[ss]]$resids <- x$result_classical[[ss]]$resids[maskIn_new,,drop=FALSE]
-        x$result_classical[[ss]]$RSS <- x$result_classical[[ss]]$RSS[maskIn_new]
+        x$result_classical[[ss]]$estimates <-
+          x$result_classical[[ss]]$estimates[maskIn_new, , drop = FALSE]
+        x$result_classical[[ss]]$SE_estimates <-
+          x$result_classical[[ss]]$SE_estimates[maskIn_new, , drop = FALSE]
+        x$result_classical[[ss]]$resids <-
+          x$result_classical[[ss]]$resids[maskIn_new, , drop = FALSE]
+        x$result_classical[[ss]]$RSS <-
+          x$result_classical[[ss]]$RSS[maskIn_new]
       }
-      x$BOLD_QC$mask <- x$BOLD_QC$mask[maskIn_new]
-      x$BOLD_QC$mask_na <- x$BOLD_QC$mask_na[maskIn_new]
-      x$BOLD_QC$mask_mean <- x$BOLD_QC$mask_mean[maskIn_new]
-      x$BOLD_QC$mask_var <- x$BOLD_QC$mask_var[maskIn_new]
-      x$BOLD_QC$mask_snr <- x$BOLD_QC$mask_snr[maskIn_new]
     }
+
+    # Location-level QC objects: subset once, not once per session.
+    x$BOLD_QC$mask <- x$BOLD_QC$mask[maskIn_new]
+    x$BOLD_QC$mask_na <- x$BOLD_QC$mask_na[maskIn_new]
+    x$BOLD_QC$mask_mean <- x$BOLD_QC$mask_mean[maskIn_new]
+    x$BOLD_QC$mask_var <- x$BOLD_QC$mask_var[maskIn_new]
+    x$BOLD_QC$mask_snr <- x$BOLD_QC$mask_snr[maskIn_new]
   }
 
   if (any(!maskMdat_new)) {
-    for (ss in seq(nS)) {
-      # Length nV_mdata of this session (not intersection)
-      if ("prewhiten_info" %in% names(x)) {
-        x$prewhiten_info$AR_coefs_avg <- x$prewhiten_info$AR_coefs_avg[maskMdat_new,,drop=FALSE]
-        x$prewhiten_info$var_avg <- x$prewhiten_info$var_avg[maskMdat_new,drop=FALSE]
-      }
-    }
 
-    # Notes for `BayesGLM2`:
-    #   `spde` has been updated prior to `retro_mask_fit_bglm` call, and will
-    #     be set after this function call.
-    #   `spatial` will be determined later after this function call.
+    # Location-level prewhitening summaries: subset once.
+    if ("prewhiten_info" %in% names(x)) {
+      x$prewhiten_info$AR_coefs_avg <-
+        x$prewhiten_info$AR_coefs_avg[maskMdat_new, , drop = FALSE]
+      x$prewhiten_info$var_avg <-
+        x$prewhiten_info$var_avg[maskMdat_new, drop = FALSE]
+    }
 
     # Do this before `spatial` because the subcortex needs the old buffer mask.
-    x$y <- c(matrix(x$y, ncol=nV_input)[,maskMdat_new,drop=FALSE])
-    for (ss in seq(length(x$X))) {
-      x$X[[ss]] <- x$X[[ss]][rep(maskMdat_new, each=nT),,drop=FALSE]
+    x$y <- c(matrix(x$y, ncol = nV_input)[, maskMdat_new, drop = FALSE])
+
+    # Session-specific X masking.
+    for (ss in seq_along(x$X)) {
+      x$X[[ss]] <- x$X[[ss]][rep(maskMdat_new, each = nT[ss]), , drop = FALSE]
     }
+
+    # Extra safety check.
+    stopifnot(length(x$y) == sum(vapply(x$X, nrow, integer(1))))
   }
 
   x
@@ -159,7 +176,7 @@ retro_mask_act <- function(x, Masks){
     }
   }
 
-  # Now: 
+  # Now:
   # `X` is (timepoints x intersect_nV_Mdata) by (n.spde x nK)
   # `y` is (timepoints x intersect_nV_Mdata) length
 
