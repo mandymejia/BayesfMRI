@@ -6,12 +6,18 @@ Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
            email = "mandy.mejia@gmail.com",
-           role = c("aut", "cre")),
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-4312-8974"))
     person(given = "Damon",
            family = "Pham",
            email = "damondpham@gmail.com",
            role = c("ctb"),
-           comment = c(ORCID = "0000-0001-7563-4727")),
+           comment = c(ORCID = "0000-0001-7563-4727"))
+    person(given = "Yunong",
+           family = "Wu",
+           email = "wuyuno@iu.edu",
+           role = c("ctb"),
+           comment = c(ORCID = "0009-0003-3741-5365"))
     person(given = "David",
            family = "Bolin",
            email = "david.bolin@kaust.edu.sa",
