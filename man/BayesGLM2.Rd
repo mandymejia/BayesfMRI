@@ -18,7 +18,8 @@ BayesGLM2(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = 1
+  verbose = 1,
+  return_intermediates = FALSE
 )
 }
 \arguments{
