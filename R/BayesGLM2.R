@@ -52,6 +52,7 @@
 #' @param num_cores The number of cores to use for sampling betas in parallel. If
 #'  \code{NULL} (default), do not run in parallel.
 #' @inheritParams verbose_Param
+# @param return_intermediates For debugging
 #'
 #' @return A list containing the estimates, PPMs and areas of activation for each contrast.
 #'
@@ -105,8 +106,9 @@ BayesGLM2 <- function(
   nsamp_theta = 50,
   nsamp_beta = 100,
   num_cores = NULL,
-  verbose = 1,
-  return_intermediates = FALSE){ # for debugging, not exported
+  verbose = 1
+  # ,return_intermediates = FALSE # for debugging, not exported
+  ){
 
   if (!requireNamespace("abind", quietly = TRUE)) {
     stop("`BayesGLM2` requires the `abind` package. Please install it.", call. = FALSE)
@@ -456,16 +458,16 @@ BayesGLM2 <- function(
 
     mu_theta <- solve(Q_theta, Qmu_theta) #mu_theta = poterior mean of q(theta|y) (Normal approximation) from paper, Q_theta = posterior precision
 
-    # Debugging: return intermediates if desired
-    if (return_intermediates) {
-      model_intermediates <- list(
-        Qmu_theta = Qmu_theta,
-        Q_theta = Q_theta,
-        mu_theta = mu_theta,
-        Xcros.all = Xcros.all,
-        Xycros.all = Xycros.all
-      )
-    }
+    # # Debugging: return intermediates if desired
+    # if (return_intermediates) {
+    #   model_intermediates <- list(
+    #     Qmu_theta = Qmu_theta,
+    #     Q_theta = Q_theta,
+    #     mu_theta = mu_theta,
+    #     Xcros.all = Xcros.all,
+    #     Xycros.all = Xycros.all
+    #   )
+    # }
 
     #### DRAW SAMPLES FROM q(theta|y)
     #theta.tmp <- mvrnorm(nsamp_theta, mu_theta, solve(Q_theta))
@@ -584,8 +586,8 @@ BayesGLM2 <- function(
       ppm = ppm.summ,
       active = active,
       mask = lapply(Masks, '[[', mm),
-      Amat = Amat, # not Amat.final?
-      intermediates = if (return_intermediates) model_intermediates else NULL # for debugging, not exported
+      Amat = Amat # not Amat.final?
+      # , intermediates = if (return_intermediates) model_intermediates else NULL # for debugging, not exported
     )
 
     if (nM>1) { cat("\n") }
