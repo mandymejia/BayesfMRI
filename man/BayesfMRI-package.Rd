@@ -19,16 +19,18 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Amanda Mejia \email{mandy.mejia@gmail.com}
+\strong{Maintainer}: Amanda Mejia \email{mandy.mejia@gmail.com} (\href{https://orcid.org/0000-0002-4312-8974}{ORCID})
 
 Authors:
 \itemize{
+  \item Amanda Mejia \email{mandy.mejia@gmail.com} (\href{https://orcid.org/0000-0002-4312-8974}{ORCID})
   \item Daniel Spencer \email{danieladamspencer@gmail.com} (\href{https://orcid.org/0000-0002-9705-3605}{ORCID})
 }
 
 Other contributors:
 \itemize{
   \item Damon Pham \email{damondpham@gmail.com} (\href{https://orcid.org/0000-0001-7563-4727}{ORCID}) [contributor]
+  \item Yunong Wu \email{wuyuno@iu.edu} (\href{https://orcid.org/0009-0003-3741-5365}{ORCID}) [contributor]
   \item David Bolin \email{david.bolin@kaust.edu.sa} [contributor]
   \item Yu (Ryan) Yue \email{yybaruch@gmail.com} [contributor]
   \item Sarah Ryan \email{sarahryan320@gmail.com} [contributor]
