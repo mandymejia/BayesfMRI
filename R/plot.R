@@ -12,6 +12,14 @@
 #'  use the first.
 #' @param zlim Overrides the \code{zlim} argument for
 #'  \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.
+#' @param act_mask (Optional) A result of \code{\link{activations}(x, ...)} to
+#'  use as a mask for this plot. Only activated locations will be displayed. 
+#'  Ensure that \code{activations} was run with the same choice of \code{Bayes}
+#'  vs. classical modeling.
+# [NOTE] it's coded so that `act_mask` could also just be a xifti or matrix.
+#' @param act_gamma_idx Index of the gamma level at which to mask based on
+#'  activation. Default: \code{1}, to include locations meeting at least the 
+#'  lowest gamma level. Only applicable if \code{act_mask} is provided.
 #' @param ... Additional arguments to \code{\link[ciftiTools]{view_xifti}}
 #'
 #' @method plot BGLM
@@ -21,7 +29,19 @@
 #'
 #' @return Result of the call to \code{ciftiTools::view_cifti}.
 #'
-plot.BGLM <- function(x, Bayes=NULL, idx=NULL, title=NULL, session=NULL, zlim=c(-1, 1), ...){
+plot.BGLM <- function(x,
+  Bayes=NULL, idx=NULL, title=NULL, session=NULL, zlim=c(-1, 1), 
+  act_mask=NULL, act_gamma_idx=1,
+  ...){
+
+  if (!is.null(act_mask)) {
+    stopifnot(is.list(act_mask))
+    if (inherits(act_mask, "act_BGLM")){ 
+      act_mask <- act_mask$activations_xii
+    }
+    # [NOTE] no check for Bayes vs. classical
+    stopifnot(length(act_gamma_idx)==1 && is.numeric(act_gamma_idx))
+  }
 
   # Method
   if (is.null(Bayes)) {
@@ -45,6 +65,17 @@ plot.BGLM <- function(x, Bayes=NULL, idx=NULL, title=NULL, session=NULL, zlim=c(
   }
   the_xii <- x$estimate_xii[[method]][[session]]
   if (is.null(the_xii)) { stop(paste("Session", session, "does not exist.")) }
+
+  if ((!is.null(act_mask)) && is.list(act_mask) && (!is.xifti(act_mask, messages=FALSE))) {
+    act_mask <- act_mask[[session]]
+  }
+  
+  # Apply activations mask, if provided
+  if (!is.null(act_mask)) {
+    the_dat <- as.matrix(the_xii)
+    the_dat[as.matrix(act_mask) < act_gamma_idx] <- NA
+    the_xii <- newdata_xifti(the_xii, the_dat)
+  }
 
   # Column index
   if (is.null(idx)) {

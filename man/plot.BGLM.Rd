@@ -11,6 +11,8 @@
   title = NULL,
   session = NULL,
   zlim = c(-1, 1),
+  act_mask = NULL,
+  act_gamma_idx = 1,
   ...
 )
 }
@@ -32,6 +34,15 @@ use the first.}
 
 \item{zlim}{Overrides the \code{zlim} argument for
 \code{\link[ciftiTools]{view_xifti}}. Default: \code{c(-1, 1)}.}
+
+\item{act_mask}{(Optional) A result of \code{\link{activations}(x, ...)} to
+use as a mask for this plot. Only activated locations will be displayed.
+Ensure that \code{activations} was run with the same choice of \code{Bayes}
+vs. classical modeling.}
+
+\item{act_gamma_idx}{Index of the gamma level at which to mask based on
+activation. Default: \code{1}, to include locations meeting at least the
+lowest gamma level. Only applicable if \code{act_mask} is provided.}
 
 \item{...}{Additional arguments to \code{\link[ciftiTools]{view_xifti}}}
 }
