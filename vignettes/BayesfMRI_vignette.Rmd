@@ -247,6 +247,15 @@ plot(act0, idx="fear", title = "naive GLM (FWER)", what = 'volume', slices = sli
 plot(act00, idx="fear", title = "naive GLM (FDR)", what = 'volume', slices = slices, n_slices=4) 
 ```
 
+We can also visualize the estimates masked by the corresponding activations using the `act_mask` argument to the estimates plotting function. Here's that on the left cortex for the spatial GLM.
+
+```{r, rgl=TRUE, format = "jpg", fig.height=4.2, fig.width=2.5}
+plot(
+  bglm, Bayes=TRUE, idx="fear", title = "spatial GLM (fear), masked", 
+  act_mask=act, what = 'surface', hemisphere="left"
+)
+```
+
 # 5. Second-Level Modeling
 
 After running `BayesGLM()` on individual sessions, second-level modeling can be

@@ -1,3 +1,11 @@
+# 12.0
+
+* add `contrast_matrix` and `design_matrix` to group level results to allow customized contrast results by user
+* change data loading process to decrease memory requirement
+* fix the mask issue from code typo
+* add "nested activation plot" option in `plot.BGLM2 `
+* fix the time point matching issue found by a user
+
 # 11.0
 
 * Change informative prior for kappa to lower upper bound of spatial range
